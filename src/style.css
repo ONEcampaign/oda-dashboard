@@ -1,0 +1,305 @@
+@import url("observablehq:default.css");
+@import url("observablehq:theme-air.css");
+@import url("observablehq:theme-alt.css");
+
+/* ===== Root Variables ===== */
+:root {
+    --base-size: 12px;
+    --size-xs: calc(var(--base-size) * 0.5);
+    --size-s: calc(var(--base-size) * 0.9);
+    --size-m: var(--base-size);
+    --size-l: calc(var(--base-size) * 1.5);
+    --size-xl: calc(var(--base-size) * 2);
+    --size-xxl: calc(var(--base-size) * 3);
+}
+
+/* Header */
+.card.header {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-around;
+}
+
+.view-button > form {
+    display: block !important;
+    width: auto !important;
+}
+
+.view-button form button{
+    border: none;
+    background: none;
+    font-size: var(--size-xl);
+    color: darkgrey;
+    cursor: pointer;
+}
+
+.view-button form button:hover {
+    color: dimgray;
+}
+
+.view-button.active form button {
+    color: black;
+}
+
+/* View Box */
+.view-box {
+    display: none;
+}
+
+.view-box.active {
+    display: block;
+}
+
+/* Settings */
+select, input {
+    cursor: pointer;
+}
+
+.card.settings {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 20px 40px;
+    gap: 30px;
+}
+
+.settings-group {
+    box-sizing: border-box;
+    flex: 2;
+    display: flex;
+    flex-flow: column nowrap;
+    gap: 10px;
+}
+
+.settings-button{
+    width: 95px;
+    flex: 1;
+}
+
+.settings-button > form > button {
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    padding: 0;
+}
+
+.settings-button > form > button::after {
+    content: "arrow_right";
+    font-family: 'Material Symbols Outlined';
+    display: inline-block;
+    vertical-align: middle;
+    font-size: 20px;
+    padding-bottom: 2px;
+}
+
+.settings-button.active > form > button::after {
+    content: "arrow_drop_down";
+}
+
+.settings-button > form > button:hover {
+    text-decoration: underline;
+}
+
+.settings-group:last-of-type {
+    flex: 3;
+}
+
+.range-input > label {
+    flex-shrink: 0;
+    align-self: start;
+    padding: 5px 0 4px 0;
+    width: 120px;
+    margin-right: 6.5px;
+}
+
+.range-input >  div {
+    width: 100%;
+}
+
+.settings-group > form,
+.range-input {
+    box-sizing: border-box;
+    display: flex;
+    gap: 10px;
+    flex-flow: row nowrap;
+    align-items: start !important;
+}
+
+.settings-group > form > div {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: flex-start !important;
+    gap: 5px
+}
+
+.settings-group form > label {
+    font-size: var(--size-m);
+    font-weight: bold;
+    max-width: 80px !important;
+}
+
+.settings-group form > select {
+    max-width: 200px !important;
+}
+
+.more-settings {
+    display: flex;
+    flex-flow: row nowrap;
+    gap: 20px
+}
+
+/* Plots */
+.card:has(.plot-container) {
+    padding: 0;
+}
+.plot-container {
+    padding: 1rem;
+}
+.plot-title {
+    font-size: var(--size-xl) !important;
+    color: var(--darkGrey) !important;
+    font-weight: bold;
+}
+.plot-subtitle {
+    font-size: var(--size-l) !important;
+    color: var(--darkGrey) !important;
+    font-weight: normal !important;
+    margin-bottom: 20px;
+}
+
+.flow-label-subtitle {
+    color: var(--blue)
+}
+
+.ge-label-subtitle {
+    color: var(--cyan)
+}
+
+.bilateral-label-subtitle {
+    color: var(--teal)
+}
+
+.multilateral-label-subtitle {
+    color: var(--orange)
+}
+
+#lines-sectors > .plot-subtitle {
+    margin-bottom: 10px;
+}
+
+.plot-settings {
+    margin:0 0 20px 20px;
+}
+
+.bottom-panel {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+    margin-top: var(--size-m);
+    width: 100%;
+}
+
+.text-section {
+    margin: 0;
+}
+
+.plot-note,
+.plot-source {
+    font-size: var(--size-s);
+    margin: 5px 0;
+}
+
+.logo-section {
+    width: var(--size-xl);
+    height: var(--size-xl);
+    margin: 5px 0 5px 10px;
+}
+
+/* Axes */
+[aria-label="x-axis tick label"],
+[aria-label="y-axis label"] text,
+[aria-label="y-axis tick label"] {
+    font-size: var(--size-m);
+    color: var(--midGrey);
+}
+
+[aria-label="y-grid"] {
+    color: var(--midGrey);
+}
+
+/* Tables */
+.table-title {
+    font-size: var(--size-xl) !important;
+    color: var(--darkGrey) !important;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+.table-subtitle {
+    font-size: var(--size-l) !important;
+    color: var(--darkGrey) !important;
+    font-weight: normal !important;
+    margin-bottom: 10px;
+}
+
+.table-settings{
+    margin:0 0 20px 20px;
+}
+.table-settings > form > label {
+    font-weight: bold;
+    max-width: 60px;
+}
+.table-settings > form > div {
+    display: flex;
+    flex-flow: row nowrap;
+    width: max-content;
+}
+
+[class^="inputs-"][class$="-table"] thead th {
+    z-index: 1;
+}
+
+/*Download buttons */
+.download-panel {
+    padding: 0 0 1rem 1rem;
+    /*display: flex;*/
+    /*flex-flow: row nowrap;*/
+    /*justify-content: space-around;*/
+    /*gap: 15px;*/
+}
+
+.download-panel > form {
+    width: fit-content;
+}
+
+.download-panel button {
+    background-color: #fff;
+    border: 1px solid #d5d9d9;
+    border-radius: 8px;
+    box-shadow: rgba(213, 217, 217, .5) 0 2px 5px 0;
+    box-sizing: border-box;
+    color: #0f1111;
+    cursor: pointer;
+    display: inline-block;
+    font-family: Colfax, Helvetica, sans-serif;
+    font-size: var(--size-m);
+    line-height: var(--size-xl);
+    padding: 5px 10px;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    vertical-align: middle;
+}
+
+.download-panel button:hover {
+    background-color: #f7fafa;
+}
+
+.download-panel button:focus {
+    border-color: #008296;
+    box-shadow: rgba(213, 217, 217, .5) 0 2px 5px 0;
+    outline: 0;
+}
