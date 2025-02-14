@@ -13,11 +13,11 @@ export function getCurrencyLabel(currency, {
     if (currency === "US Dollars") {
         symbol = "US$"
     } else if (currency === "Euros") {
-        symbol = "€ "
+        symbol = "€"
     } else if (currency === "Canadian Dollars") {
-        symbol =  "CA$ "
+        symbol =  "CA$"
     } else if (currency === "British Pounds") {
-        symbol = "£ "
+        symbol = "£"
     }
     if (value === "") {
         return `${symbol} ${unit}`

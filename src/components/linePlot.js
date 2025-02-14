@@ -24,7 +24,7 @@ export function linePlot(query, mode, width,
         yValue = "GNI Share"
         groupVar = "Type"
         colorScale = {
-            domain: ["Flow", "Grant Equivalent",],
+            domain: ["Flow", "Grant Equivalent"],
             range: [ONEPalette.blue, ONEPalette.cyan]
         }
     } else if (mode === "recipients") {

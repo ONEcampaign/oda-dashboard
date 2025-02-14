@@ -9,6 +9,7 @@
     "observable": "observable"
   },
   "dependencies": {
+    "@flourish/live-api": "^5.4.1",
     "@observablehq/framework": "^1.13.0"
   },
   "devDependencies": {

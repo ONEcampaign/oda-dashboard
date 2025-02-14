@@ -13,41 +13,61 @@
     --size-xxl: calc(var(--base-size) * 3);
 }
 
+/* Title */
+.title-container {
+    display: flex;
+    flex-direction: row;
+    margin: 40px 20px;
+}
+.title-container > * {
+    padding: 10px 20px;
+    margin: auto 0;
+}
+.title-logo {
+    width: 45px;
+    height: 45px;
+    opacity: 1;
+    transition: all 250ms ease-in-out;
+}
+.title-logo:hover {
+    opacity: 0.6;
+    transform: scale(1.1);
+}
+
+.title-text {
+    font-size: var(--size-xxl);
+    font-family: var(--sans-serif);
+    font-weight: normal;
+    border-left: 1px black solid;
+}
+
 /* Header */
 .card.header {
     display: flex;
-    flex-flow: row nowrap;
+    flex-flow: row wrap;
     justify-content: space-around;
 }
 
-.view-button > form {
-    display: block !important;
-    width: auto !important;
-}
-
-.view-button form button{
-    border: none;
-    background: none;
+.view-button {
+    text-decoration: none !important;
     font-size: var(--size-xl);
-    color: darkgrey;
+    color: darkgrey !important;
     cursor: pointer;
+    transition: all 0.3s ease-in-out;
 }
 
-.view-button form button:hover {
-    color: dimgray;
+.view-button:hover {
+    color: dimgray !important;
+    transform: scale(1.1);
 }
 
-.view-button.active form button {
-    color: black;
+.view-button.active {
+    color: black !important;
 }
 
-/* View Box */
-.view-box {
-    display: none;
-}
-
-.view-box.active {
-    display: block;
+.view-button.active:hover {
+    color: dimgray !important;
+    transform: scale(1);
 }
 
 /* Settings */
@@ -56,25 +76,31 @@ select, input {
 }
 
 .card.settings {
+    padding: 2em;
     display: flex;
-    flex-flow: row nowrap;
-    align-items: baseline;
-    justify-content: space-between;
-    padding: 20px 40px;
-    gap: 30px;
+    flex-flow: row wrap;
+    justify-content: space-around;
 }
 
 .settings-group {
     box-sizing: border-box;
-    flex: 2;
     display: flex;
-    flex-flow: column nowrap;
-    gap: 10px;
+    flex-flow: column wrap;
+    gap: 20px;
+    min-width: 200px;
+    visibility: block;
+}
+
+.settings-group.hidden {
+    visibility: hidden;
 }
 
 .settings-button{
     width: 95px;
-    flex: 1;
+}
+
+.settings-button > form {
+    margin: 0;
 }
 
 .settings-button > form > button {
@@ -101,36 +127,33 @@ select, input {
     text-decoration: underline;
 }
 
-.settings-group:last-of-type {
-    flex: 3;
-}
-
 .range-input > label {
     flex-shrink: 0;
     align-self: start;
     padding: 5px 0 4px 0;
-    width: 120px;
+    width: 100px;
     margin-right: 6.5px;
 }
 
 .range-input >  div {
-    width: 100%;
+    width: 250px;
 }
 
 .settings-group > form,
 .range-input {
     box-sizing: border-box;
     display: flex;
-    gap: 10px;
-    flex-flow: row nowrap;
+    gap: 5px;
+    flex-direction: column;
     align-items: start !important;
+    width: auto !important;
+    margin: 0 !important;
 }
 
 .settings-group > form > div {
     display: flex;
     flex-flow: row nowrap;
     align-items: flex-start !important;
-    gap: 5px
 }
 
 .settings-group form > label {
@@ -302,4 +325,48 @@ select, input {
     border-color: #008296;
     box-shadow: rgba(213, 217, 217, .5) 0 2px 5px 0;
     outline: 0;
+}
+
+/* Responsive design */
+
+@media (max-width: 1000px) {
+    .card.settings {
+        justify-content: space-between;
+        row-gap: 20px;
+    }
+    .settings-group.hidden {
+        display: none
+    }
+    .card.settings > * {
+        flex: 1 1 48%;
+        max-width: 48%;
+    }
+}
+
+
+@media (max-width: 600px) {
+    .title-container {
+        margin-left: 0;
+    }
+    .title-container > * {
+        padding: 10px;
+    }
+    .title-text {
+        font-size: calc(var(--size-xl) * 1.2);
+    }
+    .card.header {
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 20px
+    }
+    .card.settings {
+        flex-direction: column;
+        justify-content: center;
+        align-items: start;
+        gap: 20px
+    }
+    .settings-group {
+        gap: 20px !important;
+    }
 }

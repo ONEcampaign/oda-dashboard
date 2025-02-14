@@ -31,128 +31,129 @@ const oneLogo = FileAttachment("./ONE-logo-black.png").href;
 
 ```js
 const db = DuckDBClient.of({
-    financing: FileAttachment("./data/financing.parquet"),
-    recipients: FileAttachment("./data/recipients.parquet"),
-    sectors: FileAttachment("./data/sectors.parquet")
+    recipients: FileAttachment("./data/recipients.parquet")
 });
 ```
 
 ```js
 // USER INPUTS
 // Donor
-const donorFinancingInput = Inputs.select(
-    uniqueValuesFinancing.donors,
+const donorRecipientsInput = Inputs.select(
+    uniqueValuesRecipients.donors,
     {
         label: "Donor",
         value: "DAC Countries, Total",
         sort: true
     })
-const donorFinancing = Generators.input(donorFinancingInput);
+const donorRecipients = Generators.input(donorRecipientsInput);
 
-// Indicator
-const indicatorFinancingInput = Inputs.select(
-    uniqueValuesFinancing.indicators,
+// Recipient
+const recipientRecipientsInput = Inputs.select(
+    uniqueValuesRecipients.recipients,
     {
-        label: "Indicator",
-        value: "Total ODA"
-    })
-const indicatorFinancing = Generators.input(indicatorFinancingInput);
-
-// Type
-const typeFinancingInput = Inputs.select(
-    uniqueValuesFinancing.indicatorTypes,
-    {
-        label: "Type",
-        value: "Official Definition",
+        label: "Recipient",
+        value: "Developing countries, Total",
         sort: true
     })
-const typeFinancing = Generators.input(typeFinancingInput);
+const recipientRecipients = Generators.input(recipientRecipientsInput);
+
+// Indicator
+const indicatorRecipientsInput = Inputs.select(
+    uniqueValuesRecipients.indicators,
+    {
+        label: "Indicator",
+        value: "Total",
+        sort: true
+    })
+const indicatorRecipients = Generators.input(indicatorRecipientsInput);
 
 // Currency
-const currencyFinancingInput = Inputs.select(
-    uniqueValuesFinancing.currencies,
+const currencyRecipientsInput = Inputs.select(
+    uniqueValuesRecipients.currencies,
     {
         label: "Currency",
         value: "US Dollars",
         sort: true
     })
-const currencyFinancing = Generators.input(currencyFinancingInput);
+const currencyRecipients = Generators.input(currencyRecipientsInput);
 
 // Prices
-const pricesFinancingInput = Inputs.radio(
-    uniqueValuesFinancing.prices,
+const pricesRecipientsInput = Inputs.radio(
+    uniqueValuesRecipients.prices,
     {
         label: "Prices",
         value: "Constant"
     }
 )
-const pricesFinancing = Generators.input(pricesFinancingInput)
+const pricesRecipients = Generators.input(pricesRecipientsInput)
 
 // Year
-const timeRangeFinancingInput = rangeInput(
+const timeRangeRecipientsInput = rangeInput(
     {
-        min: uniqueValuesFinancing.timeRange[0],
-        max: uniqueValuesFinancing.timeRange[1],
+        min: uniqueValuesRecipients.timeRange[0],
+        max: uniqueValuesRecipients.timeRange[1],
         step: 1,
         value: [
-            uniqueValuesFinancing.timeRange[0],
-            uniqueValuesFinancing.timeRange[1]
+            uniqueValuesRecipients.timeRange[0],
+            uniqueValuesRecipients.timeRange[1]
         ],
         label: "Time range",
         enableTextInput: true
     })
-const timeRangeFinancing = Generators.input(timeRangeFinancingInput)
+const timeRangeRecipients = Generators.input(timeRangeRecipientsInput)
 
 // Unit
-const unitFinancingInput = Inputs.radio(
-    ["Value", "GNI Share"],
+const unitRecipientsInput = Inputs.radio(
+    ["Value", "Share of total", "GNI Share"],
     {
         label: null,
         value: "Value"
     }
 )
-const unitFinancing = Generators.input(unitFinancingInput)
+const unitRecipients = Generators.input(unitRecipientsInput)
 ```
 
 ```js
 // DATA QUERY
-const queryFinancingString = `
+const queryRecipientsString = `
 SELECT 
     year AS Year,
     "Donor Name" AS Donor,
+    "Recipient Name" AS Recipient,
     Indicator,
-    CASE 
-        WHEN "Indicator Type" = 'Official Definition' AND Year < 2018 THEN 'Flow'
-        WHEN "Indicator Type" = 'Official Definition' AND Year >= 2018 THEN 'Grant Equivalent'
-        ELSE "Indicator Type"
-    END AS Type,
     value AS Value,
+    share AS "Share of total",
     "GNI Share",
     Currency,
-    Prices,
-FROM financing
+    Prices
+FROM recipients
 WHERE 
     Year >= ? AND 
     Year <= ? AND
     Donor = ? AND 
-    Indicator = ? AND
-    "Indicator Type" = ? AND 
+    Recipient = ? AND
     Currency = ? AND 
-    Prices = ?;
+    Prices = ? AND
+    (
+        (? = 'Total' AND Indicator != 'Total') 
+        OR (? != 'Total' AND Indicator = ?)
+    );
 `;
 
-const queryFinancingParams = [
-    timeRangeFinancing[0],
-    timeRangeFinancing[1],
-    donorFinancing,
-    indicatorFinancing,
-    typeFinancing,
-    currencyFinancing,
-    pricesFinancing
-    
+const queryRecipientsParams = [
+    timeRangeRecipients[0],
+    timeRangeRecipients[1],
+    donorRecipients,
+    recipientRecipients,
+    currencyRecipients,
+    pricesRecipients,
+    indicatorRecipients,
+    indicatorRecipients,
+    indicatorRecipients,
+
 ];
 
-const queryFinancing = await db.query(queryFinancingString, queryFinancingParams);
+const queryRecipients = await db.query(queryRecipientsString, queryRecipientsParams);
 ```
 
 ```js
@@ -175,10 +176,10 @@ const showmoreSettings = () => {
 </div>
 
 <div class="header card">
-    <a class="view-button active" href="./">
+    <a class="view-button" href="./">
         Financing
     </a>
-    <a class="view-button" href="./recipients">
+    <a class="view-button active" href="./recipients">
         Recipients
     </a>
     <a class="view-button" href="./sectors">
@@ -191,41 +192,41 @@ const showmoreSettings = () => {
 
 <div class="settings card">
     <div class="settings-group">
-        ${donorFinancingInput}
+        ${donorRecipientsInput}
+        ${recipientRecipientsInput}
     </div>
     <div class="settings-group">
-        ${currencyFinancingInput}
-        ${indicatorFinancingInput}
+        ${currencyRecipientsInput}
+        ${indicatorRecipientsInput}
     </div>
     <div class="settings-button ${moreSettings ? 'active' : ''}">
         ${Inputs.button( moreSettings ? "Show less" : "Show more", {reduce: showmoreSettings})}
     </div>
     <div class="settings-group ${moreSettings ? '' : 'hidden'}">
-        ${pricesFinancingInput}
-        ${timeRangeFinancingInput}
+        ${pricesRecipientsInput}
+        ${timeRangeRecipientsInput}
     </div>
 </div>
 <div class="grid grid-cols-2">
-    
     <div class="card">
-        <div  class="plot-container" id="bars-financing">
+        <div class="plot-container" id="bars-recipients">
             <h2 class="plot-title">
-                ${formatString(`${indicatorFinancing} from ${donorFinancing}`)}
+                ${formatString(`ODA to ${recipientRecipients} from ${donorRecipients}`)}
             </h2>
             ${
-            typeFinancing == "Official Definition"
-            ? html`<h3 class="plot-subtitle"><span class="flow-label-subtitle">Flows</span> and <span class="ge-label-subtitle">grant equivalents</span></h3>`
-            : html`<h3 class="plot-subtitle">${typeFinancing}</h3>`
+            indicatorRecipients == "Total"
+            ? html`<h3 class="plot-subtitle"><span class="bilateral-label-subtitle">Bilateral</span> and <span class="multilateral-label-subtitle">imputed multilateral</span></h3>`
+            : html`<h3 class="plot-subtitle">${indicatorRecipients}</h3>`
             }
             ${
             resize(
-            (width) => barPlot(queryFinancing, currencyFinancing, "financing", width)
+            (width) => barPlot(queryRecipients, currencyRecipients, "recipients", width)
             )
             }
             <div class="bottom-panel">
                 <div class="text-section">
-                    <p class="plot-source">Source: OECD DAC Table 1.</p>
-                    <p class="plot-note">ODA values in million ${pricesFinancing} ${currencyFinancing}.</pclass>
+                    <p class="plot-source">Source: OECD DAC Table 2a.</p>
+                    <p class="plot-note">ODA values in million ${pricesRecipients} ${currencyRecipients}.</pclass>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
@@ -235,44 +236,41 @@ const showmoreSettings = () => {
             </div>
         </div>
         <div class="download-panel">
-            ${  
+            ${
             Inputs.button(
-            "Download plot", 
+            "Download plot",
             {
             reduce: () => downloadPNG(
-            "bars-financing",
-            "plot1_test"
+            "bars-recipients",
+            "plot3_test"
             )
-            }   
+            }
             )
             }
         </div>
-        
     </div>
-    
     <div class="card">
-        <div class="plot-container" id="lines-financing">
+        <div class="plot-container" id="lines-recipients">
             <h2 class="plot-title">
-                ${formatString(`${indicatorFinancing} from ${donorFinancing}`)}
+                ${formatString(`ODA to ${recipientRecipients} from ${donorRecipients}`)}
             </h2>
             ${
-            typeFinancing == "Official Definition"
-            ? html`<h3 class="plot-subtitle"><span class="flow-label-subtitle">Flows</span> and <span class="ge-label-subtitle">grant equivalents</span> as a share of GNI</h3>`
-            : html`<h3 class="plot-subtitle">${typeFinancing}</h3>`
+            indicatorRecipients == "Total"
+            ? html`<h3 class="plot-subtitle"><span class="bilateral-label-subtitle">Bilateral</span> and <span class="multilateral-label-subtitle">imputed multilateral</span> as a share of total ODA</h3>`
+            : html`<h3 class="plot-subtitle">${indicatorRecipients} as a share of all ODA</h3>`
             }
             ${
             resize(
             (width) => linePlot(
-            queryFinancing, 
-            "financing", 
+            queryRecipients,
+            "recipients",
             width
             )
             )
             }
             <div class="bottom-panel">
                 <div class="text-section">
-                    <p class="plot-source">Source: OECD DAC Table 1.</p>
-                    <p class="plot-note">GNI share refers to the Gross National Income of ${formatString(donorFinancing)}.</p>
+                    <p class="plot-source">Source: OECD DAC Table 2a.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
@@ -284,33 +282,31 @@ const showmoreSettings = () => {
         <div class="download-panel">
             ${
             Inputs.button(
-            "Download plot", 
+            "Download plot",
             {
             reduce: () => downloadPNG(
-            "lines-financing",
-            "plot2_test"
+            "lines-recipients",
+            "plot4_test"
             )
             }
             )
             }
         </div>
     </div>
-    
 </div>
-
 <div class="card">
     <div class="plot-container">
         <h2 class="table-title">
-            ${formatString(`${indicatorFinancing} from ${donorFinancing}`)}
+            ${formatString(`ODA to ${recipientRecipients} from ${donorRecipients}`)}
         </h2>
         <div class="table-settings">
-            ${unitFinancingInput}
+            ${unitRecipientsInput}
         </div>
-        ${table(queryFinancing, "financing", {unit: unitFinancing})}
+        ${table(queryRecipients, "recipients", {unit: unitRecipients})}
         <div class="bottom-panel">
             <div class="text-section">
-                <p class="plot-source">Source: OECD DAC Table 1.</p>
-                <p class="plot-note">ODA values in million ${pricesFinancing} ${currencyFinancing}. GNI share refers to the Gross National Income of ${formatString(donorFinancing)}.</pclass>
+                <p class="plot-source">Source: OECD DAC Table 2a.</p>
+                <p class="plot-note">ODA values in million ${pricesRecipients} ${currencyRecipients}. GNI share refers to the Gross National Income of ${formatString(recipientRecipients)}.</pclass>
             </div>
             <div class="logo-section">
                 <a href="https://data.one.org/" target="_blank">
@@ -322,11 +318,11 @@ const showmoreSettings = () => {
     <div class="download-panel">
         ${
         Inputs.button(
-        "Download data", 
+        "Download data",
         {
         reduce: () => downloadXLSX(
-        queryFinancing,
-        "file1_test"
+        queryRecipients,
+        "file2_test"
         )
         }
         )
