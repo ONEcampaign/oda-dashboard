@@ -2,19 +2,15 @@
 import {DuckDBClient} from "npm:@observablehq/duckdb";
 
 import {setCustomColors} from "./components/setCustomColors.js";
+import {formatString} from "./components/formatString.js";
 
-import {uniqueValuesFinancing} from "./components/uniqueValuesFinancing.js";
-import {uniqueValuesRecipients} from "./components/uniqueValuesRecipients.js";
 import {uniqueValuesSectors} from "./components/uniqueValuesSectors.js";
-
 import {rangeInput} from "./components/rangeInput.js";
 
-import {formatString} from "./components/formatString.js";
 
 import {barPlot} from "./components/barPlot.js";
 import {linePlot} from "./components/linePlot.js";
 import {treemapPlot, selectedSector} from "./components/treemapPlot.js";
-
 import {table} from "./components/table.js";
 
 import {downloadPNG} from './components/downloadPNG.js';
@@ -175,6 +171,11 @@ const moreSettings = Mutable(false)
 const showmoreSettings = () => {
     moreSettings.value = !moreSettings.value;
 };
+
+const showMoreButton = Inputs.button(moreSettings ? "Show less" : "Show more", {
+    reduce: showmoreSettings
+});
+showMoreButton.addEventListener("submit", event => event.preventDefault());
 ```
 
 ```js
@@ -219,7 +220,7 @@ flourishTreemap
         ${indicatorSectorsInput}
     </div>
     <div class="settings-button ${moreSettings ? 'active' : ''}">
-        ${Inputs.button( moreSettings ? "Show less" : "Show more", {reduce: showmoreSettings})}
+        ${showMoreButton}
     </div>
     <div class="settings-group ${moreSettings ? '' : 'hidden'}">
         ${pricesSectorsInput}

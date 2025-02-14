@@ -237,6 +237,11 @@ select, input {
     width: var(--size-xl);
     height: var(--size-xl);
     margin: 5px 0 5px 10px;
+    opacity: 1;
+    transition: opacity 250ms ease-in-out;
+}
+.logo-section:hover {
+    opacity: 0.6;
 }
 
 /* Axes */
