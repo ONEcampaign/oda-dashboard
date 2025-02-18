@@ -21,10 +21,6 @@ setCustomColors();
 ```
 
 ```js
-const oneLogo = FileAttachment("./ONE-logo-black.png").href;
-```
-
-```js
 const db = DuckDBClient.of({
     financing: FileAttachment("./data/financing.parquet")
 });
@@ -105,6 +101,13 @@ const unitFinancingInput = Inputs.radio(
     }
 )
 const unitFinancing = Generators.input(unitFinancingInput)
+
+// Intenational commitments
+const intlCommitmentInput = Inputs.toggle(
+    {label: html`Int'l commitment`, value: false}
+)
+
+const intlCommitment = Generators.input(intlCommitmentInput)
 ```
 
 ```js
@@ -150,22 +153,29 @@ const queryFinancing = await db.query(queryFinancingString, queryFinancingParams
 
 ```js
 const moreSettings = Mutable(false)
-const showmoreSettings = () => {
+const showMoreSettings = () => {
     moreSettings.value = !moreSettings.value;
+    if (moreSettings.value) {
+        document.querySelector(".settings-button").classList.add("active")
+        document.querySelector(".settings-group:last-of-type").classList.remove("hidden")
+    } else {
+        document.querySelector(".settings-button").classList.remove("active")
+        document.querySelector(".settings-group:last-of-type").classList.add("hidden")
+    }
 };
-
-const showMoreButton = Inputs.button(moreSettings ? "Show less" : "Show more", {
-    reduce: showmoreSettings
-});
-showMoreButton.addEventListener("submit", event => event.preventDefault());
-
 ```
 
-```html
+```js
+const showMoreButton = Inputs.button(moreSettings ? "Show less" : "Show more", {
+    reduce: showMoreSettings
+});
+showMoreButton.addEventListener("submit", event => event.preventDefault());
+```
+
 <div class="title-container" xmlns="http://www.w3.org/1999/html">
     <div class="title-logo">
         <a href="https://data.one.org/" target="_blank">
-            <img src=${oneLogo} alt="A black circle with ONE written in white thick letters.">
+            <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
         </a>
     </div>
     <h1 class="title-text">
@@ -196,26 +206,27 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         ${currencyFinancingInput}
         ${indicatorFinancingInput}
     </div>
-    <div class="settings-button ${moreSettings ? 'active' : ''}">
+    <div class="settings-button">
         ${showMoreButton}
     </div>
-    <div class="settings-group ${moreSettings ? '' : 'hidden'}">
+    <div class="settings-group hidden">
         ${pricesFinancingInput}
         ${timeRangeFinancingInput}
     </div>
 </div>
 <div class="grid grid-cols-2">
-    
     <div class="card">
         <div  class="plot-container" id="bars-financing">
             <h2 class="plot-title">
                 ${formatString(`${indicatorFinancing} from ${donorFinancing}`)}
             </h2>
-            ${
-            typeFinancing == "Official Definition"
-            ? html`<h3 class="plot-subtitle"><span class="flow-label-subtitle">Flows</span> and <span class="ge-label-subtitle">grant equivalents</span></h3>`
-            : html`<h3 class="plot-subtitle">${typeFinancing}</h3>`
-            }
+            <div class="plot-subtitle-panel">
+                ${
+                    typeFinancing == "Official Definition"
+                    ? html`<h3 class="plot-subtitle"><span class="flow-label-subtitle">Flows</span> and <span class="ge-label-subtitle">grant equivalents</span></h3>`
+                    : html`<h3 class="plot-subtitle">${typeFinancing}</h3>`
+                }
+            </div>
             ${
             resize(
             (width) => barPlot(queryFinancing, currencyFinancing, "financing", width)
@@ -224,11 +235,11 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Table 1.</p>
-                    <p class="plot-note">ODA values in million ${pricesFinancing} ${currencyFinancing}.</pclass>
+                    <p class="plot-note">ODA values in million ${pricesFinancing} ${currencyFinancing}.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
-                        <img src=${oneLogo} alt="A black circle with ONE written in white thick letters.">
+                        <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
                     </a>
                 </div>
             </div>
@@ -246,27 +257,29 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             )
             }
         </div>
-        
     </div>
-    
     <div class="card">
         <div class="plot-container" id="lines-financing">
             <h2 class="plot-title">
                 ${formatString(`${indicatorFinancing} from ${donorFinancing}`)}
             </h2>
-            ${
-            typeFinancing == "Official Definition"
-            ? html`<h3 class="plot-subtitle"><span class="flow-label-subtitle">Flows</span> and <span class="ge-label-subtitle">grant equivalents</span> as a share of GNI</h3>`
-            : html`<h3 class="plot-subtitle">${typeFinancing}</h3>`
-            }
+            <div class="plot-subtitle-panel">
+                ${
+                    typeFinancing == "Official Definition"
+                    ? html`<h3 class="plot-subtitle"><span class="flow-label-subtitle">Flows</span> and <span class="ge-label-subtitle">grant equivalents</span> as a share of GNI</h3>`
+                    : html`<h3 class="plot-subtitle">${typeFinancing}</h3>`
+                }
+                ${intlCommitmentInput}
+            </div>
             ${
             resize(
-            (width) => linePlot(
-            queryFinancing, 
-            "financing", 
-            width
-            )
-            )
+                (width) => linePlot(
+                    queryFinancing, 
+                    "financing", 
+                    width,
+                    {showIntlCommitment: intlCommitment}
+                    )
+                )
             }
             <div class="bottom-panel">
                 <div class="text-section">
@@ -275,7 +288,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
-                        <img src=${oneLogo} alt="A black circle with ONE written in white thick letters.">
+                        <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
                     </a>
                 </div>
             </div>
@@ -294,7 +307,6 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             }
         </div>
     </div>
-    
 </div>
 
 <div class="card">
@@ -309,11 +321,11 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Table 1.</p>
-                <p class="plot-note">ODA values in million ${pricesFinancing} ${currencyFinancing}. GNI share refers to the Gross National Income of ${formatString(donorFinancing)}.</pclass>
+                <p class="plot-note">ODA values in million ${pricesFinancing} ${currencyFinancing}. GNI share refers to the Gross National Income of ${formatString(donorFinancing)}.</p>
             </div>
             <div class="logo-section">
                 <a href="https://data.one.org/" target="_blank">
-                    <img src=${oneLogo} alt="A black circle with ONE written in white thick letters.">
+                    <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
                 </a>
             </div>
         </div>
@@ -332,4 +344,3 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         }
     </div>
 </div>
-```

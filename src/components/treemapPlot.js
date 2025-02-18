@@ -39,16 +39,11 @@ export function treemapPlot(query, width, { currency = null } = {}) {
     return Treemap(formattedData, {
         parentId: (d) => d.parentId,
         value: (d) => d.Value,
-        label: (d) =>
-            d.id +
-            "\n" +
-            getCurrencyLabel(currency, { long: false, value: formatValue(d.Value).label }),
         group: (d) => d.id,
         width: width,
         height: 400,
-        padding: 4,
-        fillOpacity: (d) => selectedSector.value === d.id ? 1 : 0.25, // Highlight selected sector
-        stroke: (d) => selectedSector.value === d.id ? "grey" : "white", // Add a border for selected sector
+        padding: 1,
+        fillOpacity: (d) => d.id === selectedSector.value ? 0.6 : 0.8,
         onClick: handleClick, // Pass the click handler to the Treemap
     });
 }

@@ -1,7 +1,7 @@
 import * as Plot from "npm:@observablehq/plot";
 import {utcYear} from "npm:d3-time";
 import {timeFormat} from "npm:d3-time-format";
-import {ONEPalette} from "./ONEPalette.js";
+import {ONEPalette as OnePalette, ONEPalette} from "./ONEPalette.js";
 import {getCurrencyLabel} from "./getCurrencyLabel.js";
 import * as d3 from "npm:d3";
 import {formatValue} from "./formatValue.js";
@@ -11,6 +11,7 @@ export function linePlot(query, mode, width,
                              sectorName = null,
                              currency = null,
                              breakdown = null,
+                             showIntlCommitment = false,
                          } = {}) {
 
     let arrayData = query.toArray().map((row) => ({
@@ -18,29 +19,57 @@ export function linePlot(query, mode, width,
         Year: new Date(row.Year, 1, 1), // Ensure the year is a Date object
     }));
 
-    let labelSymbol, yValue, groupVar, colorScale
+    let labelSymbol, yValue, groupVar, customChannels, customFormat, colorScale
     if (mode === "financing") {
         labelSymbol = "%"
         yValue = "GNI Share"
         groupVar = "Type"
+        customChannels = {
+            custom: {
+                value: yValue,
+                label: "GNI Share"
+            }
+        }
+        customFormat = {
+            stroke: true,
+            x: (d) => formatYear(d),
+            custom: (d) => `${d.toFixed(2)}%`,
+            y: false
+        }
         colorScale = {
             domain: ["Flow", "Grant Equivalent"],
-            range: [ONEPalette.blue, ONEPalette.cyan]
+            range: ["#9ACACD", "#17858C"]
         }
     } else if (mode === "recipients") {
         labelSymbol = "%"
         yValue = "Share of total"
         groupVar = "Indicator"
+        customChannels = {
+            custom: {
+                value: yValue,
+                label: "Share of total"
+            }
+        }
+        customFormat = {
+            stroke: true,
+            x: (d) => formatYear(d),
+            custom: (d) => `${d.toFixed(1)}%`,
+            y: false
+        }
         colorScale = {
             domain: ["Bilateral", "Imputed multilateral"],
-            range: [ONEPalette.orange, ONEPalette.teal]
+            range: ["#1A9BA3", "#FF7F4C"],
         }
     } else if (mode === "sectors") {
 
         labelSymbol = getCurrencyLabel(currency, {})
         yValue = "Value"
         groupVar = breakdown
-
+        customChannels = {}
+        customFormat = {
+            stroke: true,
+            x: (d) => formatYear(d)
+        }
         const uniqueSubsectors = new Set(
             arrayData
                 .filter(row => row.Sector === sectorName)
@@ -58,7 +87,8 @@ export function linePlot(query, mode, width,
 
             colorScale = {
                 domain: aggregated.map(([sector]) => sector),
-                range: d3.schemeObservable10,
+                // range: d3.schemeObservable10,
+                range: ["#1A9BA3", "#FF7F4C", "#081248", "#A3DAF5"]
             }
         }
 
@@ -82,7 +112,8 @@ export function linePlot(query, mode, width,
 
         if (breakdown === "Subsector" && uniqueSubsectors > 1) {
             arrayData = arrayData.sort((a, b) => a.Subsector.localeCompare(b.Subsector));
-            colorScale = d3.schemeObservable10
+            // colorScale = d3.schemeObservable10
+            colorScale = ["#1A9BA3", "#FF7F4C", "#081248", "#A3DAF5"]
         }
     }
 
@@ -101,7 +132,7 @@ export function linePlot(query, mode, width,
             tickSize: 0,
             ticks: 5,
             grid: false,
-            tickFormat: formatYear,
+            tickFormat: "%Y",
             tickPadding: 10,
             interval: utcYear,
         },
@@ -120,16 +151,52 @@ export function linePlot(query, mode, width,
                 y: yValue,
                 z: groupVar,
                 stroke: groupVar,
-                curve: "catmull-rom",
-                strokeWidth: 2.5,
-                tip: {
+                curve: "monotone-x",
+                strokeWidth: 2.5
+            }),
+
+            // Horizontal line to show international commitment
+            showIntlCommitment
+                ? Plot.ruleY( [0.7],
+                    {
+                        stroke: ONEPalette.midGrey,
+                        strokeDasharray: [5, 5],
+                        strokeWidth: 1,
+
+                    }
+                )
+                : null,
+
+            showIntlCommitment
+            ?
+
+                Plot.text(
+                    arrayData.filter(d => d.Year === d3.min(arrayData, d => d.Year)),
+                    {
+                        x: "Year",
+                        y: 0.7,
+                        text: ["Intl' commitment"],
+                        fill: OnePalette.midGrey,
+                        textAnchor: "start",
+                        dy: -10
+                    }
+                )
+                :
+                null,
+
+            Plot.tip(
+                arrayData,
+                Plot.pointer({
+                    x: "Year",
+                    y: yValue,
+                    stroke: groupVar,
+                    channels: customChannels,
+                    format: customFormat,
                     lineHeight: 1.25,
                     fontSize: 12
-                },
-                title: mode === "sectors"
-                    ? (d) => `${d[groupVar]}, ${formatYear(d.Year)}\n${getCurrencyLabel(currency, {long: false, value: formatValue(d[yValue]).label})}`
-                    : (d) => `${d[groupVar]}, ${formatYear(d.Year)}\n${yValue}: ${formatValue(d[yValue]).label}%`
-            })
+                })
+            )
+
         ]
     });
 }

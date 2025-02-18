@@ -3,14 +3,12 @@ import {DuckDBClient} from "npm:@observablehq/duckdb";
 
 import {setCustomColors} from "./components/setCustomColors.js";
 import {formatString} from "./components/formatString.js";
+import {getCurrencyLabel} from "./components/getCurrencyLabel.js";
 
 import {uniqueValuesSectors} from "./components/uniqueValuesSectors.js";
 import {rangeInput} from "./components/rangeInput.js";
 
-
-import {barPlot} from "./components/barPlot.js";
 import {linePlot} from "./components/linePlot.js";
-import {treemapPlot, selectedSector} from "./components/treemapPlot.js";
 import {table} from "./components/table.js";
 
 import {downloadPNG} from './components/downloadPNG.js';
@@ -19,10 +17,6 @@ import {downloadXLSX} from "./components/downloadXLSX.js";
 
 ```js
 setCustomColors();
-```
-
-```js
-const oneLogo = FileAttachment("./ONE-logo-black.png").href;
 ```
 
 ```js
@@ -168,26 +162,75 @@ const querySectors = await db.query(querySectorsString, querySectorsParams);
 
 ```js
 const moreSettings = Mutable(false)
-const showmoreSettings = () => {
+const showMoreSettings = () => {
     moreSettings.value = !moreSettings.value;
+    if (moreSettings.value) {
+        document.querySelector(".settings-button").classList.add("active")
+        document.querySelector(".settings-group:last-of-type").classList.remove("hidden")
+    } else {
+        document.querySelector(".settings-button").classList.remove("active")
+        document.querySelector(".settings-group:last-of-type").classList.add("hidden")
+    }
 };
+```
 
+```js
 const showMoreButton = Inputs.button(moreSettings ? "Show less" : "Show more", {
-    reduce: showmoreSettings
+    reduce: showMoreSettings 
 });
 showMoreButton.addEventListener("submit", event => event.preventDefault());
 ```
 
 ```js
-import {flourishTreemap} from "./components/flourishTreemap.js"
-flourishTreemap
+import {convertToArrayOfArrays, customColors} from "./components/flourishTreemap.js"
+
+convertToArrayOfArrays(querySectors)
+
+async function updateVisualisation() {
+    
+    console.log("Vis: ", window.vis)
+    
+    // Update the Flourish visualisation with data
+    window.vis.update({
+        "data": { 
+            "data":  convertToArrayOfArrays(querySectors)
+        },
+        "bindings": {
+            "data": {
+                "nest_columns": [
+                    0,
+                    1
+                ],
+                "popup_metadata": [],
+                "size_columns": [
+                    2
+                ]
+            }
+        },
+        "state": {
+            ...window.vis.state,
+            "color" : {
+                "categorical_custom_palette": customColors(querySectors)
+            },
+            "size_by_number_formatter": {
+                "prefix": getCurrencyLabel(currencySectors, {preffixOnly: true}),
+                "suffix": " M"
+            }
+            
+        }
+    });
+}
+
+updateVisualisation();
+
+const selectedSector = "Health";
 ```
 
-```html
+
 <div class="title-container" xmlns="http://www.w3.org/1999/html">
     <div class="title-logo">
         <a href="https://data.one.org/" target="_blank">
-            <img src=${oneLogo} alt="A black circle with ONE written in white thick letters.">
+            <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters."/>
         </a>
     </div>
     <h1 class="title-text">
@@ -219,10 +262,10 @@ flourishTreemap
         ${currencySectorsInput}
         ${indicatorSectorsInput}
     </div>
-    <div class="settings-button ${moreSettings ? 'active' : ''}">
+    <div class="settings-button">
         ${showMoreButton}
     </div>
-    <div class="settings-group ${moreSettings ? '' : 'hidden'}">
+    <div class="settings-group hidden">
         ${pricesSectorsInput}
         ${timeRangeSectorsInput}
     </div>
@@ -246,7 +289,7 @@ flourishTreemap
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
-                        <img src=${oneLogo} alt="A black circle with ONE written in white thick letters.">
+                        <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters."/>
                     </a>
                 </div>
             </div>
@@ -295,11 +338,11 @@ flourishTreemap
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>
-                    <p class="plot-note">ODA values in million ${pricesSectors} ${currencySectors}.</pclass>
+                    <p class="plot-note">ODA values in million ${pricesSectors} ${currencySectors}.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
-                        <img src=${oneLogo} alt="A black circle with ONE written in white thick letters.">
+                        <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters."/>
                     </a>
                 </div>
             </div>
@@ -336,11 +379,11 @@ flourishTreemap
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>
-                <p class="plot-note">ODA values in million ${pricesSectors} ${currencySectors}. GNI share refers to the Gross National Income of ${formatString(recipientSectors)}.</pclass>
+                <p class="plot-note">ODA values in million ${pricesSectors} ${currencySectors}. GNI share refers to the Gross National Income of ${formatString(recipientSectors)}.</p>
             </div>
             <div class="logo-section">
                 <a href="https://data.one.org/" target="_blank">
-                    <img src=${oneLogo} alt="A black circle with ONE written in white thick letters.">
+                    <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters."/>
                 </a>
             </div>
         </div>
@@ -359,4 +402,3 @@ flourishTreemap
         }
     </div>
 </div>
-```

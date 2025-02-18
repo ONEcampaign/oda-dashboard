@@ -17,14 +17,14 @@ export function barPlot(query, currency, mode, width) {
     if (mode === "financing") {
         fillVar = "Type"
         colorScale = {
-            domain: ["Flow", "Grant Equivalent",],
-            range: [ONEPalette.blue, ONEPalette.cyan],
+            domain: ["Flow", "Grant Equivalent"],
+            range: ["#9ACACD", "#17858C"]
         }
     } else if (mode === "recipients") {
         fillVar = "Indicator"
         colorScale = {
             domain: ["Bilateral", "Imputed multilateral"],
-            range: [ONEPalette.orange, ONEPalette.teal],
+            range: ["#1A9BA3", "#FF7F4C"],
         }
     }
 
@@ -57,23 +57,33 @@ export function barPlot(query, currency, mode, width) {
         color: colorScale,
         marks: [
 
-            Plot.rectY(arrayData, {
+            Plot.rectY(
+                arrayData, {
                     x: "Year",
                     y: "Value",
                     fill: fillVar,
                     opacity: .75,
-                    tip: {
-                        lineHeight: 1.25,
-                        fontSize: 12
-                    },
-                    title: (d) => `${d[fillVar]}, ${formatYear(d.Year)}\n${getCurrencyLabel(currency, {long: false, value: formatValue(d.Value).label})}`
-                }),
+                }
+            ),
 
             // Horizontal line at 0
-            Plot.ruleY([0], {
-                stroke: "black",
-                strokeWidth: .5
-            }),
+            Plot.ruleY(
+                [0], {
+                    stroke: "black",
+                    strokeWidth: .5
+                }
+            ),
+
+            Plot.tip(
+                arrayData,
+                Plot.pointer({
+                    x: "Year",
+                    y: "Value",
+                    fill: fillVar,
+                    lineHeight: 1.25,
+                    fontSize: 12
+                })
+            )
 
         ]
     })

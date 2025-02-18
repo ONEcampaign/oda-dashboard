@@ -1,28 +1,41 @@
-export function getCurrencyLabel(currency, {
-                                    long = true,
-                                    value = ""
-                                })
+export function getCurrencyLabel(unit, {
+    long = true,
+    value = "",
+    preffixOnly = false,
+    suffixOnly = false,
+})
 {
-    let unit;
+
+    let prefix, suffix;
+
     if (long) {
-        unit = "million"
-    } else (
-        unit = "M"
+        suffix = "Million"
+    }
+    else (
+        suffix = "M"
     )
-    let symbol;
-    if (currency === "US Dollars") {
-        symbol = "US$"
-    } else if (currency === "Euros") {
-        symbol = "€"
-    } else if (currency === "Canadian Dollars") {
-        symbol =  "CA$"
-    } else if (currency === "British Pounds") {
-        symbol = "£"
+
+    if (unit === "US Dollars") {
+        prefix = "US$"
+    }
+    else if (unit === "Euros") {
+        prefix = "€"
+    }
+    else if (unit === "Canadian Dollars") {
+        prefix =  "CA$"
+    }
+    else if (unit === "British Pounds") {
+        prefix = "£"
+    }
+
+    if (preffixOnly) {
+        return `${prefix}`
     }
     if (value === "") {
-        return `${symbol} ${unit}`
-    } else {
-        return `${symbol} ${value} ${unit}`
+        return `${prefix} ${suffix}`
+    }
+    else {
+        return `${prefix}${value} ${suffix}`
     }
 
 }

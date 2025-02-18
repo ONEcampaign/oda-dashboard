@@ -184,27 +184,38 @@ select, input {
     color: var(--darkGrey) !important;
     font-weight: bold;
 }
+.plot-subtitle-panel {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
 .plot-subtitle {
     font-size: var(--size-l) !important;
     color: var(--darkGrey) !important;
     font-weight: normal !important;
-    margin-bottom: 20px;
 }
-
+.plot-subtitle-panel > form {
+    width: auto !important;
+    flex-direction: row-reverse;
+}
+[class$="-label-subtitle"] {
+    font-weight: bold;
+}
 .flow-label-subtitle {
-    color: var(--blue)
+    color: #9ACACD;
 }
 
 .ge-label-subtitle {
-    color: var(--cyan)
+    color: #17858C;
 }
 
 .bilateral-label-subtitle {
-    color: var(--teal)
+    color: #1A9BA3;
 }
 
 .multilateral-label-subtitle {
-    color: var(--orange)
+    color: #FF7F4C;
 }
 
 #lines-sectors > .plot-subtitle {

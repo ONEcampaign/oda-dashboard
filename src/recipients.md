@@ -20,10 +20,6 @@ setCustomColors();
 ```
 
 ```js
-const oneLogo = FileAttachment("./ONE-logo-black.png").href;
-```
-
-```js
 const db = DuckDBClient.of({
     recipients: FileAttachment("./data/recipients.parquet")
 });
@@ -151,21 +147,29 @@ const queryRecipients = await db.query(queryRecipientsString, queryRecipientsPar
 
 ```js
 const moreSettings = Mutable(false)
-const showmoreSettings = () => {
+const showMoreSettings = () => {
     moreSettings.value = !moreSettings.value;
+    if (moreSettings.value) {
+        document.querySelector(".settings-button").classList.add("active")
+        document.querySelector(".settings-group:last-of-type").classList.remove("hidden")
+    } else {
+        document.querySelector(".settings-button").classList.remove("active")
+        document.querySelector(".settings-group:last-of-type").classList.add("hidden")
+    }
 };
+```
 
+```js
 const showMoreButton = Inputs.button(moreSettings ? "Show less" : "Show more", {
-    reduce: showmoreSettings
+    reduce: showMoreSettings 
 });
 showMoreButton.addEventListener("submit", event => event.preventDefault());
 ```
 
-```html
 <div class="title-container" xmlns="http://www.w3.org/1999/html">
     <div class="title-logo">
         <a href="https://data.one.org/" target="_blank">
-            <img src=${oneLogo} alt="A black circle with ONE written in white thick letters.">
+            <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
         </a>
     </div>
     <h1 class="title-text">
@@ -197,10 +201,10 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         ${currencyRecipientsInput}
         ${indicatorRecipientsInput}
     </div>
-    <div class="settings-button ${moreSettings ? 'active' : ''}">
+    <div class="settings-button">
         ${showMoreButton}
     </div>
-    <div class="settings-group ${moreSettings ? '' : 'hidden'}">
+    <div class="settings-group hidden">
         ${pricesRecipientsInput}
         ${timeRangeRecipientsInput}
     </div>
@@ -228,7 +232,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
-                        <img src=${oneLogo} alt="A black circle with ONE written in white thick letters.">
+                        <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
                     </a>
                 </div>
             </div>
@@ -272,7 +276,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
-                        <img src=${oneLogo} alt="A black circle with ONE written in white thick letters.">
+                        <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
                     </a>
                 </div>
             </div>
@@ -308,7 +312,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             </div>
             <div class="logo-section">
                 <a href="https://data.one.org/" target="_blank">
-                    <img src=${oneLogo} alt="A black circle with ONE written in white thick letters.">
+                    <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
                 </a>
             </div>
         </div>
@@ -327,4 +331,3 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         }
     </div>
 </div>
-```

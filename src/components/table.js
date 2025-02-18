@@ -59,7 +59,7 @@ export function table(query, mode, {
             valueColumns = [unit];
             colorMapping = {
                 domain: ["Flow", "Grant Equivalent"],
-                range: [ONEPalette.blue, ONEPalette.cyan]
+                range: ["#9ACACD", "#17858C"]
             }
             colorColumn = "Type"
         } else if (mode === "recipients") {
@@ -67,7 +67,7 @@ export function table(query, mode, {
             valueColumns = [unit];
             colorMapping = {
                 domain: ["Bilateral", "Imputed multilateral", "Total"],
-                range: [ONEPalette.orange, ONEPalette.teal, ONEPalette.blue]
+                range: ["#1A9BA3", "#FF7F4C", "#991E79"],
             }
             colorColumn = "Indicator"
 
