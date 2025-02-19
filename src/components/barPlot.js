@@ -1,6 +1,6 @@
 import * as Plot from "npm:@observablehq/plot";
 import {utcYear} from "npm:d3-time";
-import {timeFormat} from "npm:d3-time-format";
+import {uint32ArrayToDecimal} from "./convertUintArray.js";
 import {ONEPalette} from "./ONEPalette.js";
 import {getCurrencyLabel} from "./getCurrencyLabel.js";
 import {formatValue} from "./formatValue.js";
@@ -10,7 +10,8 @@ export function barPlot(query, currency, mode, width) {
     const arrayData = query.toArray()
         .map((row) => ({
             ...row,
-            Year: new Date(row.Year, 1, 1)
+            Year: new Date(row.Year, 1, 1),
+            Value: uint32ArrayToDecimal(row.Value, 2)
         }))
 
     let fillVar, colorScale
@@ -27,8 +28,6 @@ export function barPlot(query, currency, mode, width) {
             range: ["#1A9BA3", "#FF7F4C"],
         }
     }
-
-    const formatYear = timeFormat("%Y")
 
     return Plot.plot({
         width: width,

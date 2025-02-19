@@ -29,8 +29,7 @@ export function customColors(query) {
     );
     sectorTotals.sort((a, b) => b[1] - a[1]);
 
-    // const colors = d3.schemeObservable10;
-    const colors = ["#1A9BA3", "#FF7F4C", "#0C1B6E", "#A3DAF5"]
+    const colors = ["#1A9BA3", "#FF7F4C", "#102493", "#A3DAF5"]
     const sectorColors = sectorTotals.map((d, i) => `${d[0]}: ${colors[i % colors.length]}`);
 
     return sectorColors.join("\n");

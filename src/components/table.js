@@ -3,6 +3,7 @@ import {schemeObservable10} from "npm:d3-scale-chromatic";
 import {max} from "npm:d3-array";
 import {sparkbar} from "./sparkbar.js";
 import {ONEPalette} from "./ONEPalette.js";
+import {uint32ArrayToDecimal} from "./convertUintArray.js";
 
 export function table(query, mode, {
                         unit= null,
@@ -10,7 +11,10 @@ export function table(query, mode, {
                     } = {}) {
 
     let arrayData = query.toArray()
-        .map((row) => row.toJSON());
+        .map((row) => ({
+            ...row,
+            [unit]: uint32ArrayToDecimal(row[unit], 2)
+        }))
 
     let columnsToShow, valueColumns, colorMapping, colorColumn, maxValues
     if (mode === "sectors") {
@@ -54,6 +58,7 @@ export function table(query, mode, {
         );
 
     } else {
+
         if (mode === "financing") {
             columnsToShow = ["Year", "Type", unit]
             valueColumns = [unit];
