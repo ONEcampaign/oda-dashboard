@@ -3,30 +3,23 @@ import {schemeObservable10} from "npm:d3-scale-chromatic";
 import {max} from "npm:d3-array";
 import {sparkbar} from "./sparkbar.js";
 import {ONEPalette} from "./ONEPalette.js";
-import {convertUint32Array} from "./convertUintArray.js";
 
-export function table(query, mode, {
+export function table(data, mode, {
                         unit= null,
                         sectorName = null,
                     } = {}) {
 
-    let arrayData = query.toArray()
-        .map((row) => ({
-            ...row,
-            [unit]: convertUint32Array(row[unit], 2)
-        }))
-
-    let columnsToShow, valueColumns, colorMapping, colorColumn, maxValues
+    let tableData, columnsToShow, valueColumns, colorMapping, colorColumn, maxValues
     if (mode === "sectors") {
         const allSubsectors = [
-            ...new Set(arrayData
+            ...new Set(data
                 .filter((row) => row.Sector === sectorName)
                 .map(row => row.Subsector)
                 .sort((a, b) => a.localeCompare(b)))
         ];
 
-        arrayData = Object.values(
-            arrayData
+        tableData = Object.values(
+            data
                 .filter((row) => row.Sector === sectorName) // Filter rows by sectorName
                 .reduce((acc, row) => {
                     const yearKey = row.Year; // Group by Year
@@ -48,11 +41,11 @@ export function table(query, mode, {
                 }, {})
         );
 
-        columnsToShow = Object.keys(arrayData[0]);
+        columnsToShow = Object.keys(tableData[0]);
         valueColumns = columnsToShow.filter(item => item !== 'Year')
 
         maxValues = Math.max(...valueColumns
-            .flatMap(column => arrayData
+            .flatMap(column => tableData
                 .map(d => d[column]))
             .filter(v => v !== undefined)
         );
@@ -60,6 +53,7 @@ export function table(query, mode, {
     } else {
 
         if (mode === "financing") {
+            tableData = data
             columnsToShow = ["Year", "Type", unit]
             valueColumns = [unit];
             colorMapping = {
@@ -77,12 +71,12 @@ export function table(query, mode, {
             colorColumn = "Indicator"
 
             // Get unique values of the Indicator column
-            const uniqueIndicators = [...new Set(arrayData.map(d => d.Indicator))];
+            const uniqueIndicators = [...new Set(data.map(d => d.Indicator))];
 
             // If there's only one unique Indicator, keep the original data
             if (uniqueIndicators.length > 1) {
                 // Group by Year and sum the 'Value' column
-                const groupedData = arrayData.reduce((acc, d) => {
+                const groupedData = data.reduce((acc, d) => {
                     const key = d.Year;
                     if (!acc[key]) {
                         acc[key] = { ...d, [unit]: d[unit], Indicator: "Total" };
@@ -93,11 +87,13 @@ export function table(query, mode, {
                 }, {});
 
                 // Convert the object back to an array
-                arrayData = Object.values(groupedData);
+                tableData = Object.values(groupedData);
+            } else {
+                tableData = data
             }
         }
 
-        maxValues = max(arrayData, d => d[valueColumns]);
+        maxValues = max(tableData, d => d[valueColumns]);
 
     }
 
@@ -106,8 +102,8 @@ export function table(query, mode, {
         return index !== -1 ? colorMapping.range[index] : ONEPalette.lightGrey; // Default color if no match
     };
 
-    return Inputs.table(arrayData, {
-        columns: Object.keys(arrayData[0])
+    return Inputs.table(tableData, {
+        columns: Object.keys(tableData[0])
             .filter(column => columnsToShow.includes(column)),
         sort: "Year",
         reverse: true,
@@ -125,7 +121,7 @@ export function table(query, mode, {
                                 maxValues
                             )(rowValue);
                         } else {
-                            const fillColor = getColorForType(arrayData[row][colorColumn]);
+                            const fillColor = getColorForType(tableData[row][colorColumn]);
                             return sparkbar(
                                 fillColor,
                                 "left",

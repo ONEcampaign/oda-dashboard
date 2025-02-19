@@ -7,6 +7,7 @@ import {formatString} from "./components/formatString.js";
 import {uniqueValuesFinancing} from "./components/uniqueValuesFinancing.js";
 import {rangeInput} from "./components/rangeInput.js";
 
+import {convertUint32Array} from "./components/convertUintArray.js";
 
 import {barPlot} from "./components/barPlot.js";
 import {linePlot} from "./components/linePlot.js";
@@ -150,10 +151,16 @@ const queryFinancingParams = [
     typeFinancing,
     currencyFinancing,
     pricesFinancing
-    
 ];
 
 const queryFinancing = await db.query(queryFinancingString, queryFinancingParams);
+
+const dataFinancing = queryFinancing.toArray()
+    .map((row) => ({
+        ...row,
+        ["GNI Share"]: convertUint32Array(row["GNI Share"]),
+        ["Value"]: convertUint32Array(row["Value"])
+    }))
 ```
 
 ```js
@@ -233,9 +240,14 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                 }
             </div>
             ${
-            resize(
-            (width) => barPlot(queryFinancing, currencyFinancing, "financing", width)
-            )
+                resize(
+                    (width) => barPlot(
+                        dataFinancing, 
+                        currencyFinancing, 
+                        "financing", 
+                        width
+                    )
+                )
             }
             <div class="bottom-panel">
                 <div class="text-section">
@@ -251,15 +263,15 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         </div>
         <div class="download-panel">
             ${  
-            Inputs.button(
-            "Download plot", 
-            {
-            reduce: () => downloadPNG(
-            "bars-financing",
-            "plot1_test"
-            )
-            }   
-            )
+                Inputs.button(
+                    "Download plot", 
+                    {
+                        reduce: () => downloadPNG(
+                            "bars-financing",
+                            formatString(`${indicatorFinancing} from ${donorFinancing}`, {fileMode: true})
+                        )
+                    }   
+                )
             }
         </div>
     </div>
@@ -279,12 +291,11 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             ${
             resize(
                 (width) => linePlot(
-                    queryFinancing, 
+                    dataFinancing, 
                     "financing", 
                     width,
                     {showIntlCommitment: commitmentFinancing}
-                    )
-                )
+                ))
             }
             <div class="bottom-panel">
                 <div class="text-section">
@@ -300,15 +311,15 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         </div>
         <div class="download-panel">
             ${
-            Inputs.button(
-            "Download plot", 
-            {
-            reduce: () => downloadPNG(
-            "lines-financing",
-            "plot2_test"
-            )
-            }
-            )
+                Inputs.button(
+                    "Download plot", 
+                    {
+                        reduce: () => downloadPNG(
+                            "lines-financing",
+                            formatString(`${indicatorFinancing} from ${donorFinancing}_gni_share`, {fileMode: true})
+                        )
+                    }
+                )
             }
         </div>
     </div>
@@ -322,7 +333,13 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         <div class="table-subtitle-panel">
             ${unitFinancingInput}
         </div>
-        ${table(queryFinancing, "financing", {unit: unitFinancing})}
+        ${
+            table(
+                dataFinancing, 
+                "financing", 
+                {unit: unitFinancing}
+            )
+        }
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Table 1.</p>
@@ -341,15 +358,15 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     </div>
     <div class="download-panel">
         ${
-        Inputs.button(
-        "Download data", 
-        {
-        reduce: () => downloadXLSX(
-        queryFinancing,
-        "file1_test"
-        )
-        }
-        )
+            Inputs.button(
+                "Download data", 
+                {
+                    reduce: () => downloadXLSX(
+                        dataFinancing,
+                        formatString(`${indicatorFinancing} from ${donorFinancing}`, {fileMode: true})
+                    )
+                }
+            )
         }
     </div>
 </div>

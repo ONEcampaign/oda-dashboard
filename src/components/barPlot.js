@@ -1,17 +1,12 @@
 import * as Plot from "npm:@observablehq/plot";
 import {utcYear} from "npm:d3-time";
-import {convertUint32Array} from "./convertUintArray.js";
-import {ONEPalette} from "./ONEPalette.js";
 import {getCurrencyLabel} from "./getCurrencyLabel.js";
-import {formatValue} from "./formatValue.js";
 
-export function barPlot(query, currency, mode, width) {
+export function barPlot(data, currency, mode, width) {
 
-    const arrayData = query.toArray()
-        .map((row) => ({
+    const arrayData = data.map((row) => ({
             ...row,
-            Year: new Date(row.Year, 1, 1),
-            Value: convertUint32Array(row.Value, 2)
+            Year: new Date(row.Year, 1, 1)
         }))
 
     let fillVar, colorScale

@@ -1,15 +1,12 @@
 import Flourish from "npm:@flourish/live-api"
-import {convertUint32Array} from "./convertUintArray.js";
 import * as d3 from "npm:d3";
 
-export function convertToArrayOfArrays(query) {
+export function convertToArrayOfArrays(data) {
 
-    const array = query.toArray()
-        .map((row) => row.toJSON())
-        .map(row => [
+    const array = data.map(row => [
             row.Sector,
             row.Sector === row.Subsector ? null : row.Subsector, // Empty subsector if it matches sector
-            row.Value = convertUint32Array(row.Value),
+            row.Value
         ]);
 
     const keys = Object.keys(array[0]);
@@ -21,10 +18,10 @@ export function convertToArrayOfArrays(query) {
     return arrayOfArrays;
 }
 
-export function customColors(query) {
+export function customColors(data) {
 
     const sectorTotals = d3.rollups(
-        query.toArray().map((row) => row.toJSON()),
+        data,
         v => d3.sum(v, d => d.Value),
         d => d.Sector
     );

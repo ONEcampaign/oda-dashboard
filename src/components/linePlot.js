@@ -1,13 +1,10 @@
 import * as Plot from "npm:@observablehq/plot";
 import {utcYear} from "npm:d3-time";
 import {timeFormat} from "npm:d3-time-format";
-import {convertUint32Array} from "./convertUintArray.js";
-import {ONEPalette} from "./ONEPalette.js";
 import {getCurrencyLabel} from "./getCurrencyLabel.js";
 import * as d3 from "npm:d3";
-import {formatValue} from "./formatValue.js";
 
-export function linePlot(query, mode, width,
+export function linePlot(data, mode, width,
                          {
                              sectorName = null,
                              currency = null,
@@ -15,15 +12,13 @@ export function linePlot(query, mode, width,
                              showIntlCommitment = false,
                          } = {}) {
 
-    let arrayData, labelSymbol, yValue, groupVar, customChannels, customFormat, colorScale
-    if (mode === "sectors") {
+    let arrayData = data.map((row) => ({
+        ...row,
+        Year: new Date(row.Year, 1, 1)
+    }))
 
-        arrayData = query.toArray()
-            .map((row) => ({
-                ...row,
-                Year: new Date(row.Year, 1, 1),
-                Value: convertUint32Array(row.Value, 2)
-            }))
+    let labelSymbol, yValue, groupVar, customChannels, customFormat, colorScale
+    if (mode === "sectors") {
 
         labelSymbol = getCurrencyLabel(currency, {})
         yValue = "Value"
@@ -111,12 +106,6 @@ export function linePlot(query, mode, width,
                 range: ["#1A9BA3", "#FF7F4C"],
             }
         }
-
-        arrayData = query.toArray().map((row) => ({
-            ...row,
-            Year: new Date(row.Year, 1, 1),
-            [yValue]: convertUint32Array(row[yValue], 2)
-        }));
     }
 
 
@@ -128,7 +117,7 @@ export function linePlot(query, mode, width,
         marginTop: 25,
         marginRight: 25,
         marginBottom: 25,
-        marginLeft: 75,
+        marginLeft: mode === "sectors" ? 75 : 50,
         x: {
             inset: 10,
             label: null,

@@ -7,6 +7,8 @@ import {formatString} from "./components/formatString.js";
 import {uniqueValuesRecipients} from "./components/uniqueValuesRecipients.js";
 import {rangeInput} from "./components/rangeInput.js";
 
+import {convertUint32Array} from "./components/convertUintArray.js";
+
 import {barPlot} from "./components/barPlot.js";
 import {linePlot} from "./components/linePlot.js";
 import {table} from "./components/table.js";
@@ -158,10 +160,17 @@ const queryRecipientsParams = [
     indicatorRecipients,
     indicatorRecipients,
     indicatorRecipients,
-
 ];
 
 const queryRecipients = await db.query(queryRecipientsString, queryRecipientsParams);
+
+const dataRecipients = queryRecipients.toArray()
+    .map((row) => ({
+        ...row,
+        ["Value"]: convertUint32Array(row["Value"]),
+        ["GNI Share"]: convertUint32Array(row["GNI Share"]),
+        ["Share of total"]: convertUint32Array(row["Share of total"])
+    }))
 ```
 
 ```js
@@ -242,9 +251,14 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                 }
             </div>
             ${
-            resize(
-            (width) => barPlot(queryRecipients, currencyRecipients, "recipients", width)
-            )
+                resize(
+                    (width) => barPlot(
+                        dataRecipients, 
+                        currencyRecipients, 
+                        "recipients", 
+                        width
+                    )
+                )
             }
             <div class="bottom-panel">
                 <div class="text-section">
@@ -260,15 +274,14 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         </div>
         <div class="download-panel">
             ${
-            Inputs.button(
-            "Download plot",
-            {
-            reduce: () => downloadPNG(
-            "bars-recipients",
-            "plot3_test"
-            )
-            }
-            )
+                Inputs.button(
+                    "Download plot", {
+                         reduce: () => downloadPNG(
+                             "bars-recipients",
+                             formatString(`ODA to ${recipientRecipients} from ${donorRecipients}`, {fileMode: true})
+                        )
+                    }
+                )
             }
         </div>
     </div>
@@ -285,13 +298,13 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                 }
             </div>
             ${
-            resize(
-            (width) => linePlot(
-            queryRecipients,
-            "recipients",
-            width
-            )
-            )
+                resize(
+                    (width) => linePlot(
+                        dataRecipients,
+                        "recipients",
+                        width
+                    )
+                )
             }
             <div class="bottom-panel">
                 <div class="text-section">
@@ -306,15 +319,14 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         </div>
         <div class="download-panel">
             ${
-            Inputs.button(
-            "Download plot",
-            {
-            reduce: () => downloadPNG(
-            "lines-recipients",
-            "plot4_test"
-            )
-            }
-            )
+                Inputs.button(
+                    "Download plot", {
+                        reduce: () => downloadPNG(
+                            "lines-recipients",
+                             formatString(`ODA to ${recipientRecipients} from ${donorRecipients}_share`, {fileMode: true})
+                        )
+                    }
+                )
             }
         </div>
     </div>
@@ -327,7 +339,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         <div class="table-subtitle-panel">
             ${unitRecipientsInput}
         </div>
-        ${table(queryRecipients, "recipients", {unit: unitRecipients})}
+        ${table(dataRecipients, "recipients", {unit: unitRecipients})}
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Table 2a.</p>
@@ -348,15 +360,14 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     </div>
     <div class="download-panel">
         ${
-        Inputs.button(
-        "Download data",
-        {
-        reduce: () => downloadXLSX(
-        queryRecipients,
-        "file2_test"
-        )
-        }
-        )
+            Inputs.button(
+                "Download data", {
+                    reduce: () => downloadXLSX(
+                        dataRecipients,
+                        formatString(`ODA to ${recipientRecipients} from ${donorRecipients}`, {fileMode: true})
+                    )
+                }
+            )
         }
     </div>
 </div>

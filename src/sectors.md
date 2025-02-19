@@ -8,6 +8,8 @@ import {getCurrencyLabel} from "./components/getCurrencyLabel.js";
 import {uniqueValuesSectors} from "./components/uniqueValuesSectors.js";
 import {rangeInput} from "./components/rangeInput.js";
 
+import {convertUint32Array} from "./components/convertUintArray.js";
+
 import {linePlot} from "./components/linePlot.js";
 import {table} from "./components/table.js";
 
@@ -163,6 +165,15 @@ const querySectorsParams = [
 ];
 
 const querySectors = await db.query(querySectorsString, querySectorsParams);
+
+const dataSectors = querySectors.toArray()
+    .map((row) => ({
+        ...row,
+        ["Value"]: convertUint32Array(row["Value"]),
+        ["GNI Share"]: convertUint32Array(row["GNI Share"]),
+        ["Share of total"]: convertUint32Array(row["Share of total"]),
+        ["Share of indicator"]: convertUint32Array(row["Share of indicator"])
+    }))
 ```
 
 ```js
@@ -189,14 +200,12 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
 ```js
 import {convertToArrayOfArrays, customColors} from "./components/flourishTreemap.js"
 
-convertToArrayOfArrays(querySectors)
-
 async function updateVisualisation() {
     
     // Update the Flourish visualisation with data
     window.vis.update({
         "data": { 
-            "data":  convertToArrayOfArrays(querySectors)
+            "data":  convertToArrayOfArrays(dataSectors)
         },
         "bindings": {
             "data": {
@@ -213,7 +222,7 @@ async function updateVisualisation() {
         "state": {
             ...window.vis.state,
             "color" : {
-                "categorical_custom_palette": customColors(querySectors)
+                "categorical_custom_palette": customColors(dataSectors)
             },
             "size_by_number_formatter": {
                 "prefix": getCurrencyLabel(currencySectors, {preffixOnly: true}),
@@ -318,15 +327,14 @@ const selectedSector = "Health";
         </div>
         <div class="download-panel">
             ${
-            Inputs.button(
-            "Download plot",
-            {
-            reduce: () => downloadPNG(
-            "treemap-sectors",
-            "plot5_test"
-            )
-            }
-            )
+                Inputs.button(
+                    "Download plot", {
+                        reduce: () => downloadPNG(
+                            "treemap-sectors",
+                            formatString(`ODA to ${recipientSectors} from ${donorSectors} by sector`, {fileMode: true})
+                        )
+                    }
+                )
             }
         </div>
     </div>
@@ -346,10 +354,9 @@ const selectedSector = "Health";
             ${
                 resize(
                     (width) => linePlot(
-                        querySectors,
+                        dataSectors,
                         "sectors",
-                        width,
-                        {
+                        width, {
                             sectorName: selectedSector,
                             currency: currencySectors,
                             breakdown: breakdownSectors
@@ -371,15 +378,14 @@ const selectedSector = "Health";
         </div>
         <div class="download-panel">
             ${
-            Inputs.button(
-            "Download plot",
-            {
-            reduce: () => downloadPNG(
-            "lines-sectors",
-            "plot4_test"
-            )
-            }
-            )
+                Inputs.button(
+                    "Download plot", {
+                        reduce: () => downloadPNG(
+                            "lines-sectors",
+                            formatString(`ODA to ${recipientSectors} from ${donorSectors} ${selectedSector} ${breakdownSectors === "Sector" ? "total" : "breakdown"}`, {fileMode: true})
+                        )
+                    }
+                )
             }
         </div>
     </div>
@@ -397,7 +403,7 @@ const selectedSector = "Health";
             }
             ${unitSectorsInput}
         </div>
-        ${table(querySectors, "sectors", {unit: unitSectors, sectorName: selectedSector})}
+        ${table(dataSectors, "sectors", {unit: unitSectors, sectorName: selectedSector})}
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>
@@ -412,15 +418,14 @@ const selectedSector = "Health";
     </div>
     <div class="download-panel">
         ${
-        Inputs.button(
-        "Download data",
-        {
-        reduce: () => downloadXLSX(
-        querySectors,
-        "file3_test"
-        )
-        }
-        )
+            Inputs.button(
+                "Download data", {
+                    reduce: () => downloadXLSX(
+                        dataSectors,
+                        formatString(`ODA to ${recipientSectors} from ${donorSectors} ${selectedSector}`, {fileMode: true})
+                    )
+                }
+            )
         }
     </div>
 </div>
