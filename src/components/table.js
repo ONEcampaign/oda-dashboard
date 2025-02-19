@@ -3,7 +3,7 @@ import {schemeObservable10} from "npm:d3-scale-chromatic";
 import {max} from "npm:d3-array";
 import {sparkbar} from "./sparkbar.js";
 import {ONEPalette} from "./ONEPalette.js";
-import {uint32ArrayToDecimal} from "./convertUintArray.js";
+import {convertUint32Array} from "./convertUintArray.js";
 
 export function table(query, mode, {
                         unit= null,
@@ -13,7 +13,7 @@ export function table(query, mode, {
     let arrayData = query.toArray()
         .map((row) => ({
             ...row,
-            [unit]: uint32ArrayToDecimal(row[unit], 2)
+            [unit]: convertUint32Array(row[unit], 2)
         }))
 
     let columnsToShow, valueColumns, colorMapping, colorColumn, maxValues

@@ -213,6 +213,23 @@ async function updateVisualisation() {
                 "suffix": " M"
             }
             
+        },
+        "metadata": {
+            "data": {
+                "0": {
+                    "type_id": "string$arbitrary_string",
+                    "type": "string"
+                },
+                "1": {
+                    "type_id": "string$arbitrary_string",
+                    "type": "string"
+                },
+                "2": {
+                    "type_id": "number$none_point",
+                    "type": "number",
+                    "output_format_id": "number$comma_point"
+                }
+            }
         }
     });
 }

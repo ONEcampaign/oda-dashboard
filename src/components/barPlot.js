@@ -1,6 +1,6 @@
 import * as Plot from "npm:@observablehq/plot";
 import {utcYear} from "npm:d3-time";
-import {uint32ArrayToDecimal} from "./convertUintArray.js";
+import {convertUint32Array} from "./convertUintArray.js";
 import {ONEPalette} from "./ONEPalette.js";
 import {getCurrencyLabel} from "./getCurrencyLabel.js";
 import {formatValue} from "./formatValue.js";
@@ -11,7 +11,7 @@ export function barPlot(query, currency, mode, width) {
         .map((row) => ({
             ...row,
             Year: new Date(row.Year, 1, 1),
-            Value: uint32ArrayToDecimal(row.Value, 2)
+            Value: convertUint32Array(row.Value, 2)
         }))
 
     let fillVar, colorScale

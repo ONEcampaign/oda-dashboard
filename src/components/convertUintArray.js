@@ -1,4 +1,4 @@
-export function uint32ArrayToDecimal(uint32Array, scale = 2) {
+export function convertUint32Array(uint32Array, scale = 2) {
     // Handle missing or non-Uint32Array inputs
     if (!uint32Array || !(uint32Array instanceof Uint32Array) || uint32Array.length !== 4) {
         // console.warn("Skipping conversion: Invalid Uint32Array(4) format", uint32Array);

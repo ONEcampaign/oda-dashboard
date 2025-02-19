@@ -1,7 +1,7 @@
 import * as Plot from "npm:@observablehq/plot";
 import {utcYear} from "npm:d3-time";
 import {timeFormat} from "npm:d3-time-format";
-import {uint32ArrayToDecimal} from "./convertUintArray.js";
+import {convertUint32Array} from "./convertUintArray.js";
 import {ONEPalette} from "./ONEPalette.js";
 import {getCurrencyLabel} from "./getCurrencyLabel.js";
 import * as d3 from "npm:d3";
@@ -22,7 +22,7 @@ export function linePlot(query, mode, width,
             .map((row) => ({
                 ...row,
                 Year: new Date(row.Year, 1, 1),
-                Value: uint32ArrayToDecimal(row.Value, 2)
+                Value: convertUint32Array(row.Value, 2)
             }))
 
         labelSymbol = getCurrencyLabel(currency, {})
@@ -115,7 +115,7 @@ export function linePlot(query, mode, width,
         arrayData = query.toArray().map((row) => ({
             ...row,
             Year: new Date(row.Year, 1, 1),
-            [yValue]: uint32ArrayToDecimal(row[yValue], 2)
+            [yValue]: convertUint32Array(row[yValue], 2)
         }));
     }
 

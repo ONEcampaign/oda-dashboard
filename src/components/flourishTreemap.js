@@ -1,4 +1,5 @@
 import Flourish from "npm:@flourish/live-api"
+import {convertUint32Array} from "./convertUintArray.js";
 import * as d3 from "npm:d3";
 
 export function convertToArrayOfArrays(query) {
@@ -6,9 +7,9 @@ export function convertToArrayOfArrays(query) {
     const array = query.toArray()
         .map((row) => row.toJSON())
         .map(row => [
-            row["Sector"],
-            row["Sector"] === row["Subsector"] ? null : row["Subsector"], // Empty subsector if it matches sector
-            row["Value"]
+            row.Sector,
+            row.Sector === row.Subsector ? null : row.Subsector, // Empty subsector if it matches sector
+            row.Value = convertUint32Array(row.Value),
         ]);
 
     const keys = Object.keys(array[0]);
