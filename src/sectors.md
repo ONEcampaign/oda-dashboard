@@ -93,13 +93,11 @@ const timeRangeSectorsInput = rangeInput(
 const timeRangeSectors = Generators.input(timeRangeSectorsInput)
 
 // Breakdown
-const breakdownSectorsInput = Inputs.radio(
-    new Map([
-        ["Total", "Sector"],
-        ["Breakdown", "Subsector"]
-    ]),
+const breakdownSectorsInput = Inputs.toggle(
     {
-        value: "Sector"
+        label: "Sector breakdown",
+        value: "Sector",
+        values: ["Subsector", "Sector"]
     }
 )
 const breakdownSectors = Generators.input(breakdownSectorsInput)
@@ -187,8 +185,6 @@ import {convertToArrayOfArrays, customColors} from "./components/flourishTreemap
 convertToArrayOfArrays(querySectors)
 
 async function updateVisualisation() {
-    
-    console.log("Vis: ", window.vis)
     
     // Update the Flourish visualisation with data
     window.vis.update({
@@ -313,27 +309,27 @@ const selectedSector = "Health";
             <h2 class="plot-title">
                 ${formatString(`ODA to ${recipientSectors} from ${donorSectors}`)}
             </h2>
-            ${
-            indicatorSectors == "Total"
-            ? html`<h3 class="plot-subtitle">${selectedSector}, bilateral and imputed multilateral</h3>`
-            : html`<h3 class="plot-subtitle">${selectedSector}, ${indicatorSectors}</h3>`
-            }
-            <div class="plot-settings">
+            <div class="plot-subtitle-panel">
+                ${
+                    indicatorSectors == "Total"
+                    ? html`<h3 class="plot-subtitle">${selectedSector}, bilateral and imputed multilateral</h3>`
+                    : html`<h3 class="plot-subtitle">${selectedSector}, ${indicatorSectors}</h3>`
+                }
                 ${breakdownSectorsInput}
             </div>
             ${
-            resize(
-            (width) => linePlot(
-            querySectors,
-            "sectors",
-            width,
-            {
-            sectorName: selectedSector,
-            currency: currencySectors,
-            breakdown: breakdownSectors
-            }
-            )
-            )
+                resize(
+                    (width) => linePlot(
+                        querySectors,
+                        "sectors",
+                        width,
+                        {
+                            sectorName: selectedSector,
+                            currency: currencySectors,
+                            breakdown: breakdownSectors
+                        }
+                    )
+                )
             }
             <div class="bottom-panel">
                 <div class="text-section">

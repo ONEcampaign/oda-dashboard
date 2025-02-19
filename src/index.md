@@ -103,11 +103,11 @@ const unitFinancingInput = Inputs.radio(
 const unitFinancing = Generators.input(unitFinancingInput)
 
 // Intenational commitments
-const intlCommitmentInput = Inputs.toggle(
+const commitmentFinancingInput = Inputs.toggle(
     {label: html`Int'l commitment`, value: false}
 )
 
-const intlCommitment = Generators.input(intlCommitmentInput)
+const commitmentFinancing = Generators.input(commitmentFinancingInput)
 ```
 
 ```js
@@ -269,7 +269,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     ? html`<h3 class="plot-subtitle"><span class="flow-label-subtitle">Flows</span> and <span class="ge-label-subtitle">grant equivalents</span> as a share of GNI</h3>`
                     : html`<h3 class="plot-subtitle">${typeFinancing}</h3>`
                 }
-                ${intlCommitmentInput}
+                ${commitmentFinancingInput}
             </div>
             ${
             resize(
@@ -277,7 +277,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     queryFinancing, 
                     "financing", 
                     width,
-                    {showIntlCommitment: intlCommitment}
+                    {showIntlCommitment: commitmentFinancing}
                     )
                 )
             }
