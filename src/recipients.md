@@ -92,14 +92,33 @@ const timeRangeRecipientsInput = rangeInput(
 const timeRangeRecipients = Generators.input(timeRangeRecipientsInput)
 
 // Unit
-const unitRecipientsInput = Inputs.radio(
-    ["Value", "Share of total", "GNI Share"],
+const unitRecipientsInput = Inputs.select(
+    new Map(
+        [
+            [`Million ${currencyRecipientsInput.value}`, "Value"],
+            ["GNI Share", "GNI Share"],
+            ["Share of total", "Share of total"]
+        ]
+    ),
     {
-        label: null,
-        value: "Value"
+        label: "Unit",
+        value: "Value",
     }
 )
+
 const unitRecipients = Generators.input(unitRecipientsInput)
+
+function updateUnitOptions() {
+    for (const o of unitRecipientsInput.querySelectorAll("option")) {
+        if (o.innerHTML === "Share of total" & indicatorRecipientsInput.value === "Total") {
+            o.setAttribute("disabled", "disabled");
+        }
+        else o.removeAttribute("disabled");
+    }
+}
+
+updateUnitOptions();
+indicatorRecipientsInput.addEventListener("input", updateUnitOptions);
 ```
 
 ```js
@@ -215,11 +234,13 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <h2 class="plot-title">
                 ${formatString(`ODA to ${recipientRecipients} from ${donorRecipients}`)}
             </h2>
-            ${
-            indicatorRecipients == "Total"
-            ? html`<h3 class="plot-subtitle"><span class="bilateral-label-subtitle">Bilateral</span> and <span class="multilateral-label-subtitle">imputed multilateral</span></h3>`
-            : html`<h3 class="plot-subtitle">${indicatorRecipients}</h3>`
-            }
+            <div class="plot-subtitle-panel">
+                ${
+                    indicatorRecipients == "Total"
+                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label-subtitle">Bilateral</span> and <span class="multilateral-label-subtitle">imputed multilateral</span></h3>`
+                    : html`<h3 class="plot-subtitle">${indicatorRecipients}</h3>`
+                }
+            </div>
             ${
             resize(
             (width) => barPlot(queryRecipients, currencyRecipients, "recipients", width)
@@ -228,7 +249,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Table 2a.</p>
-                    <p class="plot-note">ODA values in million ${pricesRecipients} ${currencyRecipients}.</pclass>
+                    <p class="plot-note">ODA values in million ${pricesRecipients} ${currencyRecipients}.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
@@ -256,11 +277,13 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <h2 class="plot-title">
                 ${formatString(`ODA to ${recipientRecipients} from ${donorRecipients}`)}
             </h2>
-            ${
-            indicatorRecipients == "Total"
-            ? html`<h3 class="plot-subtitle"><span class="bilateral-label-subtitle">Bilateral</span> and <span class="multilateral-label-subtitle">imputed multilateral</span> as a share of total ODA</h3>`
-            : html`<h3 class="plot-subtitle">${indicatorRecipients} as a share of all ODA</h3>`
-            }
+            <div class="plot-subtitle-panel">
+                ${
+                    indicatorRecipients == "Total"
+                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label-subtitle">Bilateral</span> and <span class="multilateral-label-subtitle">imputed multilateral</span> as a share of total ODA</h3>`
+                    : html`<h3 class="plot-subtitle">${indicatorRecipients} as a share of all ODA</h3>`
+                }
+            </div>
             ${
             resize(
             (width) => linePlot(
@@ -301,14 +324,20 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         <h2 class="table-title">
             ${formatString(`ODA to ${recipientRecipients} from ${donorRecipients}`)}
         </h2>
-        <div class="table-settings">
+        <div class="table-subtitle-panel">
             ${unitRecipientsInput}
         </div>
         ${table(queryRecipients, "recipients", {unit: unitRecipients})}
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Table 2a.</p>
-                <p class="plot-note">ODA values in million ${pricesRecipients} ${currencyRecipients}. GNI share refers to the Gross National Income of ${formatString(recipientRecipients)}.</pclass>
+                ${
+                    unitRecipients === "Value" 
+                    ? html`<p class="plot-note">ODA values in million ${pricesRecipients} ${currencyRecipients}.</p>`
+                    : unitRecipients === "GNI Share" 
+                        ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(recipientRecipients)}.</p>`
+                        : html` `
+                }
             </div>
             <div class="logo-section">
                 <a href="https://data.one.org/" target="_blank">

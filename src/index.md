@@ -93,10 +93,15 @@ const timeRangeFinancingInput = rangeInput(
 const timeRangeFinancing = Generators.input(timeRangeFinancingInput)
 
 // Unit
-const unitFinancingInput = Inputs.radio(
-    ["Value", "GNI Share"],
+const unitFinancingInput = Inputs.select(
+    new Map(
+        [
+            [`Million ${currencyFinancingInput.value}`, "Value"],
+            ["GNI Share", "GNI Share"]
+        ]
+    ),
     {
-        label: null,
+        label: "Unit",
         value: "Value"
     }
 )
@@ -284,7 +289,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Table 1.</p>
-                    <p class="plot-note">GNI share refers to the Gross National Income of ${formatString(donorFinancing)}.</p>
+                    <p class="plot-note">ODA values as a share of the GNI of ${formatString(donorFinancing)}.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
@@ -314,14 +319,18 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         <h2 class="table-title">
             ${formatString(`${indicatorFinancing} from ${donorFinancing}`)}
         </h2>
-        <div class="table-settings">
+        <div class="table-subtitle-panel">
             ${unitFinancingInput}
         </div>
         ${table(queryFinancing, "financing", {unit: unitFinancing})}
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Table 1.</p>
-                <p class="plot-note">ODA values in million ${pricesFinancing} ${currencyFinancing}. GNI share refers to the Gross National Income of ${formatString(donorFinancing)}.</p>
+                ${
+                    unitFinancing === "Value" 
+                    ? html`<p class="plot-note">ODA values in million ${pricesFinancing} ${currencyFinancing}.</p>`
+                    : html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(donorFinancing)}.</p>`
+                }
             </div>
             <div class="logo-section">
                 <a href="https://data.one.org/" target="_blank">

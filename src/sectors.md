@@ -103,10 +103,17 @@ const breakdownSectorsInput = Inputs.toggle(
 const breakdownSectors = Generators.input(breakdownSectorsInput)
 
 // Unit
-const unitSectorsInput = Inputs.radio(
-    ["Value", "Share of total", "Share of indicator", "GNI Share"],
+const unitSectorsInput = Inputs.select(
+    new Map(
+        [
+            [`Million ${currencySectorsInput.value}`, "Value"],
+            ["GNI Share", "GNI Share"],
+            ["Share of total", "Share of total"],
+            ["Share of indicator", "Share of indicator"]
+        ]
+    ),
     {
-        label: null,
+        label: "Unit",
         value: "Value"
     }
 )
@@ -289,11 +296,13 @@ const selectedSector = "Health";
             <h2 class="plot-title">
                 ${formatString(`ODA to ${recipientSectors} from ${donorSectors} by sector`)}
             </h2>
-            ${
-            indicatorSectors == "Total"
-            ? html`<h3 class="plot-subtitle">Bilateral and imputed multilateral, ${timeRangeSectors[0] === timeRangeSectors[1] ? timeRangeSectors[0] : `${timeRangeSectors[0]}-${timeRangeSectors[1]}`}</h3>`
-            : html`<h3 class="plot-subtitle">${indicatorSectors}, ${timeRangeSectors[0] === timeRangeSectors[1] ? timeRangeSectors[0] : `${timeRangeSectors[0]}-${timeRangeSectors[1]}`}</h3>`
-            }
+            <div class="plot-subtitle-panel">
+                ${
+                    indicatorSectors == "Total"
+                    ? html`<h3 class="plot-subtitle">Bilateral and imputed multilateral, ${timeRangeSectors[0] === timeRangeSectors[1] ? timeRangeSectors[0] : `${timeRangeSectors[0]}-${timeRangeSectors[1]}`}</h3>`
+                    : html`<h3 class="plot-subtitle">${indicatorSectors}, ${timeRangeSectors[0] === timeRangeSectors[1] ? timeRangeSectors[0] : `${timeRangeSectors[0]}-${timeRangeSectors[1]}`}</h3>`
+                }
+            </div>
             <div id="flourish-treemap"></div>
             <div class="bottom-panel">
                 <div class="text-section">
@@ -380,12 +389,12 @@ const selectedSector = "Health";
         <h2 class="table-title">
             ${formatString(`ODA to ${recipientSectors} from ${donorSectors}, ${indicatorSectors}`)}
         </h2>
-        ${
-        indicatorSectors == "Total"
-        ? html`<h3 class="table-subtitle">Breakdown of ${selectedSector}, bilateral and imputed multilateral</h3>`
-        : html`<h3 class="table-subtitle">Breakdown of ${selectedSector}, ${indicatorSectors}</h3>`
-        }
-        <div class="table-settings">
+        <div class="table-subtitle-panel">
+            ${
+                indicatorSectors == "Total"
+                ? html`<h3 class="table-subtitle">Breakdown of ${selectedSector}, bilateral and imputed multilateral</h3>`
+                : html`<h3 class="table-subtitle">Breakdown of ${selectedSector}, ${indicatorSectors}</h3>`
+            }
             ${unitSectorsInput}
         </div>
         ${table(querySectors, "sectors", {unit: unitSectors, sectorName: selectedSector})}

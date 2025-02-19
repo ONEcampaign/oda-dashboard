@@ -222,10 +222,6 @@ select, input {
     margin-bottom: 10px;
 }
 
-.plot-settings {
-    margin:0 0 20px 20px;
-}
-
 .bottom-panel {
     display: flex;
     flex-flow: row nowrap;
@@ -274,24 +270,27 @@ select, input {
     font-weight: bold;
     margin-bottom: 10px;
 }
+.table-subtitle-panel {
+    display: flex;
+    flex-flow: row wrap;
+    column-gap: 200px;
+    row-gap: 10px;
+    margin-bottom: 30px;
+}
 .table-subtitle {
     font-size: var(--size-l) !important;
     color: var(--darkGrey) !important;
     font-weight: normal !important;
-    margin-bottom: 10px;
 }
 
-.table-settings{
-    margin:0 0 20px 20px;
+.table-subtitle-panel > form {
+    margin-left: 20px !important;
 }
-.table-settings > form > label {
-    font-weight: bold;
-    max-width: 60px;
+.table-subtitle-panel > form > label {
+    width: 50px !important;
 }
-.table-settings > form > div {
-    display: flex;
-    flex-flow: row nowrap;
-    width: max-content;
+.table-subtitle-panel > form > select {
+    width: 150px !important;
 }
 
 [class^="inputs-"][class$="-table"] thead th {
