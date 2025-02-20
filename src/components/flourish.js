@@ -1,5 +1,5 @@
 import Flourish from "npm:@flourish/live-api"
-import * as d3 from "npm:d3";
+import {sum, rollups} from "npm:d3-array"
 
 export function convertToArrayOfArrays(data) {
 
@@ -20,9 +20,9 @@ export function convertToArrayOfArrays(data) {
 
 export function customColors(data) {
 
-    const sectorTotals = d3.rollups(
+    const sectorTotals = rollups(
         data,
-        v => d3.sum(v, d => d.Value),
+        v => sum(v, d => d.Value),
         d => d.Sector
     );
     sectorTotals.sort((a, b) => b[1] - a[1]);
@@ -34,7 +34,7 @@ export function customColors(data) {
 }
 
 
-export async function loadVisualisation(baseID, containerName){
+async function loadVisualisation(baseID, containerName){
 
     const response = await fetch(`https://public.flourish.studio/visualisation/${baseID}/visualisation.json`);
     const visJson = await response.json();
@@ -49,5 +49,5 @@ export async function loadVisualisation(baseID, containerName){
     window.vis = new Flourish.Live(options);
 }
 
-const vis = loadVisualisation(21615459, "flourish-treemap")
+export const vis = loadVisualisation(21615459, "flourish-treemap")
 

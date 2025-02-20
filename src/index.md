@@ -1,20 +1,14 @@
 ```js 
 import {DuckDBClient} from "npm:@observablehq/duckdb";
 
-import {setCustomColors} from "./components/setCustomColors.js";
-import {formatString} from "./components/formatString.js";
+import {setCustomColors, formatString, convertUint32Array} from "./components/utils.js";
 
 import {uniqueValuesFinancing} from "./components/uniqueValuesFinancing.js";
 import {rangeInput} from "./components/rangeInput.js";
 
-import {convertUint32Array} from "./components/convertUintArray.js";
+import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
 
-import {barPlot} from "./components/barPlot.js";
-import {linePlot} from "./components/linePlot.js";
-import {table} from "./components/table.js";
-
-import {downloadPNG} from './components/downloadPNG.js';
-import {downloadXLSX} from "./components/downloadXLSX.js";
+import {downloadPNG, downloadXLSX} from './components/downloads.js';
 ```
 
 ```js
@@ -334,7 +328,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             ${unitFinancingInput}
         </div>
         ${
-            table(
+            sparkbarTable(
                 dataFinancing, 
                 "financing", 
                 {unit: unitFinancing}

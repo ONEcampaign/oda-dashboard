@@ -1,20 +1,15 @@
 ```js 
 import {DuckDBClient} from "npm:@observablehq/duckdb";
 
-import {setCustomColors} from "./components/setCustomColors.js";
-import {formatString} from "./components/formatString.js";
-import {getCurrencyLabel} from "./components/getCurrencyLabel.js";
+import {setCustomColors, formatString, getCurrencyLabel, convertUint32Array} from "./components/utils.js";
 
 import {uniqueValuesSectors} from "./components/uniqueValuesSectors.js";
 import {rangeInput} from "./components/rangeInput.js";
 
-import {convertUint32Array} from "./components/convertUintArray.js";
+import {convertToArrayOfArrays, customColors, vis} from "./components/flourish.js"
+import {linePlot, sparkbarTable} from "./components/visuals.js";
 
-import {linePlot} from "./components/linePlot.js";
-import {table} from "./components/table.js";
-
-import {downloadPNG} from './components/downloadPNG.js';
-import {downloadXLSX} from "./components/downloadXLSX.js";
+import {downloadPNG, downloadXLSX} from './components/downloads.js';
 ```
 
 ```js
@@ -198,14 +193,13 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
 ```
 
 ```js
-import {convertToArrayOfArrays, customColors} from "./components/flourishTreemap.js"
 
 async function updateVisualisation() {
-    
+
     // Update the Flourish visualisation with data
     window.vis.update({
-        "data": { 
-            "data":  convertToArrayOfArrays(dataSectors)
+        "data": {
+            "data": convertToArrayOfArrays(dataSectors)
         },
         "bindings": {
             "data": {
@@ -221,14 +215,14 @@ async function updateVisualisation() {
         },
         "state": {
             ...window.vis.state,
-            "color" : {
+            "color": {
                 "categorical_custom_palette": customColors(dataSectors)
             },
             "size_by_number_formatter": {
                 "prefix": getCurrencyLabel(currencySectors, {preffixOnly: true}),
                 "suffix": " M"
             }
-            
+
         },
         "metadata": {
             "data": {
@@ -403,7 +397,7 @@ const selectedSector = "Health";
             }
             ${unitSectorsInput}
         </div>
-        ${table(dataSectors, "sectors", {unit: unitSectors, sectorName: selectedSector})}
+        ${sparkbarTable(dataSectors, "sectors", {unit: unitSectors, sectorName: selectedSector})}
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>

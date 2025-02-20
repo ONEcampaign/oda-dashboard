@@ -203,19 +203,19 @@ select, input {
     font-weight: bold;
 }
 .flow-label-subtitle {
-    color: #9ACACD;
+    color: var(--teal4);
 }
 
 .ge-label-subtitle {
-    color: #17858C;
+    color: var(--teal0);
 }
 
 .bilateral-label-subtitle {
-    color: #1A9BA3;
+    color: var(--teal1);
 }
 
 .multilateral-label-subtitle {
-    color: #FF7F4C;
+    color: var(--orange1);
 }
 
 #lines-sectors > .plot-subtitle {

@@ -1,4 +1,5 @@
 import {toPng} from 'npm:html-to-image';
+import {utils, writeFile} from "npm:xlsx";
 
 export function downloadPNG(elementId, filename) {
     const element = document.getElementById(elementId);
@@ -17,4 +18,13 @@ export function downloadPNG(elementId, filename) {
         .catch((error) => {
             console.error('Error capturing the element as an image:', error);
         });
+}
+
+// https://observablehq.observablehq.cloud/pangea/party/xlsx-downloads
+export function downloadXLSX(data, filename) {
+
+    const worksheet = utils.json_to_sheet(data);
+    const workbook = utils.book_new();
+    utils.book_append_sheet(workbook, worksheet);
+    writeFile(workbook, `${filename}.xlsx`);
 }

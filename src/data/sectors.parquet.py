@@ -42,11 +42,11 @@ schema = pa.schema([
     ("GNI Share", pa.decimal128(6, 2))
 ])
 
-table = pa.Table.from_pandas(df, schema=schema, preserve_index=False)
+sparkbarTable = pa.Table.from_pandas(df, schema=schema, preserve_index=False)
 
 # Write PyArrow Table to Parquet
 buf = pa.BufferOutputStream()
-pq.write_table(table, buf, compression="snappy")
+pq.write_table(sparkbarTable, buf, compression="snappy")
 
 # Get the Parquet bytes
 buf_bytes = buf.getvalue().to_pybytes()
