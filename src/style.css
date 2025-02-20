@@ -199,23 +199,24 @@ select, input {
     width: auto !important;
     flex-direction: row-reverse;
 }
-[class$="-label-subtitle"] {
+
+.subtitle-label {
     font-weight: bold;
 }
-.flow-label-subtitle {
-    color: var(--teal4);
+.flow-label {
+    color: var(--flow);
 }
 
-.ge-label-subtitle {
-    color: var(--teal0);
+.ge-label {
+    color: var(--ge);
 }
 
-.bilateral-label-subtitle {
-    color: var(--teal1);
+.bilateral-label {
+    color: var(--bilateral);
 }
 
-.multilateral-label-subtitle {
-    color: var(--orange1);
+.multilateral-label {
+    color: var(--multilateral);
 }
 
 #lines-sectors > .plot-subtitle {

@@ -1,7 +1,8 @@
 ```js 
 import {DuckDBClient} from "npm:@observablehq/duckdb";
 
-import {setCustomColors, formatString, convertUint32Array} from "./components/utils.js";
+import {setCustomColors} from "./components/colors.js"
+import {formatString, convertUint32Array} from "./components/utils.js";
 
 import {uniqueValuesFinancing} from "./components/uniqueValuesFinancing.js";
 import {rangeInput} from "./components/rangeInput.js";
@@ -229,7 +230,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="plot-subtitle-panel">
                 ${
                     typeFinancing == "Official Definition"
-                    ? html`<h3 class="plot-subtitle"><span class="flow-label-subtitle">Flows</span> and <span class="ge-label-subtitle">grant equivalents</span></h3>`
+                    ? html`<h3 class="plot-subtitle"><span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span></h3>`
                     : html`<h3 class="plot-subtitle">${typeFinancing}</h3>`
                 }
             </div>

@@ -1,7 +1,8 @@
 ```js 
 import {DuckDBClient} from "npm:@observablehq/duckdb";
 
-import {setCustomColors, formatString, convertUint32Array} from "./components/utils.js";
+import {setCustomColors} from "./components/colors.js"
+import {formatString, convertUint32Array} from "./components/utils.js";
 
 import {uniqueValuesRecipients} from "./components/uniqueValuesRecipients.js";
 import {rangeInput} from "./components/rangeInput.js";
@@ -240,7 +241,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="plot-subtitle-panel">
                 ${
                     indicatorRecipients == "Total"
-                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label-subtitle">Bilateral</span> and <span class="multilateral-label-subtitle">imputed multilateral</span></h3>`
+                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span></h3>`
                     : html`<h3 class="plot-subtitle">${indicatorRecipients}</h3>`
                 }
             </div>

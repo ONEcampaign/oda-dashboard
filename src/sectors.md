@@ -1,7 +1,8 @@
 ```js 
 import {DuckDBClient} from "npm:@observablehq/duckdb";
 
-import {setCustomColors, formatString, getCurrencyLabel, convertUint32Array} from "./components/utils.js";
+import {setCustomColors} from "./components/colors.js"
+import {formatString, getCurrencyLabel, convertUint32Array} from "./components/utils.js";
 
 import {uniqueValuesSectors} from "./components/uniqueValuesSectors.js";
 import {rangeInput} from "./components/rangeInput.js";
@@ -416,7 +417,7 @@ const selectedSector = "Health";
                 "Download data", {
                     reduce: () => downloadXLSX(
                         dataSectors,
-                        formatString(`ODA to ${recipientSectors} from ${donorSectors} ${selectedSector}`, {fileMode: true})
+                        formatString(`ODA to ${recipientSectors} from ${donorSectors} by sector`, {fileMode: true})
                     )
                 }
             )

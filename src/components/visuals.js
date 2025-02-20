@@ -6,7 +6,7 @@ import {timeFormat} from "npm:d3-time-format";
 import {sum, rollups, descending, min, max} from "npm:d3-array"
 import {schemeObservable10} from "npm:d3-scale-chromatic";
 import {getCurrencyLabel, formatValue} from "./utils.js";
-import {ONEPalette, paletteFinancing, paletteRecipients, paletteSectors} from "./colorPalettes.js";
+import {customPalette, paletteFinancing, paletteRecipients, paletteSectors} from "./colors.js";
 
 export function linePlot(data, mode, width,
                          {
@@ -149,7 +149,7 @@ export function linePlot(data, mode, width,
             showIntlCommitment
                 ? ruleY( [0.7],
                     {
-                        stroke: ONEPalette.burgundy2,
+                        stroke: customPalette.intlCommitment,
                         strokeDasharray: [5, 5],
                         strokeWidth: 1,
 
@@ -164,7 +164,7 @@ export function linePlot(data, mode, width,
                         x: "Year",
                         y: 0.7,
                         text: ["International commitment"],
-                        fill: ONEPalette.burgundy2,
+                        fill: customPalette.intlCommitment,
                         textAnchor: "start",
                         dy: -10
                     }
@@ -350,7 +350,7 @@ export function sparkbarTable(data, mode, {
 
     const getColorForType = (type) => {
         const index = colorMapping.domain.indexOf(type);
-        return index !== -1 ? colorMapping.range[index] : ONEPalette.lightGrey; // Default color if no match
+        return index !== -1 ? colorMapping.range[index] : customPalette.lightGrey; // Default color if no match
     };
 
     return table(tableData, {
@@ -436,7 +436,7 @@ function sparkbar(fillColor, alignment, globalMax) {
                   position: absolute;
                   height: 100%;
                   width: 1px;
-                  background: ${hex2rgb(ONEPalette.midGrey, 0.5)};
+                  background: ${hex2rgb(customPalette.midGrey, 0.5)};
                   left: 0%;
                   box-sizing: border-box;
                 `
@@ -445,7 +445,7 @@ function sparkbar(fillColor, alignment, globalMax) {
                       position: absolute;
                       height: 100%;
                       width: 1px;
-                      background: ${hex2rgb(ONEPalette.midGrey, 0.5)};
+                      background: ${hex2rgb(customPalette.midGrey, 0.5)};
                       right: 0;
                       box-sizing: border-box;
                     `
@@ -453,7 +453,7 @@ function sparkbar(fillColor, alignment, globalMax) {
                       position: absolute;
                       height: 100%;
                       width: 1px;
-                      background: ${hex2rgb(ONEPalette.midGrey, 0.5)};
+                      background: ${hex2rgb(customPalette.midGrey, 0.5)};
                       left: 0;
                       box-sizing: border-box;
                     `;
@@ -485,7 +485,7 @@ function sparkbar(fillColor, alignment, globalMax) {
                     z-index: 1;
                     font-size: var(--size-m);
                     color: black;
-                    text-shadow: .5px .5px 0 ${ONEPalette.lightGrey};
+                    text-shadow: .5px .5px 0 ${customPalette.lightGrey};
                     padding: 0 3px;">
                     ${formatValue(x).label}
                 </span>

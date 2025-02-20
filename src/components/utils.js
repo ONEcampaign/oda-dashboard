@@ -1,14 +1,3 @@
-import {ONEPalette} from "./colorPalettes.js"
-
-export function setCustomColors() {
-    const root = document.documentElement;
-
-    // Set CSS variables for each color in the palette
-    Object.entries(ONEPalette).forEach(([key, value]) => {
-        root.style.setProperty(`--${key}`, value);
-    });
-}
-
 export function convertUint32Array(uint32Array, scale = 2) {
     // Handle missing or non-Uint32Array inputs
     if (!uint32Array || !(uint32Array instanceof Uint32Array) || uint32Array.length !== 4) {
