@@ -1,4 +1,4 @@
-import {plot, line, rectY, ruleY, text, tip, pointer } from "npm:@observablehq/plot";
+import * as Plot from "npm:@observablehq/plot";
 import {table} from "npm:@observablehq/inputs";
 import {html} from "npm:htl"
 import {utcYear} from "npm:d3-time";
@@ -109,7 +109,7 @@ export function linePlot(data, mode, width,
 
     const formatYear = timeFormat("%Y");
 
-    return plot({
+    return Plot.plot({
         width: width,
         ...(mode !== "sectors" && {height: width * 0.5}),
         marginTop: 25,
@@ -136,7 +136,7 @@ export function linePlot(data, mode, width,
         color: colorScale,
 
         marks: [
-            line(arrayData, {
+            Plot.line(arrayData, {
                 x: "Year",
                 y: yValue,
                 z: groupVar,
@@ -147,7 +147,7 @@ export function linePlot(data, mode, width,
 
             // Horizontal line to show international commitment
             showIntlCommitment
-                ? ruleY( [0.7],
+                ? Plot.ruleY( [0.7],
                     {
                         stroke: customPalette.intlCommitment,
                         strokeDasharray: [5, 5],
@@ -158,7 +158,7 @@ export function linePlot(data, mode, width,
                 : null,
 
             showIntlCommitment
-                ? text(
+                ? Plot.text(
                     arrayData.filter(d => d.Year === min(arrayData, d => d.Year)),
                     {
                         x: "Year",
@@ -172,9 +172,9 @@ export function linePlot(data, mode, width,
                 :
                 null,
 
-            tip(
+            Plot.tip(
                 arrayData,
-                pointer({
+                Plot.pointer({
                     x: "Year",
                     y: yValue,
                     stroke: groupVar,
@@ -205,7 +205,7 @@ export function barPlot(data, currency, mode, width) {
         colorScale = paletteRecipients
     }
 
-    return plot({
+    return Plot.plot({
         width: width,
         height: width * .5,
         marginTop: 25,
@@ -231,7 +231,7 @@ export function barPlot(data, currency, mode, width) {
         },
         color: colorScale,
         marks: [
-            rectY(
+            Plot.rectY(
                 arrayData, {
                     x: "Year",
                     y: "Value",
@@ -241,21 +241,23 @@ export function barPlot(data, currency, mode, width) {
             ),
 
             // Horizontal line at 0
-            ruleY(
+            Plot.ruleY(
                 [0], {
                     stroke: "black",
                     strokeWidth: .5
                 }
             ),
-            tip(
+            Plot.tip(
                 arrayData,
-                pointer({
-                    x: "Year",
-                    y: "Value",
-                    fill: fillVar,
-                    lineHeight: 1.25,
-                    fontSize: 12
-                })
+                Plot.pointer(
+                    Plot.stackY({
+                        x: "Year",
+                        y: "Value",
+                        fill: fillVar,
+                        lineHeight: 1.25,
+                        fontSize: 12
+                    })
+                )
             )
         ]
     })
