@@ -89,6 +89,9 @@ export function getCurrencyLabel(unit, {
     if (preffixOnly) {
         return `${prefix}`
     }
+    if (suffixOnly) {
+        return `${suffix}`
+    }
     if (value === "") {
         return `${prefix} ${suffix}`
     }
