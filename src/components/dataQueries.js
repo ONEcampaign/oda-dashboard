@@ -99,8 +99,8 @@ async function absoluteGenderQuery(
                 '${getKeysByValue(donorMapping, donor)}' AS donor,
                 '${getKeysByValue(recipientMapping, recipient)}' AS recipient,
                 CASE
-                    WHEN indicator = 2 THEN 'Principal focus'
-                    WHEN indicator = 1 THEN 'Significant focus'
+                    WHEN indicator = 2 THEN 'Main focus'
+                    WHEN indicator = 1 THEN 'Secondary focus'
                     WHEN indicator = 0 THEN 'Not targeted'
                 END AS Indicator,
                 SUM(converted_value) as Value,
@@ -163,8 +163,8 @@ async function relativeGenderQuery(
                 '${getKeysByValue(donorMapping, donor)}' AS donor,
                 '${getKeysByValue(recipientMapping, recipient)}' AS recipient,
                 CASE
-                    WHEN indicator = 2 THEN 'Principal focus'
-                    WHEN indicator = 1 THEN 'Significant focus'
+                    WHEN indicator = 2 THEN 'Main focus'
+                    WHEN indicator = 1 THEN 'Secondary focus'
                     WHEN indicator = 0 THEN 'Not targeted'
                 END AS Indicator,
                 ROUND(100.0 * f.value / t.total_value, 2) AS Value,

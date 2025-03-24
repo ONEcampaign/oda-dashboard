@@ -1,6 +1,6 @@
 ```js 
 import {setCustomColors} from "./components/colors.js"
-import {formatString, convertUint32Array, name2CodeMap} from "./components/utils.js";
+import {formatString, getCurrencyLabel, name2CodeMap, getKeysByValue} from "./components/utils.js";
 
 import {genderQueries} from "./components/dataQueries.js"
 
@@ -49,13 +49,13 @@ const recipient = Generators.input(recipientInput);
 // Indicator
 const indicatorInput = Inputs.select(
     new Map([
-        ["Gender total", 3],
-        ["Principal focus", 2],
-        ["Significant focus", 1],
+        ["Main + secondary focus", 3],
+        ["Main focus", 2],
+        ["Secondary focus", 1],
         ["Not targeted", 0],
     ]),
     {
-        label: "Indicator",
+        label: "Gender is",
         value: 3
     })
 const indicator = Generators.input(indicatorInput);
@@ -186,13 +186,22 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         ${timeRangeInput}
     </div>
 </div>
-${Inputs.table(relativeData)}
 <div class="grid grid-cols-2">
     <div class="card">
         <div class="plot-container" id="bars-gender">
             <h2 class="plot-title">
+                ODA to ${getKeysByValue(recipientMapping, recipient)} from ${getKeysByValue(donorMapping, donor)}
             </h2>
             <div class="plot-subtitle-panel">
+                ${
+                    indicator === 3 
+                        ? html`<h3 class="plot-subtitle"> Gender as <span class="gender-main subtitle-label">main</span> and <span class="gender-secondary subtitle-label">secondary</span> focus</h3>`
+                        : indicator === 2
+                            ? html`<h3 class="plot-subtitle"> Gender as main focus</h3>`
+                            : indicator === 1
+                                ? html`<h3 class="plot-subtitle"> Gender as secondary focus</h3>`
+                                : html`<h3 class="plot-subtitle"> Aid that does not target gender</h3>`
+                }
             </div>
             ${
                 resize(
@@ -205,6 +214,10 @@ ${Inputs.table(relativeData)}
                 )
             }
             <div class="bottom-panel">
+                <div class="text-section">
+                    <p class="plot-source">Source: OECD Creditor Reporting System.</p>
+                    <p class="plot-note">ODA values in million ${prices} ${getCurrencyLabel(currency, {preffixOnly: true})}.</p>
+                </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
                         <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
@@ -213,13 +226,33 @@ ${Inputs.table(relativeData)}
             </div>
         </div>
         <div class="download-panel">
+            ${
+                Inputs.button(
+                    "Download plot", {
+                        reduce: () => downloadPNG(
+                            "bars-gender",
+                             formatString(`gender ODA to ${getKeysByValue(donorMapping, donor)} from ${getKeysByValue(recipientMapping, recipient)}`, {fileMode: true})
+                        )
+                    }
+                )
+            }
         </div>
     </div>
     <div class="card">
-        <div class="plot-container" id="bars-gender">
+        <div class="plot-container" id="lines-gender">
             <h2 class="plot-title">
+                ODA to ${getKeysByValue(recipientMapping, recipient)} from ${getKeysByValue(donorMapping, donor)}
             </h2>
             <div class="plot-subtitle-panel">
+                ${
+                    indicator === 3 
+                        ? html`<h3 class="plot-subtitle"> Gender as <span class="gender-main subtitle-label">main</span> and <span class="gender-secondary subtitle-label">secondary</span> focus as a share of total aid</h3>`
+                        : indicator === 2
+                            ? html`<h3 class="plot-subtitle"> Gender as main focus as a share of total aid</h3>`
+                            : indicator === 1
+                                ? html`<h3 class="plot-subtitle"> Gender as secondary focus as a share of total aid</h3>`
+                                : html`<h3 class="plot-subtitle"> Aid that does not target gender as a share of total aid</h3>`
+                }
             </div>
             ${
                 resize(
@@ -231,6 +264,9 @@ ${Inputs.table(relativeData)}
                 )
             }
             <div class="bottom-panel">
+                <div class="text-section">
+                    <p class="plot-source">Source: OECD Creditor Reporting System.</p>
+                </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
                         <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
@@ -239,6 +275,16 @@ ${Inputs.table(relativeData)}
             </div>
         </div>
         <div class="download-panel">
+            ${
+                Inputs.button(
+                    "Download plot", {
+                        reduce: () => downloadPNG(
+                            "lines-gender",
+                             formatString(`gender ODA to ${getKeysByValue(donorMapping, donor)} from ${getKeysByValue(recipientMapping, recipient)} share`, {fileMode: true})
+                        )
+                    }
+                )
+            }
         </div>
     </div>
 </div>
