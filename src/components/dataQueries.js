@@ -60,9 +60,9 @@ async function absoluteGenderQuery(
             WITH filtered AS (
                 SELECT 
                     year, 
-                    donor_code AS donor, 
-                    (value * 1.1 / 1.1) AS value,
-                    gender_code AS indicator
+                    donor_code AS donor,
+                    gender_code AS indicator, 
+                    (value * 1.1 / 1.1) AS value
                 FROM gender
                 WHERE 
                     donor_code IN (${donor})
@@ -87,7 +87,7 @@ async function absoluteGenderQuery(
             joined AS (
                 SELECT
                     f.year,
-                    f.donor,
+                    f.indicator,
                     f.value * c.factor AS converted_value
                 FROM filtered f
                     JOIN conversion c
@@ -99,10 +99,9 @@ async function absoluteGenderQuery(
                 '${getKeysByValue(donorMapping, donor)}' AS donor,
                 '${getKeysByValue(recipientMapping, recipient)}' AS recipient,
                 CASE
-                    WHEN ${indicator} = 3 THEN 'Gender total'
-                    WHEN ${indicator} = 2 THEN 'Principal focus'
-                    WHEN ${indicator} = 1 THEN 'Significant focus'
-                    WHEN ${indicator} = 0 THEN 'Not targeted'
+                    WHEN indicator = 2 THEN 'Principal focus'
+                    WHEN indicator = 1 THEN 'Significant focus'
+                    WHEN indicator = 0 THEN 'Not targeted'
                 END AS Indicator,
                 SUM(converted_value) as Value,
                 '${currency} ${prices} million' as Unit,
@@ -132,7 +131,8 @@ async function relativeGenderQuery(
         `
             WITH filtered AS (
                 SELECT 
-                    year, 
+                    year,
+                    gender_code AS indicator,
                     SUM(value * 1.1 / 1.1) AS value
                 FROM gender
                 WHERE 
@@ -145,7 +145,7 @@ async function relativeGenderQuery(
                             ? "gender_code IN (1, 2)"
                             : `gender_code = ${indicator}`
                     }
-                group by year
+                group by year, indicator
             ),
             total AS (
                 SELECT 
@@ -163,10 +163,9 @@ async function relativeGenderQuery(
                 '${getKeysByValue(donorMapping, donor)}' AS donor,
                 '${getKeysByValue(recipientMapping, recipient)}' AS recipient,
                 CASE
-                    WHEN ${indicator} = 3 THEN 'Gender total'
-                    WHEN ${indicator} = 2 THEN 'Principal focus'
-                    WHEN ${indicator} = 1 THEN 'Significant focus'
-                    WHEN ${indicator} = 0 THEN 'Not targeted'
+                    WHEN indicator = 2 THEN 'Principal focus'
+                    WHEN indicator = 1 THEN 'Significant focus'
+                    WHEN indicator = 0 THEN 'Not targeted'
                 END AS Indicator,
                 ROUND(100.0 * f.value / t.total_value, 2) AS Value,
                 '% of total aid' AS Unit,

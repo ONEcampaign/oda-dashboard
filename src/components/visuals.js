@@ -21,7 +21,13 @@ export function linePlot(data, mode, width,
         Year: new Date(row.Year, 1, 1)
     }))
 
-    let labelSymbol, yValue, groupVar, customChannels, customFormat, colorScale
+    let labelSymbol,
+        yValue,
+        groupVar,
+        stacked = false,
+        customChannels,
+        customFormat,
+        colorScale
     if (mode === "sectors") {
 
         labelSymbol = getCurrencyLabel(currency, {})
@@ -96,6 +102,7 @@ export function linePlot(data, mode, width,
         } else if (mode === "recipients") {
             yValue = "Share of total"
             groupVar = "Indicator"
+            stacked = new Set(data.map(d => d[groupVar])).size > 1;
             customChannels = {
                 custom: {
                     value: yValue,
@@ -106,6 +113,7 @@ export function linePlot(data, mode, width,
         } else if (mode === "gender") {
             yValue = "Value"
             groupVar = "Indicator"
+            stacked = new Set(data.map(d => d[groupVar])).size > 1;
             customChannels = {
                 custom: {
                     value: yValue,
@@ -146,14 +154,32 @@ export function linePlot(data, mode, width,
         color: colorScale,
 
         marks: [
-            Plot.line(arrayData, {
-                x: "Year",
-                y: yValue,
-                z: groupVar,
-                stroke: groupVar,
-                curve: "monotone-x",
-                strokeWidth: 2.5
-            }),
+
+            ...(
+                stacked
+                    ? [
+                        Plot.areaY(arrayData, {
+                            x: "Year",
+                            y: yValue,
+                            // z: groupVar,
+                            fill: groupVar,
+                            fillOpacity: 0.75,
+                            // curve: "monotone-x",
+                            // strokeWidth: 2.5
+                        })
+
+                    ]
+                    : [
+                        Plot.line(arrayData, {
+                            x: "Year",
+                            y: yValue,
+                            z: groupVar,
+                            stroke: groupVar,
+                            curve: "monotone-x",
+                            strokeWidth: 2.5
+                        })
+                    ]
+            ),
 
             // Horizontal line to show international commitment
             showIntlCommitment
@@ -252,7 +278,7 @@ export function barPlot(data, currency, mode, width) {
                     x: "Year",
                     y: "Value",
                     fill: fillVar,
-                    opacity: .75,
+                    opacity: .9,
                 }
             ),
 
