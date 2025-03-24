@@ -288,7 +288,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="plot-subtitle-panel">
                 ${
                     indicatorRecipients == "Total"
-                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label-subtitle">Bilateral</span> and <span class="multilateral-label-subtitle">imputed multilateral</span> as a share of total ODA</h3>`
+                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label  subtitle-label">Bilateral</span> and <span class="multilateral-label  subtitle-label">imputed multilateral</span> as a share of total ODA</h3>`
                     : html`<h3 class="plot-subtitle">${indicatorRecipients} as a share of all ODA</h3>`
                 }
             </div>

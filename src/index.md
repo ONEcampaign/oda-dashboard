@@ -278,7 +278,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="plot-subtitle-panel">
                 ${
                     typeFinancing == "Official Definition"
-                    ? html`<h3 class="plot-subtitle"><span class="flow-label-subtitle">Flows</span> and <span class="ge-label-subtitle">grant equivalents</span> as a share of GNI</h3>`
+                    ? html`<h3 class="plot-subtitle"><span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span> as a share of GNI</h3>`
                     : html`<h3 class="plot-subtitle">${typeFinancing}</h3>`
                 }
                 ${commitmentFinancingInput}
