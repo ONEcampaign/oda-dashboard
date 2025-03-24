@@ -161,12 +161,23 @@ export function linePlot(data, mode, width,
                         Plot.areaY(arrayData, {
                             x: "Year",
                             y: yValue,
-                            // z: groupVar,
                             fill: groupVar,
-                            fillOpacity: 0.75,
-                            // curve: "monotone-x",
-                            // strokeWidth: 2.5
-                        })
+                            fillOpacity: 0.85
+                        }),
+
+                        Plot.tip(arrayData,
+                            Plot.pointer(
+                                Plot.stackY({
+                                    x: "Year",
+                                    y: yValue,
+                                    fill: groupVar,
+                                    channels: customChannels,
+                                    format: customFormat,
+                                    lineHeight: 1.25,
+                                    fontSize: 12
+                                })
+                            )
+                        )
 
                     ]
                     : [
@@ -177,7 +188,20 @@ export function linePlot(data, mode, width,
                             stroke: groupVar,
                             curve: "monotone-x",
                             strokeWidth: 2.5
-                        })
+                        }),
+
+                        Plot.tip(
+                            arrayData,
+                            Plot.pointer({
+                                x: "Year",
+                                y: yValue,
+                                stroke: groupVar,
+                                channels: customChannels,
+                                format: customFormat,
+                                lineHeight: 1.25,
+                                fontSize: 12
+                            })
+                        )
                     ]
             ),
 
@@ -206,20 +230,7 @@ export function linePlot(data, mode, width,
                     }
                 )
                 :
-                null,
-
-            Plot.tip(
-                arrayData,
-                Plot.pointer({
-                    x: "Year",
-                    y: yValue,
-                    stroke: groupVar,
-                    channels: customChannels,
-                    format: customFormat,
-                    lineHeight: 1.25,
-                    fontSize: 12
-                })
-            )
+                null
 
         ]
     });
@@ -278,7 +289,7 @@ export function barPlot(data, currency, mode, width) {
                     x: "Year",
                     y: "Value",
                     fill: fillVar,
-                    opacity: .9,
+                    opacity: .85,
                 }
             ),
 
