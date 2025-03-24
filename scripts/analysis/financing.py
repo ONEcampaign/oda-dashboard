@@ -457,4 +457,4 @@ def export_financing_data() -> None:
 if __name__ == "__main__":
     ...
 
-    export_financing_data()  # df = pd.read_csv(config.PATHS.output / "financing.csv")
+    export_financing_data()  # df = pd.read_csv(settings.PATHS.output / "financing.csv")

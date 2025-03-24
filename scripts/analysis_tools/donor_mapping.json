@@ -1,0 +1,817 @@
+{
+  "1": {
+    "name": "Austria",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "2": {
+    "name": "Belgium",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "3": {
+    "name": "Denmark",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "4": {
+    "name": "France",
+    "groups": [
+      "EU27 countries",
+      "G7 countries",
+      "DAC countries"
+    ]
+  },
+  "5": {
+    "name": "Germany",
+    "groups": [
+      "EU27 countries",
+      "G7 countries",
+      "DAC countries"
+    ]
+  },
+  "6": {
+    "name": "Italy",
+    "groups": [
+      "EU27 countries",
+      "G7 countries",
+      "DAC countries"
+    ]
+  },
+  "7": {
+    "name": "Netherlands",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "8": {
+    "name": "Norway",
+    "groups": [
+      "DAC countries"
+    ]
+  },
+  "9": {
+    "name": "Portugal",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "10": {
+    "name": "Sweden",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "11": {
+    "name": "Switzerland",
+    "groups": [
+      "DAC countries"
+    ]
+  },
+  "12": {
+    "name": "United Kingdom",
+    "groups": [
+      "G7 countries",
+      "DAC countries"
+    ]
+  },
+  "18": {
+    "name": "Finland",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "20": {
+    "name": "Iceland",
+    "groups": [
+      "DAC countries"
+    ]
+  },
+  "21": {
+    "name": "Ireland",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "22": {
+    "name": "Luxembourg",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "40": {
+    "name": "Greece",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "50": {
+    "name": "Spain",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "61": {
+    "name": "Slovenia",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "68": {
+    "name": "Czechia",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "69": {
+    "name": "Slovak Republic",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "75": {
+    "name": "Hungary",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "76": {
+    "name": "Poland",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "82": {
+    "name": "Estonia",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "84": {
+    "name": "Lithuania",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "301": {
+    "name": "Canada",
+    "groups": [
+      "G7 countries",
+      "DAC countries"
+    ]
+  },
+  "302": {
+    "name": "United States",
+    "groups": [
+      "G7 countries",
+      "DAC countries"
+    ]
+  },
+  "701": {
+    "name": "Japan",
+    "groups": [
+      "G7 countries",
+      "DAC countries"
+    ]
+  },
+  "742": {
+    "name": "Korea",
+    "groups": [
+      "DAC countries"
+    ]
+  },
+  "801": {
+    "name": "Australia",
+    "groups": [
+      "DAC countries"
+    ]
+  },
+  "820": {
+    "name": "New Zealand",
+    "groups": [
+      "DAC countries"
+    ]
+  },
+  "26": {
+    "name": "Monaco",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "30": {
+    "name": "Cyprus",
+    "groups": [
+      "EU27 countries",
+      "non-DAC countries"
+    ]
+  },
+  "45": {
+    "name": "Malta",
+    "groups": [
+      "EU27 countries",
+      "non-DAC countries"
+    ]
+  },
+  "55": {
+    "name": "Türkiye",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "62": {
+    "name": "Croatia",
+    "groups": [
+      "EU27 countries",
+      "non-DAC countries"
+    ]
+  },
+  "70": {
+    "name": "Liechtenstein",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "72": {
+    "name": "Bulgaria",
+    "groups": [
+      "EU27 countries",
+      "non-DAC countries"
+    ]
+  },
+  "77": {
+    "name": "Romania",
+    "groups": [
+      "EU27 countries",
+      "non-DAC countries"
+    ]
+  },
+  "83": {
+    "name": "Latvia",
+    "groups": [
+      "EU27 countries",
+      "DAC countries"
+    ]
+  },
+  "87": {
+    "name": "Russia",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "130": {
+    "name": "Algeria",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "133": {
+    "name": "Libya",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "358": {
+    "name": "Mexico",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "543": {
+    "name": "Iraq",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "546": {
+    "name": "Israel",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "552": {
+    "name": "Kuwait",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "561": {
+    "name": "Qatar",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "566": {
+    "name": "Saudi Arabia",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "576": {
+    "name": "United Arab Emirates",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "611": {
+    "name": "Azerbaijan",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "613": {
+    "name": "Kazakhstan",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "732": {
+    "name": "Chinese Taipei",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "764": {
+    "name": "Thailand",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "765": {
+    "name": "Timor-Leste",
+    "groups": [
+      "non-DAC countries"
+    ]
+  },
+  "104": {
+    "name": "Nordic Development Fund",
+    "groups": [
+      "Regional development banks"
+    ]
+  },
+  "807": {
+    "name": "UNEP",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "811": {
+    "name": "Global Environment Facility",
+    "groups": []
+  },
+  "812": {
+    "name": "Montreal Protocol",
+    "groups": []
+  },
+  "901": {
+    "name": "International Bank for Reconstruction and Development",
+    "groups": [
+      "World Bank group"
+    ]
+  },
+  "902": {
+    "name": "Multilateral Investment Guarantee Agency",
+    "groups": [
+      "World Bank group"
+    ]
+  },
+  "903": {
+    "name": "International Finance Corporation",
+    "groups": [
+      "World Bank group"
+    ]
+  },
+  "905": {
+    "name": "International Development Association",
+    "groups": [
+      "World Bank group"
+    ]
+  },
+  "906": {
+    "name": "Caribbean Development Bank",
+    "groups": [
+      "Regional development banks"
+    ]
+  },
+  "907": {
+    "name": "International Monetary Fund",
+    "groups": [
+      "IMF group",
+      "UN agencies"
+    ]
+  },
+  "909": {
+    "name": "Inter-American Development Bank",
+    "groups": [
+      "Regional development banks"
+    ]
+  },
+  "910": {
+    "name": "Central American Bank for Economic Integration",
+    "groups": [
+      "Regional development banks"
+    ]
+  },
+  "913": {
+    "name": "African Development Bank",
+    "groups": [
+      "Regional development banks"
+    ]
+  },
+  "914": {
+    "name": "African Development Fund",
+    "groups": [
+      "Regional development banks"
+    ]
+  },
+  "915": {
+    "name": "Asian Development Bank",
+    "groups": [
+      "Regional development banks"
+    ]
+  },
+  "918": {
+    "name": "EU Institutions",
+    "groups": [
+      "DAC countries"
+    ]
+  },
+  "921": {
+    "name": "Arab Fund (AFESD)",
+    "groups": []
+  },
+  "923": {
+    "name": "UN Peacebuilding Fund",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "926": {
+    "name": "Council of Europe",
+    "groups": []
+  },
+  "928": {
+    "name": "World Health Organisation",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "932": {
+    "name": "Food and Agriculture Organisation",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "940": {
+    "name": "International Labour Organisation",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "944": {
+    "name": "International Atomic Energy Agency",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "948": {
+    "name": "UNECE",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "951": {
+    "name": "OPEC Fund for International Development",
+    "groups": []
+  },
+  "952": {
+    "name": "OAPEC",
+    "groups": []
+  },
+  "953": {
+    "name": "Arab Bank for Economic Development in Africa",
+    "groups": [
+      "Regional development banks"
+    ]
+  },
+  "954": {
+    "name": "Special Arab Aid Fund for Africa",
+    "groups": []
+  },
+  "956": {
+    "name": "IMF Trust Fund",
+    "groups": [
+      "IMF group",
+      "UN agencies"
+    ]
+  },
+  "958": {
+    "name": "IMF (Concessional Trust Funds)",
+    "groups": [
+      "IMF group",
+      "UN agencies"
+    ]
+  },
+  "959": {
+    "name": "UNDP",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "960": {
+    "name": "UNTA",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "962": {
+    "name": "United Nations Conference on Trade and Development",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "963": {
+    "name": "UNICEF",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "964": {
+    "name": "UNRWA",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "966": {
+    "name": "WFP",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "967": {
+    "name": "UNHCR",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "971": {
+    "name": "UNAIDS",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "974": {
+    "name": "UNFPA",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "976": {
+    "name": "Islamic Development Bank",
+    "groups": [
+      "Regional development banks"
+    ]
+  },
+  "978": {
+    "name": "OSCE",
+    "groups": []
+  },
+  "979": {
+    "name": "Islamic Monetary Fund",
+    "groups": []
+  },
+  "980": {
+    "name": "Arab Fund for Technical Assistance to African and Arab Countries",
+    "groups": []
+  },
+  "981": {
+    "name": "Black Sea Trade & Development Bank",
+    "groups": [
+      "Regional development banks"
+    ]
+  },
+  "982": {
+    "name": "GODE",
+    "groups": []
+  },
+  "983": {
+    "name": "Other Arab Agencies",
+    "groups": []
+  },
+  "988": {
+    "name": "IFAD",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "990": {
+    "name": "European Bank for Reconstruction and Development",
+    "groups": [
+      "Regional development banks"
+    ]
+  },
+  "992": {
+    "name": "UN AGENCIES",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "997": {
+    "name": "Global Partnership for Education",
+    "groups": []
+  },
+  "1011": {
+    "name": "Climate Investment Funds",
+    "groups": []
+  },
+  "1012": {
+    "name": "Adaptation Fund",
+    "groups": []
+  },
+  "1013": {
+    "name": "Council of Europe Development Bank",
+    "groups": [
+      "non-DAC"
+    ]
+  },
+  "1014": {
+    "name": "Private Infrastructure Development Group",
+    "groups": []
+  },
+  "1015": {
+    "name": "Development Bank of Latin America",
+    "groups": [
+      "Regional development funds"
+    ]
+  },
+  "1016": {
+    "name": "Green Climate Fund",
+    "groups": []
+  },
+  "1017": {
+    "name": "Credit Guarantee and Investment Facility",
+    "groups": []
+  },
+  "1018": {
+    "name": "Global Energy Efficiency and Renewable Energy Fund",
+    "groups": []
+  },
+  "1019": {
+    "name": "IDB Invest",
+    "groups": []
+  },
+  "1020": {
+    "name": "Central Emergency Response Fund",
+    "groups": []
+  },
+  "1023": {
+    "name": "World Tourism Organisation",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "1024": {
+    "name": "Asian Infrastructure Investment Bank",
+    "groups": [
+      "Regional development banks"
+    ]
+  },
+  "1025": {
+    "name": "Center of Excellence in Finance",
+    "groups": []
+  },
+  "1037": {
+    "name": "International Investment Bank",
+    "groups": []
+  },
+  "1038": {
+    "name": "UN Institute for Disarmament Research",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "1039": {
+    "name": "UN Capital Development Fund",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "1045": {
+    "name": "North American Development Bank",
+    "groups": [
+      "Regional development banks"
+    ]
+  },
+  "1046": {
+    "name": "UN Women",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "1047": {
+    "name": "COVID-19 Response and Recovery Multi-Partner Trust Fund",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "1048": {
+    "name": "Joint Sustainable Development Goals Fund",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "1049": {
+    "name": "International Commission on Missing Persons",
+    "groups": []
+  },
+  "1050": {
+    "name": "WHO-Strategic Preparedness and Response Plan",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "1052": {
+    "name": "International Centre for Genetic Engineering and Biotechnology",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "1053": {
+    "name": "Asian Forest Cooperation Organisation",
+    "groups": []
+  },
+  "1054": {
+    "name": "World Organisation for Animal Health",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "1055": {
+    "name": "CGIAR",
+    "groups": []
+  },
+  "1057": {
+    "name": "UN Development Coordination Office",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "1058": {
+    "name": "IMF Resilience and Sustainability Trust",
+    "groups": [
+      "IMF group",
+      "UN agencies"
+    ]
+  },
+  "1311": {
+    "name": "Global Alliance for Vaccines and Immunization",
+    "groups": []
+  },
+  "1312": {
+    "name": "Global Fund",
+    "groups": []
+  },
+  "1313": {
+    "name": "Global Green Growth Institute",
+    "groups": []
+  },
+  "1401": {
+    "name": "WTO - International Trade Centre",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "1404": {
+    "name": "World Trade Organisation",
+    "groups": [
+      "UN agencies"
+    ]
+  },
+  "1406": {
+    "name": "United Nations Industrial Development Organization",
+    "groups": [
+      "UN agencies"
+    ]
+  }
+}
+

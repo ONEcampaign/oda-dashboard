@@ -19,7 +19,7 @@ setCustomColors();
 
 ```js
 const db = DuckDBClient.of({
-    sectors: FileAttachment("./data/sectors.parquet")
+    sectors: FileAttachment("./data/scripts/sectors.parquet")
 });
 ```
 
@@ -196,6 +196,8 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
 ```js
 
 async function updateVisualisation() {
+    
+    console.log(customColors(dataSectors))
 
     // Update the Flourish visualisation with data
     window.vis.update({
@@ -272,7 +274,7 @@ const selectedSector = "Health";
     <a class="view-button active" href="./sectors">
         Sectors
     </a>
-    <a class="view-button">
+    <a class="view-button" href="./gender">
         Gender
     </a>
 </div>

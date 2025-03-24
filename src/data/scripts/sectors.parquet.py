@@ -3,16 +3,14 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import sys
 
-from decimal import Decimal, ROUND_HALF_EVEN
 from pathlib import Path
+
+from src.data.settings.utils import get_schema, to_decimal
+
 
 file_path = Path.cwd() / "scripts" / "output" / "sectors.csv"
 
 df = pd.read_csv(file_path)
-
-def to_decimal(val, precision=2):
-    quantizer = Decimal("1." + "0" * precision)
-    return Decimal(str(val)).quantize(quantizer, rounding=ROUND_HALF_EVEN)
 
 df['year'] = df['year'].astype('category')
 df['Indicator'] = df['Indicator'].astype('category')

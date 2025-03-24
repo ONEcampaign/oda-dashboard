@@ -324,4 +324,4 @@ def export_recipients_data() -> None:
 
 if __name__ == "__main__":
     ...
-    export_recipients_data()  # df = pd.read_csv(config.PATHS.output / "recipients.csv")
+    export_recipients_data()  # df = pd.read_csv(settings.PATHS.output / "recipients.csv")

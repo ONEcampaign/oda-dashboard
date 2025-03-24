@@ -63,7 +63,7 @@ def get_crs_indicators_usd_current(
         years=range(start_year, end_year + 1),
         donors=list(donors),
         recipients=recipients,
-        include_names=False,
+        # include_names=False,
     )
 
     oda.load_indicator(list(indicators))

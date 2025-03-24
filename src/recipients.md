@@ -18,7 +18,7 @@ setCustomColors();
 
 ```js
 const db = DuckDBClient.of({
-    recipients: FileAttachment("./data/recipients.parquet")
+    recipients: FileAttachment("./data/scripts/recipients.parquet")
 });
 ```
 
@@ -210,7 +210,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     <a class="view-button" href="./sectors">
         Sectors
     </a>
-    <a class="view-button">
+    <a class="view-button" href="./gender">
         Gender
     </a>
 </div>

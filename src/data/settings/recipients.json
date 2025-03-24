@@ -1,0 +1,2120 @@
+{
+  "30": {
+    "name": "Cyprus",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "35": {
+    "name": "Gibraltar",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "45": {
+    "name": "Malta",
+    "groups": [
+      "Developing countries",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "55": {
+    "name": "Turkey",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "57": {
+    "name": "Kosovo",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "61": {
+    "name": "Slovenia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "62": {
+    "name": "Croatia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "63": {
+    "name": "Serbia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "64": {
+    "name": "Bosnia and Herzegovina",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "65": {
+    "name": "Montenegro",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "66": {
+    "name": "North Macedonia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "71": {
+    "name": "Albania",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "85": {
+    "name": "Ukraine",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "86": {
+    "name": "Belarus",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "88": {
+    "name": "States Ex-Yugoslavia unspecified",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "89": {
+    "name": "Europe, regional",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "93": {
+    "name": "Moldova",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "130": {
+    "name": "Algeria",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "133": {
+    "name": "Libya",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "136": {
+    "name": "Morocco",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "139": {
+    "name": "Tunisia",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "142": {
+    "name": "Egypt",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "189": {
+    "name": "North of Sahara, regional",
+    "groups": [
+      "African regions",
+      "African countries and regions",
+      "All recipients"
+    ]
+  },
+  "218": {
+    "name": "South Africa",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "225": {
+    "name": "Angola",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "227": {
+    "name": "Botswana",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "228": {
+    "name": "Burundi",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "229": {
+    "name": "Cameroon",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "230": {
+    "name": "Cabo Verde",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "231": {
+    "name": "Central African Republic",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "232": {
+    "name": "Chad",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries",
+      "Sahel countries"
+    ]
+  },
+  "233": {
+    "name": "Comoros",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "234": {
+    "name": "Congo",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "235": {
+    "name": "Democratic Republic of the Congo",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "236": {
+    "name": "Benin",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "237": {
+    "name": "East African Community",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "238": {
+    "name": "Ethiopia",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "239": {
+    "name": "Gabon",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "240": {
+    "name": "Gambia",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "241": {
+    "name": "Ghana",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "243": {
+    "name": "Guinea",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "244": {
+    "name": "Guinea-Bissau",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "245": {
+    "name": "Equatorial Guinea",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "247": {
+    "name": "Cote d'Ivoire",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "248": {
+    "name": "Kenya",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "249": {
+    "name": "Lesotho",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "251": {
+    "name": "Liberia",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "252": {
+    "name": "Madagascar",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "253": {
+    "name": "Malawi",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "255": {
+    "name": "Mali",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries",
+      "Sahel countries"
+    ]
+  },
+  "256": {
+    "name": "Mauritania",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries",
+      "Sahel countries"
+    ]
+  },
+  "257": {
+    "name": "Mauritius",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "258": {
+    "name": "Mayotte",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "259": {
+    "name": "Mozambique",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "260": {
+    "name": "Niger",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries",
+      "Sahel countries"
+    ]
+  },
+  "261": {
+    "name": "Nigeria",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "265": {
+    "name": "Zimbabwe",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "266": {
+    "name": "Rwanda",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "268": {
+    "name": "Sao Tome and Principe",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "269": {
+    "name": "Senegal",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "270": {
+    "name": "Seychelles",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "271": {
+    "name": "Eritrea",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "272": {
+    "name": "Sierra Leone",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "273": {
+    "name": "Somalia",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "274": {
+    "name": "Djibouti",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "275": {
+    "name": "Namibia",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "276": {
+    "name": "Saint Helena",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "278": {
+    "name": "Sudan",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "279": {
+    "name": "South Sudan",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "280": {
+    "name": "Eswatini",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "282": {
+    "name": "Tanzania",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "283": {
+    "name": "Togo",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "285": {
+    "name": "Uganda",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "287": {
+    "name": "Burkina Faso",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries",
+      "Sahel countries"
+    ]
+  },
+  "288": {
+    "name": "Zambia",
+    "groups": [
+      "African countries",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "289": {
+    "name": "South of Sahara, regional",
+    "groups": [
+      "African regions",
+      "African countries and regions",
+      "All recipients"
+    ]
+  },
+  "298": {
+    "name": "Africa, regional",
+    "groups": [
+      "African regions",
+      "African countries and regions",
+      "All recipients"
+    ]
+  },
+  "328": {
+    "name": "Bahamas",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "329": {
+    "name": "Barbados",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "331": {
+    "name": "Bermuda",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "336": {
+    "name": "Costa Rica",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "338": {
+    "name": "Cuba",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "340": {
+    "name": "Dominican Republic",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "342": {
+    "name": "El Salvador",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "347": {
+    "name": "Guatemala",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "349": {
+    "name": "Haiti",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "France priority countries",
+      "Least developed countries"
+    ]
+  },
+  "351": {
+    "name": "Honduras",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "352": {
+    "name": "Belize",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "354": {
+    "name": "Jamaica",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "358": {
+    "name": "Mexico",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "361": {
+    "name": "Netherlands Antilles",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "364": {
+    "name": "Nicaragua",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "366": {
+    "name": "Panama",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "373": {
+    "name": "Aruba",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "375": {
+    "name": "Trinidad and Tobago",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "376": {
+    "name": "Anguilla",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "377": {
+    "name": "Antigua and Barbuda",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "378": {
+    "name": "Dominica",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "381": {
+    "name": "Grenada",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "382": {
+    "name": "Saint Kitts and Nevis",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "383": {
+    "name": "Saint Lucia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "384": {
+    "name": "Saint Vincent and the Grenadines",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "385": {
+    "name": "Montserrat",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "386": {
+    "name": "Cayman Islands",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "387": {
+    "name": "Turks and Caicos Islands",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "388": {
+    "name": "British Virgin Islands",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "389": {
+    "name": "Caribbean & Central America, regional",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "425": {
+    "name": "Argentina",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "428": {
+    "name": "Bolivia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "431": {
+    "name": "Brazil",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "434": {
+    "name": "Chile",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "437": {
+    "name": "Colombia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "440": {
+    "name": "Ecuador",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "446": {
+    "name": "Guyana",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "451": {
+    "name": "Paraguay",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "454": {
+    "name": "Peru",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "457": {
+    "name": "Suriname",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "460": {
+    "name": "Uruguay",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "463": {
+    "name": "Venezuela",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "489": {
+    "name": "South America, regional",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "498": {
+    "name": "America, regional",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "530": {
+    "name": "Bahrain",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "540": {
+    "name": "Iran",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "543": {
+    "name": "Iraq",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "546": {
+    "name": "Israel",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "549": {
+    "name": "Jordan",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "550": {
+    "name": "West Bank and Gaza Strip",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "552": {
+    "name": "Kuwait",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "555": {
+    "name": "Lebanon",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "558": {
+    "name": "Oman",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "561": {
+    "name": "Qatar",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "566": {
+    "name": "Saudi Arabia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "573": {
+    "name": "Syrian Arab Republic",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "576": {
+    "name": "United Arab Emirates",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "580": {
+    "name": "Yemen",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "589": {
+    "name": "Middle East, regional",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "610": {
+    "name": "Armenia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "611": {
+    "name": "Azerbaijan",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "612": {
+    "name": "Georgia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "613": {
+    "name": "Kazakhstan",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "614": {
+    "name": "Kyrgyzstan",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "615": {
+    "name": "Tajikistan",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "616": {
+    "name": "Turkmenistan",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "617": {
+    "name": "Uzbekistan",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "619": {
+    "name": "Central Asia, regional",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "625": {
+    "name": "Afghanistan",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "630": {
+    "name": "Bhutan",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "635": {
+    "name": "Myanmar",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "640": {
+    "name": "Sri Lanka",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "645": {
+    "name": "India",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "650": {
+    "name": "Indus Basin",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "655": {
+    "name": "Maldives",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "660": {
+    "name": "Nepal",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "665": {
+    "name": "Pakistan",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "666": {
+    "name": "Bangladesh",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "679": {
+    "name": "South Asia, regional",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "689": {
+    "name": "South & Central Asia, regional",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "725": {
+    "name": "Brunei Darussalam",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "728": {
+    "name": "Cambodia",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "730": {
+    "name": "China (People's Republic of)",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "732": {
+    "name": "Chinese Taipei",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "735": {
+    "name": "Hong Kong (China)",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "738": {
+    "name": "Indonesia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "740": {
+    "name": "Democratic People's Republic of Korea",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "742": {
+    "name": "Korea",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "745": {
+    "name": "Lao People's Democratic Republic",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "748": {
+    "name": "Macau (China)",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "751": {
+    "name": "Malaysia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "753": {
+    "name": "Mongolia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "755": {
+    "name": "Philippines",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "761": {
+    "name": "Singapore",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "764": {
+    "name": "Thailand",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "765": {
+    "name": "Timor-Leste",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "769": {
+    "name": "Viet Nam",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "789": {
+    "name": "Far East Asia, regional",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "798": {
+    "name": "Asia, regional",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "816": {
+    "name": "Other Regional Banks",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "831": {
+    "name": "Cook Islands",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "832": {
+    "name": "Fiji",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "836": {
+    "name": "Kiribati",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "840": {
+    "name": "French Polynesia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "845": {
+    "name": "Nauru",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "850": {
+    "name": "New Caledonia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "854": {
+    "name": "Vanuatu",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "856": {
+    "name": "Niue",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "858": {
+    "name": "Northern Mariana Islands",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "859": {
+    "name": "Marshall Islands",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "860": {
+    "name": "Micronesia",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "861": {
+    "name": "Palau",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "862": {
+    "name": "Papua New Guinea",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "866": {
+    "name": "Solomon Islands",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "868": {
+    "name": "Tokelau",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "870": {
+    "name": "Tonga",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "872": {
+    "name": "Tuvalu",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "Least developed countries"
+    ]
+  },
+  "876": {
+    "name": "Wallis and Futuna",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "880": {
+    "name": "Samoa",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "889": {
+    "name": "Oceania, regional",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  },
+  "900": {
+    "name": "Other World Bank (AMCs)",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "901": {
+    "name": "IBRD",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "902": {
+    "name": "MIGA",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "903": {
+    "name": "IFC",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "904": {
+    "name": "IDA-MDRI",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "905": {
+    "name": "IDA",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "906": {
+    "name": "Caribbean Dev. Bank",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "907": {
+    "name": "IMF",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "909": {
+    "name": "IDB",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "910": {
+    "name": "CABEI",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "912": {
+    "name": "IDB Special Oper. Fund",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "913": {
+    "name": "Af. D B",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "914": {
+    "name": "African Dev. Fund",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "915": {
+    "name": "Asian Dev. Bank",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "916": {
+    "name": "AsDB Special Funds",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "917": {
+    "name": "EC",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "918": {
+    "name": "EDF",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "919": {
+    "name": "EIB",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "927": {
+    "name": "Other EU institutions",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "959": {
+    "name": "UNDP",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "963": {
+    "name": "UNICEF",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "964": {
+    "name": "UNRWA",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "966": {
+    "name": "WFP",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "967": {
+    "name": "UNHCR",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "974": {
+    "name": "UNFPA",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "975": {
+    "name": "Other UN",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "988": {
+    "name": "IFAD",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "989": {
+    "name": "Other Multilateral",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "9998": {
+    "name": "Developing countries, unspecified",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10001": {
+    "name": "Africa, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10002": {
+    "name": "North of Sahara, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10003": {
+    "name": "South of Sahara, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10004": {
+    "name": "America, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10005": {
+    "name": "Caribbean & Central America, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10006": {
+    "name": "South America, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10007": {
+    "name": "Asia, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10008": {
+    "name": "Far East Asia, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10009": {
+    "name": "South & Central Asia, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10010": {
+    "name": "Europe, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10011": {
+    "name": "Middle East, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10012": {
+    "name": "Oceania, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10013": {
+    "name": "CEEC, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10014": {
+    "name": "NIS, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10016": {
+    "name": "LDCs, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10017": {
+    "name": "Other LICs, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10018": {
+    "name": "LMICs, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10019": {
+    "name": "UMICs, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10024": {
+    "name": "Part I Unallocated by income",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10025": {
+    "name": "MADCTs, Total",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "10026": {
+    "name": "Part II Countries, Total",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "10030": {
+    "name": "HIPCs, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10040": {
+    "name": "ACP Countries, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10041": {
+    "name": "Club du Sahel countries, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10045": {
+    "name": "WorldBank Low income countries",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10046": {
+    "name": "WorldBank Lower-middle income countries",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10047": {
+    "name": "WorldBank Upper-middle income countries",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10048": {
+    "name": "WorldBank High income countries",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10049": {
+    "name": "Countries not classified by the World Bank",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10050": {
+    "name": "Eastern Africa, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10051": {
+    "name": "Middle Africa, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10052": {
+    "name": "Southern Africa, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10053": {
+    "name": "Western Africa, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10054": {
+    "name": "Caribbean, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10055": {
+    "name": "Central America, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10056": {
+    "name": "Northern America, Total",
+    "groups": [
+      "All recipients"
+    ]
+  },
+  "10057": {
+    "name": "Melanesia, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10058": {
+    "name": "Micronesia, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10059": {
+    "name": "Polynesia, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10100": {
+    "name": "Developing Countries, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10150": {
+    "name": "All Multilateral Recipients, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10200": {
+    "name": "All Recipients, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10201": {
+    "name": "Land-Locked countries, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10202": {
+    "name": "Small island states, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "10203": {
+    "name": "Fragile states, Total",
+    "groups": [
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "1027": {
+    "name": "Eastern Africa, regional",
+    "groups": [
+      "African regions",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "1028": {
+    "name": "Middle Africa, regional",
+    "groups": [
+      "African regions",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "1029": {
+    "name": "Southern Africa, regional",
+    "groups": [
+      "African regions",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "1030": {
+    "name": "Western Africa, regional",
+    "groups": [
+      "African regions",
+      "African countries and regions",
+      "Developing countries",
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "1031": {
+    "name": "Caribbean, regional",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "1032": {
+    "name": "Central America, regional",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "1033": {
+    "name": "Melanesia, regional",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "1034": {
+    "name": "Micronesia, regional",
+    "groups": [
+      "Developing countries",
+      "All recipients",
+      "dac2a_aggregates"
+    ]
+  },
+  "1035": {
+    "name": "Polynesia, regional",
+    "groups": [
+      "Developing countries",
+      "All recipients"
+    ]
+  }
+}

@@ -18,7 +18,7 @@ setCustomColors();
 
 ```js
 const db = DuckDBClient.of({
-    financing: FileAttachment("./data/financing.parquet")
+    financing: FileAttachment("./data/scripts/financing.parquet")
 });
 ```
 
@@ -179,7 +179,7 @@ const showMoreButton = Inputs.button(moreSettings ? "Show less" : "Show more", {
 showMoreButton.addEventListener("submit", event => event.preventDefault());
 ```
 
-<div class="title-container" xmlns="http://www.w3.org/1999/html">
+<div class="title-container">
     <div class="title-logo">
         <a href="https://data.one.org/" target="_blank">
             <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
@@ -200,7 +200,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     <a class="view-button" href="./sectors">
         Sectors
     </a>
-    <a class="view-button">
+    <a class="view-button" href="./gender">
         Gender
     </a>
 </div>

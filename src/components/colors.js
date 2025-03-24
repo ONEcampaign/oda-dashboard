@@ -48,22 +48,51 @@ export const customPalette = {
 }
 
 export const paletteFinancing = {
-    domain: ["Grant Equivalent", "Flow"],
-    range: [customPalette.ge, customPalette.flow]
+    domain: [
+        "Grant Equivalent",
+        "Flow"
+    ],
+    range: [
+        customPalette.ge,
+        customPalette.flow
+    ]
 }
 
 export const paletteRecipients = {
-    domain: ["Bilateral", "Imputed multilateral", "Total"],
-    range: [customPalette.bilateral, customPalette.multilateral, customPalette.total],
+    domain: [
+        "Bilateral",
+        "Imputed multilateral",
+        "Total"
+    ],
+    range: [
+        customPalette.bilateral,
+        customPalette.multilateral,
+        customPalette.total
+    ],
 }
 
 export const paletteSectors = [
     ONEPalette.teal1,
     ONEPalette.orange1,
-    ONEPalette.navy1,
-    ONEPalette.blue1,
-    ONEPalette.purple1
+    ONEPalette.navy0,
+    ONEPalette.purple1,
+    ONEPalette.blue0,
 ]
+
+export const paletteGender = {
+    domain: [
+        "Gender total",
+        "Principal focus",
+        "Significant focus",
+        'Not targeted'
+    ],
+    range: [
+        ONEPalette.teal1,
+        ONEPalette.orange1,
+        ONEPalette.navy0,
+        ONEPalette.purple1
+    ]
+}
 
 export function setCustomColors() {
     const root = document.documentElement;

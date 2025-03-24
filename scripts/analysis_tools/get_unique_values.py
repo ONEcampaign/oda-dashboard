@@ -44,6 +44,13 @@ def get_unique_values(df, view_name):
             "Sector": "sectors",
             "Sub-sector": "subsectors"
         }
+    elif view_name == "Gender":
+        column_variable_map = {
+            "year": "timeRange",
+            "gender_code": "gender",
+            "donor_code": "donors",
+            "recipient_code": "recipients"
+        }
 
     columns = list(column_variable_map.keys())
 

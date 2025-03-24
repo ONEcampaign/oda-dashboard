@@ -1,5 +1,6 @@
 import Flourish from "npm:@flourish/live-api"
 import {sum, rollups} from "npm:d3-array"
+import {paletteSectors} from "./colors.js"
 
 export function convertToArrayOfArrays(data) {
 
@@ -27,7 +28,7 @@ export function customColors(data) {
     );
     sectorTotals.sort((a, b) => b[1] - a[1]);
 
-    const colors = ["#1A9BA3", "#FF7F4C", "#102493", "#A3DAF5"]
+    const colors = paletteSectors
     const sectorColors = sectorTotals.map((d, i) => `${d[0]}: ${colors[i % colors.length]}`);
 
     return sectorColors.join("\n");

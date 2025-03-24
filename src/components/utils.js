@@ -97,3 +97,32 @@ export function getCurrencyLabel(unit, {
     }
 
 }
+
+export function name2CodeMap(jsonData) {
+    const map = new Map();
+
+    for (const [code, { name, groups }] of Object.entries(jsonData)) {
+        if (!map.has(name)) map.set(name, []);
+        map.get(name).push(code);
+
+        for (const group of groups) {
+            if (!map.has(group)) map.set(group, []);
+            map.get(group).push(code);
+        }
+    }
+
+    return map;
+}
+
+export function getKeysByValue(map, targetCodes) {
+    const result = [];
+    const target = [...targetCodes].sort().join(",");
+
+    for (const [key, value] of map.entries()) {
+        if ([...value].sort().join(",") === target) {
+            result.push(key);
+        }
+    }
+
+    return result;
+}

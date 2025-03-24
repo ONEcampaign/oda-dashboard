@@ -166,4 +166,4 @@ def export_sectors_data() -> None:
 
 if __name__ == "__main__":
     ...
-    export_sectors_data() # df = pd.read_csv(config.PATHS.output / "sectors.csv")
+    export_sectors_data() # df = pd.read_csv(settings.PATHS.output / "sectors.csv")

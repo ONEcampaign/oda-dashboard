@@ -6,7 +6,7 @@ import {timeFormat} from "npm:d3-time-format";
 import {sum, rollups, descending, min, max} from "npm:d3-array"
 import {schemeObservable10} from "npm:d3-scale-chromatic";
 import {getCurrencyLabel, formatValue} from "./utils.js";
-import {customPalette, paletteFinancing, paletteRecipients, paletteSectors} from "./colors.js";
+import {customPalette, paletteFinancing, paletteRecipients, paletteSectors, paletteGender} from "./colors.js";
 
 export function linePlot(data, mode, width,
                          {
@@ -103,6 +103,16 @@ export function linePlot(data, mode, width,
                 }
             }
             colorScale = paletteRecipients
+        } else if (mode === "gender") {
+            yValue = "Value"
+            groupVar = "Indicator"
+            customChannels = {
+                custom: {
+                    value: yValue,
+                    label: "Share of total"
+                }
+            }
+            colorScale = paletteGender
         }
     }
 
@@ -204,6 +214,12 @@ export function barPlot(data, currency, mode, width) {
         fillVar = "Indicator"
         colorScale = paletteRecipients
     }
+    else if (mode === "gender") {
+        fillVar = "Indicator"
+        colorScale = paletteGender
+    }
+
+    console.log(arrayData)
 
     return Plot.plot({
         width: width,
