@@ -256,8 +256,6 @@ export function barPlot(data, currency, mode, width) {
         colorScale = paletteGender
     }
 
-    console.log(arrayData)
-
     return Plot.plot({
         width: width,
         height: width * .5,
