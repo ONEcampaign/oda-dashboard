@@ -41,6 +41,9 @@ export const customPalette = {
     multilateral: ONEPalette.orange1,
     total: ONEPalette.purple2,
     intlCommitment: ONEPalette.burgundy1,
+    genderMain: ONEPalette.orange1,
+    genderSecondary: ONEPalette.navy0,
+    genderNot: ONEPalette.purple1,
     darkGrey: "#333333",
     midGrey: "#646464",
     lightGrey: "#E8E8E8",
@@ -82,15 +85,15 @@ export const paletteSectors = [
 export const paletteGender = {
     domain: [
         "Gender total",
-        "Principal focus",
-        "Significant focus",
+        "Main focus",
+        "Secondary focus",
         'Not targeted'
     ],
     range: [
-        ONEPalette.teal1,
-        ONEPalette.orange1,
-        ONEPalette.navy0,
-        ONEPalette.purple1
+        customPalette.total,
+        customPalette.genderMain,
+        customPalette.genderSecondary,
+        customPalette.genderNot
     ]
 }
 
