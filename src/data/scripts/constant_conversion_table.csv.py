@@ -1,8 +1,7 @@
 import sys
 import json
 import pandas as pd
-from bblocks import add_iso_codes_column
-from pydeflate import imf_gdp_deflate, set_pydeflate_path
+from pydeflate import oecd_dac_deflate, set_pydeflate_path
 
 from src.data.config import logger, PATHS, time_range, base_year
 
@@ -11,21 +10,17 @@ set_pydeflate_path(PATHS.PYDEFLATE)
 
 def create_df():
     with open(PATHS.DONORS) as f:
-        data = json.load(f)
+        donor_dict = json.load(f)
 
-    country_codes = pd.DataFrame([
-        {"dac_code": code, "country": details["name"]}
-        for code, details in data.items()
-    ])
+    donor_codes = [int(k) for k in donor_dict.keys()]
 
-    years = range(time_range[0], time_range[1] + 1)
+    years = range(time_range["start"], time_range["end"] + 1)
 
-    df = country_codes.assign(key=1).merge(
-        pd.DataFrame({"year": years, "key": 1}),
-        on="key"
-    ).drop(columns="key")
-
-    df = add_iso_codes_column(df, "country", id_type="regex")
+    df = pd.DataFrame(
+        index=pd.MultiIndex.from_product(
+            [years, donor_codes], names=["year", "dac_code"]
+        )
+    ).reset_index()
 
     df["value"] = 1
 
@@ -38,18 +33,19 @@ def deflate_current_usd():
 
     codes = {"USA": "usd", "CAN": "cad", "FRA": "eur", "GBR": "gbp"}
     for country, code in codes.items():
-        df = imf_gdp_deflate(
+        df = oecd_dac_deflate(
             data=df,
             base_year=base_year,
             source_currency="USA",
             target_currency=country,
             year_column="year",
-            id_column="iso_code",
+            id_column="dac_code",
+            use_source_codes=True,
             value_column="value",
             target_value_column=f"{code}_constant",
         )
 
-    return df.drop(columns=["value", "iso_code", "country"]).dropna(thresh=4, axis="rows")
+    return df.drop(columns=["value"])
 
 
 def get_conversion_table():

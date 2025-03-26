@@ -11,7 +11,9 @@ codes = {"USA": "usd", "CAN": "cad", "FRA": "eur", "GBR": "gbp"}
 
 
 def create_df():
-    return pd.DataFrame({"year": range(time_range[0], time_range[1] + 1), "value": 1})
+    return pd.DataFrame(
+        {"year": range(time_range["start"], time_range["end"] + 1), "value": 1}
+    )
 
 
 def convert_currencies():
