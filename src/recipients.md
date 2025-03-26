@@ -1,14 +1,9 @@
 ```js 
-import {DuckDBClient} from "npm:@observablehq/duckdb";
-
 import {setCustomColors} from "./components/colors.js"
-import {formatString, convertUint32Array} from "./components/utils.js";
-
-import {uniqueValuesRecipients} from "./components/uniqueValuesRecipients.js";
+import {recipientsQueries} from './components/dataQueries.js'
+import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap} from "./components/utils.js";
 import {rangeInput} from "./components/rangeInput.js";
-
 import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
-
 import {downloadPNG, downloadXLSX} from './components/downloads.js';
 ```
 
@@ -17,82 +12,90 @@ setCustomColors();
 ```
 
 ```js
-const db = DuckDBClient.of({
-    recipients: FileAttachment("./data/scripts/recipients.parquet")
-});
+const donorOptions = await FileAttachment("./data/analysis_tools/donor_mapping.json").json()
+const donorMapping = name2CodeMap(donorOptions)
+
+const recipientOptions = await FileAttachment("./data/analysis_tools/recipient_mapping.json").json()
+const recipientMapping = name2CodeMap(recipientOptions)
+
+const indicatorOptions = await FileAttachment("./data/analysis_tools/indicators.json").json()
+const indicatorMapping = generateIndicatorMap(indicatorOptions, "recipients")
 ```
+
 
 ```js
 // USER INPUTS
-const donorRecipientsInput = Inputs.select(
-    uniqueValuesRecipients.donors,
+const donorInput = Inputs.select(
+    donorMapping,
     {
         label: "Donor",
-        value: "DAC Countries, Total",
-        sort: true
+        value: donorMapping.get("DAC countries")
     })
-const donorRecipients = Generators.input(donorRecipientsInput);
+const donor = Generators.input(donorInput);
 
 // Recipient
-const recipientRecipientsInput = Inputs.select(
-    uniqueValuesRecipients.recipients,
+const recipientInput = Inputs.select(
+    recipientMapping,
     {
         label: "Recipient",
-        value: "Developing countries, Total",
-        sort: true
+        value: recipientMapping.get("Developing countries")
     })
-const recipientRecipients = Generators.input(recipientRecipientsInput);
+const recipient = Generators.input(recipientInput);
 
 // Indicator
-const indicatorRecipientsInput = Inputs.select(
-    uniqueValuesRecipients.indicators,
+const indicatorInput = Inputs.select(
+    indicatorMapping,
     {
         label: "Indicator",
-        value: "Total",
-        sort: true
+        value: indicatorMapping.get("Total ODA"),
     })
-const indicatorRecipients = Generators.input(indicatorRecipientsInput);
+const indicator = Generators.input(indicatorInput);
 
 // Currency
-const currencyRecipientsInput = Inputs.select(
-    uniqueValuesRecipients.currencies,
+const currencyInput = Inputs.select(
+    new Map([
+        ["US Dollars", "usd"],
+        ["Canada Dollars", "cad"],
+        ["Euros", "eur"],
+        ["British pounds", "gbp"]
+    ]),
     {
         label: "Currency",
-        value: "US Dollars",
+        value: "usd",
         sort: true
     })
-const currencyRecipients = Generators.input(currencyRecipientsInput);
+const currency = Generators.input(currencyInput);
 
 // Prices
-const pricesRecipientsInput = Inputs.radio(
-    uniqueValuesRecipients.prices,
+const pricesInput = Inputs.radio(
+    new Map([
+        ["Current", "current"],
+        // ["Constant", "constant"]
+    ]),
     {
         label: "Prices",
-        value: "Constant"
+        value: "current"
     }
 )
-const pricesRecipients = Generators.input(pricesRecipientsInput)
+const prices = Generators.input(pricesInput)
 
 // Year
-const timeRangeRecipientsInput = rangeInput(
+const timeRangeInput = rangeInput(
     {
-        min: uniqueValuesRecipients.timeRange[0],
-        max: uniqueValuesRecipients.timeRange[1],
+        min: 2000,
+        max: 2023,
         step: 1,
-        value: [
-            uniqueValuesRecipients.timeRange[0],
-            uniqueValuesRecipients.timeRange[1]
-        ],
+        value: [2013, 2023],
         label: "Time range",
         enableTextInput: true
     })
-const timeRangeRecipients = Generators.input(timeRangeRecipientsInput)
+const timeRange = Generators.input(timeRangeInput)
 
 // Unit
-const unitRecipientsInput = Inputs.select(
+const unitInput = Inputs.select(
     new Map(
         [
-            [`Million ${currencyRecipientsInput.value}`, "Value"],
+            [`Million ${currencyInput.value}`, "Value"],
             ["GNI Share", "GNI Share"],
             ["Share of total", "Share of total"]
         ]
@@ -103,11 +106,11 @@ const unitRecipientsInput = Inputs.select(
     }
 )
 
-const unitRecipients = Generators.input(unitRecipientsInput)
+const unit = Generators.input(unitInput)
 
 function updateUnitOptions() {
-    for (const o of unitRecipientsInput.querySelectorAll("option")) {
-        if (o.innerHTML === "Share of total" & indicatorRecipientsInput.value === "Total") {
+    for (const o of unitInput.querySelectorAll("option")) {
+        if (o.innerHTML === "Share of total" & indicatorInput.value === "Total") {
             o.setAttribute("disabled", "disabled");
         }
         else o.removeAttribute("disabled");
@@ -115,58 +118,24 @@ function updateUnitOptions() {
 }
 
 updateUnitOptions();
-indicatorRecipientsInput.addEventListener("input", updateUnitOptions);
+indicatorInput.addEventListener("input", updateUnitOptions);
 ```
 
 ```js
 // DATA QUERY
-const queryRecipientsString = `
-SELECT 
-    year AS Year,
-    "Donor Name" AS Donor,
-    "Recipient Name" AS Recipient,
-    Indicator,
-    value AS Value,
-    share AS "Share of total",
-    "GNI Share",
-    Currency,
-    Prices
-FROM recipients
-WHERE 
-    Year >= ? AND 
-    Year <= ? AND
-    Donor = ? AND 
-    Recipient = ? AND
-    Currency = ? AND 
-    Prices = ? AND
-    (
-        (? = 'Total' AND Indicator != 'Total') 
-        OR (? != 'Total' AND Indicator = ?)
-    );
-`;
+const data = recipientsQueries(
+    donor, 
+    recipient, 
+    indicator,
+    currency,
+    prices,
+    timeRange
+)
 
-const queryRecipientsParams = [
-    timeRangeRecipients[0],
-    timeRangeRecipients[1],
-    donorRecipients,
-    recipientRecipients,
-    currencyRecipients,
-    pricesRecipients,
-    indicatorRecipients,
-    indicatorRecipients,
-    indicatorRecipients,
-];
-
-const queryRecipients = await db.query(queryRecipientsString, queryRecipientsParams);
-
-const dataRecipients = queryRecipients.toArray()
-    .map((row) => ({
-        ...row,
-        ["Value"]: convertUint32Array(row["Value"]),
-        ["GNI Share"]: convertUint32Array(row["GNI Share"]),
-        ["Share of total"]: convertUint32Array(row["Share of total"])
-    }))
+const absoluteData = data.absolute
+const relativeData = data.relative
 ```
+
 
 ```js
 const moreSettings = Mutable(false)
@@ -187,6 +156,8 @@ const showMoreButton = Inputs.button(moreSettings ? "Show less" : "Show more", {
     reduce: showMoreSettings 
 });
 showMoreButton.addEventListener("submit", event => event.preventDefault());
+
+console.log(donorMapping.get("Austria"))
 ```
 
 <div class="title-container" xmlns="http://www.w3.org/1999/html">
@@ -214,42 +185,44 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         Gender
     </a>
 </div>
-
+${Inputs.table(absoluteData)}
 <div class="settings card">
     <div class="settings-group">
-        ${donorRecipientsInput}
-        ${recipientRecipientsInput}
+        ${donorInput}
+        ${recipientInput}
     </div>
     <div class="settings-group">
-        ${currencyRecipientsInput}
-        ${indicatorRecipientsInput}
+        ${currencyInput}
+        ${indicatorInput}
     </div>
     <div class="settings-button">
         ${showMoreButton}
     </div>
     <div class="settings-group hidden">
-        ${pricesRecipientsInput}
-        ${timeRangeRecipientsInput}
+        ${pricesInput}
+        ${timeRangeInput}
     </div>
 </div>
 <div class="grid grid-cols-2">
     <div class="card">
         <div class="plot-container" id="bars-recipients">
             <h2 class="plot-title">
-                ${formatString(`ODA to ${recipientRecipients} from ${donorRecipients}`)}
+                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
             </h2>
             <div class="plot-subtitle-panel">
                 ${
-                    indicatorRecipients == "Total"
-                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span></h3>`
-                    : html`<h3 class="plot-subtitle">${indicatorRecipients}</h3>`
+                    indicator == 306
+                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span> aid</h3>`
+                    : indicator == 206
+                        ? html`<h3 class="plot-subtitle">Bilateral aid</h3>`
+                        : html`<h3 class="plot-subtitle">Imputed multilateral aid</h3>`
                 }
             </div>
             ${
                 resize(
                     (width) => barPlot(
-                        dataRecipients, 
-                        currencyRecipients, 
+                        absoluteData, 
+                        currency, 
                         "recipients", 
                         width
                     )
@@ -258,7 +231,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Table 2a.</p>
-                    <p class="plot-note">ODA values in million ${pricesRecipients} ${currencyRecipients}.</p>
+                    <p class="plot-note">ODA values in million ${prices} ${currency}.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
@@ -273,7 +246,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     "Download plot", {
                          reduce: () => downloadPNG(
                              "bars-recipients",
-                             formatString(`ODA to ${recipientRecipients} from ${donorRecipients}`, {fileMode: true})
+                             formatString(`ODA to ${recipient} from ${donor}`, {fileMode: true})
                         )
                     }
                 )
@@ -283,19 +256,21 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     <div class="card">
         <div class="plot-container" id="lines-recipients">
             <h2 class="plot-title">
-                ${formatString(`ODA to ${recipientRecipients} from ${donorRecipients}`)}
+                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
             </h2>
             <div class="plot-subtitle-panel">
                 ${
-                    indicatorRecipients == "Total"
-                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label  subtitle-label">Bilateral</span> and <span class="multilateral-label  subtitle-label">imputed multilateral</span> as a share of total ODA</h3>`
-                    : html`<h3 class="plot-subtitle">${indicatorRecipients} as a share of all ODA</h3>`
+                    indicator == 306
+                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span> as a share of total aid</h3>`
+                    : indicator == 206
+                        ? html`<h3 class="plot-subtitle">Bilateral as a share of total aid</h3>`
+                        : html`<h3 class="plot-subtitle">Imputed multilateral as a share of total aid</h3>`
                 }
             </div>
             ${
                 resize(
                     (width) => linePlot(
-                        dataRecipients,
+                        relativeData,
                         "recipients",
                         width
                     )
@@ -318,7 +293,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     "Download plot", {
                         reduce: () => downloadPNG(
                             "lines-recipients",
-                             formatString(`ODA to ${recipientRecipients} from ${donorRecipients}_share`, {fileMode: true})
+                             formatString(`ODA to ${recipient} from ${donor}_share`, {fileMode: true})
                         )
                     }
                 )
@@ -329,20 +304,20 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
 <div class="card">
     <div class="plot-container">
         <h2 class="table-title">
-            ${formatString(`ODA to ${recipientRecipients} from ${donorRecipients}`)}
+            ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
         </h2>
         <div class="table-subtitle-panel">
-            ${unitRecipientsInput}
+            ${unitInput}
         </div>
-        ${sparkbarTable(dataRecipients, "recipients", {unit: unitRecipients})}
+        ${sparkbarTable(data, "recipients", {unit: unit})}
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Table 2a.</p>
                 ${
-                    unitRecipients === "Value" 
-                    ? html`<p class="plot-note">ODA values in million ${pricesRecipients} ${currencyRecipients}.</p>`
-                    : unitRecipients === "GNI Share" 
-                        ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(recipientRecipients)}.</p>`
+                    unit === "Value" 
+                    ? html`<p class="plot-note">ODA values in million ${prices} ${currency}.</p>`
+                    : unit === "GNI Share" 
+                        ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(recipient)}.</p>`
                         : html` `
                 }
             </div>
@@ -358,8 +333,8 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             Inputs.button(
                 "Download data", {
                     reduce: () => downloadXLSX(
-                        dataRecipients,
-                        formatString(`ODA to ${recipientRecipients} from ${donorRecipients}`, {fileMode: true})
+                        data,
+                        formatString(`ODA to ${recipient} from ${donor}`, {fileMode: true})
                     )
                 }
             )
