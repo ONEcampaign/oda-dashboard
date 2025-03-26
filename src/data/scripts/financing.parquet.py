@@ -1,52 +1,136 @@
 import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
-import sys
 
-from pathlib import Path
+from oda_data import Dac1Data, set_data_path
 
-from src.data.settings.utils import get_schema, to_decimal
+from src.data.config import PATHS, time_range, logger
 
-file_path = Path.cwd() / "scripts" / "output" / "financing.csv"
+from src.data.analysis_tools.utils import get_dac_ids, load_indicators, to_decimal, return_pa_table
 
-df = pd.read_csv(file_path)
+set_data_path(PATHS.ODA_DATA)
 
-df.drop(columns=["Donor Code", "share", "description"], inplace=True)
 
-df['year'] = df['year'].astype('category')
-df['Indicator'] = df['Indicator'].astype('category')
-# df['Donor Code'] = df['Donor Code'].astype('category')
-df['Donor Name'] = df['Donor Name'].astype('category')
-df['Share of'] = df['Share of'].astype('category')
-df['Currency'] = df['Currency'].astype('category')
-df['Prices'] = df['Prices'].astype('category')
-df['Indicator Type'] = df['Indicator Type'].astype('category')
-df["value"] = df["value"].apply(lambda x: to_decimal(x))
-# df["share"] = df["share"].apply(lambda x: to_decimal(x)
-df["GNI Share"] = df["GNI Share"].apply(lambda x: to_decimal(x))
-# df['description'] = df['description'].astype('category')
+def get_dac1_flow():
 
-schema = pa.schema([
-    ("year", pa.dictionary(pa.int8(), pa.int16())),
-    ("Indicator", pa.dictionary(pa.int8(), pa.string())),
-    # ("Donor Code", pa.int32()),
-    ("Donor Name", pa.dictionary(pa.int8(), pa.string())),
-    ("Share of", pa.dictionary(pa.int8(), pa.string())),
-    ("Currency", pa.dictionary(pa.int8(), pa.string())),
-    ("Prices", pa.dictionary(pa.int8(), pa.string())),
-    ("value", pa.decimal128(9, 2)),
-    # ("share", pa.decimal128(6, 2)),
-    ("GNI Share", pa.decimal128(6, 2)),
-    ("Indicator Type", pa.dictionary(pa.int8(), pa.string())),
-    # ("description", pa.dictionary(pa.int8(), pa.string()))
-])
+    donor_ids = get_dac_ids(PATHS.DONORS)
+    indicator_ids = load_indicators("financing")['flow']
 
-sparkbarTable = pa.Table.from_pandas(df, schema=schema, preserve_index=False)
+    df_raw = (
+        Dac1Data(years=range(time_range["start"], 2018))
+        .read(
+            using_bulk_download=True,
+            additional_filters=[
+                ("amount_type", "==", "Current prices"),
+                ("donor_code", "in", donor_ids),
+                ("aidtype_code", "in", indicator_ids.keys()),
+                ("flows_code", "==", 1140),
+            ],
+        )
+    )
 
-# Write PyArrow Table to Parquet
-buf = pa.BufferOutputStream()
-pq.write_table(sparkbarTable, buf, compression="snappy")
+    df = (
+        df_raw.groupby(
+            ["year", "donor_code", "aidtype_code"], dropna=False, observed=True
+        )["value"]
+        .sum()
+        .reset_index()
+        .assign(indicator=lambda d: d["aidtype_code"].astype(str).map(indicator_ids))
+        .drop(columns="aidtype_code")
+    )
 
-# Get the Parquet bytes
-buf_bytes = buf.getvalue().to_pybytes()
-sys.stdout.buffer.write(buf_bytes)
+    df = df[df["value"] != 0]
+
+    return df
+
+def get_dac1_ge():
+
+    donor_ids = get_dac_ids(PATHS.DONORS)
+    indicator_ids = load_indicators("financing")['ge']
+
+    df_raw = (
+        Dac1Data(years=range(2018, time_range['end'] + 1))
+        .read(
+            using_bulk_download=True,
+            additional_filters=[
+                ("amount_type", "==", "Current prices"),
+                ("donor_code", "in", donor_ids),
+                ("aidtype_code", "in", indicator_ids.keys()),
+                ("flows_code", "==", 1160),
+            ],
+        )
+    )
+
+    df = (
+        df_raw.groupby(
+            ["year", "donor_code", "aidtype_code"], dropna=False, observed=True
+        )["value"]
+        .sum()
+        .reset_index()
+        .assign(indicator=lambda d: d["aidtype_code"].astype(str).map(indicator_ids))
+        .drop(columns="aidtype_code")
+    )
+
+    df = df[df["value"] != 0]
+
+    return df
+
+
+def get_dac1_grants():
+
+    donor_ids = get_dac_ids(PATHS.DONORS)
+    indicator_ids = load_indicators("financing")['grant']
+
+    df_raw = Dac1Data(years=range(time_range["start"], time_range["end"] + 1)).read(
+        using_bulk_download=True,
+        additional_filters=[
+            ("amount_type", "==", "Current prices"),
+            ("donor_code", "in", donor_ids),
+            ("aidtype_code", "==", 1010),
+            ("flows_code", "in", indicator_ids.keys()),
+        ],
+    )
+
+    df = (
+        df_raw.groupby(
+            ["year", "donor_code", "flows_code"], dropna=False, observed=True
+        )["value"]
+        .sum()
+        .reset_index()
+        .assign(indicator=lambda d: d["flows_code"].astype(str).map(indicator_ids))
+        .drop(columns="flows_code")
+    )
+
+    df = df[df["value"] != 0]
+
+    return df
+
+
+def get_financing():
+
+    flow = get_dac1_flow()
+    ge = get_dac1_ge()
+    grants = get_dac1_grants()
+
+    financing = pd.concat([flow, ge, grants])
+
+    return financing
+
+
+def convert_types(df):
+
+    df["year"] = df["year"].astype("category")
+    df["donor_code"] = df["donor_code"].astype("category")
+    df["indicator"] = df["indicator"].astype("category")
+    df["value"] = df["value"].apply(lambda x: to_decimal(x))
+
+    return df
+
+
+def create_parquet():
+    df = get_financing()
+    converted_df = convert_types(df)
+    return_pa_table(converted_df)
+
+
+if __name__ == "__main__":
+    logger.info("Generating financing table...")
+    create_parquet()

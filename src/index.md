@@ -1,14 +1,9 @@
-```js 
-import {DuckDBClient} from "npm:@observablehq/duckdb";
-
+```js
 import {setCustomColors} from "./components/colors.js"
-import {formatString, convertUint32Array} from "./components/utils.js";
-
-import {uniqueValuesFinancing} from "./components/uniqueValuesFinancing.js";
+import {financingQueries} from "./components/dataQueries.js"
+import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap} from "./components/utils.js";
 import {rangeInput} from "./components/rangeInput.js";
-
 import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
-
 import {downloadPNG, downloadXLSX} from './components/downloads.js';
 ```
 
@@ -17,82 +12,78 @@ setCustomColors();
 ```
 
 ```js
-const db = DuckDBClient.of({
-    financing: FileAttachment("./data/scripts/financing.parquet")
-});
+const donorOptions = await FileAttachment("./data/analysis_tools/donor_mapping.json").json()
+const donorMapping = name2CodeMap(donorOptions)
+
+const indicatorOptions = await FileAttachment("./data/analysis_tools/indicators.json").json()
+const indicatorMapping = generateIndicatorMap(indicatorOptions, "financing")
 ```
 
 ```js
 // USER INPUTS
 // Donor
-const donorFinancingInput = Inputs.select(
-    uniqueValuesFinancing.donors,
+const donorInput = Inputs.select(
+    donorMapping,
     {
         label: "Donor",
-        value: "DAC Countries, Total",
-        sort: true
+        value: donorMapping.get("DAC countries")
     })
-const donorFinancing = Generators.input(donorFinancingInput);
+const donor = Generators.input(donorInput);
 
 // Indicator
-const indicatorFinancingInput = Inputs.select(
-    uniqueValuesFinancing.indicators,
+const indicatorInput = Inputs.select(
+    indicatorMapping,
     {
         label: "Indicator",
-        value: "Total ODA"
+        value: indicatorMapping.get("Total ODA")
     })
-const indicatorFinancing = Generators.input(indicatorFinancingInput);
-
-// Type
-const typeFinancingInput = Inputs.select(
-    uniqueValuesFinancing.indicatorTypes,
-    {
-        label: "Type",
-        value: "Official Definition",
-        sort: true
-    })
-const typeFinancing = Generators.input(typeFinancingInput);
+const indicator = Generators.input(indicatorInput);
 
 // Currency
-const currencyFinancingInput = Inputs.select(
-    uniqueValuesFinancing.currencies,
+const currencyInput = Inputs.select(
+    new Map([
+        ["US Dollars", "usd"],
+        ["Canada Dollars", "cad"],
+        ["Euros", "eur"],
+        ["British pounds", "gbp"]
+    ]),
     {
         label: "Currency",
-        value: "US Dollars",
+        value: "usd",
         sort: true
     })
-const currencyFinancing = Generators.input(currencyFinancingInput);
+const currency = Generators.input(currencyInput);
 
 // Prices
-const pricesFinancingInput = Inputs.radio(
-    uniqueValuesFinancing.prices,
+const pricesInput = Inputs.radio(
+    new Map([
+        ["Current", "current"],
+        // ["Constant", "constant"]
+    ]),
     {
         label: "Prices",
-        value: "Constant"
+        value: "current"
     }
 )
-const pricesFinancing = Generators.input(pricesFinancingInput)
+const prices = Generators.input(pricesInput)
 
 // Year
-const timeRangeFinancingInput = rangeInput(
+const timeRangeInput = rangeInput(
     {
-        min: uniqueValuesFinancing.timeRange[0],
-        max: uniqueValuesFinancing.timeRange[1],
+        min: 2000,
+        max: 2023,
         step: 1,
-        value: [
-            uniqueValuesFinancing.timeRange[0],
-            uniqueValuesFinancing.timeRange[1]
-        ],
+        value: [2013, 2023],
         label: "Time range",
         enableTextInput: true
     })
-const timeRangeFinancing = Generators.input(timeRangeFinancingInput)
+const timeRange = Generators.input(timeRangeInput)
 
 // Unit
-const unitFinancingInput = Inputs.select(
+const unitInput = Inputs.select(
     new Map(
         [
-            [`Million ${currencyFinancingInput.value}`, "Value"],
+            [`Million ${currencyInput.value}`, "Value"],
             ["GNI Share", "GNI Share"]
         ]
     ),
@@ -101,62 +92,30 @@ const unitFinancingInput = Inputs.select(
         value: "Value"
     }
 )
-const unitFinancing = Generators.input(unitFinancingInput)
+const unit = Generators.input(unitInput)
 
 // Intenational commitments
-const commitmentFinancingInput = Inputs.toggle(
+const commitmentInput = Inputs.toggle(
     {label: html`Int'l commitment`, value: false}
 )
 
-const commitmentFinancing = Generators.input(commitmentFinancingInput)
+const commitment = Generators.input(commitmentInput)
 ```
 
 ```js
 // DATA QUERY
-const queryFinancingString = `
-SELECT 
-    year AS Year,
-    "Donor Name" AS Donor,
-    Indicator,
-    CASE 
-        WHEN "Indicator Type" = 'Official Definition' AND Year < 2018 THEN 'Flow'
-        WHEN "Indicator Type" = 'Official Definition' AND Year >= 2018 THEN 'Grant Equivalent'
-        ELSE "Indicator Type"
-    END AS Type,
-    value AS Value,
-    "GNI Share",
-    Currency,
-    Prices,
-FROM financing
-WHERE 
-    Year >= ? AND 
-    Year <= ? AND
-    Donor = ? AND 
-    Indicator = ? AND
-    "Indicator Type" = ? AND 
-    Currency = ? AND 
-    Prices = ?;
-`;
+const data = financingQueries(
+    donor, 
+    indicator,
+    currency,
+    prices,
+    timeRange
+)
 
-const queryFinancingParams = [
-    timeRangeFinancing[0],
-    timeRangeFinancing[1],
-    donorFinancing,
-    indicatorFinancing,
-    typeFinancing,
-    currencyFinancing,
-    pricesFinancing
-];
-
-const queryFinancing = await db.query(queryFinancingString, queryFinancingParams);
-
-const dataFinancing = queryFinancing.toArray()
-    .map((row) => ({
-        ...row,
-        ["GNI Share"]: convertUint32Array(row["GNI Share"]),
-        ["Value"]: convertUint32Array(row["Value"])
-    }))
+const absoluteData = data.absolute
+const relativeData = data.relative
 ```
+
 
 ```js
 const moreSettings = Mutable(false)
@@ -173,6 +132,7 @@ const showMoreSettings = () => {
 ```
 
 ```js
+
 const showMoreButton = Inputs.button(moreSettings ? "Show less" : "Show more", {
     reduce: showMoreSettings
 });
@@ -207,38 +167,37 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
 
 <div class="settings card">
     <div class="settings-group">
-        ${donorFinancingInput}
+        ${donorInput}
     </div>
     <div class="settings-group">
-        ${currencyFinancingInput}
-        ${indicatorFinancingInput}
+        ${currencyInput}
+        ${indicatorInput}
     </div>
     <div class="settings-button">
         ${showMoreButton}
     </div>
     <div class="settings-group hidden">
-        ${pricesFinancingInput}
-        ${timeRangeFinancingInput}
+        ${pricesInput}
+        ${timeRangeInput}
     </div>
 </div>
+
 <div class="grid grid-cols-2">
     <div class="card">
         <div  class="plot-container" id="bars-financing">
             <h2 class="plot-title">
-                ${formatString(`${indicatorFinancing} from ${donorFinancing}`)}
+                ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)}
             </h2>
             <div class="plot-subtitle-panel">
-                ${
-                    typeFinancing == "Official Definition"
-                    ? html`<h3 class="plot-subtitle"><span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span></h3>`
-                    : html`<h3 class="plot-subtitle">${typeFinancing}</h3>`
-                }
+                <h3 class="plot-subtitle">
+                    <span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span>
+                </h3>
             </div>
             ${
                 resize(
                     (width) => barPlot(
-                        dataFinancing, 
-                        currencyFinancing, 
+                        absoluteData, 
+                        currency, 
                         "financing", 
                         width
                     )
@@ -247,8 +206,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Table 1.</p>
-                    <p class="plot-note">ODA values in million ${pricesFinancing} ${currencyFinancing}.</p>
-                </div>
+                    <p class="plot-note">ODA values in million ${prices} ${getCurrencyLabel(currency, {preffixOnly: true})}.</p>                </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
                         <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
@@ -263,7 +221,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     {
                         reduce: () => downloadPNG(
                             "bars-financing",
-                            formatString(`${indicatorFinancing} from ${donorFinancing}`, {fileMode: true})
+                            formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`, {fileMode: true})
                         )
                     }   
                 )
@@ -273,29 +231,35 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     <div class="card">
         <div class="plot-container" id="lines-financing">
             <h2 class="plot-title">
-                ${formatString(`${indicatorFinancing} from ${donorFinancing}`)}
+                ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)}
             </h2>
             <div class="plot-subtitle-panel">
+                <h3 class="plot-subtitle">
                 ${
-                    typeFinancing == "Official Definition"
-                    ? html`<h3 class="plot-subtitle"><span class="flow-label subtitle-label">Flows</span> and <span class="ge-label subtitle-label">grant equivalents</span> as a share of GNI</h3>`
-                    : html`<h3 class="plot-subtitle">${typeFinancing}</h3>`
+                    indicator === indicatorMapping.get("Total ODA") 
+                        ? html`<span class="flow-label subtitle-label">Flows</span> and <span class="ge-label subtitle-label">grant equivalents</span> as a share of GNI`
+                        : html`<span class="flow-label subtitle-label">Flows</span> and <span class="ge-label subtitle-label">grant equivalents</span> as a share total aid`
                 }
-                ${commitmentFinancingInput}
+                </h3>
+                ${
+                    indicator === indicatorMapping.get("Total ODA") 
+                        ? commitmentInput
+                        : html` `
+                }
             </div>
             ${
             resize(
                 (width) => linePlot(
-                    dataFinancing, 
+                    relativeData, 
                     "financing", 
                     width,
-                    {showIntlCommitment: commitmentFinancing}
+                    {showIntlCommitment: commitment}
                 ))
             }
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Table 1.</p>
-                    <p class="plot-note">ODA values as a share of the GNI of ${formatString(donorFinancing)}.</p>
+                    <p class="plot-note">ODA values as a share of GNI of ${formatString(getNameByCode(donorMapping, donor))}.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
@@ -311,7 +275,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     {
                         reduce: () => downloadPNG(
                             "lines-financing",
-                            formatString(`${indicatorFinancing} from ${donorFinancing}_gni_share`, {fileMode: true})
+                            formatString(`${getNameByCode(indicatorMapping, indicator)} from ${donor}_gni_share`, {fileMode: true})
                         )
                     }
                 )
@@ -323,25 +287,25 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
 <div class="card">
     <div class="plot-container">
         <h2 class="table-title">
-            ${formatString(`${indicatorFinancing} from ${donorFinancing}`)}
+            ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)}
         </h2>
         <div class="table-subtitle-panel">
-            ${unitFinancingInput}
+            ${unitInput}
         </div>
         ${
             sparkbarTable(
-                dataFinancing, 
+                data, 
                 "financing", 
-                {unit: unitFinancing}
+                {unit: unit}
             )
         }
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Table 1.</p>
                 ${
-                    unitFinancing === "Value" 
-                    ? html`<p class="plot-note">ODA values in million ${pricesFinancing} ${currencyFinancing}.</p>`
-                    : html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(donorFinancing)}.</p>`
+                    unit === "Value" 
+                    ? html`<p class="plot-note">ODA values in million ${prices} ${getCurrencyLabel(currency, {preffixOnly: true})}.</p>`
+                    : html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(donor)}.</p>`
                 }
             </div>
             <div class="logo-section">
@@ -357,8 +321,8 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                 "Download data", 
                 {
                     reduce: () => downloadXLSX(
-                        dataFinancing,
-                        formatString(`${indicatorFinancing} from ${donorFinancing}`, {fileMode: true})
+                        data,
+                        formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`, {fileMode: true})
                     )
                 }
             )
