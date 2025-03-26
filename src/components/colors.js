@@ -43,7 +43,8 @@ export const customPalette = {
     intlCommitment: ONEPalette.burgundy1,
     genderMain: ONEPalette.orange1,
     genderSecondary: ONEPalette.navy0,
-    genderNot: ONEPalette.purple1,
+    genderNotTargeted: ONEPalette.purple1,
+    genderNotScreened: "#646464", // ONEPalette.blue0,
     darkGrey: "#333333",
     midGrey: "#646464",
     lightGrey: "#E8E8E8",
@@ -52,7 +53,7 @@ export const customPalette = {
 
 export const paletteFinancing = {
     domain: [
-        "Grant Equivalent",
+        "Grant equivalent",
         "Flow"
     ],
     range: [
@@ -65,7 +66,7 @@ export const paletteRecipients = {
     domain: [
         "Bilateral",
         "Imputed multilateral",
-        "Total"
+        "Total ODA"
     ],
     range: [
         customPalette.bilateral,
@@ -87,13 +88,15 @@ export const paletteGender = {
         "Gender total",
         "Main focus",
         "Secondary focus",
-        'Not targeted'
+        'Not targeted',
+        'Not screened'
     ],
     range: [
         customPalette.total,
         customPalette.genderMain,
         customPalette.genderSecondary,
-        customPalette.genderNot
+        customPalette.genderNotTargeted,
+        customPalette.genderNotScreened
     ]
 }
 

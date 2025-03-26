@@ -90,7 +90,7 @@ export function linePlot(data, mode, width,
             y: false
         }
         if (mode === "financing") {
-            yValue = "GNI Share"
+            yValue = "Value"
             groupVar = "Type"
             customChannels = {
                 custom: {
@@ -100,7 +100,7 @@ export function linePlot(data, mode, width,
             }
             colorScale = paletteFinancing
         } else if (mode === "recipients") {
-            yValue = "Share of total"
+            yValue = "Value"
             groupVar = "Indicator"
             stacked = new Set(data.map(d => d[groupVar])).size > 1;
             customChannels = {
