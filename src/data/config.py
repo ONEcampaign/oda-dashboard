@@ -15,9 +15,9 @@ logger.addHandler(shell_handler)
 logger.setLevel(logging.INFO)
 
 
-base_year = 2023  # for currency conversions
+base_year: int = 2023  # for currency conversions
 
-time_range = [2000, 2023]
+time_range: dict = {"start": 2000, "end": 2023}
 
 
 class PATHS:
@@ -25,9 +25,10 @@ class PATHS:
 
     SRC = Path(__file__).resolve().parent.parent
 
-    SETTINGS = SRC / "data" / "settings"
-    DONORS = SETTINGS / "donors.json"
-    RECIPIENTS = SETTINGS / "recipients.json"
+    TOOLS = SRC / "data" / "analysis_tools"
+    INDICATORS = TOOLS / "indicators.json"
+    DONORS = TOOLS / "donor_mapping.json"
+    RECIPIENTS = TOOLS / "recipient_mapping.json"
 
     DATA = SRC / "data" / "raw_data"
     PYDEFLATE = DATA / "pydeflate"
