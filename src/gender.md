@@ -1,14 +1,9 @@
 ```js 
 import {setCustomColors} from "./components/colors.js"
-import {formatString, getCurrencyLabel, name2CodeMap, getKeysByValue} from "./components/utils.js";
-
+import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode} from "./components/utils.js";
 import {genderQueries} from "./components/dataQueries.js"
-
-import {uniqueValuesGender} from "./components/uniqueValuesGender.js";
 import {rangeInput} from "./components/rangeInput.js";
-
 import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
-
 import {downloadPNG, downloadXLSX} from './components/downloads.js';
 ```
 
@@ -17,8 +12,8 @@ setCustomColors();
 ```
 
 ```js
-const donorOptions = await FileAttachment("./data/settings/donors.json").json()
-const recipientOptions = await FileAttachment("./data/settings/recipients.json").json()
+const donorOptions = await FileAttachment("./data/analysis_tools/donor_mapping.json").json()
+const recipientOptions = await FileAttachment("./data/analysis_tools/recipient_mapping.json").json()
 
 const donorMapping = name2CodeMap(donorOptions)
 const recipientMapping = name2CodeMap(recipientOptions)
@@ -53,6 +48,7 @@ const indicatorInput = Inputs.select(
         ["Main focus", 2],
         ["Secondary focus", 1],
         ["Not targeted", 0],
+        ["Not screened", 9]
     ]),
     {
         label: "Gender is",
@@ -79,11 +75,11 @@ const currency = Generators.input(currencyInput);
 const pricesInput = Inputs.radio(
     new Map([
         ["Current", "current"],
-        ["Constant", "constant"]
+        // ["Constant", "constant"]
     ]),
     {
         label: "Prices",
-        value: "constant"
+        value: "current"
     }
 )
 const prices = Generators.input(pricesInput)
@@ -91,18 +87,14 @@ const prices = Generators.input(pricesInput)
 // Year
 const timeRangeInput = rangeInput(
     {
-        min: uniqueValuesGender.timeRange[0],
-        max: uniqueValuesGender.timeRange[1],
+        min: 2000,
+        max: 2023,
         step: 1,
-        value: [
-            uniqueValuesGender.timeRange[1] - 10,
-            uniqueValuesGender.timeRange[1]
-        ],
+        value: [2013, 2023],
         label: "Time range",
         enableTextInput: true
     })
 const timeRange = Generators.input(timeRangeInput)
-
 ```
 
 
@@ -119,8 +111,8 @@ const data = genderQueries(
 
 const absoluteData = data.absolute
 const relativeData = data.relative
-
 ```
+
 
 ```js
 const moreSettings = Mutable(false)
@@ -190,7 +182,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     <div class="card">
         <div class="plot-container" id="bars-gender">
             <h2 class="plot-title">
-                ODA to ${getKeysByValue(recipientMapping, recipient)} from ${getKeysByValue(donorMapping, donor)}
+                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
             </h2>
             <div class="plot-subtitle-panel">
                 ${
@@ -200,7 +192,9 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                             ? html`<h3 class="plot-subtitle"> Gender as main focus</h3>`
                             : indicator === 1
                                 ? html`<h3 class="plot-subtitle"> Gender as secondary focus</h3>`
-                                : html`<h3 class="plot-subtitle"> Aid that does not target gender</h3>`
+                                : indicator == 0
+                                    ? html`<h3 class="plot-subtitle"> Aid that does not target gender</h3>`
+                                    : html`<h3 class="plot-subtitle"> Aid that is not screened for whether it targets gender</h3>`
                 }
             </div>
             ${
@@ -231,7 +225,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     "Download plot", {
                         reduce: () => downloadPNG(
                             "bars-gender",
-                             formatString(`gender ODA to ${getKeysByValue(donorMapping, donor)} from ${getKeysByValue(recipientMapping, recipient)}`, {fileMode: true})
+                             formatString(`gender ODA to ${getNameByCode(donorMapping, donor)} from ${getNameByCode(recipientMapping, recipient)}`, {fileMode: true})
                         )
                     }
                 )
@@ -241,17 +235,19 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     <div class="card">
         <div class="plot-container" id="lines-gender">
             <h2 class="plot-title">
-                ODA to ${getKeysByValue(recipientMapping, recipient)} from ${getKeysByValue(donorMapping, donor)}
+                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
             </h2>
             <div class="plot-subtitle-panel">
                 ${
                     indicator === 3 
-                        ? html`<h3 class="plot-subtitle"> Gender as <span class="gender-main subtitle-label">main</span> and <span class="gender-secondary subtitle-label">secondary</span> focus as a share of total aid</h3>`
+                        ? html`<h3 class="plot-subtitle"> Gender as <span class="gender-main subtitle-label">main</span> and <span class="gender-secondary subtitle-label">secondary</span> focus  of total aid</h3>`
                         : indicator === 2
-                            ? html`<h3 class="plot-subtitle"> Gender as main focus as a share of total aid</h3>`
+                            ? html`<h3 class="plot-subtitle"> Gender as main focus of total aid</h3>`
                             : indicator === 1
-                                ? html`<h3 class="plot-subtitle"> Gender as secondary focus as a share of total aid</h3>`
-                                : html`<h3 class="plot-subtitle"> Aid that does not target gender as a share of total aid</h3>`
+                                ? html`<h3 class="plot-subtitle"> Gender as secondary focus of total aid</h3>`
+                                : indicator == 0
+                                    ? html`<h3 class="plot-subtitle"> Aid that does not target gender of total aid</h3>`
+                                    : html`<h3 class="plot-subtitle"> Aid that is not screened for whether it targets gender as a share of total aid</h3>`
                 }
             </div>
             ${
@@ -280,7 +276,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     "Download plot", {
                         reduce: () => downloadPNG(
                             "lines-gender",
-                             formatString(`gender ODA to ${getKeysByValue(donorMapping, donor)} from ${getKeysByValue(recipientMapping, recipient)} share`, {fileMode: true})
+                             formatString(`gender ODA to ${getNameByCode(donorMapping, donor)} from ${getNameByCode(recipientMapping, recipient)} share`, {fileMode: true})
                         )
                     }
                 )
