@@ -73,16 +73,16 @@ export function getCurrencyLabel(unit, {
         suffix = "M"
     )
 
-    if (unit === "US Dollars") {
+    if (unit === "US Dollars" || unit === "usd") {
         prefix = "US$"
     }
-    else if (unit === "Euros") {
+    else if (unit === "Euros" || unit === "eur") {
         prefix = "€"
     }
-    else if (unit === "Canadian Dollars") {
+    else if (unit === "Canadian Dollars" || unit === "cad") {
         prefix =  "CA$"
     }
-    else if (unit === "British Pounds") {
+    else if (unit === "British Pounds" || unit === "gbp") {
         prefix = "£"
     }
 
@@ -101,31 +101,68 @@ export function getCurrencyLabel(unit, {
 
 }
 
-export function name2CodeMap(jsonData) {
-    const map = new Map();
+export function name2CodeMap(obj) {
+        const map = new Map();
 
-    for (const [code, { name, groups }] of Object.entries(jsonData)) {
-        if (!map.has(name)) map.set(name, []);
-        map.get(name).push(code);
+        for (const [code, { name, groups }] of Object.entries(obj)) {
+            // Add country name → code
+            if (!map.has(name)) map.set(name, []);
+            map.get(name).push(Number(code));
 
-        for (const group of groups) {
-            if (!map.has(group)) map.set(group, []);
-            map.get(group).push(code);
+            // Add each group → code
+            for (const group of groups) {
+                if (!map.has(group)) map.set(group, []);
+                map.get(group).push(Number(code));
+            }
+        }
+
+        return map;
+    }
+
+
+export function getNameByCode(map, codes) {
+    const codeArray = Array.isArray(codes) ? codes : [codes];
+    const target = codeArray.map(String).sort().join(",");
+
+    for (const [name, codeListRaw] of map.entries()) {
+        const codeList = Array.isArray(codeListRaw) ? codeListRaw : [codeListRaw];
+        const listKey = codeList.map(String).sort().join(",");
+
+        if (listKey === target) {
+            return name;
         }
     }
 
-    return map;
+    return undefined;
 }
 
-export function getKeysByValue(map, targetCodes) {
-    const result = [];
-    const target = [...targetCodes].sort().join(",");
 
-    for (const [key, value] of map.entries()) {
-        if ([...value].sort().join(",") === target) {
-            result.push(key);
+
+export function generateIndicatorMap(data, page) {
+    // Step 1: Filter entries by page and collect unique names
+    const names = new Set();
+
+    for (const key in data) {
+        const entry = data[key];
+        if (entry.page === page && typeof entry.name === "string") {
+            names.add(entry.name);
         }
     }
 
-    return result;
+    // Add "Total ODA" manually if page === "recipients"
+    if (page === "recipients") {
+        names.add("Total ODA");
+    }
+
+    // Step 2: Sort names alphabetically and assign incremental IDs
+    const sortedNames = [...names].sort();
+    const nameToId = new Map();
+
+    sortedNames.forEach((name, index) => {
+        nameToId.set(name, index);
+    });
+
+    return nameToId;
 }
+
+
