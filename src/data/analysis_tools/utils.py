@@ -66,8 +66,6 @@ def load_indicators(page):
         return result
 
 
-
-
 def return_pa_table(df):
 
     schema = get_schema(df)
@@ -144,3 +142,20 @@ def get_schema(df):
 def to_decimal(val, precision=2):
     quantizer = Decimal("1." + "0" * precision)
     return Decimal(str(val)).quantize(quantizer, rounding=ROUND_HALF_EVEN)
+
+def convert_types(df):
+    type_map = {
+        "year": "category",
+        "donor_code": "category",
+        "recipient_code": "category",
+        "indicator": "category"
+    }
+
+    for col, dtype in type_map.items():
+        if col in df.columns:
+            df[col] = df[col].astype(dtype)
+
+    if "value" in df.columns:
+        df["value"] = df["value"].apply(to_decimal)
+
+    return df

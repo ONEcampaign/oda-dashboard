@@ -1,7 +1,7 @@
 from oda_data import Dac2aData, set_data_path
 from src.data.config import PATHS, time_range, logger
 
-from src.data.analysis_tools.utils import get_dac_ids, load_indicators, to_decimal, return_pa_table
+from src.data.analysis_tools.utils import get_dac_ids, load_indicators, convert_types, return_pa_table
 
 set_data_path(PATHS.ODA_DATA)
 
@@ -44,24 +44,15 @@ def filter_transform_dac2a():
     return df
 
 
-def convert_types(df):
-
-    df["year"] = df["year"].astype("category")
-    df["donor_code"] = df["donor_code"].astype("category")
-    df["recipient_code"] = df["recipient_code"].astype("category")
-    df["indicator"] = df["indicator"].astype("category")
-    df["value"] = df["value"].apply(lambda x: to_decimal(x))
-
-    return df
-
-
-def create_parquet():
+def get_recipients():
 
     df = filter_transform_dac2a()
-    converted_df = convert_types(df)
-    return_pa_table(converted_df)
+
+    df_converted = convert_types(df)
+
+    return_pa_table(df_converted)
 
 
 if __name__ == "__main__":
     logger.info("Generating recipients table...")
-    create_parquet()
+    get_recipients()
