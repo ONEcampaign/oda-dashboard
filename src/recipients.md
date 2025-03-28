@@ -22,7 +22,6 @@ const indicatorOptions = await FileAttachment("./data/analysis_tools/indicators.
 const indicatorMapping = generateIndicatorMap(indicatorOptions, "recipients")
 ```
 
-
 ```js
 // USER INPUTS
 const donorInput = Inputs.select(
@@ -43,11 +42,11 @@ const recipientInput = Inputs.select(
 const recipient = Generators.input(recipientInput);
 
 // Indicator
-const indicatorInput = Inputs.select(
+const indicatorInput = Inputs.checkbox(
     indicatorMapping,
     {
         label: "Indicator",
-        value: indicatorMapping.get("Total ODA"),
+        value: [indicatorMapping.get("Bilateral"), indicatorMapping.get("Imputed multilateral")],
     })
 const indicator = Generators.input(indicatorInput);
 
@@ -185,7 +184,7 @@ console.log(donorMapping.get("Austria"))
         Gender
     </a>
 </div>
-${Inputs.table(absoluteData)}
+
 <div class="settings card">
     <div class="settings-group">
         ${donorInput}
@@ -211,11 +210,9 @@ ${Inputs.table(absoluteData)}
             </h2>
             <div class="plot-subtitle-panel">
                 ${
-                    indicator == 306
+                    indicator.length > 1
                     ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span> aid</h3>`
-                    : indicator == 206
-                        ? html`<h3 class="plot-subtitle">Bilateral aid</h3>`
-                        : html`<h3 class="plot-subtitle">Imputed multilateral aid</h3>`
+                    : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} aid</h3>`
                 }
             </div>
             ${
@@ -231,7 +228,7 @@ ${Inputs.table(absoluteData)}
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Table 2a.</p>
-                    <p class="plot-note">ODA values in million ${prices} ${currency}.</p>
+                    <p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
@@ -260,11 +257,9 @@ ${Inputs.table(absoluteData)}
             </h2>
             <div class="plot-subtitle-panel">
                 ${
-                    indicator == 306
+                    indicator.length > 1
                     ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span> as a share of total aid</h3>`
-                    : indicator == 206
-                        ? html`<h3 class="plot-subtitle">Bilateral as a share of total aid</h3>`
-                        : html`<h3 class="plot-subtitle">Imputed multilateral as a share of total aid</h3>`
+                    : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} as a share of total aid</h3>`
                 }
             </div>
             ${
@@ -315,7 +310,7 @@ ${Inputs.table(absoluteData)}
                 <p class="plot-source">Source: OECD DAC Table 2a.</p>
                 ${
                     unit === "Value" 
-                    ? html`<p class="plot-note">ODA values in million ${prices} ${currency}.</p>`
+                    ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
                     : unit === "GNI Share" 
                         ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(recipient)}.</p>`
                         : html` `

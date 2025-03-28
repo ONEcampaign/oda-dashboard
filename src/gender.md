@@ -1,6 +1,6 @@
 ```js 
 import {setCustomColors} from "./components/colors.js"
-import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode} from "./components/utils.js";
+import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap} from "./components/utils.js";
 import {genderQueries} from "./components/dataQueries.js"
 import {rangeInput} from "./components/rangeInput.js";
 import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
@@ -13,10 +13,13 @@ setCustomColors();
 
 ```js
 const donorOptions = await FileAttachment("./data/analysis_tools/donor_mapping.json").json()
-const recipientOptions = await FileAttachment("./data/analysis_tools/recipient_mapping.json").json()
-
 const donorMapping = name2CodeMap(donorOptions)
+
+const recipientOptions = await FileAttachment("./data/analysis_tools/recipient_mapping.json").json()
 const recipientMapping = name2CodeMap(recipientOptions)
+
+const indicatorOptions = await FileAttachment("./data/analysis_tools/indicators.json").json()
+const indicatorMapping = generateIndicatorMap(indicatorOptions, "gender")
 ```
 
 ```js
@@ -42,17 +45,14 @@ const recipientInput = Inputs.select(
 const recipient = Generators.input(recipientInput);
 
 // Indicator
-const indicatorInput = Inputs.select(
-    new Map([
-        ["Main + secondary focus", 3],
-        ["Main focus", 2],
-        ["Secondary focus", 1],
-        ["Not targeted", 0],
-        ["Not screened", 9]
-    ]),
+const indicatorInput = Inputs.checkbox(
+    indicatorMapping,
     {
         label: "Gender is",
-        value: 3
+        value: [
+            indicatorMapping.get("Main focus"), 
+            indicatorMapping.get("Secondary focus")
+        ],
     })
 const indicator = Generators.input(indicatorInput);
 
@@ -97,12 +97,11 @@ const timeRangeInput = rangeInput(
 const timeRange = Generators.input(timeRangeInput)
 ```
 
-
 ```js
 // DATA QUERY
 const data = genderQueries(
-    donor, 
-    recipient, 
+    donor,
+    recipient,
     indicator,
     currency,
     prices,
@@ -178,6 +177,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         ${timeRangeInput}
     </div>
 </div>
+
 <div class="grid grid-cols-2">
     <div class="card">
         <div class="plot-container" id="bars-gender">
@@ -210,7 +210,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD Creditor Reporting System.</p>
-                    <p class="plot-note">ODA values in million ${prices} ${getCurrencyLabel(currency, {preffixOnly: true})}.</p>
+                    <p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">

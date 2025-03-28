@@ -190,7 +190,11 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             </h2>
             <div class="plot-subtitle-panel">
                 <h3 class="plot-subtitle">
-                    <span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span>
+                    ${
+                        new Set(absoluteData.map(d => d.Type)).size > 1 
+                            ? html`in <span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span>`
+                            : html`in ${[...new Set(absoluteData.map(d => d.Type))][0]}`
+                    }
                 </h3>
             </div>
             ${
@@ -206,7 +210,8 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Table 1.</p>
-                    <p class="plot-note">ODA values in million ${prices} ${getCurrencyLabel(currency, {preffixOnly: true})}.</p>                </div>
+                    <p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>                
+                </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
                         <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
@@ -235,11 +240,12 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             </h2>
             <div class="plot-subtitle-panel">
                 <h3 class="plot-subtitle">
-                ${
-                    indicator === indicatorMapping.get("Total ODA") 
-                        ? html`<span class="flow-label subtitle-label">Flows</span> and <span class="ge-label subtitle-label">grant equivalents</span> as a share of GNI`
-                        : html`<span class="flow-label subtitle-label">Flows</span> and <span class="ge-label subtitle-label">grant equivalents</span> as a share total aid`
-                }
+                    ${
+                        new Set(relativeData.map(d => d.Type)).size > 1 
+                            ? html`in <span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span>`
+                            : html`in ${[...new Set(relativeData.map(d => d.Type))][0]}`
+                    }
+                    ${indicator === indicatorMapping.get("Total ODA") ? html`as a share of GNI` : html`as a share of total aid`}
                 </h3>
                 ${
                     indicator === indicatorMapping.get("Total ODA") 
@@ -304,7 +310,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                 <p class="plot-source">Source: OECD DAC Table 1.</p>
                 ${
                     unit === "Value" 
-                    ? html`<p class="plot-note">ODA values in million ${prices} ${getCurrencyLabel(currency, {preffixOnly: true})}.</p>`
+                    ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
                     : html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(donor)}.</p>`
                 }
             </div>
