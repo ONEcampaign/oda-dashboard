@@ -9,7 +9,7 @@ const db = await DuckDBClient.of({
     gender: FileAttachment("../data/scripts/gender.parquet"),
     gni_table: FileAttachment("../data/scripts/gni_table.parquet"),
     current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv"),
-    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table.csv")
+    // constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table.csv")
 });
 
 const donorOptions = await FileAttachment("../data/analysis_tools/donor_mapping.json").json()
@@ -18,7 +18,6 @@ const indicatorOptions = await FileAttachment("../data/analysis_tools/indicators
 
 const donorMapping = name2CodeMap(donorOptions)
 const recipientMapping = name2CodeMap(recipientOptions)
-
 
 
 //  FINANCING VIEW
@@ -30,7 +29,9 @@ export function financingQueries(
     timeRange
 ) {
 
+
     const indicatorMapping = generateIndicatorMap(indicatorOptions, "financing")
+
 
     const absolute = absoluteFinancingQuery(
         donor,
@@ -74,7 +75,11 @@ async function absoluteFinancingQuery(
                 FROM financing
                 WHERE 
                     donor_code IN (${donor})
-                    AND indicator = ${indicator}
+                    ${
+                        indicator === indicatorMapping.get("Non-grants")
+                            ? `AND indicator IN (${indicatorMapping.get("Grants")}, ${indicatorMapping.get("Total ODA")})` 
+                            : `AND indicator = ${indicator}`
+                    }
                     AND year between ${timeRange[0]} AND ${timeRange[1]}
             ),
             conversion AS (
@@ -100,9 +105,9 @@ async function absoluteFinancingQuery(
                 year AS Year,
                 '${getNameByCode(donorMapping, donor)}' AS donor,
                 '${getNameByCode(indicatorMapping, indicator)}' AS indicator,
-                CASE
-                    WHEN year < 2018 THEN 'Flow'
-                    WHEN year >= 2018 THEN 'Grant equivalent'
+                CASE 
+                    WHEN year < 2018 THEN 'Flows'
+                    WHEN year >= 2018 THEN 'Grant equivalents'
                 END AS Type,
                 SUM(converted_value) as Value,
                 '${currency} ${prices} million' as Unit,
@@ -138,7 +143,7 @@ async function relativeFinancingQuery(
                 FROM financing
                 WHERE 
                     donor_code IN (${donor})
-                    AND indicator = (${indicator})
+                    AND indicator IN (${indicator})
                     AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
                 GROUP BY year
             ),
@@ -159,7 +164,11 @@ async function relativeFinancingQuery(
                 FROM financing
                 WHERE
                     donor_code IN (${donor})
-                    AND indicator = ${indicatorMapping.get("Total ODA")}
+                    ${
+                            indicator === indicatorMapping.get("Grants") || indicator === indicatorMapping.get("Non-Grants")
+                                    ? `AND indicator IN (${indicatorMapping.get("Grants")}, ${indicatorMapping.get("Non-Grants")})`
+                                    : `AND indicator = ${indicatorMapping.get("Total ODA")}`
+                    }
                     AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
                 GROUP BY year
                     
@@ -172,10 +181,16 @@ async function relativeFinancingQuery(
                         ? "f.value / g.gni * 100 AS Value,"
                         : "f.value / t.total_value * 100 AS Value,"
                 }
-                CASE 
-                    WHEN f.year < 2018 THEN 'Flow'
-                    WHEN f.year >= 2018 THEN 'Grant equivalent'
-                END AS Type,
+                ${
+                        indicator === indicatorMapping.get("Grants") || indicator === indicatorMapping.get("Non-Grants")
+                                ? "'Flows' AS Type,"
+                                : `
+                                    CASE 
+                                        WHEN f.year < 2018 THEN 'Flows'
+                                        WHEN f.year >= 2018 THEN 'Grant equivalents'
+                                    END AS Type,
+                                `
+                }
                 ${
                     indicator === indicatorMapping.get("Total ODA")
                         ? "'% of GNI' AS Unit,"
@@ -199,8 +214,7 @@ async function relativeFinancingQuery(
 }
 
 
-
-//  RECIPIENTS VIEW
+// RECIPIENTS VIEW
 export function recipientsQueries(
     donor,
     recipient,
@@ -210,13 +224,11 @@ export function recipientsQueries(
     timeRange
 ) {
 
-    const indicatorMapping = generateIndicatorMap(indicatorOptions, "recipients")
 
     const absolute = absoluteRecipientsQuery(
         donor,
         recipient,
         indicator,
-        indicatorMapping,
         currency,
         prices,
         timeRange
@@ -226,7 +238,6 @@ export function recipientsQueries(
         donor,
         recipient,
         indicator,
-        indicatorMapping,
         currency,
         prices,
         timeRange
@@ -240,7 +251,6 @@ async function absoluteRecipientsQuery(
     donor,
     recipient,
     indicator,
-    indicatorMapping,
     currency,
     prices,
     timeRange
@@ -259,11 +269,7 @@ async function absoluteRecipientsQuery(
                     donor_code IN (${donor})
                     AND recipient_code IN (${recipient})
                     AND year between ${timeRange[0]} AND ${timeRange[1]} 
-                    ${
-                        indicator === indicatorMapping.get("Total ODA")
-                            ? ""
-                            : `AND indicator = ${indicator}`
-                    }
+                    AND indicator IN (${indicator})
             ),
             conversion AS (
                 SELECT
@@ -312,7 +318,6 @@ async function relativeRecipientsQuery(
     donor,
     recipient,
     indicator,
-    indicatorMapping,
     currency,
     prices,
     timeRange
@@ -330,11 +335,7 @@ async function relativeRecipientsQuery(
                     donor_code IN (${donor})
                     AND recipient_code IN (${recipient})
                     AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-                    ${
-                        indicator === indicatorMapping.get("Total ODA")
-                                ? ""
-                                : `AND indicator = ${indicator}`
-                    }
+                    AND indicator IN (${indicator})
                 GROUP BY year, indicator
             ),
             total AS (
@@ -381,6 +382,7 @@ export function genderQueries(
     timeRange
 ) {
 
+
     const absolute = absoluteGenderQuery(
         donor,
         recipient,
@@ -425,12 +427,7 @@ async function absoluteGenderQuery(
                     donor_code IN (${donor})
                     AND recipient_code IN (${recipient})
                     AND year between ${timeRange[0]} AND ${timeRange[1]}
-                    AND 
-                    ${
-                        indicator === 3
-                            ? "indicator IN (1, 2)"
-                            : `indicator = ${indicator}`
-                    }
+                    AND indicator IN (${indicator})
             ),
             conversion AS (
                 SELECT
@@ -456,10 +453,10 @@ async function absoluteGenderQuery(
                 '${getNameByCode(donorMapping, donor)}' AS donor,
                 '${getNameByCode(recipientMapping, recipient)}' AS recipient,
                 CASE
-                    WHEN indicator = 2 THEN 'Main focus'
-                    WHEN indicator = 1 THEN 'Secondary focus'
-                    WHEN indicator = 0 THEN 'Not targeted'
-                    WHEN indicator = 9 THEN 'Not screened'
+                    WHEN indicator = 0 THEN 'Main focus'
+                    WHEN indicator = 1 THEN 'Not screened'
+                    WHEN indicator = 2 THEN 'Not targeted'
+                    WHEN indicator = 3 THEN 'Secondary focus'
                 END AS Indicator,
                 SUM(converted_value) as Value,
                 '${currency} ${prices} million' as Unit,
@@ -497,12 +494,7 @@ async function relativeGenderQuery(
                     donor_code IN (${donor})
                     AND recipient_code IN (${recipient})
                     AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-                    AND
-                    ${
-                        indicator === 3
-                            ? "indicator IN (1, 2)"
-                            : `indicator = ${indicator}`
-                    }
+                    AND indicator IN (${indicator})
                 GROUP BY year, indicator
             ),
             total AS (
@@ -521,10 +513,10 @@ async function relativeGenderQuery(
                 '${getNameByCode(donorMapping, donor)}' AS donor,
                 '${getNameByCode(recipientMapping, recipient)}' AS recipient,
                 CASE
-                    WHEN indicator = 2 THEN 'Main focus'
-                    WHEN indicator = 1 THEN 'Secondary focus'
-                    WHEN indicator = 0 THEN 'Not targeted'
-                    WHEN indicator = 9 THEN 'Not screened'
+                    WHEN indicator = 0 THEN 'Main focus'
+                    WHEN indicator = 1 THEN 'Not screened'
+                    WHEN indicator = 2 THEN 'Not targeted'
+                    WHEN indicator = 3 THEN 'Secondary focus'
                 END AS Indicator,
                 f.value / t.total_value * 100 AS Value,
                 '% of total aid' AS Unit,
@@ -534,7 +526,6 @@ async function relativeGenderQuery(
             ORDER BY f.year
         `
     );
-
 
 
     return query.toArray().map((row) => ({
