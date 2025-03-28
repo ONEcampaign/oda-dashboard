@@ -56,50 +56,41 @@ export function formatValue(value) {
     return {value: roundedValue, label};
 }
 
-export function getCurrencyLabel(unit, {
-    long = true,
+
+export function getCurrencyLabel(tag, {
+    currencyOnly = false,
+    currencyLong = false,
+    unitsOnly = false,
+    unitsLong = true,
+    inSentence = false,
     value = "",
-    preffixOnly = false,
-    suffixOnly = false,
-})
-{
+} = {}) {
 
-    let prefix, suffix;
+    const currencyMap = {
+        "usd": currencyLong ? "US Dollars" : "US$",
+        "US Dollars": currencyLong ? "US Dollars" : "US$",
+        "eur": currencyLong ? "Euros" : "€",
+        "Euros": currencyLong ? "Euros" : "€",
+        "cad": currencyLong ? "Canada Dollars" : "CA$",
+        "Canadian Dollars": currencyLong ? "Canada Dollars" : "CA$",
+        "gbp": currencyLong ? "British Pounds" : "£",
+        "British Pounds": currencyLong ? "British Pounds" : "£",
+    };
 
-    if (long) {
-        suffix = "Million"
-    }
-    else (
-        suffix = "M"
-    )
+    const currency = currencyMap[tag] ?? tag;
+    const units = unitsLong ? "Million" : "M";
 
-    if (unit === "US Dollars" || unit === "usd") {
-        prefix = "US$"
-    }
-    else if (unit === "Euros" || unit === "eur") {
-        prefix = "€"
-    }
-    else if (unit === "Canadian Dollars" || unit === "cad") {
-        prefix =  "CA$"
-    }
-    else if (unit === "British Pounds" || unit === "gbp") {
-        prefix = "£"
+    if (inSentence) {
+        return `${currency} (millions)`;
     }
 
-    if (preffixOnly) {
-        return `${prefix}`
-    }
-    if (suffixOnly) {
-        return `${suffix}`
-    }
-    if (value === "") {
-        return `${prefix} ${suffix}`
-    }
-    else {
-        return `${prefix}${value} ${suffix}`
-    }
+    if (currencyOnly) return currency;
+    if (unitsOnly) return units;
 
+    return value === "" ? `${currency} ${units}` : `${currency}${value} ${units}`;
 }
+
+
 
 export function name2CodeMap(obj) {
         const map = new Map();
@@ -147,11 +138,6 @@ export function generateIndicatorMap(data, page) {
         if (entry.page === page && typeof entry.name === "string") {
             names.add(entry.name);
         }
-    }
-
-    // Add "Total ODA" manually if page === "recipients"
-    if (page === "recipients") {
-        names.add("Total ODA");
     }
 
     // Step 2: Sort names alphabetically and assign incremental IDs
