@@ -90,11 +90,9 @@
     "page": "financing"
   },
   "1122": {
-    "name": "Non-Grants",
-    "type": "grant",
+    "name": "Non-grants",
     "page": "financing"
   },
-
   "106": {
     "name": "Imputed multilateral",
     "page": "recipients"
@@ -102,5 +100,21 @@
   "206": {
     "name": "Bilateral",
     "page": "recipients"
+  },
+  "0.0": {
+    "name": "Not targeted",
+    "page": "gender"
+  },
+  "1.0": {
+    "name": "Secondary focus",
+    "page": "gender"
+  },
+  "2.0": {
+    "name": "Main focus",
+    "page": "gender"
+  },
+  "NA": {
+    "name": "Not screened",
+    "page": "gender"
   }
 }
