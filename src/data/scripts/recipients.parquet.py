@@ -6,13 +6,13 @@ from src.data.analysis_tools.utils import get_dac_ids, load_indicators, convert_
 set_data_path(PATHS.ODA_DATA)
 
 
-def filter_transform_dac2a():
+def filter_transform_recipients():
 
     donor_ids = get_dac_ids(PATHS.DONORS)
     recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
     indicator_ids = load_indicators("recipients")
 
-    df_raw = Dac2aData(years=range(time_range["start"], time_range["end"] + 1)).read(
+    dac2a = Dac2aData(years=range(time_range["start"], time_range["end"] + 1)).read(
         using_bulk_download=True,
         additional_filters=[
             ("amount_type", "==", "Current prices"),
@@ -22,8 +22,8 @@ def filter_transform_dac2a():
         ],
     )
 
-    df = (
-        df_raw.groupby(
+    recipients_df = (
+        dac2a.groupby(
             [
                 "year",
                 "donor_code",
@@ -39,20 +39,20 @@ def filter_transform_dac2a():
         .drop(columns="aidtype_code")
     )
 
-    df = df[df["value"] != 0]
+    recipients_df = recipients_df[recipients_df["value"] != 0]
 
-    return df
+    return recipients_df
 
 
-def get_recipients():
+def recipients_to_parquet():
 
-    df = filter_transform_dac2a()
+    df = filter_transform_recipients()
 
-    df_converted = convert_types(df)
+    converted_df = convert_types(df)
 
-    return_pa_table(df_converted)
+    return_pa_table(converted_df)
 
 
 if __name__ == "__main__":
     logger.info("Generating recipients table...")
-    get_recipients()
+    recipients_to_parquet()

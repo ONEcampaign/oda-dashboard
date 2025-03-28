@@ -1,7 +1,7 @@
 import sys
 
 import pandas as pd
-from pydeflate import imf_exchange, set_pydeflate_path
+from pydeflate import oecd_dac_exchange, set_pydeflate_path
 
 from src.data.config import logger, PATHS, time_range
 
@@ -22,7 +22,7 @@ def convert_currencies():
     for country, code in codes.items():
         df["iso_code"] = country
 
-        df = imf_exchange(
+        df = oecd_dac_exchange(
             data=df,
             source_currency="USA",
             target_currency=country,

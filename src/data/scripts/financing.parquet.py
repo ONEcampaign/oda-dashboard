@@ -104,20 +104,19 @@ def get_dac1_grants():
     return df
 
 
-def get_financing():
+def financing_to_parquet():
 
     flow = get_dac1_flow()
     ge = get_dac1_ge()
     grants = get_dac1_grants()
 
-    df_combined = pd.concat([flow, ge, grants])
+    financing_df = pd.concat([flow, ge, grants])
 
-    df_converted = convert_types(df_combined)
-
-    return_pa_table(df_converted)
+    converted_df = convert_types(financing_df)
+    return_pa_table(converted_df)
 
 
 
 if __name__ == "__main__":
     logger.info("Generating financing table...")
-    get_financing()
+    financing_to_parquet()
