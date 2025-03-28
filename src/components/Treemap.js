@@ -1,11 +1,57 @@
 import * as d3 from "npm:d3";
-import {getCurrencyLabel} from "./getCurrencyLabel.js";
-import {formatValue} from "./formatValue.js";
+import { formatValue, getCurrencyLabel } from "./utils.js";
+import { Mutable } from "observablehq:stdlib";
+import {paletteTreemap} from "./colors.js";
+
+// Declare an observable variable to hold the selected sector
+export const selectedSector = Mutable("Health"); // Default selected sector
+
+export function treemapPlot(data, width, { currency = null } = {}) {
+
+    // Aggregate data by sector and calculate total values
+    const aggregated = d3.rollups(
+        data,
+        (v) => d3.sum(v, (d) => d.Value),
+        (d) => d.Sector
+    );
+
+    const formattedData = [
+        { id: "root", parentId: null, Value: null },
+        ...aggregated.map(([sector, value]) => ({
+            id: sector,
+            parentId: "root",
+            Value: value,
+        })),
+    ];
+
+    // Function to handle clicks and update the selectedSector observable
+    const handleClick = (id) => {
+        selectedSector.value = id; // Update the selected sector
+    };
+
+    // Return the Treemap visualization with the updated color scale
+    return Treemap(formattedData, {
+        parentId: (d) => d.parentId,
+        value: (d) => d.Value,
+        group: (d) => d.id,
+        width: width,
+        height: 400,
+        padding: 1,
+        fillOpacity: (d) => d.id === selectedSector.value ? 0.6 : 0.8,
+        strokeOpacity: 1,
+        onClick: handleClick, // Pass the click handler to the Treemap
+    });
+}
+
+// This will reactively handle the selected sector value
+// selectedSector; // The observable will be updated automatically when a sector is clicked
+
+
 
 // Copyright 2021-2023 Observable, Inc.
 // Released under the ISC license.
 // https://observablehq.com/@d3/treemap
-export function Treemap(data, { // data is either tabular (array of objects) or hierarchy (nested objects)
+function Treemap(data, { // data is either tabular (array of objects) or hierarchy (nested objects)
     path,
     id = Array.isArray(data) ? d => d.id : null,
     parentId = Array.isArray(data) ? d => d.parentId : null,
@@ -33,13 +79,13 @@ export function Treemap(data, { // data is either tabular (array of objects) or 
     paddingBottom = paddingOuter,
     paddingLeft = paddingOuter,
     round = true,
-    colors = d3.schemeObservable10,
+    colors,
     zDomain,
     fill = "#ccc",
     fillOpacity = group == null ? null : 0.6,
-    stroke = d3.schemeObservable10,
-    strokeWidth = 15,
-    strokeOpacity = 1,
+    stroke,
+    strokeWidth = 20,
+    strokeOpacity = group == null ? null : 0.6,
     strokeLinejoin,
     onClick = null
 } = {}) {
@@ -65,8 +111,6 @@ export function Treemap(data, { // data is either tabular (array of objects) or 
 
     const leaves = root.leaves();
 
-    console.log(leaves);
-
     // Color scale setup
     if (zDomain === undefined && group != null) {
         const groupValues = d3.rollups(
@@ -78,8 +122,8 @@ export function Treemap(data, { // data is either tabular (array of objects) or 
         zDomain = groupValues.map(([key]) => key);
     }
 
-    zDomain = new d3.InternSet(zDomain);
-    const color = group == null ? null : d3.scaleOrdinal(zDomain, colors);
+    // zDomain = new d3.InternSet(zDomain);
+    // const color = group == null ? null : d3.scaleOrdinal(zDomain, colors);
 
     const L = label == null ? null : leaves.map(d => label(d.data, d));
     const T = title === undefined ? L : title == null ? null : leaves.map(d => title(d.data, d));
@@ -116,9 +160,9 @@ export function Treemap(data, { // data is either tabular (array of objects) or 
 
     node.append("rect")
         .attr("id", (d) => `rect-${d.id ? d.id.replace(/\s+/g, '-').replace(/[&/,]/g, '') : d.id}`)
-        .attr("fill", color ? (d, i) => color(group(d.data, d)) : fill)
+        .attr("fill", (d) => d.id === selectedSector.value ? paletteTreemap[0] : paletteTreemap[1])
         .attr("fill-opacity", fillOpacity)
-        .attr("stroke", stroke ? (d, i) => color(group(d.data, d)) : stroke)
+        .attr("stroke", (d) => d.id === selectedSector.value ? paletteTreemap[0] : paletteTreemap[1])
         .attr("stroke-width", strokeWidth)
         .attr("stroke-opacity", strokeOpacity)
         .attr("stroke-linejoin", strokeLinejoin)
@@ -127,14 +171,7 @@ export function Treemap(data, { // data is either tabular (array of objects) or 
         .attr("width", d => d.x1 - d.x0 - strokeWidth) // Adjust width
         .attr("height", d => d.y1 - d.y0 - strokeWidth); // Adjust height
 
-
-    // if (T) {
-    //     node.append("title").text((d, i) => T[i]);
-    // }
-
-    console.log(leaves)
-
-    const darkColors = ["#4269d0", "#a463f2", "#9c6b4e"]
+    const darkColors = ["#73175A", "#081248"]
 
     const uid = `O-${Math.random().toString(16).slice(2)}`;
 
@@ -147,31 +184,31 @@ export function Treemap(data, { // data is either tabular (array of objects) or 
     node.append("text")
         .attr("filter", "url(#text-shadow)")
         .attr("clip-path", (d, i) => `url(${new URL(`#${uid}-clip-${i}`, location)})`)
-        .attr("x", 2.5)
-        .attr("y", strokeWidth / 2)
+        .attr("x", 5)
+        .attr("y", strokeWidth / 1.75)
         .attr("text-anchor", "start")
         .attr("dominant-baseline", "middle")
         .text(d => String(d.id).toUpperCase())
         .attr("font-size", "12px")
         .attr("font-family", "var(--sans-serif)")
         .attr("font-weight", "500")
-        .attr("fill", (d) => darkColors.includes(color(group(d.data, d))) ? "white" : "black")
+        // .attr("fill", (d) => darkColorColors.includes(color(group(d.data, d))) ? "white" : "black")
 
-    node.append("text")
-        .attr("filter", "url(#text-shadow)")
-        .attr("clip-path", (d, i) => `url(${new URL(`#${uid}-clip-${i}`, location)})`)
-        .attr("x", (d) => (d.x1 - d.x0) / 2)
-        .attr("y", (d) => (d.y1 - d.y0) / 2)
-        .attr("text-anchor", "middle")
-        .text(
-            (d) => (d.x1 - d.x0) > 100
-                ? getCurrencyLabel("US Dollars", {value: formatValue(d.value).label, long: false})
-                : "..."
-        )
-        .attr("font-size", "12px")
-        .attr("font-family", "var(--sans-serif)")
-        .attr("font-weight", "500")
-        .attr("fill", (d) => darkColors.includes(color(group(d.data, d))) ? "white" : "black")
+    // node.append("text")
+    //     .attr("filter", "url(#text-shadow)")
+    //     .attr("clip-path", (d, i) => `url(${new URL(`#${uid}-clip-${i}`, location)})`)
+    //     .attr("x", (d) => (d.x1 - d.x0) / 2)
+    //     .attr("y", (d) => (d.y1 - d.y0) / 2)
+    //     .attr("text-anchor", "middle")
+    //     .text(
+    //         (d) => (d.x1 - d.x0) > 100
+    //             ? getCurrencyLabel("US Dollars", {value: formatValue(d.value).label, long: false})
+    //             : "..."
+    //     )
+    //     .attr("font-size", "12px")
+    //     .attr("font-family", "var(--sans-serif)")
+    //     .attr("font-weight", "500")
+    //     .attr("fill", (d) => darkColors.includes(color(group(d.data, d))) ? "white" : "black")
 
     node.append("rect")
         .attr("id", (d) => d.id)
@@ -181,8 +218,18 @@ export function Treemap(data, { // data is either tabular (array of objects) or 
         .attr("cursor", "pointer")
         .on("click", function (event, d) {
             if (onClick) {
-                onClick(d.id); // Pass the ID of the clicked rect
+                onClick(d.id);
             }
+
+            // Re-color all rectangles on selection
+            node.selectAll("rect")
+                .filter(function () {
+                    return d3.select(this).attr("id")?.startsWith("rect-");
+                })
+                .transition()
+                .duration(200)
+                .attr("fill", (rectD) => rectD.id === d.id ? paletteTreemap[0] : paletteTreemap[1])
+                .attr("stroke", (rectD) => rectD.id === d.id ? paletteTreemap[0] : paletteTreemap[1]);
         })
         // Add hover effects: change opacity on hover
         .on("mouseenter", function (event, d) {
@@ -198,5 +245,5 @@ export function Treemap(data, { // data is either tabular (array of objects) or 
                 .style("fill-opacity", fillOpacity); // Reset opacity when mouse leaves
         });
 
-    return Object.assign(svg.node(), {scales: {color}});
+    return Object.assign(svg.node(), {});
 }

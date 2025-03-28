@@ -10,6 +10,8 @@ import {rangeInput} from "./components/rangeInput.js";
 import {convertToArrayOfArrays, customColors, vis} from "./components/flourish.js"
 import {linePlot, sparkbarTable} from "./components/visuals.js";
 
+import {treemapPlot, selectedSector} from "./components/Treemap.js"
+
 import {downloadPNG, downloadXLSX} from './components/downloads.js';
 ```
 
@@ -194,62 +196,57 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
 ```
 
 ```js
-
-async function updateVisualisation() {
-    
-    console.log(customColors(dataSectors))
-
-    // Update the Flourish visualisation with data
-    window.vis.update({
-        "data": {
-            "data": convertToArrayOfArrays(dataSectors)
-        },
-        "bindings": {
-            "data": {
-                "nest_columns": [
-                    0,
-                    1
-                ],
-                "popup_metadata": [],
-                "size_columns": [
-                    2
-                ]
-            }
-        },
-        "state": {
-            ...window.vis.state,
-            "color": {
-                "categorical_custom_palette": customColors(dataSectors)
-            },
-            "size_by_number_formatter": {
-                "prefix": getCurrencyLabel(currencySectors, {preffixOnly: true}),
-                "suffix": " M"
-            }
-
-        },
-        "metadata": {
-            "data": {
-                "0": {
-                    "type_id": "string$arbitrary_string",
-                    "type": "string"
-                },
-                "1": {
-                    "type_id": "string$arbitrary_string",
-                    "type": "string"
-                },
-                "2": {
-                    "type_id": "number$none_point",
-                    "type": "number",
-                    "output_format_id": "number$comma_point"
-                }
-            }
-        }
-    });
-}
-
-updateVisualisation();
-
-const selectedSector = "Health";
+// async function updateVisualisation() {
+//    
+//     // Update the Flourish visualisation with data
+//     window.vis.update({
+//         "data": {
+//             "data": convertToArrayOfArrays(dataSectors)
+//         },
+//         "bindings": {
+//             "data": {
+//                 "nest_columns": [
+//                     0,
+//                     1
+//                 ],
+//                 "popup_metadata": [],
+//                 "size_columns": [
+//                     2
+//                 ]
+//             }
+//         },
+//         "state": {
+//             ...window.vis.state,
+//             "color": {
+//                 "categorical_custom_palette": customColors(dataSectors)
+//             },
+//             "size_by_number_formatter": {
+//                 "prefix": getCurrencyLabel(currencySectors, {preffixOnly: true}),
+//                 "suffix": " M"
+//             }
+//
+//         },
+//         "metadata": {
+//             "data": {
+//                 "0": {
+//                     "type_id": "string$arbitrary_string",
+//                     "type": "string"
+//                 },
+//                 "1": {
+//                     "type_id": "string$arbitrary_string",
+//                     "type": "string"
+//                 },
+//                 "2": {
+//                     "type_id": "number$none_point",
+//                     "type": "number",
+//                     "output_format_id": "number$comma_point"
+//                 }
+//             }
+//         }
+//     });
+// }
+//
+// updateVisualisation();
 ```
 
 
@@ -309,7 +306,11 @@ const selectedSector = "Health";
                     : html`<h3 class="plot-subtitle">${indicatorSectors}, ${timeRangeSectors[0] === timeRangeSectors[1] ? timeRangeSectors[0] : `${timeRangeSectors[0]}-${timeRangeSectors[1]}`}</h3>`
                 }
             </div>
-            <div id="flourish-treemap"></div>
+            ${
+                resize(
+                    (width) => treemapPlot(dataSectors, width, {currency: currencySectors})
+                )
+            }
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>

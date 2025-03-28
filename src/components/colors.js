@@ -32,6 +32,12 @@ const ONEPalette = {
     blue0: "#7ECBF1",
     blue1: "#A3DAF5",
     red0: "#ED8282",
+    red1: "#F2A6A6",
+    grey0: "#000000",
+    grey1: "#AAAAAA",
+    grey2: "#BBBBBB",
+    grey3: "#E5E5E5",
+    grey4: "#FFFFFF"
 };
 
 export const customPalette = {
@@ -44,7 +50,7 @@ export const customPalette = {
     genderMain: ONEPalette.orange1,
     genderSecondary: ONEPalette.navy0,
     genderNotTargeted: ONEPalette.purple1,
-    genderNotScreened: "#646464", // ONEPalette.blue0,
+    genderNotScreened: "#c2c2c4",
     darkGrey: "#333333",
     midGrey: "#646464",
     lightGrey: "#E8E8E8",
@@ -53,8 +59,8 @@ export const customPalette = {
 
 export const paletteFinancing = {
     domain: [
-        "Grant equivalent",
-        "Flow"
+        "Grant equivalents",
+        "Flows"
     ],
     range: [
         customPalette.ge,
@@ -81,18 +87,25 @@ export const paletteSectors = [
     ONEPalette.navy0,
     ONEPalette.purple1,
     ONEPalette.blue0,
+    ONEPalette.yellow1,
+    ONEPalette.burgundy1,
+    ONEPalette.red1
+
+]
+
+export const paletteTreemap = [
+    ONEPalette.teal1,
+    customPalette.neutralGrey
 ]
 
 export const paletteGender = {
     domain: [
-        "Gender total",
         "Main focus",
         "Secondary focus",
         'Not targeted',
         'Not screened'
     ],
     range: [
-        customPalette.total,
         customPalette.genderMain,
         customPalette.genderSecondary,
         customPalette.genderNotTargeted,

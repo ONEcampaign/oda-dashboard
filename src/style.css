@@ -152,8 +152,15 @@ select, input {
 
 .settings-group > form > div {
     display: flex;
-    flex-flow: row nowrap;
+    flex-flow: row wrap;
     align-items: flex-start !important;
+}
+
+[class*="checkbox"] > div > label {
+    flex: 0 0 50%;
+    max-width: 150px !important;
+    margin: 2.5px 0;
+    box-sizing: border-box;
 }
 
 .settings-group form > label {
