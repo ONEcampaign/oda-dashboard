@@ -140,6 +140,7 @@ def to_decimal(val, precision=2):
     quantizer = Decimal("1." + "0" * precision)
     return Decimal(str(val)).quantize(quantizer, rounding=ROUND_HALF_EVEN)
 
+
 def convert_types(df):
     type_map = {
         "year": "category",
@@ -159,7 +160,13 @@ def convert_types(df):
     return df
 
 
-def add_index_column(df, column, json_path='index.json'):
+def df_to_parquet(df):
+
+    converted_df = convert_types(df)
+    return_pa_table(converted_df)
+
+
+def add_index_column(df, column, json_path="index.json"):
     # Create string to index mapping
     unique_values = df[column].unique()
     str_to_idx = {name: idx for idx, name in enumerate(unique_values)}
@@ -174,4 +181,3 @@ def add_index_column(df, column, json_path='index.json'):
         json.dump(idx_to_str, f, indent=2)
 
     return df
-
