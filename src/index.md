@@ -12,7 +12,7 @@ setCustomColors();
 ```
 
 ```js
-const donorOptions = await FileAttachment("./data/analysis_tools/donor_mapping.json").json()
+const donorOptions = await FileAttachment("./data/analysis_tools/donors.json").json()
 const donorMapping = name2CodeMap(donorOptions)
 
 const indicatorOptions = await FileAttachment('./data/analysis_tools/financing_indicators.json').json()

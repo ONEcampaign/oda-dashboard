@@ -25,9 +25,6 @@ const indicatorMapping = new Map(
 ```
 
 ```js
-
-console.log(indicatorMapping)
-
 // USER INPUTS
 // Donor
 const donorInput = Inputs.select(
