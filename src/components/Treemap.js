@@ -233,17 +233,42 @@ function Treemap(data, { // data is either tabular (array of objects) or hierarc
         })
         // Add hover effects: change opacity on hover
         .on("mouseenter", function (event, d) {
-            d3.select(`#rect-${d.id.replace(/\s+/g, '-').replace(/[&/,]/g, '')}`)
+            const id = d.id.replace(/\s+/g, '-').replace(/[&/,]/g, '');
+
+            // Fade the main rect's fill and stroke
+            d3.select(`#rect-${id}`)
                 .transition()
-                .duration(200)
-                .style("fill-opacity", 0.6);  // Increase opacity on hover
+                .duration(150)
+                .style("fill-opacity", 0.6)
+                // .style("stroke-opacity", 0.8);
+
+            // Add highlight rect
+            d3.select(this.parentNode) // this is the <a> element
+                .append("rect")
+                .attr("class", "hover-outline")
+                .attr("x", 0)
+                .attr("y", 0)
+                .attr("width", d.x1 - d.x0)
+                .attr("height", d.y1 - d.y0)
+                .attr("stroke", "black")
+                .attr("stroke-width", 1.5)
+                .attr("fill", "none")
+                .attr("pointer-events", "none");
         })
         .on("mouseleave", function (event, d) {
-            d3.select(`#rect-${d.id.replace(/\s+/g, '-').replace(/[&/,]/g, '')}`)
+            const id = d.id.replace(/\s+/g, '-').replace(/[&/,]/g, '');
+
+            // Reset fill and stroke opacity
+            d3.select(`#rect-${id}`)
                 .transition()
-                .duration(200)
-                .style("fill-opacity", fillOpacity); // Reset opacity when mouse leaves
+                .duration(150)
+                .style("fill-opacity", fillOpacity)
+                // .style("stroke-opacity", strokeOpacity);
+
+            // Remove highlight outline
+            d3.select(this.parentNode).select(".hover-outline").remove();
         });
+
 
     return Object.assign(svg.node(), {});
 }

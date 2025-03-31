@@ -38,51 +38,23 @@ export function linePlot(data, mode, width,
             stroke: true,
             x: (d) => formatYear(d)
         }
-        colorScale = paletteSectors
 
-        // const uniqueSubsectors = new Set(
-        //     arrayData
-        //         .filter(row => row.Sector === sectorName)
-        //         .map(row => row.Subsector)
-        // ).size;
-        //
-        // if (breakdown === "Sector" || (breakdown === "Subsector" && uniqueSubsectors === 1)) {
-        //     const aggregated = rollups(
-        //         arrayData,
-        //         (v) => sum(v, (d) => d.Value),
-        //         (d) => d.Sector
-        //     );
-        //
-        //     aggregated.sort((a, b) => descending(a[1], b[1]));
-        //
-        //     colorScale = {
-        //         domain: aggregated.map(([sector]) => sector),
-        //         range: paletteSectors
-        //     }
-        // }
-        //
-        // arrayData = Object.values(
-        //     arrayData
-        //         .filter((row) => row.Sector === sectorName) // Filter rows by sectorName
-        //         .reduce((acc, row) => {
-        //             const key = `${row.Year}-${row[breakdown]}`; // Unique key combining year and the grouping field
-        //
-        //             acc[key] ??= {
-        //                 Year: row.Year,
-        //                 [breakdown]: row[breakdown], // Set either Sector or Subsector dynamically
-        //                 Value: 0
-        //             }; // Initialize if absent
-        //
-        //             acc[key].Value += row.Value; // Sum the values
-        //
-        //             return acc;
-        //         }, {})
-        // );
-        //
-        // if (breakdown === "Subsector" && uniqueSubsectors > 1) {
-        //     arrayData = arrayData.sort((a, b) => a.Subsector.localeCompare(b.Subsector));
-        //     colorScale = paletteSectors
-        // }
+        if (breakdown) {
+            const uniqueSubsectors = new Set(
+                arrayData
+                    .map(row => row['Sub-sector'])
+            );
+            colorScale = {
+                domain: uniqueSubsectors,
+                range: paletteSectors
+            }
+        } else {
+            colorScale = {
+                domain: [selectedSector],
+                range: [paletteSectors[0]]
+            }
+        }
+
     } else {
         labelSymbol = "%"
         customFormat = {
@@ -158,7 +130,7 @@ export function linePlot(data, mode, width,
         marks: [
 
             ...(
-                stacked
+                stacked || breakdown
                     ? [
                         Plot.areaY(arrayData, {
                             x: "Year",
