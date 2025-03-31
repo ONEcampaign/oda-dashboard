@@ -1,6 +1,6 @@
 from oda_data import Dac1Data, set_data_path
 
-from src.data.config import PATHS, time_range, logger
+from src.data.config import PATHS, TIME_RANGE, logger
 
 from src.data.analysis_tools.helper_functions import get_dac_ids, to_decimal, return_pa_table
 
@@ -11,7 +11,7 @@ def get_gni():
 
     donor_ids = get_dac_ids(PATHS.DONORS)
 
-    df = Dac1Data(years=range(time_range["start"], time_range["end"] + 1)).read(
+    df = Dac1Data(years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)).read(
         using_bulk_download=True,
         additional_filters=[
             ("amount_type", "==", "Current prices"),
