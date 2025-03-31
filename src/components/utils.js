@@ -68,13 +68,9 @@ export function getCurrencyLabel(tag, {
 
     const currencyMap = {
         "usd": currencyLong ? "US Dollars" : "US$",
-        "US Dollars": currencyLong ? "US Dollars" : "US$",
         "eur": currencyLong ? "Euros" : "€",
-        "Euros": currencyLong ? "Euros" : "€",
         "cad": currencyLong ? "Canada Dollars" : "CA$",
-        "Canadian Dollars": currencyLong ? "Canada Dollars" : "CA$",
         "gbp": currencyLong ? "British Pounds" : "£",
-        "British Pounds": currencyLong ? "British Pounds" : "£",
     };
 
     const currency = currencyMap[tag] ?? tag;
