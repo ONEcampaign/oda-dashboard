@@ -1,55 +1,63 @@
-from oda_data import Dac2aData, set_data_path
+from oda_data import Indicators, set_data_path
 from src.data.config import PATHS, time_range, logger
 
-from src.data.analysis_tools.utils import get_dac_ids, load_indicators, convert_types, return_pa_table
+from src.data.analysis_tools.utils import get_dac_ids, add_index_column, convert_types, return_pa_table
 
 set_data_path(PATHS.ODA_DATA)
 
+donor_ids = get_dac_ids(PATHS.DONORS)
+recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
+
+indicators_dac2a = {
+    "DAC2A.10.206": "Bilateral",
+    "DAC2A.10.106": "Imputed multilateral"
+}
 
 def filter_transform_recipients():
 
-    donor_ids = get_dac_ids(PATHS.DONORS)
-    recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
-    indicator_ids = load_indicators("recipients")
-
-    dac2a = Dac2aData(years=range(time_range["start"], time_range["end"] + 1)).read(
-        using_bulk_download=True,
-        additional_filters=[
-            ("amount_type", "==", "Current prices"),
-            ("donor_code", "in", donor_ids),
-            ("recipient_code", "in", recipient_ids),
-            ("aidtype_code", "in", indicator_ids.keys()),
-        ],
+    dac2a_raw = Indicators(
+        years=range(time_range["start"], time_range["end"] + 1),
+        providers= donor_ids,
+        recipients= recipient_ids,
+        use_bulk_download=True
+    ).get_indicators(
+        list(indicators_dac2a.keys())
     )
 
-    recipients_df = (
-        dac2a.groupby(
+    recipients = (
+        dac2a_raw.query(
+            "donor_code in @donor_ids and "
+            "recipient_code in @recipient_ids"
+        ).groupby(
             [
-                "year",
-                "donor_code",
-                "recipient_code",
-                "aidtype_code",
+                'year',
+                'donor_code',
+                'recipient_code',
+                'one_indicator'
             ],
-            dropna=False,
-            observed=True,
-        )["value"]
+            dropna=False, observed=True
+        )['value']
         .sum()
         .reset_index()
-        .assign(indicator=lambda d: d["aidtype_code"].astype(str).map(indicator_ids))
-        .drop(columns="aidtype_code")
+        .assign(indicator=lambda d: d["one_indicator"].map(indicators_dac2a))
+        .drop(columns=["one_indicator"])
     )
 
-    recipients_df = recipients_df[recipients_df["value"] != 0]
+    recipients = recipients[recipients["value"] != 0]
 
-    return recipients_df
+    recipients = add_index_column(
+        df=recipients,
+        column='indicator',
+        json_path=PATHS.TOOLS / 'recipients_indicators.json'
+    )
+
+    return recipients
 
 
 def recipients_to_parquet():
 
     df = filter_transform_recipients()
-
     converted_df = convert_types(df)
-
     return_pa_table(converted_df)
 
 

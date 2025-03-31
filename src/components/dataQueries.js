@@ -212,11 +212,13 @@ export function recipientsQueries(
     timeRange
 ) {
 
+    const indicators = indicator.length > 0 ? indicator : [-1]; // use -1 or any value that won’t match real indicators
+
 
     const absolute = absoluteRecipientsQuery(
         donor,
         recipient,
-        indicator,
+        indicators,
         currency,
         prices,
         timeRange
@@ -225,7 +227,7 @@ export function recipientsQueries(
     const relative = relativeRecipientsQuery(
         donor,
         recipient,
-        indicator,
+        indicators,
         currency,
         prices,
         timeRange

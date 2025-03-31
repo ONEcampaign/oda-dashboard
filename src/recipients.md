@@ -18,8 +18,10 @@ const donorMapping = name2CodeMap(donorOptions)
 const recipientOptions = await FileAttachment("./data/analysis_tools/recipient_mapping.json").json()
 const recipientMapping = name2CodeMap(recipientOptions)
 
-const indicatorOptions = await FileAttachment("./data/analysis_tools/indicators.json").json()
-const indicatorMapping = generateIndicatorMap(indicatorOptions, "recipients")
+const indicatorOptions = await FileAttachment("./data/analysis_tools/recipients_indicators.json").json()
+const indicatorMapping = new Map(
+    Object.entries(indicatorOptions).map(([k, v]) => [v, Number(k)])
+);
 ```
 
 ```js
