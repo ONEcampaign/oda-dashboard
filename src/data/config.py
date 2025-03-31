@@ -27,8 +27,8 @@ class PATHS:
 
     TOOLS = SRC / "data" / "analysis_tools"
     INDICATORS = TOOLS / "indicators.json"
-    DONORS = TOOLS / "donor_mapping.json"
-    RECIPIENTS = TOOLS / "recipient_mapping.json"
+    DONORS = TOOLS / "donors.json"
+    RECIPIENTS = TOOLS / "recipients.json"
 
     DATA = SRC / "data" / "raw_data"
     PYDEFLATE = DATA / "pydeflate"
