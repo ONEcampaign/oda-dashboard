@@ -1,112 +1,114 @@
 ```js 
-import {DuckDBClient} from "npm:@observablehq/duckdb";
-
 import {setCustomColors} from "./components/colors.js"
-import {formatString, getCurrencyLabel, convertUint32Array} from "./components/utils.js";
-
-import {uniqueValuesSectors} from "./components/uniqueValuesSectors.js";
+import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap} from "./components/utils.js";
+import {sectorsQueries} from "./components/dataQueries.js"
 import {rangeInput} from "./components/rangeInput.js";
-
-import {convertToArrayOfArrays, customColors, vis} from "./components/flourish.js"
 import {linePlot, sparkbarTable} from "./components/visuals.js";
-
 import {treemapPlot, selectedSector} from "./components/Treemap.js"
-
 import {downloadPNG, downloadXLSX} from './components/downloads.js';
 ```
+
 
 ```js
 setCustomColors();
 ```
 
+
 ```js
-const db = DuckDBClient.of({
-    sectors: FileAttachment("./data/scripts/sectors.parquet")
-});
+const donorOptions = await FileAttachment("./data/analysis_tools/donors.json").json()
+const donorMapping = name2CodeMap(donorOptions)
+
+const recipientOptions = await FileAttachment("./data/analysis_tools/recipients.json").json()
+const recipientMapping = name2CodeMap(recipientOptions)
 ```
+
 
 ```js
 // USER INPUTS
 // Donor
-const donorSectorsInput = Inputs.select(
-    uniqueValuesSectors.donors,
+const donorInput = Inputs.select(
+    donorMapping,
     {
         label: "Donor",
-        value: "DAC Countries, Total",
+        value: donorMapping.get("DAC countries"),
         sort: true
     })
-const donorSectors = Generators.input(donorSectorsInput);
+const donor = Generators.input(donorInput);
 
 // Recipient
-const recipientSectorsInput = Inputs.select(
-    uniqueValuesSectors.recipients,
+const recipientInput = Inputs.select(
+    recipientMapping,
     {
         label: "Recipient",
-        value: "Developing Countries, Total",
+        value: recipientMapping.get("Developing countries"),
         sort: true
     })
-const recipientSectors = Generators.input(recipientSectorsInput);
+const recipient = Generators.input(recipientInput);
 
 // Indicator
-const indicatorSectorsInput = Inputs.select(
-    uniqueValuesSectors.indicators,
+const indicatorInput = Inputs.select(
+    ["Total"],
     {
         label: "Indicator",
         value: "Total",
         sort: true
     })
-const indicatorSectors = Generators.input(indicatorSectorsInput);
+const indicator = Generators.input(indicatorInput);
 
 // Currency
-const currencySectorsInput = Inputs.select(
-    uniqueValuesSectors.currencies,
+const currencyInput = Inputs.select(
+    new Map([
+        ["US Dollars", "usd"],
+        ["Canada Dollars", "cad"],
+        ["Euros", "eur"],
+        ["British pounds", "gbp"]
+    ]),
     {
         label: "Currency",
-        value: "US Dollars",
+        value: "usd",
         sort: true
     })
-const currencySectors = Generators.input(currencySectorsInput);
+const currency = Generators.input(currencyInput);
 
 // Prices
-const pricesSectorsInput = Inputs.radio(
-    uniqueValuesSectors.prices,
+const pricesInput = Inputs.radio(
+    new Map([
+        ["Current", "current"],
+        // ["Constant", "constant"]
+    ]),
     {
         label: "Prices",
-        value: "Constant"
+        value: "current"
     }
 )
-const pricesSectors = Generators.input(pricesSectorsInput)
+const prices = Generators.input(pricesInput)
 
 // Year
-const timeRangeSectorsInput = rangeInput(
+const timeRangeInput = rangeInput(
     {
-        min: uniqueValuesSectors.timeRange[0],
-        max: uniqueValuesSectors.timeRange[1],
+        min: 2000,
+        max: 2023,
         step: 1,
-        value: [
-            uniqueValuesSectors.timeRange[0],
-            uniqueValuesSectors.timeRange[1]
-        ],
+        value: [2013, 2023],
         label: "Time range",
         enableTextInput: true
     })
-const timeRangeSectors = Generators.input(timeRangeSectorsInput)
+const timeRange = Generators.input(timeRangeInput)
 
 // Breakdown
-const breakdownSectorsInput = Inputs.toggle(
+const breakdownInput = Inputs.toggle(
     {
         label: "Sector breakdown",
-        value: "Sector",
-        values: ["Subsector", "Sector"]
+        value: false
     }
 )
-const breakdownSectors = Generators.input(breakdownSectorsInput)
+const breakdown = Generators.input(breakdownInput)
 
 // Unit
-const unitSectorsInput = Inputs.select(
+const unitInput = Inputs.select(
     new Map(
         [
-            [`Million ${currencySectorsInput.value}`, "Value"],
+            [`Million ${currencyInput.value}`, "Value"],
             ["GNI Share", "GNI Share"],
             ["Share of total", "Share of total"],
             ["Share of indicator", "Share of indicator"]
@@ -117,62 +119,25 @@ const unitSectorsInput = Inputs.select(
         value: "Value"
     }
 )
-const unitSectors = Generators.input(unitSectorsInput)
+const unit = Generators.input(unitInput)
 ```
 
 ```js
 // DATA QUERY
-const querySectorsString = `
-SELECT 
-    year AS Year,
-    "Donor Name" AS Donor,
-    "Recipient Name" AS Recipient,
-    Indicator,
-    Sector,
-    Subsector,
-    value AS Value,
-    share_of_total AS "Share of total",
-    share_of_indicator AS "Share of indicator",
-    "GNI Share",
-    Currency,
-    Prices
-FROM sectors
-WHERE 
-    Year >= ? AND 
-    Year <= ? AND
-    Donor = ? AND 
-    Recipient = ? AND
-    Currency = ? AND 
-    prices = ? AND
-    (
-        (? = 'Total' AND Indicator != 'Total') 
-        OR (? != 'Total' AND Indicator = ?)
-    );
-`;
+const data = sectorsQueries(
+    donor,
+    recipient,
+    selectedSector,
+    currency,
+    prices,
+    timeRange,
+    breakdown
+)
 
-const querySectorsParams = [
-    timeRangeSectors[0],
-    timeRangeSectors[1],
-    donorSectors,
-    recipientSectors,
-    currencySectors,
-    pricesSectors,
-    indicatorSectors,
-    indicatorSectors,
-    indicatorSectors
-];
-
-const querySectors = await db.query(querySectorsString, querySectorsParams);
-
-const dataSectors = querySectors.toArray()
-    .map((row) => ({
-        ...row,
-        ["Value"]: convertUint32Array(row["Value"]),
-        ["GNI Share"]: convertUint32Array(row["GNI Share"]),
-        ["Share of total"]: convertUint32Array(row["Share of total"]),
-        ["Share of indicator"]: convertUint32Array(row["Share of indicator"])
-    }))
+const treemapData = data.treemap
+const selectedData = data.selected
 ```
+
 
 ```js
 const moreSettings = Mutable(false)
@@ -188,65 +153,12 @@ const showMoreSettings = () => {
 };
 ```
 
+
 ```js
 const showMoreButton = Inputs.button(moreSettings ? "Show less" : "Show more", {
     reduce: showMoreSettings 
 });
 showMoreButton.addEventListener("submit", event => event.preventDefault());
-```
-
-```js
-// async function updateVisualisation() {
-//    
-//     // Update the Flourish visualisation with data
-//     window.vis.update({
-//         "data": {
-//             "data": convertToArrayOfArrays(dataSectors)
-//         },
-//         "bindings": {
-//             "data": {
-//                 "nest_columns": [
-//                     0,
-//                     1
-//                 ],
-//                 "popup_metadata": [],
-//                 "size_columns": [
-//                     2
-//                 ]
-//             }
-//         },
-//         "state": {
-//             ...window.vis.state,
-//             "color": {
-//                 "categorical_custom_palette": customColors(dataSectors)
-//             },
-//             "size_by_number_formatter": {
-//                 "prefix": getCurrencyLabel(currencySectors, {preffixOnly: true}),
-//                 "suffix": " M"
-//             }
-//
-//         },
-//         "metadata": {
-//             "data": {
-//                 "0": {
-//                     "type_id": "string$arbitrary_string",
-//                     "type": "string"
-//                 },
-//                 "1": {
-//                     "type_id": "string$arbitrary_string",
-//                     "type": "string"
-//                 },
-//                 "2": {
-//                     "type_id": "number$none_point",
-//                     "type": "number",
-//                     "output_format_id": "number$comma_point"
-//                 }
-//             }
-//         }
-//     });
-// }
-//
-// updateVisualisation();
 ```
 
 
@@ -278,43 +190,43 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
 
 <div class="settings card">
     <div class="settings-group">
-        ${donorSectorsInput}
-        ${recipientSectorsInput}
+        ${donorInput}
+        ${recipientInput}
     </div>
     <div class="settings-group">
-        ${currencySectorsInput}
-        ${indicatorSectorsInput}
+        ${currencyInput}
+        ${indicatorInput}
     </div>
     <div class="settings-button">
         ${showMoreButton}
     </div>
     <div class="settings-group hidden">
-        ${pricesSectorsInput}
-        ${timeRangeSectorsInput}
+        ${pricesInput}
+        ${timeRangeInput}
     </div>
 </div>
 <div class="grid grid-cols-2">
     <div class="card">
         <div class="plot-container" id="treemap-sectors">
             <h2 class="plot-title">
-                ${formatString(`ODA to ${recipientSectors} from ${donorSectors} by sector`)}
+                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)} by sector
             </h2>
             <div class="plot-subtitle-panel">
                 ${
-                    indicatorSectors == "Total"
-                    ? html`<h3 class="plot-subtitle">Bilateral and imputed multilateral, ${timeRangeSectors[0] === timeRangeSectors[1] ? timeRangeSectors[0] : `${timeRangeSectors[0]}-${timeRangeSectors[1]}`}</h3>`
-                    : html`<h3 class="plot-subtitle">${indicatorSectors}, ${timeRangeSectors[0] === timeRangeSectors[1] ? timeRangeSectors[0] : `${timeRangeSectors[0]}-${timeRangeSectors[1]}`}</h3>`
+                    indicator == "Total"
+                    ? html`<h3 class="plot-subtitle">Bilateral and imputed multilateral, ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
+                    : html`<h3 class="plot-subtitle">${indicator}, ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
                 }
             </div>
             ${
                 resize(
-                    (width) => treemapPlot(dataSectors, width, {currency: currencySectors})
+                    (width) => treemapPlot(treemapData, width, {currency: currency})
                 )
             }
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>
-                    <p class="plot-note">ODA values in million ${pricesSectors} ${currencySectors}.</p>
+                    <p class="plot-note">ODA values in million ${prices} ${currency}.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
@@ -329,7 +241,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     "Download plot", {
                         reduce: () => downloadPNG(
                             "treemap-sectors",
-                            formatString(`ODA to ${recipientSectors} from ${donorSectors} by sector`, {fileMode: true})
+                            formatString(`ODA to ${recipient} from ${donor} by sector`, {fileMode: true})
                         )
                     }
                 )
@@ -339,25 +251,25 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     <div class="card">
         <div class="plot-container" id="lines-sectors">
             <h2 class="plot-title">
-                ${formatString(`ODA to ${recipientSectors} from ${donorSectors}`)}
+                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
             </h2>
             <div class="plot-subtitle-panel">
                 ${
-                    indicatorSectors == "Total"
+                    indicator == "Total"
                     ? html`<h3 class="plot-subtitle">${selectedSector}, bilateral and imputed multilateral</h3>`
-                    : html`<h3 class="plot-subtitle">${selectedSector}, ${indicatorSectors}</h3>`
+                    : html`<h3 class="plot-subtitle">${selectedSector}, ${indicator}</h3>`
                 }
-                ${breakdownSectorsInput}
+                ${breakdownInput}
             </div>
             ${
                 resize(
                     (width) => linePlot(
-                        dataSectors,
+                        selectedData,
                         "sectors",
                         width, {
-                            sectorName: selectedSector,
-                            currency: currencySectors,
-                            breakdown: breakdownSectors
+                            selectedSector: selectedSector,
+                            currency: currency,
+                            breakdown: breakdown
                         }
                     )
                 )
@@ -365,7 +277,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>
-                    <p class="plot-note">ODA values in million ${pricesSectors} ${currencySectors}.</p>
+                    <p class="plot-note">ODA values in million ${prices} ${currency}.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
@@ -380,7 +292,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     "Download plot", {
                         reduce: () => downloadPNG(
                             "lines-sectors",
-                            formatString(`ODA to ${recipientSectors} from ${donorSectors} ${selectedSector} ${breakdownSectors === "Sector" ? "total" : "breakdown"}`, {fileMode: true})
+                            formatString(`ODA to ${recipient} from ${donor} ${selectedSector} ${breakdown === "Sector" ? "total" : "breakdown"}`, {fileMode: true})
                         )
                     }
                 )
@@ -391,21 +303,21 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
 <div class="card">
     <div class="plot-container">
         <h2 class="table-title">
-            ${formatString(`ODA to ${recipientSectors} from ${donorSectors}, ${indicatorSectors}`)}
+            ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
         </h2>
         <div class="table-subtitle-panel">
             ${
-                indicatorSectors == "Total"
+                indicator == "Total"
                 ? html`<h3 class="table-subtitle">Breakdown of ${selectedSector}, bilateral and imputed multilateral</h3>`
-                : html`<h3 class="table-subtitle">Breakdown of ${selectedSector}, ${indicatorSectors}</h3>`
+                : html`<h3 class="table-subtitle">Breakdown of ${selectedSector}, ${indicator}</h3>`
             }
-            ${unitSectorsInput}
+            ${unitInput}
         </div>
-        ${sparkbarTable(dataSectors, "sectors", {unit: unitSectors, sectorName: selectedSector})}
+        ${sparkbarTable(data, "sectors", {unit: unit, sectorName: selectedSector})}
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>
-                <p class="plot-note">ODA values in million ${pricesSectors} ${currencySectors}. GNI share refers to the Gross National Income of ${formatString(recipientSectors)}.</p>
+                <p class="plot-note">ODA values in million ${prices} ${currency}. GNI share refers to the Gross National Income of ${formatString(recipient)}.</p>
             </div>
             <div class="logo-section">
                 <a href="https://data.one.org/" target="_blank">
@@ -419,8 +331,8 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             Inputs.button(
                 "Download data", {
                     reduce: () => downloadXLSX(
-                        dataSectors,
-                        formatString(`ODA to ${recipientSectors} from ${donorSectors} by sector`, {fileMode: true})
+                        data,
+                        formatString(`ODA to ${recipient} from ${donor} by sector`, {fileMode: true})
                     )
                 }
             )

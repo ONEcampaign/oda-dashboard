@@ -1,53 +1,79 @@
-import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
-import sys
+import json
 
-from pathlib import Path
+from oda_data import CrsData, set_data_path
+from src.data.config import PATHS, time_range, logger
 
-from src.data.analysis_tools.utils import get_schema, to_decimal
+from src.data.analysis_tools.utils import get_dac_ids, add_index_column, convert_types, return_pa_table
+from src.data.analysis_tools import sector_lists
+
+set_data_path(PATHS.ODA_DATA)
+
+def filter_transform_sectors():
+
+    donor_ids = get_dac_ids(PATHS.DONORS)
+    recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
+
+    crs = CrsData(
+        years=range(time_range["start"], time_range["end"] + 1)
+    ).read(
+        using_bulk_download=True,
+        additional_filters=[
+            ("donor_code", "in", donor_ids),
+            ("recipient_code", "in", recipient_ids),
+            ("category", "in", [10, 60])
+        ],
+        columns=["year", "donor_code", "recipient_code", "purpose_code", "usd_disbursement"]
+    )
+
+    sub_sectors = sector_lists.get_sector_groups()
+
+    for name, codes in sub_sectors.items():
+        crs.loc[
+            crs.purpose_code.isin(codes), "indicator"
+        ] = name
+
+    sectors = (
+        crs.groupby(
+            [
+                "year",
+                "donor_code",
+                "recipient_code",
+                "indicator",
+            ],
+            dropna=False,
+            observed=True,
+        )["usd_disbursement"]
+        .sum()
+        .reset_index()
+        .rename(
+            columns={
+                "usd_disbursement": "value",
+            }
+        )
+    )
+
+    sectors = sectors[sectors["value"] != 0]
+
+    sectors = add_index_column(
+        df=sectors,
+        column='indicator',
+        json_path=PATHS.TOOLS / 'sub_sectors.json'
+    )
+
+    sector_mapping = sector_lists.get_broad_sector_groups()
+
+    with open(PATHS.TOOLS / "sectors.json", "w") as f:
+        json.dump(sector_mapping, f, indent=2)
+
+    return sectors
+
+def sectors_to_parquet():
+
+    df = filter_transform_sectors()
+    converted_df = convert_types(df)
+    return_pa_table(converted_df)
 
 
-file_path = Path.cwd() / "scripts" / "output" / "sectors.csv"
-
-df = pd.read_csv(file_path)
-
-df["year"] = df["year"].astype("category")
-df["Indicator"] = df["Indicator"].astype("category")
-df["Donor Name"] = df["Donor Name"].astype("category")
-df["Recipient Name"] = df["Recipient Name"].astype("category")
-df["Currency"] = df["Currency"].astype("category")
-df["Prices"] = df["Prices"].astype("category")
-df["Sector"] = df["Sector"].astype("category")
-df["Subsector"] = df["Subsector"].astype("category")
-df["value"] = df["value"].apply(lambda x: to_decimal(x))
-df["share_of_total"] = df["share_of_total"].apply(lambda x: to_decimal(x))
-df["share_of_indicator"] = df["share_of_indicator"].apply(lambda x: to_decimal(x))
-df["GNI Share"] = df["GNI Share"].apply(lambda x: to_decimal(x))
-
-schema = pa.schema(
-    [
-        ("year", pa.dictionary(pa.int8(), pa.int16())),
-        ("Indicator", pa.dictionary(index_type=pa.int8(), value_type=pa.string())),
-        ("Donor Name", pa.dictionary(index_type=pa.int8(), value_type=pa.string())),
-        ("Recipient Name", pa.dictionary(index_type=pa.int8(), value_type=pa.string())),
-        ("Currency", pa.dictionary(index_type=pa.int8(), value_type=pa.string())),
-        ("Prices", pa.dictionary(index_type=pa.int8(), value_type=pa.string())),
-        ("Sector", pa.dictionary(index_type=pa.int8(), value_type=pa.string())),
-        ("Subsector", pa.dictionary(index_type=pa.int16(), value_type=pa.string())),
-        ("value", pa.decimal128(7, 2)),
-        ("share_of_total", pa.decimal128(5, 2)),
-        ("share_of_indicator", pa.decimal128(6, 2)),
-        ("GNI Share", pa.decimal128(6, 2)),
-    ]
-)
-
-sparkbarTable = pa.Table.from_pandas(df, schema=schema, preserve_index=False)
-
-# Write PyArrow Table to Parquet
-buf = pa.BufferOutputStream()
-pq.write_table(sparkbarTable, buf, compression="snappy")
-
-# Get the Parquet bytes
-buf_bytes = buf.getvalue().to_pybytes()
-sys.stdout.buffer.write(buf_bytes)
+if __name__ == "__main__":
+    logger.info("Generating sectors table...")
+    sectors_to_parquet()

@@ -23,6 +23,9 @@ const financingIndicators = await FileAttachment('../data/analysis_tools/financi
 const recipientsIndicators = await FileAttachment('../data/analysis_tools/recipients_indicators.json').json()
 const genderIndicators = await FileAttachment('../data/analysis_tools/gender_indicators.json').json()
 
+const code2Subsector = await FileAttachment("../data/analysis_tools/sub_sectors.json").json()
+const subsector2Sector = await FileAttachment("../data/analysis_tools/sectors.json").json()
+
 //  FINANCING VIEW
 export function financingQueries(
     donor,
@@ -374,50 +377,98 @@ async function relativeRecipientsQuery(
 export function sectorsQueries(
     donor,
     recipient,
-    sector,
-    indicator,
+    selectedSector,
     currency,
     prices,
-    timeRange
+    timeRange,
+    breakdown
 ) {
 
-    const absolute = absoluteSectorsQuery(
+
+    const treemap = treemapSectorQuery(
         donor,
         recipient,
-        sector,
-        indicator,
         currency,
         prices,
         timeRange
     );
 
+    const selected = selectedSectorQuery(
+        donor,
+        recipient,
+        selectedSector,
+        currency,
+        prices,
+        timeRange,
+        breakdown
+    )
 
-    return {absolute};
+    return {treemap, selected};
 
 }
 
 
-async function absoluteSectorsQuery(
+async function treemapSectorQuery(
     donor,
     recipient,
-    sector,
-    indicator,
     currency,
     prices,
     timeRange
 ) {
 
+    const code2SectorCase = Object.entries(code2Subsector)
+        .map(([code, subsector]) => {
+            const sector = subsector2Sector[subsector] || 'Other';
+            return `WHEN ${code} THEN '${sector.replace(/'/g, "''")}'`;
+        })
+        .join('\n');
+
+    const sectorCaseSQL = `CASE indicator\n${code2SectorCase}\nEND AS Sector`;
+
     const query = await db.query(
         `
-            -- WITH filtered AS (
-                SELECT *
-                FROM sectors 
-                WHERE
-                    donor_code IN (${donor})
-                    AND recipient_code IN (${recipient})
-                    AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-            -- )
-            -- SELECT * FROM filtered
+            WITH filtered AS (
+             SELECT
+                year,
+                donor_code AS donor,
+                indicator,
+                SUM(value * 1.1 / 1.1) AS value
+             FROM sectors 
+             WHERE
+                 donor_code IN (${donor})
+                 AND recipient_code IN (${recipient})
+                 AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
+            GROUP BY year, donor_code, indicator
+            ),
+            conversion AS (
+                SELECT
+                    year,
+                    ${prices === "constant" ? "dac_code AS donor," : ""}
+                    ${currency}_${prices} AS factor
+                FROM
+                    ${prices}_conversion_table
+                    ${prices === "constant" ? `WHERE dac_code IN (${donor})` : ""}
+            ),
+            joined AS (
+                SELECT
+                    f.year,
+                    f.indicator,
+                    f.value * c.factor AS converted_value
+                FROM filtered f
+                    JOIN conversion c
+                ON f.year = c.year
+                    ${prices === "constant" ? "AND f.donor = c.donor" : ""}
+            )
+            SELECT
+                '${timeRange[0]}-${timeRange[1]}' AS period,
+                '${getNameByCode(donorMapping, donor)}' AS donor,
+                '${getNameByCode(recipientMapping, recipient)}' AS recipient,
+                ${sectorCaseSQL},
+                SUM(converted_value) as Value,
+                '${currency} ${prices} million' as Unit,
+                'OECD CRS' AS Source
+            FROM joined
+            GROUP BY sector
         `
     )
 
@@ -426,6 +477,93 @@ async function absoluteSectorsQuery(
     }));
 
 }
+
+
+async function selectedSectorQuery(
+    donor,
+    recipient,
+    selectedSector,
+    currency,
+    prices,
+    timeRange,
+    breakdown
+) {
+
+    //
+    const relevantSubsectors = Object.entries(subsector2Sector)
+        .filter(([, sector]) => sector === selectedSector)
+        .map(([subsector]) => subsector);
+
+    const indicatorCodes = Object.entries(code2Subsector)
+        .filter(([, subsector]) => relevantSubsectors.includes(subsector))
+        .map(([code]) => Number(code)); // or keep as strings depending on SQL needs
+
+    //
+    const code2SubsectorCase = Object.entries(code2Subsector)
+        .filter(([, subsector]) => relevantSubsectors.includes(subsector))
+        .map(([code, subsector]) => `WHEN ${code} THEN '${subsector.replace(/'/g, "''")}'`)
+        .join('\n');
+
+    const subsectorCaseSQL = `CASE indicator\n${code2SubsectorCase}\nEND AS 'Sub-sector',`;
+
+    const query = await db.query(
+        `
+            WITH filtered AS (
+             SELECT
+                year,
+                donor_code AS donor,
+                ${breakdown ? "indicator,": ""}
+                SUM(value * 1.1 / 1.1) AS value
+             FROM sectors 
+             WHERE
+                donor_code IN (${donor})
+                AND recipient_code IN (${recipient})
+                AND indicator IN (${indicatorCodes})
+                AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
+            GROUP BY year, ${breakdown ? "indicator,": ""} donor_code 
+            ),
+            conversion AS (
+                SELECT
+                    year,
+                    ${prices === "constant" ? "dac_code AS donor," : ""}
+                    ${currency}_${prices} AS factor
+                FROM
+                    ${prices}_conversion_table
+                    ${prices === "constant" ? `WHERE dac_code IN (${donor})` : ""}
+            ),
+            joined AS (
+                SELECT
+                    f.year, 
+                    ${breakdown ? "f.indicator AS indicator," : ""}
+                    SUM(f.value * c.factor) AS converted_value
+                FROM filtered f
+                    JOIN conversion c
+                ON f.year = c.year
+                    ${prices === "constant" ? "AND f.donor = c.donor" : ""}
+                GROUP BY f.year ${breakdown ? ", f.indicator" : ""}
+            )
+            SELECT
+                year AS Year,
+                '${getNameByCode(donorMapping, donor)}' AS donor,
+                '${getNameByCode(recipientMapping, recipient)}' AS recipient,
+                ${
+                    breakdown
+                            ? subsectorCaseSQL
+                            : `'${selectedSector}' AS Sector,`
+                }
+                converted_value as Value,
+                '${currency} ${prices} million' as Unit,
+                'OECD CRS' AS Source
+            FROM joined
+        `
+    )
+
+    return query.toArray().map((row) => ({
+        ...row
+    }));
+
+}
+
 
 
 // GENDER VIEW
