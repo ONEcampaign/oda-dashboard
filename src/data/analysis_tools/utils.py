@@ -16,9 +16,6 @@ def get_dac_ids(path):
     return [int(key) for key in data.keys()]
 
 
-import json
-from collections import defaultdict
-
 def load_indicators(page):
     with open(PATHS.INDICATORS, "r") as f:
         data = json.load(f)
@@ -148,7 +145,8 @@ def convert_types(df):
         "year": "category",
         "donor_code": "category",
         "recipient_code": "category",
-        "indicator": "category"
+        "indicator": "category",
+        "subsector": "category",
     }
 
     for col, dtype in type_map.items():
@@ -159,3 +157,21 @@ def convert_types(df):
         df["value"] = df["value"].apply(to_decimal)
 
     return df
+
+
+def add_index_column(df, column, json_path='index.json'):
+    # Create string to index mapping
+    unique_values = df[column].unique()
+    str_to_idx = {name: idx for idx, name in enumerate(unique_values)}
+    idx_to_str = {idx: name for name, idx in str_to_idx.items()}
+
+    # Map column to 'indicator'
+    df = df.copy()
+    df["indicator"] = df[column].map(str_to_idx)
+
+    # Save index to string mapping as JSON
+    with open(json_path, "w") as f:
+        json.dump(idx_to_str, f, indent=2)
+
+    return df
+

@@ -1143,15 +1143,15 @@ files = [
 
 [[package]]
 name = "oda-data"
-version = "2.0.0b3"
+version = "2.0.0b4"
 description = "A python package to work with Official Development Assistance data from the OECD DAC."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 markers = "python_version == \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "oda_data-2.0.0b3-py3-none-any.whl", hash = "sha256:c7f0eaa174dff935d1c7290bdbd1b423a3c4a625693ae552d19f050d3a016b0c"},
-    {file = "oda_data-2.0.0b3.tar.gz", hash = "sha256:552a3de6f9434d4177f56997135dec452464a24c1afac9304ffb6d6c90bb4be8"},
+    {file = "oda_data-2.0.0b4-py3-none-any.whl", hash = "sha256:c0fca7962b6642bf6ddf3df06ebe09d05550dd007fb464cab37eb12a01215d47"},
+    {file = "oda_data-2.0.0b4.tar.gz", hash = "sha256:f8ba22ae4fbfbc526cfe5634804321e526760daff441850f127d2ed77b25f25b"},
 ]
 
 [package.dependencies]
@@ -2664,4 +2664,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "358128a1b8d76a6f2b95f974c7c188c2a3c9533cfdc90cc52636de55b42aa95d"
+content-hash = "2b79e7d02d1bc13bcd1261e0c0e697ee16acf82432445fcd7cc804ebd883adeb"

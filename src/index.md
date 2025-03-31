@@ -15,8 +15,12 @@ setCustomColors();
 const donorOptions = await FileAttachment("./data/analysis_tools/donor_mapping.json").json()
 const donorMapping = name2CodeMap(donorOptions)
 
-const indicatorOptions = await FileAttachment("./data/analysis_tools/indicators.json").json()
-const indicatorMapping = generateIndicatorMap(indicatorOptions, "financing")
+const indicatorOptions = await FileAttachment('./data/analysis_tools/financing_indicators.json').json()
+const indicatorMapping = new Map(
+    Object.entries(indicatorOptions).map(([k, v]) => [v, Number(k)])
+);
+
+
 ```
 
 ```js

@@ -1,118 +1,122 @@
 import pandas as pd
 
-from oda_data import Dac1Data, set_data_path
+from oda_data import Dac1Data, Indicators, set_data_path
 
 from src.data.config import PATHS, time_range, logger
 
-from src.data.analysis_tools.utils import get_dac_ids, load_indicators, convert_types, return_pa_table
+from src.data.analysis_tools.utils import get_dac_ids, add_index_column, convert_types, return_pa_table
 
 set_data_path(PATHS.ODA_DATA)
 
+donor_ids = get_dac_ids(PATHS.DONORS)
 
-def get_dac1_flow():
+indicators_dac1 = {
+    'ONE.10.1010_11010': 'Total ODA',
+    # 'ONE.10.1010C', # Total Core ODA (ONE Definition)
+    'DAC1.10.1015': 'Bilateral ODA',
+    'DAC1.10.2000': 'Multilateral ODA',
+    'DAC1.10.1600': 'Debt relief',
+    'DAC1.10.1500': 'Scholarships and student costs in donor countries',
+    'DAC1.10.1510': 'Scholarships/training in donor country',
+    'DAC1.10.1520': 'Imputed student costs',
+    'DAC1.10.1820': 'Refugees in donor countries',
+    'DAC1.60.11030': 'Private sector instruments',
+    'DAC1.60.11023': 'Private sector instruments - institutional approach',
+    'DAC1.60.11024': 'Private sector instruments - instrument approach',
+}
 
-    donor_ids = get_dac_ids(PATHS.DONORS)
-    indicator_ids = load_indicators("financing")['flow']
 
-    df_raw = (
-        Dac1Data(years=range(time_range["start"], 2018))
-        .read(
-            using_bulk_download=True,
-            additional_filters=[
-                ("amount_type", "==", "Current prices"),
-                ("donor_code", "in", donor_ids),
-                ("aidtype_code", "in", indicator_ids.keys()),
-                ("flows_code", "==", 1140),
+def get_dac1():
+
+    dac1_raw = Indicators(
+        years=range(time_range["start"], time_range["end"] + 1),
+        providers= donor_ids,
+        measure=["net_disbursement", "grant_equivalent"],
+        use_bulk_download=True
+    ).get_indicators(
+        list(indicators_dac1.keys())
+    )
+
+    # Remove net disbursements after 2018
+    dac1_raw = dac1_raw[~((dac1_raw["year"] >= 2018) & (dac1_raw["fund_flows"] == "Disbursements, net"))]
+
+
+    dac1 = (
+        dac1_raw.groupby(
+            [
+                'year',
+                'donor_code',
+                'one_indicator'
             ],
-        )
-    )
-
-    df = (
-        df_raw.groupby(
-            ["year", "donor_code", "aidtype_code"], dropna=False, observed=True
-        )["value"]
+            dropna=False, observed=True
+        )['value']
         .sum()
         .reset_index()
-        .assign(indicator=lambda d: d["aidtype_code"].astype(str).map(indicator_ids))
-        .drop(columns="aidtype_code")
+        .assign(indicator=lambda d: d["one_indicator"].map(indicators_dac1))
+        .drop(columns=["one_indicator"])
     )
 
-    df = df[df["value"] != 0]
+    return dac1
 
-    return df
+def get_grants():
 
-def get_dac1_ge():
+    mapping = {
+        "Disbursements, net": "Total ODA",
+        "Grant equivalents": "Total ODA",
+        "Disbursements, grants": "Grants"
+    }
 
-    donor_ids = get_dac_ids(PATHS.DONORS)
-    indicator_ids = load_indicators("financing")['ge']
+    grants_raw = Indicators(
+        years=range(time_range["start"], time_range["end"] + 1),
+        providers= donor_ids,
+        measure=["net_disbursement_grant", "net_disbursement", "grant_equivalent"],
+        use_bulk_download=True
+    ).get_indicators(["DAC1.10.1010", "DAC1.10.11010"])
 
-    df_raw = (
-        Dac1Data(years=range(2018, time_range['end'] + 1))
-        .read(
-            using_bulk_download=True,
-            additional_filters=[
-                ("amount_type", "==", "Current prices"),
-                ("donor_code", "in", donor_ids),
-                ("aidtype_code", "in", indicator_ids.keys()),
-                ("flows_code", "==", 1160),
+    # Remove net disbursements after 2018
+    grants_raw = grants_raw[~((grants_raw["year"] >= 2018) & (grants_raw["fund_flows"] == "Disbursements, net"))]
+
+    grants = (
+        grants_raw
+        .assign(indicator=lambda d: d["fund_flows"].map(mapping))
+        .groupby(
+            [
+                'year',
+                'donor_code',
+                'indicator'
             ],
-        )
-    )
-
-    df = (
-        df_raw.groupby(
-            ["year", "donor_code", "aidtype_code"], dropna=False, observed=True
-        )["value"]
+            dropna=False, observed=True
+        )['value']
         .sum()
         .reset_index()
-        .assign(indicator=lambda d: d["aidtype_code"].astype(str).map(indicator_ids))
-        .drop(columns="aidtype_code")
-    )
-
-    df = df[df["value"] != 0]
-
-    return df
-
-
-def get_dac1_grants():
-
-    donor_ids = get_dac_ids(PATHS.DONORS)
-    indicator_ids = load_indicators("financing")['grant']
-
-    df_raw = Dac1Data(years=range(time_range["start"], time_range["end"] + 1)).read(
-        using_bulk_download=True,
-        additional_filters=[
-            ("amount_type", "==", "Current prices"),
-            ("donor_code", "in", donor_ids),
-            ("aidtype_code", "==", 1010),
-            ("flows_code", "in", indicator_ids.keys()),
-        ],
-    )
-
-    df = (
-        df_raw.groupby(
-            ["year", "donor_code", "flows_code"], dropna=False, observed=True
-        )["value"]
-        .sum()
+        .pivot(index=['year', 'donor_code'], columns='indicator', values="value")
         .reset_index()
-        .assign(indicator=lambda d: d["flows_code"].astype(str).map(indicator_ids))
-        .drop(columns="flows_code")
+        .assign(**{"Non-grants": lambda d: d['Total ODA'] - d['Grants']})
+        .melt(id_vars=['year', 'donor_code'], value_vars=['Grants', 'Non-grants'])
     )
 
-    df = df[df["value"] != 0]
+    return grants
 
-    return df
+def get_financing_data():
+
+    dac1 = get_dac1()
+    grants = get_grants()
+
+    financing = pd.concat([dac1, grants])
+
+    financing = add_index_column(
+        df=financing,
+        column='indicator',
+        json_path=PATHS.TOOLS / 'financing_indicators.json'
+    )
+
+    return financing
 
 
 def financing_to_parquet():
 
-    flow = get_dac1_flow()
-    ge = get_dac1_ge()
-    grants = get_dac1_grants()
-
-    financing_df = pd.concat([flow, ge, grants])
-
-    converted_df = convert_types(financing_df)
+    df = get_financing_data()
+    converted_df = convert_types(df)
     return_pa_table(converted_df)
 
 

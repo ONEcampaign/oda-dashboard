@@ -6,6 +6,7 @@ import {name2CodeMap, getNameByCode, generateIndicatorMap} from "./utils.js";
 const db = await DuckDBClient.of({
     financing: FileAttachment("../data/scripts/financing.parquet"),
     recipients: FileAttachment("../data/scripts/recipients.parquet"),
+    sectors: FileAttachment("../data/scripts/sectors.parquet"),
     gender: FileAttachment("../data/scripts/gender.parquet"),
     gni_table: FileAttachment("../data/scripts/gni_table.parquet"),
     current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv"),
@@ -14,11 +15,11 @@ const db = await DuckDBClient.of({
 
 const donorOptions = await FileAttachment("../data/analysis_tools/donor_mapping.json").json()
 const recipientOptions = await FileAttachment("../data/analysis_tools/recipient_mapping.json").json()
-const indicatorOptions = await FileAttachment("../data/analysis_tools/indicators.json").json()
 
 const donorMapping = name2CodeMap(donorOptions)
 const recipientMapping = name2CodeMap(recipientOptions)
 
+const financingIndicators = await FileAttachment('../data/analysis_tools/financing_indicators.json').json()
 
 //  FINANCING VIEW
 export function financingQueries(
@@ -29,8 +30,9 @@ export function financingQueries(
     timeRange
 ) {
 
-
-    const indicatorMapping = generateIndicatorMap(indicatorOptions, "financing")
+    const indicatorMapping = new Map(
+        Object.entries(financingIndicators).map(([k, v]) => [v, Number(k)])
+    );
 
 
     const absolute = absoluteFinancingQuery(
@@ -75,11 +77,7 @@ async function absoluteFinancingQuery(
                 FROM financing
                 WHERE 
                     donor_code IN (${donor})
-                    ${
-                        indicator === indicatorMapping.get("Non-grants")
-                            ? `AND indicator IN (${indicatorMapping.get("Grants")}, ${indicatorMapping.get("Total ODA")})` 
-                            : `AND indicator = ${indicator}`
-                    }
+                    AND indicator = ${indicator}
                     AND year between ${timeRange[0]} AND ${timeRange[1]}
             ),
             conversion AS (
@@ -164,11 +162,7 @@ async function relativeFinancingQuery(
                 FROM financing
                 WHERE
                     donor_code IN (${donor})
-                    ${
-                            indicator === indicatorMapping.get("Grants") || indicator === indicatorMapping.get("Non-Grants")
-                                    ? `AND indicator IN (${indicatorMapping.get("Grants")}, ${indicatorMapping.get("Non-Grants")})`
-                                    : `AND indicator = ${indicatorMapping.get("Total ODA")}`
-                    }
+                    AND indicator = ${indicatorMapping.get("Total ODA")}
                     AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
                 GROUP BY year
                     
@@ -181,16 +175,10 @@ async function relativeFinancingQuery(
                         ? "f.value / g.gni * 100 AS Value,"
                         : "f.value / t.total_value * 100 AS Value,"
                 }
-                ${
-                        indicator === indicatorMapping.get("Grants") || indicator === indicatorMapping.get("Non-Grants")
-                                ? "'Flows' AS Type,"
-                                : `
-                                    CASE 
-                                        WHEN f.year < 2018 THEN 'Flows'
-                                        WHEN f.year >= 2018 THEN 'Grant equivalents'
-                                    END AS Type,
-                                `
-                }
+                CASE 
+                    WHEN f.year < 2018 THEN 'Flows'
+                    WHEN f.year >= 2018 THEN 'Grant equivalents'
+                END AS Type,
                 ${
                     indicator === indicatorMapping.get("Total ODA")
                         ? "'% of GNI' AS Unit,"
@@ -364,6 +352,68 @@ async function relativeRecipientsQuery(
             ORDER BY f.year
         `
     );
+
+    return query.toArray().map((row) => ({
+        ...row
+    }));
+
+}
+
+
+//  SECTORS VIEW
+export function sectorsQueries(
+    donor,
+    recipient,
+    sector,
+    indicator,
+    currency,
+    prices,
+    timeRange
+) {
+
+
+    // const indicatorMapping = generateIndicatorMap(indicatorOptions, "financing")
+
+
+    const absolute = absoluteSectorsQuery(
+        donor,
+        recipient,
+        sector,
+        indicator,
+        currency,
+        prices,
+        timeRange
+    );
+
+
+    return {absolute};
+
+}
+
+
+async function absoluteSectorsQuery(
+    donor,
+    recipient,
+    sector,
+    indicator,
+    currency,
+    prices,
+    timeRange
+) {
+
+    const query = await db.query(
+        `
+            -- WITH filtered AS (
+                SELECT *
+                FROM sectors 
+                WHERE
+                    donor_code IN (${donor})
+                    AND recipient_code IN (${recipient})
+                    AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
+            -- )
+            -- SELECT * FROM filtered
+        `
+    )
 
     return query.toArray().map((row) => ({
         ...row
