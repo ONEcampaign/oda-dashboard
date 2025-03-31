@@ -100,8 +100,8 @@ export const paletteTreemap = [
 
 export const paletteGender = {
     domain: [
-        "Main focus",
-        "Secondary focus",
+        "Main target",
+        "Secondary target",
         'Not targeted',
         'Not screened'
     ],

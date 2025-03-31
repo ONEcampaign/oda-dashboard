@@ -13,13 +13,15 @@ const db = await DuckDBClient.of({
     // constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table.csv")
 });
 
-const donorOptions = await FileAttachment("../data/analysis_tools/donor_mapping.json").json()
-const recipientOptions = await FileAttachment("../data/analysis_tools/recipient_mapping.json").json()
+const donorOptions = await FileAttachment("../data/analysis_tools/donors.json").json()
+const recipientOptions = await FileAttachment("../data/analysis_tools/recipients.json").json()
 
 const donorMapping = name2CodeMap(donorOptions)
 const recipientMapping = name2CodeMap(recipientOptions)
 
 const financingIndicators = await FileAttachment('../data/analysis_tools/financing_indicators.json').json()
+const recipientsIndicators = await FileAttachment('../data/analysis_tools/recipients_indicators.json').json()
+const genderIndicators = await FileAttachment('../data/analysis_tools/gender_indicators.json').json()
 
 //  FINANCING VIEW
 export function financingQueries(
@@ -29,6 +31,7 @@ export function financingQueries(
     prices,
     timeRange
 ) {
+
 
     const indicatorMapping = new Map(
         Object.entries(financingIndicators).map(([k, v]) => [v, Number(k)])
@@ -214,11 +217,15 @@ export function recipientsQueries(
 
     const indicators = indicator.length > 0 ? indicator : [-1]; // use -1 or any value that won’t match real indicators
 
+    const indicatorCase = Object.entries(recipientsIndicators)
+        .map(([code, label]) => `WHEN indicator = ${code} THEN '${label}'`)
+        .join("\n");
 
     const absolute = absoluteRecipientsQuery(
         donor,
         recipient,
         indicators,
+        indicatorCase,
         currency,
         prices,
         timeRange
@@ -228,6 +235,7 @@ export function recipientsQueries(
         donor,
         recipient,
         indicators,
+        indicatorCase,
         currency,
         prices,
         timeRange
@@ -241,6 +249,7 @@ async function absoluteRecipientsQuery(
     donor,
     recipient,
     indicator,
+    indicatorCase,
     currency,
     prices,
     timeRange
@@ -285,8 +294,7 @@ async function absoluteRecipientsQuery(
                 '${getNameByCode(donorMapping, donor)}' AS donor,
                 '${getNameByCode(recipientMapping, recipient)}' AS recipient,
                 CASE
-                    WHEN indicator = 1 THEN 'Imputed multilateral'
-                    WHEN indicator = 0 THEN 'Bilateral'
+                    ${indicatorCase}
                 END AS Indicator,
                 SUM(converted_value) as Value,
                 '${currency} ${prices} million' as Unit,
@@ -308,6 +316,7 @@ async function relativeRecipientsQuery(
     donor,
     recipient,
     indicator,
+    indicatorCase,
     currency,
     prices,
     timeRange
@@ -343,8 +352,7 @@ async function relativeRecipientsQuery(
                 '${getNameByCode(donorMapping, donor)}' AS donor,
                 '${getNameByCode(recipientMapping, recipient)}' AS recipient,
                 CASE
-                    WHEN indicator = 1 THEN 'Imputed multilateral'
-                    WHEN indicator = 0 THEN 'Bilateral'
+                    ${indicatorCase}
                 END AS Indicator,
                 f.value / t.total_value * 100 AS Value,
                 '% of total aid' AS Unit,
@@ -372,10 +380,6 @@ export function sectorsQueries(
     prices,
     timeRange
 ) {
-
-
-    // const indicatorMapping = generateIndicatorMap(indicatorOptions, "financing")
-
 
     const absolute = absoluteSectorsQuery(
         donor,
@@ -434,11 +438,17 @@ export function genderQueries(
     timeRange
 ) {
 
+    const indicators = indicator.length > 0 ? indicator : [-1]; // use -1 or any value that won’t match real indicators
+
+    const indicatorCase = Object.entries(genderIndicators)
+        .map(([code, label]) => `WHEN indicator = ${code} THEN '${label}'`)
+        .join("\n");
 
     const absolute = absoluteGenderQuery(
         donor,
         recipient,
-        indicator,
+        indicators,
+        indicatorCase,
         currency,
         prices,
         timeRange
@@ -447,7 +457,8 @@ export function genderQueries(
     const relative = relativeGenderQuery(
         donor,
         recipient,
-        indicator,
+        indicators,
+        indicatorCase,
         currency,
         prices,
         timeRange
@@ -461,6 +472,7 @@ async function absoluteGenderQuery(
     donor,
     recipient,
     indicator,
+    indicatorCase,
     currency,
     prices,
     timeRange
@@ -504,11 +516,8 @@ async function absoluteGenderQuery(
                 year AS Year,
                 '${getNameByCode(donorMapping, donor)}' AS donor,
                 '${getNameByCode(recipientMapping, recipient)}' AS recipient,
-                CASE
-                    WHEN indicator = 0 THEN 'Main focus'
-                    WHEN indicator = 1 THEN 'Not screened'
-                    WHEN indicator = 2 THEN 'Not targeted'
-                    WHEN indicator = 3 THEN 'Secondary focus'
+                CASE    
+                    ${indicatorCase}
                 END AS Indicator,
                 SUM(converted_value) as Value,
                 '${currency} ${prices} million' as Unit,
@@ -529,6 +538,7 @@ async function relativeGenderQuery(
     donor,
     recipient,
     indicator,
+    indicatorCase,
     currency,
     prices,
     timeRange
@@ -565,10 +575,7 @@ async function relativeGenderQuery(
                 '${getNameByCode(donorMapping, donor)}' AS donor,
                 '${getNameByCode(recipientMapping, recipient)}' AS recipient,
                 CASE
-                    WHEN indicator = 0 THEN 'Main focus'
-                    WHEN indicator = 1 THEN 'Not screened'
-                    WHEN indicator = 2 THEN 'Not targeted'
-                    WHEN indicator = 3 THEN 'Secondary focus'
+                    ${indicatorCase}
                 END AS Indicator,
                 f.value / t.total_value * 100 AS Value,
                 '% of total aid' AS Unit,

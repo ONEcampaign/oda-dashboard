@@ -1,16 +1,24 @@
+import pandas as pd
+
 from oda_data import CrsData, set_data_path
 from src.data.config import PATHS, time_range, logger
 
-from src.data.analysis_tools.utils import get_dac_ids, load_indicators, convert_types, return_pa_table
+from src.data.analysis_tools.utils import get_dac_ids, add_index_column, convert_types, return_pa_table
 
 set_data_path(PATHS.ODA_DATA)
 
+donor_ids = get_dac_ids(PATHS.DONORS)
+recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
+
+indicators_gender = {
+    "2.0": "Main target",
+    "1.0": "Secondary target",
+    "0.0": "Not targeted",
+    pd.NA: "Not screened"
+}
 
 def filter_transform_gender():
 
-    donor_ids = get_dac_ids(PATHS.DONORS)
-    recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
-    indicator_ids = load_indicators("gender")
 
     crs = CrsData(years=range(time_range["start"], time_range["end"] + 1)).read(
         using_bulk_download=True,
@@ -22,8 +30,8 @@ def filter_transform_gender():
     )
 
     # Format gender df including all flows (flow_name)
-    gender_df = (
-        crs.assign(indicator=lambda d: d["gender"].fillna("NA").map(indicator_ids))
+    gender = (
+        crs.assign(indicator=lambda d: d["gender"].map(indicators_gender))
         .groupby(
             [
                 "year",
@@ -39,9 +47,15 @@ def filter_transform_gender():
         .rename(columns={"usd_disbursement": "value"})
     )
 
-    gender_df = gender_df[gender_df["value"] != 0]
+    gender = gender[gender["value"] != 0]
 
-    return gender_df
+    gender = add_index_column(
+        df=gender,
+        column='indicator',
+        json_path=PATHS.TOOLS / 'gender_indicators.json'
+    )
+
+    return gender
 
 
 def gender_to_parquet():
@@ -56,3 +70,5 @@ def gender_to_parquet():
 if __name__ == "__main__":
     logger.info("Generating gender table...")
     gender_to_parquet()
+
+

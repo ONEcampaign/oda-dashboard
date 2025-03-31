@@ -12,17 +12,22 @@ setCustomColors();
 ```
 
 ```js
-const donorOptions = await FileAttachment("./data/analysis_tools/donor_mapping.json").json()
+const donorOptions = await FileAttachment("./data/analysis_tools/donors.json").json()
 const donorMapping = name2CodeMap(donorOptions)
 
-const recipientOptions = await FileAttachment("./data/analysis_tools/recipient_mapping.json").json()
+const recipientOptions = await FileAttachment("./data/analysis_tools/recipients.json").json()
 const recipientMapping = name2CodeMap(recipientOptions)
 
-const indicatorOptions = await FileAttachment("./data/analysis_tools/indicators.json").json()
-const indicatorMapping = generateIndicatorMap(indicatorOptions, "gender")
+const indicatorOptions = await FileAttachment("./data/analysis_tools/gender_indicators.json").json()
+const indicatorMapping = new Map(
+    Object.entries(indicatorOptions).map(([k, v]) => [v, Number(k)])
+);
 ```
 
 ```js
+
+console.log(indicatorMapping)
+
 // USER INPUTS
 // Donor
 const donorInput = Inputs.select(
@@ -50,8 +55,8 @@ const indicatorInput = Inputs.checkbox(
     {
         label: "Gender is",
         value: [
-            indicatorMapping.get("Main focus"), 
-            indicatorMapping.get("Secondary focus")
+            indicatorMapping.get("Main target"), 
+            indicatorMapping.get("Secondary target")
         ],
     })
 const indicator = Generators.input(indicatorInput);
