@@ -1,3 +1,4 @@
+import pandas as pd
 import logging
 from pathlib import Path
 
@@ -17,7 +18,34 @@ logger.setLevel(logging.INFO)
 
 base_year: int = 2023  # for currency conversions
 
-time_range: dict = {"start": 2000, "end": 2023}
+TIME_RANGE: dict = {"start": 2000, "end": 2023}
+
+FINANCING_INDICATORS = {
+    "ONE.10.1010_11010": "Total ODA",
+    # 'ONE.10.1010C', # Total Core ODA (ONE Definition)
+    "DAC1.10.1015": "Bilateral ODA",
+    "DAC1.10.2000": "Multilateral ODA",
+    "DAC1.10.1600": "Debt relief",
+    "DAC1.10.1500": "Scholarships and student costs in donor countries",
+    "DAC1.10.1510": "Scholarships/training in donor country",
+    "DAC1.10.1520": "Imputed student costs",
+    "DAC1.10.1820": "Refugees in donor countries",
+    "DAC1.60.11030": "Private sector instruments",
+    "DAC1.60.11023": "Private sector instruments - institutional approach",
+    "DAC1.60.11024": "Private sector instruments - instrument approach",
+}
+
+RECIPIENTS_INDICATORS = {
+    "DAC2A.10.206": "Bilateral",
+    "DAC2A.10.106": "Imputed multilateral",
+}
+
+GENDER_INDICATORS = {
+    "2.0": "Main target",
+    "1.0": "Secondary target",
+    "0.0": "Not targeted",
+    pd.NA: "Not screened",
+}
 
 
 class PATHS:

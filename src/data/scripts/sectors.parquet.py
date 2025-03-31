@@ -1,36 +1,39 @@
 import json
 
 from oda_data import CrsData, set_data_path
-from src.data.config import PATHS, time_range, logger
+from src.data.config import PATHS, TIME_RANGE, logger
 
-from src.data.analysis_tools.utils import get_dac_ids, add_index_column, convert_types, return_pa_table
+from src.data.analysis_tools.helper_functions import get_dac_ids, add_index_column, df_to_parquet
 from src.data.analysis_tools import sector_lists
 
 set_data_path(PATHS.ODA_DATA)
+
 
 def filter_transform_sectors():
 
     donor_ids = get_dac_ids(PATHS.DONORS)
     recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 
-    crs = CrsData(
-        years=range(time_range["start"], time_range["end"] + 1)
-    ).read(
+    crs = CrsData(years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)).read(
         using_bulk_download=True,
         additional_filters=[
             ("donor_code", "in", donor_ids),
             ("recipient_code", "in", recipient_ids),
-            ("category", "in", [10, 60])
+            ("category", "in", [10, 60]),
         ],
-        columns=["year", "donor_code", "recipient_code", "purpose_code", "usd_disbursement"]
+        columns=[
+            "year",
+            "donor_code",
+            "recipient_code",
+            "purpose_code",
+            "usd_disbursement",
+        ],
     )
 
     sub_sectors = sector_lists.get_sector_groups()
 
     for name, codes in sub_sectors.items():
-        crs.loc[
-            crs.purpose_code.isin(codes), "indicator"
-        ] = name
+        crs.loc[crs.purpose_code.isin(codes), "indicator"] = name
 
     sectors = (
         crs.groupby(
@@ -55,9 +58,7 @@ def filter_transform_sectors():
     sectors = sectors[sectors["value"] != 0]
 
     sectors = add_index_column(
-        df=sectors,
-        column='indicator',
-        json_path=PATHS.TOOLS / 'sub_sectors.json'
+        df=sectors, column="indicator", json_path=PATHS.TOOLS / "sub_sectors.json"
     )
 
     sector_mapping = sector_lists.get_broad_sector_groups()
@@ -67,11 +68,11 @@ def filter_transform_sectors():
 
     return sectors
 
+
 def sectors_to_parquet():
 
     df = filter_transform_sectors()
-    converted_df = convert_types(df)
-    return_pa_table(converted_df)
+    df_to_parquet(df)
 
 
 if __name__ == "__main__":

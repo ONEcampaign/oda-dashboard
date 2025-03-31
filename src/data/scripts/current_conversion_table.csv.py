@@ -3,7 +3,7 @@ import sys
 import pandas as pd
 from pydeflate import oecd_dac_exchange, set_pydeflate_path
 
-from src.data.config import logger, PATHS, time_range
+from src.data.config import logger, PATHS, TIME_RANGE
 
 set_pydeflate_path(PATHS.PYDEFLATE)
 
@@ -12,7 +12,7 @@ codes = {"USA": "usd", "CAN": "cad", "FRA": "eur", "GBR": "gbp"}
 
 def create_df():
     return pd.DataFrame(
-        {"year": range(time_range["start"], time_range["end"] + 1), "value": 1}
+        {"year": range(TIME_RANGE["start"], TIME_RANGE["end"] + 1), "value": 1}
     )
 
 

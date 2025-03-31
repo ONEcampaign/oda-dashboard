@@ -1,45 +1,35 @@
 from oda_data import Indicators, set_data_path
-from src.data.config import PATHS, time_range, logger
+from src.data.config import PATHS, RECIPIENTS_INDICATORS, TIME_RANGE, logger
 
-from src.data.analysis_tools.utils import get_dac_ids, add_index_column, convert_types, return_pa_table
+from src.data.analysis_tools.helper_functions import get_dac_ids, add_index_column, df_to_parquet
 
 set_data_path(PATHS.ODA_DATA)
 
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 
-indicators_dac2a = {
-    "DAC2A.10.206": "Bilateral",
-    "DAC2A.10.106": "Imputed multilateral"
-}
 
 def filter_transform_recipients():
 
     dac2a_raw = Indicators(
-        years=range(time_range["start"], time_range["end"] + 1),
-        providers= donor_ids,
-        recipients= recipient_ids,
-        use_bulk_download=True
-    ).get_indicators(
-        list(indicators_dac2a.keys())
-    )
+        years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1),
+        providers=donor_ids,
+        recipients=recipient_ids,
+        use_bulk_download=True,
+    ).get_indicators(list(RECIPIENTS_INDICATORS.keys()))
 
     recipients = (
         dac2a_raw.query(
-            "donor_code in @donor_ids and "
-            "recipient_code in @recipient_ids"
-        ).groupby(
-            [
-                'year',
-                'donor_code',
-                'recipient_code',
-                'one_indicator'
-            ],
-            dropna=False, observed=True
-        )['value']
+            "donor_code in @donor_ids and " "recipient_code in @recipient_ids"
+        )
+        .groupby(
+            ["year", "donor_code", "recipient_code", "one_indicator"],
+            dropna=False,
+            observed=True,
+        )["value"]
         .sum()
         .reset_index()
-        .assign(indicator=lambda d: d["one_indicator"].map(indicators_dac2a))
+        .assign(indicator=lambda d: d["one_indicator"].map(RECIPIENTS_INDICATORS))
         .drop(columns=["one_indicator"])
     )
 
@@ -47,8 +37,8 @@ def filter_transform_recipients():
 
     recipients = add_index_column(
         df=recipients,
-        column='indicator',
-        json_path=PATHS.TOOLS / 'recipients_indicators.json'
+        column="indicator",
+        json_path=PATHS.TOOLS / "recipients_indicators.json",
     )
 
     return recipients
@@ -57,8 +47,7 @@ def filter_transform_recipients():
 def recipients_to_parquet():
 
     df = filter_transform_recipients()
-    converted_df = convert_types(df)
-    return_pa_table(converted_df)
+    df_to_parquet(df)
 
 
 if __name__ == "__main__":

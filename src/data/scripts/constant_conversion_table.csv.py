@@ -3,7 +3,7 @@ import json
 import pandas as pd
 from pydeflate import oecd_dac_deflate, set_pydeflate_path
 
-from src.data.config import logger, PATHS, time_range, base_year
+from src.data.config import logger, PATHS, TIME_RANGE, base_year
 
 set_pydeflate_path(PATHS.PYDEFLATE)
 
@@ -14,7 +14,7 @@ def create_df():
 
     donor_codes = [int(k) for k in donor_dict.keys()]
 
-    years = range(time_range["start"], time_range["end"] + 1)
+    years = range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)
 
     df = pd.DataFrame(
         index=pd.MultiIndex.from_product(

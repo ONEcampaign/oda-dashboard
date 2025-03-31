@@ -1,37 +1,28 @@
-import pandas as pd
-
 from oda_data import CrsData, set_data_path
-from src.data.config import PATHS, time_range, logger
+from src.data.config import PATHS, TIME_RANGE, GENDER_INDICATORS, logger
 
-from src.data.analysis_tools.utils import get_dac_ids, add_index_column, convert_types, return_pa_table
+from src.data.analysis_tools.helper_functions import get_dac_ids, add_index_column, df_to_parquet
 
 set_data_path(PATHS.ODA_DATA)
 
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 
-indicators_gender = {
-    "2.0": "Main target",
-    "1.0": "Secondary target",
-    "0.0": "Not targeted",
-    pd.NA: "Not screened"
-}
 
 def filter_transform_gender():
 
-
-    crs = CrsData(years=range(time_range["start"], time_range["end"] + 1)).read(
+    crs = CrsData(years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)).read(
         using_bulk_download=True,
         additional_filters=[
             ("donor_code", "in", donor_ids),
             ("recipient_code", "in", recipient_ids),
         ],
-        columns=["year", "donor_code", "recipient_code", "gender", "usd_disbursement"]
+        columns=["year", "donor_code", "recipient_code", "gender", "usd_disbursement"],
     )
 
     # Format gender df including all flows (flow_name)
     gender = (
-        crs.assign(indicator=lambda d: d["gender"].map(indicators_gender))
+        crs.assign(indicator=lambda d: d["gender"].map(GENDER_INDICATORS))
         .groupby(
             [
                 "year",
@@ -50,9 +41,7 @@ def filter_transform_gender():
     gender = gender[gender["value"] != 0]
 
     gender = add_index_column(
-        df=gender,
-        column='indicator',
-        json_path=PATHS.TOOLS / 'gender_indicators.json'
+        df=gender, column="indicator", json_path=PATHS.TOOLS / "gender_indicators.json"
     )
 
     return gender
@@ -61,14 +50,9 @@ def filter_transform_gender():
 def gender_to_parquet():
 
     df = filter_transform_gender()
-
-    converted_df = convert_types(df)
-
-    return_pa_table(converted_df)
+    df_to_parquet(df)
 
 
 if __name__ == "__main__":
     logger.info("Generating gender table...")
     gender_to_parquet()
-
-
