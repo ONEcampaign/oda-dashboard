@@ -1,7 +1,11 @@
 from oda_data import CrsData, set_data_path
 from src.data.config import PATHS, TIME_RANGE, GENDER_INDICATORS, logger
 
-from src.data.analysis_tools.helper_functions import get_dac_ids, add_index_column, df_to_parquet
+from src.data.analysis_tools.helper_functions import (
+    get_dac_ids,
+    add_index_column,
+    df_to_parquet,
+)
 
 set_data_path(PATHS.ODA_DATA)
 

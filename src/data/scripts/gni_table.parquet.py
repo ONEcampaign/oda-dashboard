@@ -2,7 +2,11 @@ from oda_data import Dac1Data, set_data_path
 
 from src.data.config import PATHS, TIME_RANGE, logger
 
-from src.data.analysis_tools.helper_functions import get_dac_ids, to_decimal, return_pa_table
+from src.data.analysis_tools.helper_functions import (
+    get_dac_ids,
+    convert_types,
+    df_to_parquet,
+)
 
 set_data_path(PATHS.ODA_DATA)
 
@@ -28,21 +32,11 @@ def get_gni():
     return df
 
 
-def convert_types(df):
-
-    df["year"] = df["year"].astype("category")
-    df["donor_code"] = df["donor_code"].astype("category")
-    df["value"] = df["value"].apply(lambda x: to_decimal(x))
-
-    return df
-
-
-def create_parquet():
+def gni_to_parquet():
     df = get_gni()
-    converted_df = convert_types(df)
-    return_pa_table(converted_df)
+    df_to_parquet(df)
 
 
 if __name__ == "__main__":
     logger.info("Generating GNI table...")
-    create_parquet()
+    gni_to_parquet()
