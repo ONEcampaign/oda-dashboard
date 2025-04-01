@@ -320,14 +320,14 @@ select, input {
 /*Download buttons */
 .download-panel {
     padding: 0 0 1rem 1rem;
-    /*display: flex;*/
-    /*flex-flow: row nowrap;*/
-    /*justify-content: space-around;*/
-    /*gap: 15px;*/
+    display: flex;
+    flex-flow: row;
+    justify-content: flex-start;
+    gap: 20px;
 }
 
 .download-panel > form {
-    width: fit-content;
+    width: auto !important;
 }
 
 .download-panel button {
