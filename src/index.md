@@ -87,16 +87,29 @@ const timeRange = Generators.input(timeRangeInput)
 const unitInput = Inputs.select(
     new Map(
         [
-            [`Million ${currencyInput.value}`, "Value"],
-            ["GNI Share", "GNI Share"]
+            [`Million ${getCurrencyLabel(currencyInput.value, {currencyOnly: true,})}`, "value"],
+            ["GNI Share", "gni"],
+            ["Share of aid provided", "total"]
         ]
     ),
     {
         label: "Unit",
-        value: "Value"
+        value: "value"
     }
 )
 const unit = Generators.input(unitInput)
+
+function updateUnitOptions() {
+    for (const o of unitInput.querySelectorAll("option")) {
+        if (o.innerHTML === "Share of aid provided" & indicatorInput.value === indicatorMapping.get("Total ODA")) {
+            o.setAttribute("disabled", "disabled");
+        }
+        else o.removeAttribute("disabled");
+    }
+}
+
+updateUnitOptions();
+indicatorInput.addEventListener("input", updateUnitOptions);
 
 // Intenational commitments
 const commitmentInput = Inputs.toggle(
@@ -113,11 +126,13 @@ const data = financingQueries(
     indicator,
     currency,
     prices,
-    timeRange
+    timeRange, 
+    unit
 )
 
 const absoluteData = data.absolute
 const relativeData = data.relative
+const tableData = data.table
 ```
 
 
@@ -136,7 +151,6 @@ const showMoreSettings = () => {
 ```
 
 ```js
-
 const showMoreButton = Inputs.button(moreSettings ? "Show less" : "Show more", {
     reduce: showMoreSettings
 });
@@ -304,7 +318,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         </div>
         ${
             sparkbarTable(
-                data, 
+                tableData, 
                 "financing", 
                 {unit: unit}
             )
@@ -313,9 +327,11 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Table 1.</p>
                 ${
-                    unit === "Value" 
-                    ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
-                    : html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(donor)}.</p>`
+                    unit === "value" 
+                        ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
+                        : unit === "gni"
+                            ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(getNameByCode(donorMapping, donor))}.</p>`
+                            : html`<p class="plot-note">ODA values as a share of total contributions from ${formatString(getNameByCode(donorMapping, donor))}.</p>`
                 }
             </div>
             <div class="logo-section">
