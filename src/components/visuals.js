@@ -4,7 +4,6 @@ import {html} from "npm:htl"
 import {utcYear} from "npm:d3-time";
 import {timeFormat} from "npm:d3-time-format";
 import {sum, rollups, descending, min, max} from "npm:d3-array"
-import {schemeObservable10} from "npm:d3-scale-chromatic";
 import {getCurrencyLabel, formatValue} from "./utils.js";
 import {customPalette, paletteFinancing, paletteRecipients, paletteSectors, paletteGender} from "./colors.js";
 
@@ -40,10 +39,10 @@ export function linePlot(data, mode, width,
         }
 
         if (breakdown) {
-            const uniqueSubsectors = new Set(
-                arrayData
-                    .map(row => row['Sub-sector'])
-            );
+            const uniqueSubsectors = [
+                ...new Set(data.map(row => row["Sub-sector"])).values()
+            ].sort((a, b) => a.localeCompare(b));
+
             colorScale = {
                 domain: uniqueSubsectors,
                 range: paletteSectors
@@ -288,42 +287,43 @@ export function barPlot(data, currency, mode, width) {
     })
 }
 
-export function sparkbarTable(data, mode, {
-    unit= null,
-    sectorName = null,
-} = {}) {
+export function sparkbarTable(data, mode) {
 
-    let tableData, columnsToShow, valueColumns, colorMapping, colorColumn, maxValues
+    let tableData,
+        columnsToShow,
+        valueColumns,
+        colorMapping,
+        colorColumn,
+        maxValues
     if (mode === "sectors") {
-        const allSubsectors = [
-            ...new Set(data
-                .filter((row) => row.Sector === sectorName)
-                .map(row => row.Subsector)
-                .sort((a, b) => a.localeCompare(b)))
-        ];
+
+        const uniqueSubsectors = [
+            ...new Set(data.map(row => row["Sub-sector"])).values()
+        ].sort((a, b) => a.localeCompare(b));
+
+
+        const unitKey = "Value"; // make sure this matches actual key in the data
 
         tableData = Object.values(
-            data
-                .filter((row) => row.Sector === sectorName) // Filter rows by sectorName
-                .reduce((acc, row) => {
-                    const yearKey = row.Year; // Group by Year
+            data.reduce((acc, row) => {
+                const yearKey = row.Year;
+                const subsector = row["Sub-sector"];
+                const value = row[unitKey];
 
-                    // Initialize the year if not present in the accumulator
-                    if (!acc[yearKey]) {
-                        acc[yearKey] = { Year: row.Year };
+                if (!acc[yearKey]) {
+                    acc[yearKey] = { Year: yearKey };
+                    uniqueSubsectors.forEach(s => {
+                        acc[yearKey][s] = null;
+                    });
+                }
 
-                        // Initialize all subsectors for this year with null
-                        allSubsectors.forEach(subsector => {
-                            acc[yearKey][subsector] = null;
-                        });
-                    }
+                acc[yearKey][subsector] =
+                    (acc[yearKey][subsector] || 0) + (typeof value === "number" ? value : 0);
 
-                    // Add the Subsector value (if exists) for this year
-                    acc[yearKey][row.Subsector] = (acc[yearKey][row.Subsector] || 0) + row[unit];
-
-                    return acc;
-                }, {})
+                return acc;
+            }, {})
         );
+
 
         columnsToShow = Object.keys(tableData[0]);
         valueColumns = columnsToShow.filter(item => item !== 'Year')
@@ -337,39 +337,19 @@ export function sparkbarTable(data, mode, {
     } else {
 
         if (mode === "financing") {
-            tableData = data
-            columnsToShow = ["Year", "Type", unit]
-            valueColumns = [unit];
             colorMapping = paletteFinancing
             colorColumn = "Type"
         } else if (mode === "recipients") {
-            columnsToShow = ["Year", "Indicator", unit]
-            valueColumns = [unit];
             colorMapping = paletteRecipients
             colorColumn = "Indicator"
-
-            // Get unique values of the Indicator column
-            const uniqueIndicators = [...new Set(data.map(d => d.Indicator))];
-
-            // If there's only one unique Indicator, keep the original data
-            if (uniqueIndicators.length > 1) {
-                // Group by Year and sum the 'Value' column
-                const groupedData = data.reduce((acc, d) => {
-                    const key = d.Year;
-                    if (!acc[key]) {
-                        acc[key] = { ...d, [unit]: d[unit], Indicator: "Total" };
-                    } else {
-                        acc[key][unit] += d[unit]; // Sum up the Value column
-                    }
-                    return acc;
-                }, {});
-
-                // Convert the object back to an array
-                tableData = Object.values(groupedData);
-            } else {
-                tableData = data
-            }
+        } else if (mode === "gender") {
+            colorMapping = paletteGender
+            colorColumn = "Indicator"
         }
+
+        tableData = data
+        valueColumns = ["Value"];
+        columnsToShow = ["Year", colorColumn, valueColumns]
 
         maxValues = max(tableData, d => d[valueColumns]);
 
@@ -392,7 +372,7 @@ export function sparkbarTable(data, mode, {
                     column,
                     (rowValue, row) => {
                         if (mode === "sectors") {
-                            const colors = schemeObservable10;
+                            const colors = paletteSectors;
                             return sparkbar(
                                 colors[index % colors.length],
                                 "left",
