@@ -96,30 +96,35 @@ const timeRange = Generators.input(timeRangeInput)
 const unitInput = Inputs.select(
     new Map(
         [
-            [`Million ${currencyInput.value}`, "Value"],
-            ["GNI Share", "GNI Share"],
-            ["Share of total", "Share of total"]
+            [`Million ${getCurrencyLabel(currencyInput.value, {currencyOnly: true,})}`, "value"],
+            ["Share of aid received", "total"],
+            ["Bilateral vs multilateral share", "indicator"]
         ]
     ),
     {
         label: "Unit",
-        value: "Value",
+        value: "value"
     }
 )
-
 const unit = Generators.input(unitInput)
 
 function updateUnitOptions() {
     for (const o of unitInput.querySelectorAll("option")) {
-        if (o.innerHTML === "Share of total" & indicatorInput.value === "Total") {
-            o.setAttribute("disabled", "disabled");
-        }
-        else o.removeAttribute("disabled");
+        if (
+            indicatorInput.value.length === 2 &&
+            (
+                o.innerHTML === "Bilateral vs multilateral share" ||
+                (o.innerHTML === "Share of aid received" && donorInput.value === donorMapping.get("All donors"))
+            )
+        ) {
+            o.setAttribute("disabled", "disabled")
+        } else o.removeAttribute("disabled");
     }
 }
 
 updateUnitOptions();
 indicatorInput.addEventListener("input", updateUnitOptions);
+donorInput.addEventListener("input", updateUnitOptions);
 ```
 
 ```js
@@ -130,11 +135,13 @@ const data = recipientsQueries(
     indicator,
     currency,
     prices,
-    timeRange
+    timeRange,
+    unit
 )
 
 const absoluteData = data.absolute
 const relativeData = data.relative
+const tableData = data.table
 ```
 
 
@@ -157,8 +164,6 @@ const showMoreButton = Inputs.button(moreSettings ? "Show less" : "Show more", {
     reduce: showMoreSettings 
 });
 showMoreButton.addEventListener("submit", event => event.preventDefault());
-
-console.log(donorMapping.get("Austria"))
 ```
 
 <div class="title-container" xmlns="http://www.w3.org/1999/html">
@@ -204,6 +209,7 @@ console.log(donorMapping.get("Austria"))
         ${timeRangeInput}
     </div>
 </div>
+
 <div class="grid grid-cols-2">
     <div class="card">
         <div class="plot-container" id="bars-recipients">
@@ -276,6 +282,7 @@ console.log(donorMapping.get("Austria"))
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Table 2a.</p>
+                    <p class="plot-note">ODA values as a share of all aid received by ${getNameByCode(recipientMapping, recipient)}.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
@@ -306,16 +313,16 @@ console.log(donorMapping.get("Austria"))
         <div class="table-subtitle-panel">
             ${unitInput}
         </div>
-        ${sparkbarTable(data, "recipients", {unit: unit})}
+        ${sparkbarTable(tableData, "recipients", {unit: unit})}
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Table 2a.</p>
                 ${
-                    unit === "Value" 
-                    ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
-                    : unit === "GNI Share" 
-                        ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(recipient)}.</p>`
-                        : html` `
+                    unit === "value" 
+                        ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
+                        : unit === "total"
+                            ? html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)}.</p>`
+                            : html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
                 }
             </div>
             <div class="logo-section">
