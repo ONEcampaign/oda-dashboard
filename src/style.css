@@ -310,7 +310,7 @@ select, input {
     width: 50px !important;
 }
 .table-subtitle-panel > form > select {
-    width: 150px !important;
+    width: 200px !important;
 }
 
 [class^="inputs-"][class$="-table"] thead th {
