@@ -47,10 +47,10 @@ const recipient = Generators.input(recipientInput);
 
 // Indicator
 const indicatorInput = Inputs.select(
-    ["Total"],
+    ["Bilateral"],
     {
         label: "Indicator",
-        value: "Total",
+        value: "Bilateral",
         sort: true
     })
 const indicator = Generators.input(indicatorInput);
@@ -108,10 +108,10 @@ const breakdown = Generators.input(breakdownInput)
 const unitInput = Inputs.select(
     new Map(
         [
-            [`Million ${currencyInput.value}`, "Value"],
-            ["GNI Share", "GNI Share"],
-            ["Share of total", "Share of total"],
-            ["Share of indicator", "Share of indicator"]
+            [`Million ${currencyInput.value}`, "value"],
+            [`Share of ${selectedSector}`, "indicator"]
+            // ["GNI Share", "GNI Share"],
+            // ["Share of total", "Share of total"],
         ]
     ),
     {
@@ -131,11 +131,13 @@ const data = sectorsQueries(
     currency,
     prices,
     timeRange,
-    breakdown
+    breakdown,
+    unit
 )
 
 const treemapData = data.treemap
 const selectedData = data.selected
+const tableData = data.table
 ```
 
 
@@ -205,6 +207,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         ${timeRangeInput}
     </div>
 </div>
+
 <div class="grid grid-cols-2">
     <div class="card">
         <div class="plot-container" id="treemap-sectors">
@@ -214,8 +217,8 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="plot-subtitle-panel">
                 ${
                     indicator == "Total"
-                    ? html`<h3 class="plot-subtitle">Bilateral and imputed multilateral, ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
-                    : html`<h3 class="plot-subtitle">${indicator}, ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
+                    ? html`<h3 class="plot-subtitle">Bilateral and imputed multilateral; ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
+                    : html`<h3 class="plot-subtitle">${indicator} aid; ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
                 }
             </div>
             ${
@@ -226,7 +229,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>
-                    <p class="plot-note">ODA values in million ${prices} ${currency}.</p>
+                    <p class="plot-note">ODA values in million ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
@@ -256,8 +259,8 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="plot-subtitle-panel">
                 ${
                     indicator == "Total"
-                    ? html`<h3 class="plot-subtitle">${selectedSector}, bilateral and imputed multilateral</h3>`
-                    : html`<h3 class="plot-subtitle">${selectedSector}, ${indicator}</h3>`
+                    ? html`<h3 class="plot-subtitle">${selectedSector}; bilateral and imputed multilateral aid</h3>`
+                    : html`<h3 class="plot-subtitle">${selectedSector}; ${indicator} aid</h3>`
                 }
                 ${breakdownInput}
             </div>
@@ -277,7 +280,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="bottom-panel">
                 <div class="text-section">
                     <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>
-                    <p class="plot-note">ODA values in million ${prices} ${currency}.</p>
+                    <p class="plot-note">ODA values in million ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
                 </div>
                 <div class="logo-section">
                     <a href="https://data.one.org/" target="_blank">
@@ -308,16 +311,28 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         <div class="table-subtitle-panel">
             ${
                 indicator == "Total"
-                ? html`<h3 class="table-subtitle">Breakdown of ${selectedSector}, bilateral and imputed multilateral</h3>`
-                : html`<h3 class="table-subtitle">Breakdown of ${selectedSector}, ${indicator}</h3>`
+                ? html`<h3 class="table-subtitle">Breakdown of ${selectedSector}; bilateral and imputed multilateral aid</h3>`
+                : html`<h3 class="table-subtitle">Breakdown of ${selectedSector}; ${indicator} aid</h3>`
             }
             ${unitInput}
         </div>
-        ${sparkbarTable(data, "sectors", {unit: unit, sectorName: selectedSector})}
+        ${
+            sparkbarTable(
+                tableData, 
+                "sectors", 
+                {unit: unit}
+            )
+        }
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>
-                <p class="plot-note">ODA values in million ${prices} ${currency}. GNI share refers to the Gross National Income of ${formatString(recipient)}.</p>
+                ${
+                    unit === "value" 
+                        ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
+                        : unit === "indicator"
+                            ? html`<p class="plot-note">ODA values as a share of ${selectedSector} sector aid received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
+                            : html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
+                }                
             </div>
             <div class="logo-section">
                 <a href="https://data.one.org/" target="_blank">
