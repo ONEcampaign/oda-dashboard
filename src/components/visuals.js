@@ -59,7 +59,7 @@ export function linePlot(data, mode, width,
         customFormat = {
             stroke: true,
             x: (d) => formatYear(d),
-            custom: (d) => `${d}%`,
+            custom: (d) => `${d.toFixed(2)}%`,
             y: false
         }
         if (mode === "financing") {
@@ -349,7 +349,7 @@ export function sparkbarTable(data, mode) {
 
         tableData = data
         valueColumns = ["Value"];
-        columnsToShow = ["Year", colorColumn, valueColumns]
+        columnsToShow = ["Year", colorColumn, valueColumns[0]]
 
         maxValues = max(tableData, d => d[valueColumns]);
 
