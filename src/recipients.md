@@ -97,8 +97,8 @@ const unitInput = Inputs.select(
     new Map(
         [
             [`Million ${getCurrencyLabel(currencyInput.value, {currencyOnly: true,})}`, "value"],
-            ["Share of aid received", "total"],
-            ["Bilateral vs multilateral share", "indicator"]
+            ["% of ODA received", "total"],
+            ["% bilateral vs imputed multi", "indicator"]
         ]
     ),
     {
@@ -113,8 +113,8 @@ function updateUnitOptions() {
         if (
             indicatorInput.value.length === 2 &&
             (
-                o.innerHTML === "Bilateral vs multilateral share" ||
-                (o.innerHTML === "Share of aid received" && donorInput.value === donorMapping.get("All donors"))
+                o.innerHTML === "% bilateral vs imputed multi" ||
+                (o.innerHTML === "% of ODA received" && donorInput.value === donorMapping.get("All donors"))
             )
         ) {
             o.setAttribute("disabled", "disabled")
@@ -251,7 +251,18 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     "Download plot", {
                          reduce: () => downloadPNG(
                              "bars-recipients",
-                             formatString(`ODA to ${recipient} from ${donor}`, {fileMode: true})
+                             formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)}`, {fileMode: true})                        
+                        )
+                    }
+                )
+            }
+            ${
+                Inputs.button(
+                    "Download data", 
+                    {
+                        reduce: () => downloadXLSX(
+                            absoluteData,
+                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)}`, {fileMode: true})
                         )
                     }
                 )
@@ -295,9 +306,19 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             ${
                 Inputs.button(
                     "Download plot", {
-                        reduce: () => downloadPNG(
-                            "lines-recipients",
-                             formatString(`ODA to ${recipient} from ${donor}_share`, {fileMode: true})
+                         reduce: () => downloadPNG(
+                             "lines-recipients",
+                             formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} share`, {fileMode: true})                        )
+                    }
+                )
+            }
+            ${
+                Inputs.button(
+                    "Download data", 
+                    {
+                        reduce: () => downloadXLSX(
+                            relativeData,
+                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} share`, {fileMode: true})
                         )
                     }
                 )
@@ -313,7 +334,12 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         <div class="table-subtitle-panel">
             ${unitInput}
         </div>
-        ${sparkbarTable(tableData, "recipients", {unit: unit})}
+        ${
+            sparkbarTable(  
+                tableData, 
+                "recipients"
+            )
+        }
         <div class="bottom-panel">
             <div class="text-section">
                 <p class="plot-source">Source: OECD DAC Table 2a.</p>
@@ -335,10 +361,11 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     <div class="download-panel">
         ${
             Inputs.button(
-                "Download data", {
+                "Download data", 
+                {
                     reduce: () => downloadXLSX(
-                        data,
-                        formatString(`ODA to ${recipient} from ${donor}`, {fileMode: true})
+                        tableData,
+                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} share ${unit}`, {fileMode: true})
                     )
                 }
             )

@@ -244,7 +244,18 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     "Download plot", {
                         reduce: () => downloadPNG(
                             "treemap-sectors",
-                            formatString(`ODA to ${recipient} from ${donor} by sector`, {fileMode: true})
+                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} by sector`, {fileMode: true})
+                        )
+                    }
+                )
+            }
+            ${
+                Inputs.button(
+                    "Download data", 
+                    {
+                        reduce: () => downloadXLSX(
+                            treemapData,
+                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} by sector`, {fileMode: true})
                         )
                     }
                 )
@@ -295,7 +306,18 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     "Download plot", {
                         reduce: () => downloadPNG(
                             "lines-sectors",
-                            formatString(`ODA to ${recipient} from ${donor} ${selectedSector} ${breakdown === "Sector" ? "total" : "breakdown"}`, {fileMode: true})
+                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} ${breakdown ? "breakdown" : "total"}`, {fileMode: true})
+                        )
+                    }
+                )
+            }
+            ${
+                Inputs.button(
+                    "Download data", 
+                    {
+                        reduce: () => downloadXLSX(
+                            selectedData,
+                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} ${breakdown ? "breakdown" : "total"}`, {fileMode: true})
                         )
                     }
                 )
@@ -319,8 +341,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         ${
             sparkbarTable(
                 tableData, 
-                "sectors", 
-                {unit: unit}
+                "sectors"
             )
         }
         <div class="bottom-panel">
@@ -346,9 +367,8 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             Inputs.button(
                 "Download data", {
                     reduce: () => downloadXLSX(
-                        data,
-                        formatString(`ODA to ${recipient} from ${donor} by sector`, {fileMode: true})
-                    )
+                        tableData,
+                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} breakdown ${unit}`, {fileMode: true})                    )
                 }
             )
         }

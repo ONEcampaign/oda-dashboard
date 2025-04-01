@@ -97,6 +97,21 @@ const timeRangeInput = rangeInput(
         enableTextInput: true
     })
 const timeRange = Generators.input(timeRangeInput)
+
+// Unit
+const unitInput = Inputs.select(
+    new Map(
+        [
+            [`Million ${getCurrencyLabel(currencyInput.value, {currencyOnly: true,})}`, "value"],
+            ["Share of total aid", "total"]
+        ]
+    ),
+    {
+        label: "Unit",
+        value: "value"
+    }
+)
+const unit = Generators.input(unitInput)
 ```
 
 ```js
@@ -107,11 +122,13 @@ const data = genderQueries(
     indicator,
     currency,
     prices,
-    timeRange
+    timeRange,
+    unit
 )
 
 const absoluteData = data.absolute
 const relativeData = data.relative
+const tableData = data.table
 ```
 
 
@@ -184,7 +201,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     <div class="card">
         <div class="plot-container" id="bars-gender">
             <h2 class="plot-title">
-                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
+                Gender ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
             </h2>
             <div class="plot-subtitle-panel">
                 ${
@@ -227,7 +244,18 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     "Download plot", {
                         reduce: () => downloadPNG(
                             "bars-gender",
-                             formatString(`gender ODA to ${getNameByCode(donorMapping, donor)} from ${getNameByCode(recipientMapping, recipient)}`, {fileMode: true})
+                             formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)}`, {fileMode: true})
+                        )
+                    }
+                )
+            }
+            ${
+                Inputs.button(
+                    "Download data", 
+                    {
+                        reduce: () => downloadXLSX(
+                            absoluteData,
+                             formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)}`, {fileMode: true})
                         )
                     }
                 )
@@ -237,7 +265,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     <div class="card">
         <div class="plot-container" id="lines-gender">
             <h2 class="plot-title">
-                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
+                Gender ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
             </h2>
             <div class="plot-subtitle-panel">
                 ${
@@ -278,8 +306,17 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     "Download plot", {
                         reduce: () => downloadPNG(
                             "lines-gender",
-                             formatString(`gender ODA to ${getNameByCode(donorMapping, donor)} from ${getNameByCode(recipientMapping, recipient)} share`, {fileMode: true})
-                        )
+                             formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} share`, {fileMode: true})                        )
+                    }
+                )
+            }
+            ${
+                Inputs.button(
+                    "Download data", 
+                    {
+                        reduce: () => downloadXLSX(
+                            relativeData,
+                            formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} share`, {fileMode: true})                        )
                     }
                 )
             }
@@ -288,4 +325,46 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
 </div>
 
 <div class="card">
+    <div class="plot-container">
+        <h2 class="table-title">
+            Gender ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
+        </h2>
+        <div class="table-subtitle-panel">
+            ${unitInput}
+        </div>
+        ${
+            sparkbarTable(
+                tableData, 
+                "gender"
+            )
+        }
+        <div class="bottom-panel">
+            <div class="text-section">
+                <p class="plot-source">Source: OECD DAC Table Creditor Reporting System.</p>
+                ${
+                    unit === "value" 
+                        ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
+                        : unit === "total"
+                            ? html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)}.</p>`
+                            : html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
+                }
+            </div>
+            <div class="logo-section">
+                <a href="https://data.one.org/" target="_blank">
+                    <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="download-panel">
+        ${
+            Inputs.button(
+                "Download data", {
+                    reduce: () => downloadXLSX(
+                        tableData,
+                             formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${unit}`, {fileMode: true})                    )
+                }
+            )
+        }
+    </div>
 </div>

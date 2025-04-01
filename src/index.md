@@ -89,7 +89,7 @@ const unitInput = Inputs.select(
         [
             [`Million ${getCurrencyLabel(currencyInput.value, {currencyOnly: true,})}`, "value"],
             ["GNI Share", "gni"],
-            ["Share of aid provided", "total"]
+            ["% of total ODA", "total"]
         ]
     ),
     {
@@ -101,7 +101,7 @@ const unit = Generators.input(unitInput)
 
 function updateUnitOptions() {
     for (const o of unitInput.querySelectorAll("option")) {
-        if (o.innerHTML === "Share of aid provided" & indicatorInput.value === indicatorMapping.get("Total ODA")) {
+        if (o.innerHTML === "% of total ODA" & indicatorInput.value === indicatorMapping.get("Total ODA")) {
             o.setAttribute("disabled", "disabled");
         }
         else o.removeAttribute("disabled");
@@ -244,9 +244,20 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     {
                         reduce: () => downloadPNG(
                             "bars-financing",
-                            formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`, {fileMode: true})
+                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)}`, {fileMode: true})
                         )
                     }   
+                )
+            }
+            ${
+                Inputs.button(
+                    "Download data", 
+                    {
+                        reduce: () => downloadXLSX(
+                            absoluteData,
+                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)}`, {fileMode: true})
+                        )
+                    }
                 )
             }
         </div>
@@ -299,7 +310,18 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                     {
                         reduce: () => downloadPNG(
                             "lines-financing",
-                            formatString(`${getNameByCode(indicatorMapping, indicator)} from ${donor}_gni_share`, {fileMode: true})
+                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)} share`, {fileMode: true})
+                        )
+                    }
+                )
+            }
+            ${
+                Inputs.button(
+                    "Download data", 
+                    {
+                        reduce: () => downloadXLSX(
+                            relativeData,
+                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)} share`, {fileMode: true})
                         )
                     }
                 )
@@ -319,8 +341,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
         ${
             sparkbarTable(
                 tableData, 
-                "financing", 
-                {unit: unit}
+                "financing"
             )
         }
         <div class="bottom-panel">
@@ -347,8 +368,8 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                 "Download data", 
                 {
                     reduce: () => downloadXLSX(
-                        data,
-                        formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`, {fileMode: true})
+                        tableData,
+                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)} ${unit}`, {fileMode: true})
                     )
                 }
             )
