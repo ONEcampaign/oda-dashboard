@@ -100,16 +100,16 @@ async function absoluteFinancingQuery(
                 GROUP BY f.year
             )
             SELECT
-                year AS Year,
+                year AS year,
                 '${getNameByCode(donorMapping, donor)}' AS donor,
                 '${getNameByCode(indicatorMapping, indicator)}' AS indicator,
                 CASE 
                     WHEN year < 2018 THEN 'Flows'
                     WHEN year >= 2018 THEN 'Grant equivalents'
-                END AS Type,
-                converted_value as Value,
-                '${currency} ${prices} million' as Unit,
-                'OECD DAC1' AS Source
+                END AS type,
+                converted_value AS value,
+                '${currency} ${prices} million' AS unit,
+                'OECD DAC1' AS source
             FROM converted
             ORDER BY year
         `
@@ -165,23 +165,23 @@ async function relativeFinancingQuery(
                 GROUP BY year
             )
             SELECT
-                f.year AS Year,
+                f.year AS year,
                 '${getNameByCode(donorMapping, donor)}' AS donor,
                 ${
                     indicator === indicatorMapping.get("Total ODA")
                         ? "f.value / g.gni * 100"
                         : "f.value / t.total_value * 100"
-                } AS Value,
+                } AS value,
                 CASE 
                     WHEN f.year < 2018 THEN 'Flows'
                     WHEN f.year >= 2018 THEN 'Grant equivalents'
-                END AS Type,
+                END AS type,
                 ${
                     indicator === indicatorMapping.get("Total ODA")
                         ? "'% of GNI'"
                         : "'% of total ODA'"
-                } AS Unit,
-                'OECD DAC1' AS Source
+                } AS unit,
+                'OECD DAC1' AS source
             FROM filtered f
             ${
                 indicator === indicatorMapping.get("Total ODA")
@@ -274,28 +274,28 @@ async function tableFinancingQuery(
                     LEFT JOIN total_table tt ON ct.year = tt.year
             )
             SELECT
-                year AS Year,
+                year AS year,
                     '${getNameByCode(donorMapping, donor)}' AS donor,
                     '${getNameByCode(indicatorMapping, indicator)}' AS indicator,
                 CASE
                     WHEN year < 2018 THEN 'Flows'
                     WHEN year >= 2018 THEN 'Grant equivalents'
-                END AS Type,
+                END AS type,
                 ${
                     unit === "value" 
                         ? "converted_value" 
                         : unit === "gni_pct" 
                             ? "value / gni_value * 100" 
                             : "value / total_value * 100"
-                } AS Value,
+                } AS value,
                 ${
                     unit === "value"
                         ? `'${currency} ${prices} million'`
                         : unit === "gni_pct"
                             ? "'% of GNI'"
                             : "'% of total ODA'"
-                } AS Unit,
-                'OECD DAC1' AS Source
+                } AS unit,
+                'OECD DAC1' AS source
             FROM final_table
             ORDER BY year
         `

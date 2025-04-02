@@ -11,16 +11,16 @@ export function treemapPlot(data, width, { currency = null } = {}) {
     // Aggregate data by sector and calculate total values
     const aggregated = d3.rollups(
         data,
-        (v) => d3.sum(v, (d) => d.Value),
-        (d) => d.Sector
+        (v) => d3.sum(v, (d) => d.value),
+        (d) => d.sector
     );
 
     const formattedData = [
-        { id: "root", parentId: null, Value: null },
+        { id: "root", parentId: null, value: null },
         ...aggregated.map(([sector, value]) => ({
             id: sector,
             parentId: "root",
-            Value: value,
+            value: value,
         })),
     ];
 
@@ -32,7 +32,7 @@ export function treemapPlot(data, width, { currency = null } = {}) {
     // Return the Treemap visualization with the updated color scale
     return Treemap(formattedData, {
         parentId: (d) => d.parentId,
-        value: (d) => d.Value,
+        value: (d) => d.value,
         group: (d) => d.id,
         width: width,
         height: 400,
@@ -171,8 +171,6 @@ function Treemap(data, { // data is either tabular (array of objects) or hierarc
         .attr("width", d => d.x1 - d.x0 - strokeWidth) // Adjust width
         .attr("height", d => d.y1 - d.y0 - strokeWidth); // Adjust height
 
-    const darkColors = ["#73175A", "#081248"]
-
     const uid = `O-${Math.random().toString(16).slice(2)}`;
 
     node.append("clipPath")
@@ -192,7 +190,7 @@ function Treemap(data, { // data is either tabular (array of objects) or hierarc
         .attr("font-size", "12px")
         .attr("font-family", "var(--sans-serif)")
         .attr("font-weight", "500")
-        // .attr("fill", (d) => darkColorColors.includes(color(group(d.data, d))) ? "white" : "black")
+        .attr("fill", (d) => d.id === selectedSector.value ? "white" : "black")
 
     // node.append("text")
     //     .attr("filter", "url(#text-shadow)")
@@ -227,7 +225,7 @@ function Treemap(data, { // data is either tabular (array of objects) or hierarc
                     return d3.select(this).attr("id")?.startsWith("rect-");
                 })
                 .transition()
-                .duration(200)
+                // .duration(200)
                 .attr("fill", (rectD) => rectD.id === d.id ? paletteTreemap[0] : paletteTreemap[1])
                 .attr("stroke", (rectD) => rectD.id === d.id ? paletteTreemap[0] : paletteTreemap[1]);
         })
@@ -238,9 +236,8 @@ function Treemap(data, { // data is either tabular (array of objects) or hierarc
             // Fade the main rect's fill and stroke
             d3.select(`#rect-${id}`)
                 .transition()
-                .duration(150)
+                // .duration(150)
                 .style("fill-opacity", 0.6)
-                // .style("stroke-opacity", 0.8);
 
             // Add highlight rect
             d3.select(this.parentNode) // this is the <a> element
@@ -261,9 +258,8 @@ function Treemap(data, { // data is either tabular (array of objects) or hierarc
             // Reset fill and stroke opacity
             d3.select(`#rect-${id}`)
                 .transition()
-                .duration(150)
+                // .duration(150)
                 .style("fill-opacity", fillOpacity)
-                // .style("stroke-opacity", strokeOpacity);
 
             // Remove highlight outline
             d3.select(this.parentNode).select(".hover-outline").remove();

@@ -114,15 +114,15 @@ async function absoluteGenderQuery(
                     ${prices === "constant" ? "AND f.donor = c.donor" : ""}
             )
             SELECT
-                year AS Year,
+                year AS year,
                 '${getNameByCode(donorMapping, donor)}' AS donor,
                 '${getNameByCode(recipientMapping, recipient)}' AS recipient,
                 CASE    
                     ${indicatorCase}
-                END AS Indicator,
-                SUM(converted_value) as Value,
-                '${currency} ${prices} million' as Unit,
-                'OECD Creditor Reporting System' AS Source
+                END AS indicator,
+                SUM(converted_value) AS value,
+                '${currency} ${prices} million' AS unit,
+                'OECD CRS' AS source
             FROM joined
             GROUP BY year, indicator
             ORDER BY year
@@ -172,15 +172,15 @@ async function relativeGenderQuery(
                 GROUP BY year
             )
             SELECT
-                f.year AS Year,
+                f.year AS year,
                 '${getNameByCode(donorMapping, donor)}' AS donor,
                 '${getNameByCode(recipientMapping, recipient)}' AS recipient,
                 CASE
                     ${indicatorCase}
-                END AS Indicator,
-                f.value / t.total_value * 100 AS Value,
-                '% of total ODA' AS Unit,
-                'OECD Creditor Reporting System' AS Source
+                END AS indicator,
+                f.value / t.total_value * 100 AS value,
+                '% of total ODA' AS unit,
+                'OECD CRS' AS source
             FROM filtered f
             JOIN total t ON f.year = t.year
             ORDER BY f.year
@@ -264,23 +264,23 @@ async function tableGenderQuery(
                     ON ct.year = tt.year
             )
             SELECT
-                year AS Year,
+                year AS year,
                 '${getNameByCode(donorMapping, donor)}' AS donor,
                 '${getNameByCode(recipientMapping, recipient)}' AS recipient,
                 CASE    
                     ${indicatorCase}
-                END AS Indicator,
+                END AS indicator,
                 ${
                     unit === "value"
                         ? "converted_value"
                         : "value / total_value * 100"
-                } AS Value,
+                } AS value,
                 ${
                         unit === "value"
                                 ? `'${currency} ${prices} million'`
                                 : "'% of total ODA'"
-                } AS Unit,
-                'OECD Creditor Reporting System' AS Source
+                } AS unit,
+                'OECD CRS' AS source
             FROM final_table
             ORDER BY year
         `

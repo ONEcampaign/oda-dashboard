@@ -17,7 +17,7 @@ export function linePlot(data, mode, width,
 
     let arrayData = data.map((row) => ({
         ...row,
-        Year: new Date(row.Year, 1, 1)
+        year: new Date(row.year, 1, 1)
     }))
 
     let labelSymbol,
@@ -30,8 +30,8 @@ export function linePlot(data, mode, width,
     if (mode === "sectors") {
 
         labelSymbol = getCurrencyLabel(currency, {})
-        yValue = "Value"
-        groupVar = breakdown ? "Sub-sector" : "Sector"
+        yValue = "value"
+        groupVar = breakdown ? "sub_sector" : "sector"
         customChannels = {}
         customFormat = {
             stroke: true,
@@ -40,7 +40,7 @@ export function linePlot(data, mode, width,
 
         if (breakdown) {
             const uniqueSubsectors = [
-                ...new Set(data.map(row => row["Sub-sector"])).values()
+                ...new Set(data.map(row => row["sub_sector"])).values()
             ].sort((a, b) => a.localeCompare(b));
 
             colorScale = {
@@ -63,8 +63,8 @@ export function linePlot(data, mode, width,
             y: false
         }
         if (mode === "financing") {
-            yValue = "Value"
-            groupVar = "Type"
+            yValue = "value"
+            groupVar = "type"
             customChannels = {
                 custom: {
                     value: yValue,
@@ -73,8 +73,8 @@ export function linePlot(data, mode, width,
             }
             colorScale = paletteFinancing
         } else if (mode === "recipients") {
-            yValue = "Value"
-            groupVar = "Indicator"
+            yValue = "value"
+            groupVar = "indicator"
             stacked = new Set(data.map(d => d[groupVar])).size > 1;
             customChannels = {
                 custom: {
@@ -84,8 +84,8 @@ export function linePlot(data, mode, width,
             }
             colorScale = paletteRecipients
         } else if (mode === "gender") {
-            yValue = "Value"
-            groupVar = "Indicator"
+            yValue = "value"
+            groupVar = "indicator"
             stacked = new Set(data.map(d => d[groupVar])).size > 1;
             customChannels = {
                 custom: {
@@ -132,7 +132,7 @@ export function linePlot(data, mode, width,
                 stacked || breakdown
                     ? [
                         Plot.areaY(arrayData, {
-                            x: "Year",
+                            x: "year",
                             y: yValue,
                             fill: groupVar,
                             fillOpacity: 0.85
@@ -141,7 +141,7 @@ export function linePlot(data, mode, width,
                         Plot.tip(arrayData,
                             Plot.pointer(
                                 Plot.stackY({
-                                    x: "Year",
+                                    x: "year",
                                     y: yValue,
                                     fill: groupVar,
                                     channels: customChannels,
@@ -155,7 +155,7 @@ export function linePlot(data, mode, width,
                     ]
                     : [
                         Plot.line(arrayData, {
-                            x: "Year",
+                            x: "year",
                             y: yValue,
                             z: groupVar,
                             stroke: groupVar,
@@ -166,7 +166,7 @@ export function linePlot(data, mode, width,
                         Plot.tip(
                             arrayData,
                             Plot.pointer({
-                                x: "Year",
+                                x: "year",
                                 y: yValue,
                                 stroke: groupVar,
                                 channels: customChannels,
@@ -192,9 +192,9 @@ export function linePlot(data, mode, width,
 
             showIntlCommitment
                 ? Plot.text(
-                    arrayData.filter(d => d.Year === min(arrayData, d => d.Year)),
+                    arrayData.filter(d => d.year === min(arrayData, d => d.year)),
                     {
-                        x: "Year",
+                        x: "year",
                         y: 0.7,
                         text: ["International commitment"],
                         fill: customPalette.intlCommitment,
@@ -213,19 +213,19 @@ export function barPlot(data, currency, mode, width) {
 
     const arrayData = data.map((row) => ({
         ...row,
-        Year: new Date(row.Year, 1, 1)
+        year: new Date(row.year, 1, 1)
     }))
 
     let fillVar, colorScale
     if (mode === "financing") {
-        fillVar = "Type"
+        fillVar = "type"
         colorScale = paletteFinancing
     } else if (mode === "recipients") {
-        fillVar = "Indicator"
+        fillVar = "indicator"
         colorScale = paletteRecipients
     }
     else if (mode === "gender") {
-        fillVar = "Indicator"
+        fillVar = "indicator"
         colorScale = paletteGender
     }
 
@@ -257,8 +257,8 @@ export function barPlot(data, currency, mode, width) {
         marks: [
             Plot.rectY(
                 arrayData, {
-                    x: "Year",
-                    y: "Value",
+                    x: "year",
+                    y: "value",
                     fill: fillVar,
                     opacity: .85,
                 }
@@ -275,8 +275,8 @@ export function barPlot(data, currency, mode, width) {
                 arrayData,
                 Plot.pointer(
                     Plot.stackY({
-                        x: "Year",
-                        y: "Value",
+                        x: "year",
+                        y: "value",
                         fill: fillVar,
                         lineHeight: 1.25,
                         fontSize: 12
@@ -298,20 +298,20 @@ export function sparkbarTable(data, mode) {
     if (mode === "sectors") {
 
         const uniqueSubsectors = [
-            ...new Set(data.map(row => row["Sub-sector"])).values()
+            ...new Set(data.map(row => row["sub_sector"])).values()
         ].sort((a, b) => a.localeCompare(b));
 
 
-        const unitKey = "Value"; // make sure this matches actual key in the data
+        const unitKey = "value"; // make sure this matches actual key in the data
 
         tableData = Object.values(
             data.reduce((acc, row) => {
-                const yearKey = row.Year;
-                const subsector = row["Sub-sector"];
+                const yearKey = row.year;
+                const subsector = row["sub_sector"];
                 const value = row[unitKey];
 
                 if (!acc[yearKey]) {
-                    acc[yearKey] = { Year: yearKey };
+                    acc[yearKey] = { year: yearKey };
                     uniqueSubsectors.forEach(s => {
                         acc[yearKey][s] = null;
                     });
@@ -326,7 +326,7 @@ export function sparkbarTable(data, mode) {
 
 
         columnsToShow = Object.keys(tableData[0]);
-        valueColumns = columnsToShow.filter(item => item !== 'Year')
+        valueColumns = columnsToShow.filter(item => item !== "year")
 
         maxValues = Math.max(...valueColumns
             .flatMap(column => tableData
@@ -338,18 +338,18 @@ export function sparkbarTable(data, mode) {
 
         if (mode === "financing") {
             colorMapping = paletteFinancing
-            colorColumn = "Type"
+            colorColumn = "type"
         } else if (mode === "recipients") {
             colorMapping = paletteRecipients
-            colorColumn = "Indicator"
+            colorColumn = "indicator"
         } else if (mode === "gender") {
             colorMapping = paletteGender
-            colorColumn = "Indicator"
+            colorColumn = "indicator"
         }
 
         tableData = data
-        valueColumns = ["Value"];
-        columnsToShow = ["Year", colorColumn, valueColumns[0]]
+        valueColumns = ["value"];
+        columnsToShow = ["year", colorColumn, valueColumns[0]]
 
         maxValues = max(tableData, d => d[valueColumns]);
 
@@ -363,10 +363,10 @@ export function sparkbarTable(data, mode) {
     return table(tableData, {
         columns: Object.keys(tableData[0])
             .filter(column => columnsToShow.includes(column)),
-        sort: "Year",
+        sort: "year",
         reverse: true,
         format: {
-            Year: (x) => x,
+            year: (x) => x,
             ...Object.fromEntries(
                 valueColumns.map((column, index) => [
                     column,
@@ -391,7 +391,7 @@ export function sparkbarTable(data, mode) {
             )
         },
         align: {
-            Year: "left",
+            year: "left",
             ...Object.fromEntries(
                 columnsToShow.map(column => [column, "left"])
             )
