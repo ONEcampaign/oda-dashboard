@@ -2,7 +2,9 @@ import json
 import pandas as pd
 
 from oda_data import CrsData, set_data_path
-from oda_data.indicators.research.sector_imputations import imputed_multilateral_by_purpose
+from oda_data.indicators.research.sector_imputations import (
+    imputed_multilateral_by_purpose,
+)
 
 from src.data.config import PATHS, TIME_RANGE, logger
 from src.data.analysis_tools import sector_lists
@@ -17,9 +19,12 @@ set_data_path(PATHS.ODA_DATA)
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 
+
 def get_bilateral_by_sector():
 
-    raw_bilateral = CrsData(years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)).read(
+    raw_bilateral = CrsData(
+        years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)
+    ).read(
         using_bulk_download=True,
         additional_filters=[
             ("donor_code", "in", donor_ids),
@@ -76,26 +81,21 @@ def get_imputed_multi_by_sector():
         base_year=None,
     )
 
-    raw_multi = raw_multi[raw_multi['recipient_code'].isin(recipient_ids)]
+    raw_multi = raw_multi[raw_multi["recipient_code"].isin(recipient_ids)]
 
     sub_sectors = sector_lists.get_sector_groups()
 
     for name, codes in sub_sectors.items():
         raw_multi.loc[raw_multi.purpose_code.isin(codes), "sub_sector"] = name
 
-    raw_multi['sub_sector'] = raw_multi['sub_sector'].fillna('Unallocated/unspecificed')
+    raw_multi["sub_sector"] = raw_multi["sub_sector"].fillna("Unallocated/unspecificed")
 
     sectors_multi = (
         raw_multi.groupby(
-            [
-                "year",
-                "donor_code",
-                "recipient_code",
-                "sub_sector"
-            ],
+            ["year", "donor_code", "recipient_code", "sub_sector"],
             dropna=False,
             observed=True,
-        )['value']
+        )["value"]
         .sum()
         .reset_index()
         .assign(indicator="Imputed multilateral")
@@ -114,7 +114,9 @@ def merge_transform_sectors():
     sectors = pd.concat([sectors_bi, sectors_multi])
 
     sectors = add_index_column(
-        df=sectors, column="indicator", json_path=PATHS.TOOLS / "sectors_indicators.json"
+        df=sectors,
+        column="indicator",
+        json_path=PATHS.TOOLS / "sectors_indicators.json",
     )
     sectors = add_index_column(
         df=sectors, column="sub_sector", json_path=PATHS.TOOLS / "sub_sectors.json"
