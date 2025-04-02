@@ -1,6 +1,6 @@
 ```js 
 import {setCustomColors} from "./components/colors.js"
-import {recipientsQueries} from './components/dataQueries.js'
+import {recipientsQueries} from './components/recipientQueries.js'
 import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap} from "./components/utils.js";
 import {rangeInput} from "./components/rangeInput.js";
 import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
@@ -48,7 +48,10 @@ const indicatorInput = Inputs.checkbox(
     indicatorMapping,
     {
         label: "Indicator",
-        value: [indicatorMapping.get("Bilateral"), indicatorMapping.get("Imputed multilateral")],
+        value: [
+            indicatorMapping.get("Bilateral"), 
+            indicatorMapping.get("Imputed multilateral")
+        ],
     })
 const indicator = Generators.input(indicatorInput);
 
@@ -97,8 +100,7 @@ const unitInput = Inputs.select(
     new Map(
         [
             [`Million ${getCurrencyLabel(currencyInput.value, {currencyOnly: true,})}`, "value"],
-            ["% of ODA received", "total"],
-            ["% bilateral vs imputed multi", "indicator"]
+            ["% of total ODA", "pct_total"],
         ]
     ),
     {
@@ -111,11 +113,7 @@ const unit = Generators.input(unitInput)
 function updateUnitOptions() {
     for (const o of unitInput.querySelectorAll("option")) {
         if (
-            indicatorInput.value.length === 2 &&
-            (
-                o.innerHTML === "% bilateral vs imputed multi" ||
-                (o.innerHTML === "% of ODA received" && donorInput.value === donorMapping.get("All donors"))
-            )
+            indicatorInput.value.length === 2 && o.innerHTML === "% of total ODA" 
         ) {
             o.setAttribute("disabled", "disabled")
         } else o.removeAttribute("disabled");
@@ -219,8 +217,8 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="plot-subtitle-panel">
                 ${
                     indicator.length > 1
-                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span> aid</h3>`
-                    : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} aid</h3>`
+                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span> ODA</h3>`
+                    : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)}  ODA</h3>`
                 }
             </div>
             ${
@@ -277,8 +275,8 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
             <div class="plot-subtitle-panel">
                 ${
                     indicator.length > 1
-                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span> as a share of total aid</h3>`
-                    : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} as a share of total aid</h3>`
+                    ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span> as a share of total ODA</h3>`
+                    : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} as a share of total ODA</h3>`
                 }
             </div>
             ${
@@ -346,9 +344,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                 ${
                     unit === "value" 
                         ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
-                        : unit === "total"
-                            ? html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)}.</p>`
-                            : html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
+                        : html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
                 }
             </div>
             <div class="logo-section">

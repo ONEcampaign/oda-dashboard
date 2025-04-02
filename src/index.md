@@ -1,6 +1,6 @@
 ```js
 import {setCustomColors} from "./components/colors.js"
-import {financingQueries} from "./components/dataQueries.js"
+import {financingQueries} from "./components/financingQueries.js"
 import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap} from "./components/utils.js";
 import {rangeInput} from "./components/rangeInput.js";
 import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
@@ -88,8 +88,8 @@ const unitInput = Inputs.select(
     new Map(
         [
             [`Million ${getCurrencyLabel(currencyInput.value, {currencyOnly: true,})}`, "value"],
-            ["GNI Share", "gni"],
-            ["% of total ODA", "total"]
+            ["% of GNI", "gni_pct"],
+            ["% of total ODA", "total_pct"]
         ]
     ),
     {
@@ -350,7 +350,7 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
                 ${
                     unit === "value" 
                         ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
-                        : unit === "gni"
+                        : unit === "gni_pct"
                             ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(getNameByCode(donorMapping, donor))}.</p>`
                             : html`<p class="plot-note">ODA values as a share of total contributions from ${formatString(getNameByCode(donorMapping, donor))}.</p>`
                 }

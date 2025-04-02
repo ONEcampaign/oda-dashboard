@@ -1,7 +1,7 @@
 ```js 
 import {setCustomColors} from "./components/colors.js"
 import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap} from "./components/utils.js";
-import {genderQueries} from "./components/dataQueries.js"
+import {genderQueries} from "./components/genderQueries.js"
 import {rangeInput} from "./components/rangeInput.js";
 import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
 import {downloadPNG, downloadXLSX} from './components/downloads.js';
@@ -103,7 +103,7 @@ const unitInput = Inputs.select(
     new Map(
         [
             [`Million ${getCurrencyLabel(currencyInput.value, {currencyOnly: true,})}`, "value"],
-            ["Share of total aid", "total"]
+            ["% of total ODA", "total"]
         ]
     ),
     {
@@ -151,6 +151,24 @@ const showMoreButton = Inputs.button(moreSettings ? "Show less" : "Show more", {
     reduce: showMoreSettings
 });
 showMoreButton.addEventListener("submit", event => event.preventDefault());
+```
+
+```js
+const indicatorClassMap = {
+    "Main target": "gender-main",
+    "Secondary target": "gender-secondary",
+    "Not targeted": "gender-not-targeted",
+    "Not screened": "gender-not-screened"
+};
+
+function generateSubtitle(codes, indicatorMapping) {
+    return codes.map((code, i) => {
+        const name = getNameByCode(indicatorMapping, code);
+        const className = indicatorClassMap[name] || 'unknown';
+        return html`<span class="subtitle-label ${className}">${name}</span>${i < codes.length - 1 ? ', ' : ''}`;
+    });
+}
+
 ```
 
 <div class="title-container">
@@ -201,20 +219,13 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     <div class="card">
         <div class="plot-container" id="bars-gender">
             <h2 class="plot-title">
-                Gender ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
+                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
             </h2>
             <div class="plot-subtitle-panel">
-                ${
-                    indicator === 3 
-                        ? html`<h3 class="plot-subtitle"> Gender as <span class="gender-main subtitle-label">main</span> and <span class="gender-secondary subtitle-label">secondary</span> focus</h3>`
-                        : indicator === 2
-                            ? html`<h3 class="plot-subtitle"> Gender as main focus</h3>`
-                            : indicator === 1
-                                ? html`<h3 class="plot-subtitle"> Gender as secondary focus</h3>`
-                                : indicator == 0
-                                    ? html`<h3 class="plot-subtitle"> Aid that does not target gender</h3>`
-                                    : html`<h3 class="plot-subtitle"> Aid that is not screened for whether it targets gender</h3>`
-                }
+                <div class="plot-subtitle">
+                    Gender is
+                    ${generateSubtitle(indicator, indicatorMapping)}
+                </div>
             </div>
             ${
                 resize(
@@ -265,20 +276,14 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     <div class="card">
         <div class="plot-container" id="lines-gender">
             <h2 class="plot-title">
-                Gender ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
+                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
             </h2>
             <div class="plot-subtitle-panel">
-                ${
-                    indicator === 3 
-                        ? html`<h3 class="plot-subtitle"> Gender as <span class="gender-main subtitle-label">main</span> and <span class="gender-secondary subtitle-label">secondary</span> focus  of total aid</h3>`
-                        : indicator === 2
-                            ? html`<h3 class="plot-subtitle"> Gender as main focus of total aid</h3>`
-                            : indicator === 1
-                                ? html`<h3 class="plot-subtitle"> Gender as secondary focus of total aid</h3>`
-                                : indicator == 0
-                                    ? html`<h3 class="plot-subtitle"> Aid that does not target gender of total aid</h3>`
-                                    : html`<h3 class="plot-subtitle"> Aid that is not screened for whether it targets gender as a share of total aid</h3>`
-                }
+                <div class="plot-subtitle">
+                    Gender is
+                    ${generateSubtitle(indicator, indicatorMapping)}
+                    as a share of total aid
+                </div>
             </div>
             ${
                 resize(
