@@ -238,6 +238,16 @@ select, input {
     color: var(--genderSecondary);
 }
 
+.gender-not-targeted {
+    color: var(--genderNotTargeted);
+}
+
+.gender-not-screened {
+    color: var(--genderNotScreened);
+}
+
+
+
 #lines-sectors > .plot-subtitle {
     margin-bottom: 10px;
 }
