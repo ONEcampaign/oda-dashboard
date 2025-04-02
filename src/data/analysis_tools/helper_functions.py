@@ -147,7 +147,7 @@ def convert_types(df):
         "donor_code": "category",
         "recipient_code": "category",
         "indicator": "category",
-        "subsector": "category",
+        "sub_sector": "category",
     }
 
     for col, dtype in type_map.items():
@@ -166,7 +166,7 @@ def df_to_parquet(df):
     return_pa_table(converted_df)
 
 
-def add_index_column(df, column, json_path="index.json"):
+def add_index_column(df, column, json_path):
     # Create string to index mapping
     unique_values = df[column].unique()
     str_to_idx = {name: idx for idx, name in enumerate(unique_values)}
@@ -174,7 +174,7 @@ def add_index_column(df, column, json_path="index.json"):
 
     # Map column to 'indicator'
     df = df.copy()
-    df["indicator"] = df[column].map(str_to_idx)
+    df[column] = df[column].map(str_to_idx)
 
     # Save index to string mapping as JSON
     with open(json_path, "w") as f:
