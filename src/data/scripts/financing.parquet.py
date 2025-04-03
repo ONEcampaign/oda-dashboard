@@ -94,6 +94,7 @@ def get_financing_data():
         df=financing,
         column="indicator",
         json_path=PATHS.TOOLS / "financing_indicators.json",
+        ordered_list=list(FINANCING_INDICATORS.values()) + ["Grants", "Non-grants"]
     )
 
     return financing

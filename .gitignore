@@ -2,4 +2,5 @@
 /dist/
 node_modules/
 yarn-error.log
-src/data/raw_data/
+src/data/raw_data/oda_data/
+src/data/raw_data/pydeflte/
