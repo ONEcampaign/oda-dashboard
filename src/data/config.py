@@ -58,8 +58,8 @@ class PATHS:
     DONORS = TOOLS / "donors.json"
     RECIPIENTS = TOOLS / "recipients.json"
 
-    DATA = SRC / "data" / "raw_data"
-    PYDEFLATE = DATA / "pydeflate"
-    ODA_DATA = DATA / "oda_data"
+    DATA = SRC / "data" / ".cache"
+    PYDEFLATE = DATA
+    ODA_DATA = DATA
 
     COMPONENTS = SRC / "components"
