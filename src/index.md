@@ -12,6 +12,10 @@ setCustomColors();
 ```
 
 ```js
+const ONELogo = await FileAttachment("./ONE-logo-black.png").image()
+```
+
+```js
 const donorOptions = await FileAttachment("./data/analysis_tools/donors.json").json()
 const donorMapping = name2CodeMap(donorOptions)
 
@@ -62,11 +66,12 @@ const currency = Generators.input(currencyInput);
 const pricesInput = Inputs.radio(
     new Map([
         ["Current", "current"],
-        // ["Constant", "constant"]
+        ["Constant", "constant"]
     ]),
     {
         label: "Prices",
-        value: "current"
+        value: "current",
+        disabled: ["constant"]
     }
 )
 const prices = Generators.input(pricesInput)
@@ -135,28 +140,6 @@ const relativeData = data.relative
 const tableData = data.table
 ```
 
-
-```js
-const moreSettings = Mutable(false)
-const showMoreSettings = () => {
-    moreSettings.value = !moreSettings.value;
-    if (moreSettings.value) {
-        document.querySelector(".settings-button").classList.add("active")
-        document.querySelector(".settings-group:last-of-type").classList.remove("hidden")
-    } else {
-        document.querySelector(".settings-button").classList.remove("active")
-        document.querySelector(".settings-group:last-of-type").classList.add("hidden")
-    }
-};
-```
-
-```js
-const showMoreButton = Inputs.button(moreSettings ? "Show less" : "Show more", {
-    reduce: showMoreSettings
-});
-showMoreButton.addEventListener("submit", event => event.preventDefault());
-```
-
 <div class="title-container">
     <div class="title-logo">
         <a href="https://data.one.org/" target="_blank">
@@ -183,196 +166,199 @@ showMoreButton.addEventListener("submit", event => event.preventDefault());
     </a>
 </div>
 
-<div class="settings card">
-    <div class="settings-group">
-        ${donorInput}
-    </div>
-    <div class="settings-group">
-        ${currencyInput}
-        ${indicatorInput}
-    </div>
-    <div class="settings-button">
-        ${showMoreButton}
-    </div>
-    <div class="settings-group hidden">
-        ${pricesInput}
-        ${timeRangeInput}
-    </div>
-</div>
-
-<div class="grid grid-cols-2">
-    <div class="card">
-        <div  class="plot-container" id="bars-financing">
-            <h2 class="plot-title">
-                ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)}
-            </h2>
-            <div class="plot-subtitle-panel">
-                <h3 class="plot-subtitle">
-                    ${
-                        new Set(absoluteData.map(d => d.Type)).size > 1 
-                            ? html`in <span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span>`
-                            : html`in ${[...new Set(absoluteData.map(d => d.Type))][0]}`
-                    }
-                </h3>
-            </div>
-            ${
-                resize(
-                    (width) => barPlot(
-                        absoluteData, 
-                        currency, 
-                        "financing", 
-                        width
-                    )
-                )
-            }
-            <div class="bottom-panel">
-                <div class="text-section">
-                    <p class="plot-source">Source: OECD DAC Table 1.</p>
-                    <p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>                
+<div>
+    ${  
+        !data 
+            ? html` `
+            : html`
+                <div class="settings card">
+                    <div class="settings-group">
+                        ${donorInput}
+                    </div>
+                    <div class="settings-group">
+                        ${currencyInput}
+                        ${indicatorInput}
+                    </div>
+                    <div class="settings-group">
+                        ${pricesInput}
+                        ${timeRangeInput}
+                    </div>
                 </div>
-                <div class="logo-section">
-                    <a href="https://data.one.org/" target="_blank">
-                        <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
-                    </a>
+                <div class="grid grid-cols-2">
+                    <div class="card">
+                        <div  class="plot-container" id="bars-financing">
+                            <h2 class="plot-title">
+                                ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)}
+                            </h2>
+                            <div class="plot-subtitle-panel">
+                                <h3 class="plot-subtitle">
+                                    ${
+                                        new Set(absoluteData.map(d => d.type)).size > 1 
+                                            ? html`in <span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span>`
+                                            : html`in ${[...new Set(absoluteData.map(d => d.type))][0]}`
+                                    }
+                                </h3>
+                            </div>
+                            ${
+                                resize(
+                                    (width) => barPlot(
+                                        absoluteData, 
+                                        currency, 
+                                        "financing", 
+                                        width
+                                    )
+                                )
+                            }
+                            <div class="bottom-panel">
+                                <div class="text-section">
+                                    <p class="plot-source">Source: OECD DAC Table 1.</p>
+                                    <p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>                
+                                </div>
+                                <div class="logo-section">
+                                    <a href="https://data.one.org/" target="_blank">
+                                        ${ONELogo}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="download-panel">
+                            ${  
+                                Inputs.button(
+                                    "Download plot", 
+                                    {
+                                        reduce: () => downloadPNG(
+                                            "bars-financing",
+                                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)}`, {fileMode: true})
+                                        )
+                                    }   
+                                )
+                            }
+                            ${
+                                Inputs.button(
+                                    "Download data", 
+                                    {
+                                        reduce: () => downloadXLSX(
+                                            absoluteData,
+                                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)}`, {fileMode: true})
+                                        )
+                                    }
+                                )
+                            }
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="plot-container" id="lines-financing">
+                            <h2 class="plot-title">
+                                ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)}
+                            </h2>
+                            <div class="plot-subtitle-panel">
+                                <h3 class="plot-subtitle">
+                                    ${
+                                        new Set(relativeData.map(d => d.type)).size > 1 
+                                            ? html`in <span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span>`
+                                            : html`in ${[...new Set(relativeData.map(d => d.type))][0]}`
+                                    }
+                                    ${indicator === indicatorMapping.get("Total ODA") ? html`as a share of GNI` : html`as a share of total aid`}
+                                </h3>
+                                ${
+                                    indicator === indicatorMapping.get("Total ODA") 
+                                        ? commitmentInput
+                                        : html` `
+                                }
+                            </div>
+                            ${
+                            resize(
+                                (width) => linePlot(
+                                    relativeData, 
+                                    "financing", 
+                                    width,
+                                    {showIntlCommitment: commitment}
+                                ))
+                            }
+                            <div class="bottom-panel">
+                                <div class="text-section">
+                                    <p class="plot-source">Source: OECD DAC Table 1.</p>
+                                    <p class="plot-note">ODA values as a share of GNI of ${formatString(getNameByCode(donorMapping, donor))}.</p>
+                                </div>
+                                <div class="logo-section">
+                                    <a href="https://data.one.org/" target="_blank">
+                                        ${ONELogo}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="download-panel">
+                            ${
+                                Inputs.button(
+                                    "Download plot", 
+                                    {
+                                        reduce: () => downloadPNG(
+                                            "lines-financing",
+                                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)} share`, {fileMode: true})
+                                        )
+                                    }
+                                )
+                            }
+                            ${
+                                Inputs.button(
+                                    "Download data", 
+                                    {
+                                        reduce: () => downloadXLSX(
+                                            relativeData,
+                                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)} share`, {fileMode: true})
+                                        )
+                                    }
+                                )
+                            }
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        <div class="download-panel">
-            ${  
-                Inputs.button(
-                    "Download plot", 
-                    {
-                        reduce: () => downloadPNG(
-                            "bars-financing",
-                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)}`, {fileMode: true})
-                        )
-                    }   
-                )
-            }
-            ${
-                Inputs.button(
-                    "Download data", 
-                    {
-                        reduce: () => downloadXLSX(
-                            absoluteData,
-                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)}`, {fileMode: true})
-                        )
-                    }
-                )
-            }
-        </div>
-    </div>
-    <div class="card">
-        <div class="plot-container" id="lines-financing">
-            <h2 class="plot-title">
-                ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)}
-            </h2>
-            <div class="plot-subtitle-panel">
-                <h3 class="plot-subtitle">
-                    ${
-                        new Set(relativeData.map(d => d.Type)).size > 1 
-                            ? html`in <span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span>`
-                            : html`in ${[...new Set(relativeData.map(d => d.Type))][0]}`
-                    }
-                    ${indicator === indicatorMapping.get("Total ODA") ? html`as a share of GNI` : html`as a share of total aid`}
-                </h3>
-                ${
-                    indicator === indicatorMapping.get("Total ODA") 
-                        ? commitmentInput
-                        : html` `
-                }
-            </div>
-            ${
-            resize(
-                (width) => linePlot(
-                    relativeData, 
-                    "financing", 
-                    width,
-                    {showIntlCommitment: commitment}
-                ))
-            }
-            <div class="bottom-panel">
-                <div class="text-section">
-                    <p class="plot-source">Source: OECD DAC Table 1.</p>
-                    <p class="plot-note">ODA values as a share of GNI of ${formatString(getNameByCode(donorMapping, donor))}.</p>
+                <div class="card">
+                    <div class="plot-container">
+                        <h2 class="table-title">
+                            ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)}
+                        </h2>
+                        <div class="table-subtitle-panel">
+                            ${unitInput}
+                        </div>
+                        ${
+                            sparkbarTable(
+                                tableData, 
+                                "financing"
+                            )
+                        }
+                        <div class="bottom-panel">
+                            <div class="text-section">
+                                <p class="plot-source">Source: OECD DAC Table 1.</p>
+                                ${
+                                    unit === "value" 
+                                        ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
+                                        : unit === "gni_pct"
+                                            ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(getNameByCode(donorMapping, donor))}.</p>`
+                                            : html`<p class="plot-note">ODA values as a share of total contributions from ${formatString(getNameByCode(donorMapping, donor))}.</p>`
+                                }
+                            </div>
+                            <div class="logo-section">
+                                <a href="https://data.one.org/" target="_blank">
+                                    ${ONELogo}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="download-panel">
+                        ${
+                            Inputs.button(
+                                "Download data", 
+                                {
+                                    reduce: () => downloadXLSX(
+                                        tableData,
+                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)} ${unit}`, {fileMode: true})
+                                    )
+                                }
+                            )
+                        }
+                    </div>
                 </div>
-                <div class="logo-section">
-                    <a href="https://data.one.org/" target="_blank">
-                        <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
-                    </a>
-                </div>
-            </div>
-        </div>
-        <div class="download-panel">
-            ${
-                Inputs.button(
-                    "Download plot", 
-                    {
-                        reduce: () => downloadPNG(
-                            "lines-financing",
-                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)} share`, {fileMode: true})
-                        )
-                    }
-                )
-            }
-            ${
-                Inputs.button(
-                    "Download data", 
-                    {
-                        reduce: () => downloadXLSX(
-                            relativeData,
-                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)} share`, {fileMode: true})
-                        )
-                    }
-                )
-            }
-        </div>
-    </div>
-</div>
-
-<div class="card">
-    <div class="plot-container">
-        <h2 class="table-title">
-            ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)}
-        </h2>
-        <div class="table-subtitle-panel">
-            ${unitInput}
-        </div>
-        ${
-            sparkbarTable(
-                tableData, 
-                "financing"
-            )
-        }
-        <div class="bottom-panel">
-            <div class="text-section">
-                <p class="plot-source">Source: OECD DAC Table 1.</p>
-                ${
-                    unit === "value" 
-                        ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
-                        : unit === "gni_pct"
-                            ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(getNameByCode(donorMapping, donor))}.</p>`
-                            : html`<p class="plot-note">ODA values as a share of total contributions from ${formatString(getNameByCode(donorMapping, donor))}.</p>`
-                }
-            </div>
-            <div class="logo-section">
-                <a href="https://data.one.org/" target="_blank">
-                    <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
-                </a>
-            </div>
-        </div>
-    </div>
-    <div class="download-panel">
-        ${
-            Inputs.button(
-                "Download data", 
-                {
-                    reduce: () => downloadXLSX(
-                        tableData,
-                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)} ${unit}`, {fileMode: true})
-                    )
-                }
-            )
-        }
-    </div>
+            `
+    }
 </div>

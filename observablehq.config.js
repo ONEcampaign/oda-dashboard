@@ -2,8 +2,7 @@
 export default {
   title: "ODA Dashboard",
 
-  head: '<link rel="icon" href="ONE-logo-favicon.png" type="image/png" sizes="32x32">' +
-      '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />',
+  head: '<link rel="icon" href="ONE-logo-favicon.png" type="image/png" sizes="32x32">',
 
   root: "src",
   theme: ["light", "wide", "alt"],
