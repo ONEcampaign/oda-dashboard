@@ -261,7 +261,10 @@ const tableData = data.table
                                     relativeData, 
                                     "financing", 
                                     width,
-                                    {showIntlCommitment: commitment}
+                                    {
+                                        showIntlCommitment: commitment,
+                                        GNIShare: indicator === indicatorMapping.get("Total ODA")
+                                    }
                                 ))
                             }
                             <div class="bottom-panel">
