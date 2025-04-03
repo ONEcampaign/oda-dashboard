@@ -151,6 +151,8 @@ function generateSubtitle(codes, indicatorMapping) {
         return html`<span class="subtitle-label ${className}">${name}</span>${i < codes.length - 1 ? ', ' : ''}`;
     });
 }
+
+console.log(indicator.length)
 ```
 
 <div class="title-container">
@@ -198,163 +200,179 @@ function generateSubtitle(codes, indicatorMapping) {
                         ${timeRangeInput}
                     </div>
                 </div>
-                <div class="grid grid-cols-2">
-                    <div class="card">
-                        <div class="plot-container" id="bars-gender">
-                            <h2 class="plot-title">
-                                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
-                            </h2>
-                            <div class="plot-subtitle-panel">
-                                <div class="plot-subtitle">
-                                    Gender is
-                                    ${generateSubtitle(indicator, indicatorMapping)}
+                <div>
+                    ${
+                        indicator.length === 0 
+                            ? html ` 
+                                <div class="grid grid-cols-2">
+                                    <div class="card"> 
+                                        <div class="warning">
+                                            Select at least one indicator
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            ${
-                                resize(
-                                    (width) => barPlot(
-                                        absoluteData, 
-                                        currency, 
-                                        "gender", 
-                                        width
-                                    )
-                                )
-                            }
-                            <div class="bottom-panel">
-                                <div class="text-section">
-                                    <p class="plot-source">Source: OECD Creditor Reporting System.</p>
-                                    <p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
+                            `
+                            : html`
+                                <div class="grid grid-cols-2">
+                                    <div class="card">
+                                        <div class="plot-container" id="bars-gender">
+                                            <h2 class="plot-title">
+                                                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
+                                            </h2>
+                                            <div class="plot-subtitle-panel">
+                                                <div class="plot-subtitle">
+                                                    Gender is
+                                                    ${generateSubtitle(indicator, indicatorMapping)}
+                                                </div>
+                                            </div>
+                                            ${
+                                                resize(
+                                                    (width) => barPlot(
+                                                        absoluteData, 
+                                                        currency, 
+                                                        "gender", 
+                                                        width
+                                                    )
+                                                )
+                                            }
+                                            <div class="bottom-panel">
+                                                <div class="text-section">
+                                                    <p class="plot-source">Source: OECD Creditor Reporting System.</p>
+                                                    <p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
+                                                </div>
+                                                <div class="logo-section">
+                                                    <a href="https://data.one.org/" target="_blank">
+                                                        ${ONELogo}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="download-panel">
+                                            ${
+                                                Inputs.button(
+                                                    "Download plot", {
+                                                        reduce: () => downloadPNG(
+                                                            "bars-gender",
+                                                             formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)}`, {fileMode: true})
+                                                        )
+                                                    }
+                                                )
+                                            }
+                                            ${
+                                                Inputs.button(
+                                                    "Download data", 
+                                                    {
+                                                        reduce: () => downloadXLSX(
+                                                            absoluteData,
+                                                             formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)}`, {fileMode: true})
+                                                        )
+                                                    }
+                                                )
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="card">
+                                        <div class="plot-container" id="lines-gender">
+                                            <h2 class="plot-title">
+                                                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
+                                            </h2>
+                                            <div class="plot-subtitle-panel">
+                                                <div class="plot-subtitle">
+                                                    Gender is
+                                                    ${generateSubtitle(indicator, indicatorMapping)}
+                                                    as a share of total ODA
+                                                </div>
+                                            </div>
+                                            ${
+                                                resize(
+                                                    (width) => linePlot(
+                                                        relativeData, 
+                                                        "gender", 
+                                                        width
+                                                    )
+                                                )
+                                            }
+                                            <div class="bottom-panel">
+                                                <div class="text-section">
+                                                    <p class="plot-source">Source: OECD Creditor Reporting System.</p>
+                                                </div>
+                                                <div class="logo-section">
+                                                    <a href="https://data.one.org/" target="_blank">
+                                                        ${ONELogo}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="download-panel">
+                                            ${
+                                                Inputs.button(
+                                                    "Download plot", {
+                                                        reduce: () => downloadPNG(
+                                                            "lines-gender",
+                                                             formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} share`, {fileMode: true})                        )
+                                                    }
+                                                )
+                                            }
+                                            ${
+                                                Inputs.button(
+                                                    "Download data", 
+                                                    {
+                                                        reduce: () => downloadXLSX(
+                                                            relativeData,
+                                                            formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} share`, {fileMode: true})                        )
+                                                    }
+                                                )
+                                            }
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="logo-section">
-                                    <a href="https://data.one.org/" target="_blank">
-                                        ${ONELogo}
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="download-panel">
-                            ${
-                                Inputs.button(
-                                    "Download plot", {
-                                        reduce: () => downloadPNG(
-                                            "bars-gender",
-                                             formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)}`, {fileMode: true})
-                                        )
-                                    }
-                                )
-                            }
-                            ${
-                                Inputs.button(
-                                    "Download data", 
-                                    {
-                                        reduce: () => downloadXLSX(
-                                            absoluteData,
-                                             formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)}`, {fileMode: true})
-                                        )
-                                    }
-                                )
-                            }
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="plot-container" id="lines-gender">
-                            <h2 class="plot-title">
-                                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
-                            </h2>
-                            <div class="plot-subtitle-panel">
-                                <div class="plot-subtitle">
-                                    Gender is
-                                    ${generateSubtitle(indicator, indicatorMapping)}
-                                    as a share of total ODA
-                                </div>
-                            </div>
-                            ${
-                                resize(
-                                    (width) => linePlot(
-                                        relativeData, 
-                                        "gender", 
-                                        width
-                                    )
-                                )
-                            }
-                            <div class="bottom-panel">
-                                <div class="text-section">
-                                    <p class="plot-source">Source: OECD Creditor Reporting System.</p>
-                                </div>
-                                <div class="logo-section">
-                                    <a href="https://data.one.org/" target="_blank">
-                                        ${ONELogo}
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="download-panel">
-                            ${
-                                Inputs.button(
-                                    "Download plot", {
-                                        reduce: () => downloadPNG(
-                                            "lines-gender",
-                                             formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} share`, {fileMode: true})                        )
-                                    }
-                                )
-                            }
-                            ${
-                                Inputs.button(
-                                    "Download data", 
-                                    {
-                                        reduce: () => downloadXLSX(
-                                            relativeData,
-                                            formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} share`, {fileMode: true})                        )
-                                    }
-                                )
-                            }
-                        </div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="plot-container">
-                        <h2 class="table-title">
-                            Gender ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
-                        </h2>
-                        <div class="table-subtitle-panel">
-                            ${unitInput}
-                        </div>
-                        ${
-                            sparkbarTable(
-                                tableData, 
-                                "gender"
-                            )
-                        }
-                        <div class="bottom-panel">
-                            <div class="text-section">
-                                <p class="plot-source">Source: OECD DAC Table Creditor Reporting System.</p>
-                                ${
-                                    unit === "value" 
-                                        ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
-                                        : unit === "total"
-                                            ? html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)}.</p>`
-                                            : html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
-                                }
-                            </div>
-                            <div class="logo-section">
-                                <a href="https://data.one.org/" target="_blank">
-                                    ${ONELogo}
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="download-panel">
-                        ${
-                            Inputs.button(
-                                "Download data", {
-                                    reduce: () => downloadXLSX(
-                                        tableData,
-                                             formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${unit}`, {fileMode: true})                    )
-                                }
-                            )
-                        }
-                    </div>
-                </div>            
+                                <div class="card">
+                                    <div class="plot-container">
+                                        <h2 class="table-title">
+                                            Gender ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
+                                        </h2>
+                                        <div class="table-subtitle-panel">
+                                            ${unitInput}
+                                        </div>
+                                        ${
+                                            sparkbarTable(
+                                                tableData, 
+                                                "gender"
+                                            )
+                                        }
+                                        <div class="bottom-panel">
+                                            <div class="text-section">
+                                                <p class="plot-source">Source: OECD DAC Table Creditor Reporting System.</p>
+                                                ${
+                                                    unit === "value" 
+                                                        ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
+                                                        : unit === "total"
+                                                            ? html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)}.</p>`
+                                                            : html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
+                                                }
+                                            </div>
+                                            <div class="logo-section">
+                                                <a href="https://data.one.org/" target="_blank">
+                                                    ${ONELogo}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="download-panel">
+                                        ${
+                                            Inputs.button(
+                                                "Download data", {
+                                                    reduce: () => downloadXLSX(
+                                                        tableData,
+                                                             formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${unit}`, {fileMode: true})                    )
+                                                }
+                                            )
+                                        }
+                                    </div>
+                                </div>      
+                            `
+                    }
+                </div> 
             `
     }
 </div>

@@ -57,7 +57,7 @@ export function genderQueries(
     const table = tableGenderQuery(
         donor,
         recipient,
-        indicator,
+        indicators,
         indicatorCase,
         currency,
         prices,
