@@ -1,5 +1,3 @@
-import pandas as pd
-
 from oda_data import Indicators, set_data_path
 from src.data.config import PATHS, RECIPIENTS_INDICATORS, TIME_RANGE, logger
 
@@ -25,9 +23,7 @@ def filter_transform_recipients():
     ).get_indicators(list(RECIPIENTS_INDICATORS.keys()))
 
     recipients = (
-        dac2a_raw.query(
-            "donor_code in @donor_ids and " "recipient_code in @recipient_ids"
-        )
+        dac2a_raw.query("donor_code in @donor_ids and recipient_code in @recipient_ids")
         .groupby(
             ["year", "donor_code", "recipient_code", "one_indicator"],
             dropna=False,
@@ -45,7 +41,7 @@ def filter_transform_recipients():
         df=recipients,
         column="indicator",
         json_path=PATHS.TOOLS / "recipients_indicators.json",
-        ordered_list=list(RECIPIENTS_INDICATORS.values())
+        ordered_list=list(RECIPIENTS_INDICATORS.values()),
     )
 
     return recipients

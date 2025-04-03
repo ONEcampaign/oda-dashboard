@@ -166,7 +166,6 @@ def df_to_parquet(df):
     return_pa_table(converted_df)
 
 
-
 def add_index_column(df, column, json_path, ordered_list=None):
     # If no custom order is provided, use unique values in appearance order
     if ordered_list is None:
