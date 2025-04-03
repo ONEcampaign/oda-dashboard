@@ -1,6 +1,6 @@
 import {FileAttachment} from "observablehq:stdlib";
 import {DuckDBClient} from "npm:@observablehq/duckdb";
-import {name2CodeMap, getNameByCode} from "./utils.js";
+import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
 
 const db = await DuckDBClient.of({
     sectors: FileAttachment("../data/scripts/sectors.parquet"),
@@ -37,13 +37,13 @@ export function sectorsQueries(
     const indicators = indicator.length > 0 ? indicator : [-1]; // use -1 or any value that won’t match real indicators
 
     const indicatorCase = Object.entries(sectorsIndicators)
-        .map(([code, label]) => `WHEN indicator = ${code} THEN '${label}'`)
+        .map(([code, label]) => `WHEN indicator = ${code} THEN '${escapeSQL(label)}'`)
         .join("\n");
 
     const code2SectorCase = Object.entries(code2Subsector)
         .map(([code, subsector]) => {
             const sector = subsector2Sector[subsector] || 'Other';
-            return `WHEN ${code} THEN '${sector.replace(/'/g, "''")}'`;
+            return `WHEN ${code} THEN '${escapeSQL(sector)}'`;
         })
         .join('\n');
 
@@ -61,7 +61,7 @@ export function sectorsQueries(
     //
     const code2SubsectorCase = Object.entries(code2Subsector)
         .filter(([, subsector]) => relevantSubsectors.includes(subsector))
-        .map(([code, subsector]) => `WHEN ${code} THEN '${subsector.replace(/'/g, "''")}'`)
+        .map(([code, subsector]) => `WHEN ${code} THEN '${escapeSQL(subsector)}'`)
         .join('\n');
 
     const subsectorCaseSQL = `CASE sub_sector\n${code2SubsectorCase}\nEND AS 'sub_sector',`;
@@ -168,8 +168,8 @@ async function treemapSectorsQuery(
             )
             SELECT
                 '${timeRange[0]}-${timeRange[1]}' AS period,
-                '${getNameByCode(donorMapping, donor)}' AS donor,
-                '${getNameByCode(recipientMapping, recipient)}' AS recipient,
+                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
+                '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
                 ${sectorCaseSQL},
                 indicator,
                 SUM(converted_value)  AS value,
@@ -249,8 +249,8 @@ async function selectedSectorsQuery(
             )
             SELECT
                 year AS year,
-                '${getNameByCode(donorMapping, donor)}' AS donor,
-                '${getNameByCode(recipientMapping, recipient)}' AS recipient,
+                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
+                '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
                 ${breakdown ? subsectorCaseSQL : ""}
                 '${selectedSector}' AS sector,
                 indicator,
@@ -355,8 +355,8 @@ async function tableSectorsQuery(
             )
             SELECT
                 year AS year,
-                '${getNameByCode(donorMapping, donor)}' AS donor,
-                '${getNameByCode(recipientMapping, recipient)}' AS recipient, 
+                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
+                '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient, 
                 ${subsectorCaseSQL}
                 '${selectedSector}' AS sector,
                 indicator AS indicator,

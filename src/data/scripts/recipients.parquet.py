@@ -1,3 +1,5 @@
+import pandas as pd
+
 from oda_data import Indicators, set_data_path
 from src.data.config import PATHS, RECIPIENTS_INDICATORS, TIME_RANGE, logger
 
@@ -43,6 +45,7 @@ def filter_transform_recipients():
         df=recipients,
         column="indicator",
         json_path=PATHS.TOOLS / "recipients_indicators.json",
+        ordered_list=list(RECIPIENTS_INDICATORS.values())
     )
 
     return recipients

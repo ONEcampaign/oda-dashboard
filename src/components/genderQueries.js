@@ -1,6 +1,6 @@
 import {FileAttachment} from "observablehq:stdlib";
 import {DuckDBClient} from "npm:@observablehq/duckdb";
-import {name2CodeMap, getNameByCode} from "./utils.js";
+import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
 
 
 const db = await DuckDBClient.of({
@@ -31,7 +31,7 @@ export function genderQueries(
     const indicators = indicator.length > 0 ? indicator : [-1]; // use -1 or any value that won’t match real indicators
 
     const indicatorCase = Object.entries(genderIndicators)
-        .map(([code, label]) => `WHEN indicator = ${code} THEN '${label}'`)
+        .map(([code, label]) => `WHEN indicator = ${code} THEN '${escapeSQL(label)}'`)
         .join("\n");
 
     const absolute = absoluteGenderQuery(
@@ -115,8 +115,8 @@ async function absoluteGenderQuery(
             )
             SELECT
                 year AS year,
-                '${getNameByCode(donorMapping, donor)}' AS donor,
-                '${getNameByCode(recipientMapping, recipient)}' AS recipient,
+                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
+                '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
                 CASE    
                     ${indicatorCase}
                 END AS indicator,
@@ -173,8 +173,8 @@ async function relativeGenderQuery(
             )
             SELECT
                 f.year AS year,
-                '${getNameByCode(donorMapping, donor)}' AS donor,
-                '${getNameByCode(recipientMapping, recipient)}' AS recipient,
+                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
+                '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
                 CASE
                     ${indicatorCase}
                 END AS indicator,
@@ -265,8 +265,8 @@ async function tableGenderQuery(
             )
             SELECT
                 year AS year,
-                '${getNameByCode(donorMapping, donor)}' AS donor,
-                '${getNameByCode(recipientMapping, recipient)}' AS recipient,
+                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
+                '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
                 CASE    
                     ${indicatorCase}
                 END AS indicator,

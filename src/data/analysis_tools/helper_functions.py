@@ -166,17 +166,21 @@ def df_to_parquet(df):
     return_pa_table(converted_df)
 
 
-def add_index_column(df, column, json_path):
-    # Create string to index mapping
-    unique_values = df[column].unique()
-    str_to_idx = {name: idx for idx, name in enumerate(unique_values)}
-    idx_to_str = {idx: name for name, idx in str_to_idx.items()}
 
-    # Map column to 'indicator'
+def add_index_column(df, column, json_path, ordered_list=None):
+    # If no custom order is provided, use unique values in appearance order
+    if ordered_list is None:
+        ordered_list = list(df[column].unique())
+
+    # Create string-to-index and index-to-string mappings
+    str_to_idx = {name: idx for idx, name in enumerate(ordered_list)}
+    idx_to_str = {str(idx): name for idx, name in enumerate(ordered_list)}
+
+    # Map column to index values
     df = df.copy()
     df[column] = df[column].map(str_to_idx)
 
-    # Save index to string mapping as JSON
+    # Save index-to-string mapping as JSON
     with open(json_path, "w") as f:
         json.dump(idx_to_str, f, indent=2)
 

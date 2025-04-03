@@ -1,3 +1,5 @@
+import pandas as pd
+
 from oda_data import CrsData, set_data_path
 from src.data.config import PATHS, TIME_RANGE, GENDER_INDICATORS, logger
 
@@ -45,7 +47,10 @@ def filter_transform_gender():
     gender = gender[gender["value"] != 0]
 
     gender = add_index_column(
-        df=gender, column="indicator", json_path=PATHS.TOOLS / "gender_indicators.json"
+        df=gender,
+        column="indicator",
+        json_path=PATHS.TOOLS / "gender_indicators.json",
+        ordered_list=list(GENDER_INDICATORS.values())
     )
 
     return gender

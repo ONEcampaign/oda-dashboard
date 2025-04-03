@@ -133,13 +133,11 @@ select, input {
 }
 
 .settings-group > form > div:has(> label:nth-of-type(3)) {
-    display: flex;
-    flex-flow: wrap-reverse;
     max-width: 300px;
 }
 
 .settings-group > form > div:has(> label:nth-of-type(3)) > label{
-    padding: 2.5px 0;
+    padding: 2.5px 10px 2.5px 0;
 }
 
 .settings-group form > label {

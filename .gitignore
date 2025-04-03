@@ -163,7 +163,7 @@ cython_debug/
 
 /dist/
 node_modules/
-yarn-error.log
+yarn-error.log-
 src/data/raw_data/
 
 
@@ -177,4 +177,4 @@ src/data/cache/*.csv
 
 # .pyc files
 /src/data/__pycache__
-/.idea
+/.idea-

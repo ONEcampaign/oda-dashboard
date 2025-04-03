@@ -1,6 +1,6 @@
 import {FileAttachment} from "observablehq:stdlib";
 import {DuckDBClient} from "npm:@observablehq/duckdb";
-import {name2CodeMap, getNameByCode} from "./utils.js";
+import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
 
 const db = await DuckDBClient.of({
     recipients: FileAttachment("../data/scripts/recipients.parquet"),
@@ -31,7 +31,7 @@ export function recipientsQueries(
     const indicators = indicator.length > 0 ? indicator : [-1]; // use -1 or any value that won’t match real indicators
 
     const indicatorCase = Object.entries(recipientsIndicators)
-        .map(([code, label]) => `WHEN indicator = ${code} THEN '${label}'`)
+        .map(([code, label]) => `WHEN indicator = ${code} THEN '${escapeSQL(label)}'`)
         .join("\n");
 
 
@@ -116,8 +116,8 @@ async function absoluteRecipientsQuery(
             )
             SELECT
                 year AS year,
-                '${getNameByCode(donorMapping, donor)}' AS donor,
-                '${getNameByCode(recipientMapping, recipient)}' AS recipient,
+                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
+                '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
                 CASE
                     ${indicatorCase}
                 END AS indicator,
@@ -175,8 +175,8 @@ async function relativeRecipientsQuery(
             )
             SELECT
                 f.year AS year,
-                '${getNameByCode(donorMapping, donor)}' AS donor,
-                '${getNameByCode(recipientMapping, recipient)}' AS recipient,
+                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
+                '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
                 CASE
                     ${indicatorCase}
                 END AS indicator,
@@ -272,8 +272,8 @@ async function tableRecipientsQuery(
             )
             SELECT
                 year AS year,
-                '${getNameByCode(donorMapping, donor)}' AS donor,
-                '${getNameByCode(recipientMapping, recipient)}' AS recipient,
+                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
+                '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
                 indicator AS indicator,
                 ${
                     unit === "value" 

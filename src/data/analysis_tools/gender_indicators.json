@@ -1,4 +1,6 @@
 {
-  "0": NaN,
-  "1": "Not screened"
+  "0": "Main target",
+  "1": "Secondary target",
+  "2": "Not targeted",
+  "3": "Not screened"
 }
