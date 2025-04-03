@@ -177,3 +177,4 @@ src/data/cache/*.csv
 
 # .pyc files
 /src/data/__pycache__
+/.idea
