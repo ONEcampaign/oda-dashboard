@@ -3,7 +3,7 @@ import {table} from "npm:@observablehq/inputs";
 import {html} from "npm:htl"
 import {utcYear} from "npm:d3-time";
 import {timeFormat} from "npm:d3-time-format";
-import {sum, rollups, descending, min, max} from "npm:d3-array"
+import {min, max} from "npm:d3-array"
 import {getCurrencyLabel, formatValue} from "./utils.js";
 import {customPalette, paletteFinancing, paletteRecipients, paletteSectors, paletteGender} from "./colors.js";
 
@@ -12,6 +12,7 @@ export function linePlot(data, mode, width,
                              selectedSector = null,
                              currency = null,
                              breakdown = null,
+                             GNIShare = false,
                              showIntlCommitment = false,
                          } = {}) {
 
@@ -68,7 +69,7 @@ export function linePlot(data, mode, width,
             customChannels = {
                 custom: {
                     value: yValue,
-                    label: "GNI Share"
+                    label: GNIShare ? "GNI Share" : "Share of total"
                 }
             }
             colorScale = paletteFinancing
