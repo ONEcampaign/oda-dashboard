@@ -2,459 +2,397 @@
   "1": {
     "name": "Austria",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "2": {
     "name": "Belgium",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "3": {
     "name": "Denmark",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "4": {
     "name": "France",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
       "G7 countries",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "5": {
     "name": "Germany",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
       "G7 countries",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "6": {
     "name": "Italy",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
       "G7 countries",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "7": {
     "name": "Netherlands",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "8": {
     "name": "Norway",
      "groups": [
-      "All donors",
-      "DAC countries",
-      "DAC members"
+      "All bilateral donors",
+      "DAC countries"
     ]
   },
   "9": {
     "name": "Portugal",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "10": {
     "name": "Sweden",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "11": {
     "name": "Switzerland",
      "groups": [
-      "All donors",
-      "DAC countries",
-      "DAC members"
+      "All bilateral donors",
+      "DAC countries"
     ]
   },
   "12": {
     "name": "United Kingdom",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "G7 countries",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "18": {
     "name": "Finland",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "20": {
     "name": "Iceland",
      "groups": [
-      "All donors",
-      "DAC countries",
-      "DAC members"
+      "All bilateral donors",
+      "DAC countries"
     ]
   },
   "21": {
     "name": "Ireland",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "22": {
     "name": "Luxembourg",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "40": {
     "name": "Greece",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "50": {
     "name": "Spain",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "61": {
     "name": "Slovenia",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "68": {
     "name": "Czechia",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "69": {
     "name": "Slovak Republic",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "75": {
     "name": "Hungary",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "76": {
     "name": "Poland",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "82": {
     "name": "Estonia",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "84": {
     "name": "Lithuania",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "301": {
     "name": "Canada",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "G7 countries",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "302": {
     "name": "United States",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "G7 countries",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "701": {
     "name": "Japan",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "G7 countries",
-      "DAC countries",
-      "DAC members"
+      "DAC countries"
     ]
   },
   "742": {
     "name": "Korea",
      "groups": [
-      "All donors",
-      "DAC countries",
-      "DAC members"
+      "All bilateral donors",
+      "DAC countries"
     ]
   },
   "801": {
     "name": "Australia",
      "groups": [
-      "All donors",
-      "DAC countries",
-      "DAC members"
+      "All bilateral donors",
+      "DAC countries"
     ]
   },
   "820": {
     "name": "New Zealand",
      "groups": [
-      "All donors",
-      "DAC countries",
-      "DAC members"
+      "All bilateral donors",
+      "DAC countries"
     ]
   },
   "26": {
     "name": "Monaco",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "30": {
     "name": "Cyprus",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
       "non-DAC countries"
     ]
   },
   "45": {
     "name": "Malta",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
       "non-DAC countries"
     ]
   },
   "55": {
     "name": "Türkiye",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "62": {
     "name": "Croatia",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
       "non-DAC countries"
     ]
   },
   "70": {
     "name": "Liechtenstein",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "72": {
     "name": "Bulgaria",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
       "non-DAC countries"
     ]
   },
   "77": {
     "name": "Romania",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
       "non-DAC countries"
     ]
   },
   "83": {
     "name": "Latvia",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "EU27 countries",
-      "EU27 + institutions",
       "non-DAC countries"
     ]
   },
   "87": {
     "name": "Russia",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "546": {
     "name": "Israel",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "552": {
     "name": "Kuwait",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "561": {
     "name": "Qatar",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "566": {
     "name": "Saudi Arabia",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "576": {
     "name": "United Arab Emirates",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "611": {
     "name": "Azerbaijan",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "613": {
     "name": "Kazakhstan",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "732": {
     "name": "Chinese Taipei",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "764": {
     "name": "Thailand",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "765": {
     "name": "Timor-Leste",
      "groups": [
-      "All donors",
+      "All bilateral donors",
       "non-DAC countries"
     ]
   },
   "918": {
     "name": "EU Institutions",
-     "groups": [
-      "All donors",
-      "EU27 + institutions",
-      "DAC members"
-    ]
+     "groups": []
   }
 }
 
