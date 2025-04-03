@@ -1,6 +1,6 @@
 import {FileAttachment} from "observablehq:stdlib";
 import {DuckDBClient} from "npm:@observablehq/duckdb";
-import {name2CodeMap, getNameByCode} from "./utils.js";
+import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
 
 const db = await DuckDBClient.of({
     financing: FileAttachment("../data/scripts/financing.parquet"),
@@ -101,8 +101,8 @@ async function absoluteFinancingQuery(
             )
             SELECT
                 year AS year,
-                '${getNameByCode(donorMapping, donor)}' AS donor,
-                '${getNameByCode(indicatorMapping, indicator)}' AS indicator,
+                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
+                '${escapeSQL(getNameByCode(indicatorMapping, indicator))}' AS indicator,
                 CASE 
                     WHEN year < 2018 THEN 'Flows'
                     WHEN year >= 2018 THEN 'Grant equivalents'
@@ -166,7 +166,7 @@ async function relativeFinancingQuery(
             )
             SELECT
                 f.year AS year,
-                '${getNameByCode(donorMapping, donor)}' AS donor,
+                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
                 ${
                     indicator === indicatorMapping.get("Total ODA")
                         ? "f.value / g.gni * 100"
@@ -275,8 +275,8 @@ async function tableFinancingQuery(
             )
             SELECT
                 year AS year,
-                    '${getNameByCode(donorMapping, donor)}' AS donor,
-                    '${getNameByCode(indicatorMapping, indicator)}' AS indicator,
+                    '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
+                    '${escapeSQL(getNameByCode(indicatorMapping, indicator))}' AS indicator,
                 CASE
                     WHEN year < 2018 THEN 'Flows'
                     WHEN year >= 2018 THEN 'Grant equivalents'

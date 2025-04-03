@@ -147,4 +147,8 @@ export function generateIndicatorMap(data, page) {
     return nameToId;
 }
 
+export function escapeSQL(str) {
+    return str.replace(/'/g, "''");
+}
+
 
