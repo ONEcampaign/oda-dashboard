@@ -155,17 +155,6 @@ function generateSubtitle(codes, indicatorMapping) {
 console.log(indicator.length)
 ```
 
-<div class="title-container">
-    <div class="title-logo">
-        <a href="https://data.one.org/" target="_blank">
-            <img src="./ONE-logo-black.png" alt="A black circle with ONE written in white thick letters.">
-        </a>
-    </div>
-    <h1 class="title-text">
-        ODA Dashboard
-    </h1>
-</div>
-
 <div class="header card">
     <a class="view-button" href="./">
         Financing

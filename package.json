@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@flourish/live-api": "^5.4.1",
-    "@observablehq/framework": "^1.13.0"
+    "@observablehq/framework": "latest",
+    "@one-data/observable-themes": "^0.1.0"
   },
   "devDependencies": {
     "rimraf": "^5.0.5"
