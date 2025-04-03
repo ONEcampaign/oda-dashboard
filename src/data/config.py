@@ -58,7 +58,7 @@ class PATHS:
     DONORS = TOOLS / "donors.json"
     RECIPIENTS = TOOLS / "recipients.json"
 
-    DATA = SRC / "data" / ".cache"
+    DATA = SRC / "data" / "cache"
     PYDEFLATE = DATA
     ODA_DATA = DATA
 

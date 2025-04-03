@@ -168,12 +168,12 @@ src/data/raw_data/
 
 
 # Parquet files in cache
-src/data/.cache/*.parquet
+src/data/cache/*.parquet
 
 # csv files in cache
-src/data/.cache/*.csv
+src/data/cache/*.csv
 
-!src/data/.cache/README.md
+!src/data/cache/README.md
 
 # .pyc files
 /src/data/__pycache__
