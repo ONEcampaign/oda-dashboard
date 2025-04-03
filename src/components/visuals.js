@@ -2,7 +2,7 @@ import * as Plot from "npm:@observablehq/plot";
 import {table} from "npm:@observablehq/inputs";
 import {html} from "npm:htl"
 import {utcYear} from "npm:d3-time";
-import {timeFormat} from "npm:d3-time-format";
+import {timeFormat, utcFormat} from "npm:d3-time-format";
 import {min, max} from "npm:d3-array"
 import {getCurrencyLabel, formatValue} from "./utils.js";
 import {customPalette, paletteFinancing, paletteRecipients, paletteSectors, paletteGender} from "./colors.js";
@@ -262,6 +262,13 @@ export function barPlot(data, currency, mode, width) {
                     y: "value",
                     fill: fillVar,
                     opacity: .85,
+                    tip: {
+                        lineHeight: 1.25,
+                        fontSize: 12,
+                        channels: {
+                            year: d => utcFormat("%Y")(d.year),
+                        }
+                    }
                 }
             ),
 
@@ -271,18 +278,6 @@ export function barPlot(data, currency, mode, width) {
                     stroke: "black",
                     strokeWidth: .5
                 }
-            ),
-            Plot.tip(
-                arrayData,
-                Plot.pointer(
-                    Plot.stackY({
-                        x: "year",
-                        y: "value",
-                        fill: fillVar,
-                        lineHeight: 1.25,
-                        fontSize: 12
-                    })
-                )
             )
         ]
     })
