@@ -1,3 +1,4 @@
+import os
 import sys
 import json
 import pandas as pd
@@ -7,7 +8,13 @@ import pyarrow.parquet as pq
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_EVEN
 
-from src.data.config import PATHS
+from src.data.config import PATHS, logger
+
+
+def check_cache_dir(path=PATHS.DATA):
+    if not os.path.exists(path):
+        logger(f"Creating directory for cached data: {PATHS.DATA}")
+        os.makedirs(path)
 
 
 def get_dac_ids(path):

@@ -1,12 +1,11 @@
 from oda_data import Dac1Data, set_data_path
 
 from src.data.analysis_tools.helper_functions import (
+    check_cache_dir,
     get_dac_ids,
     df_to_parquet,
 )
 from src.data.config import PATHS, TIME_RANGE, logger
-
-set_data_path(PATHS.ODA_DATA)
 
 
 def get_gni():
@@ -35,5 +34,10 @@ def gni_to_parquet():
 
 
 if __name__ == "__main__":
+
     logger.info("Generating GNI table...")
+
+    check_cache_dir()
+    set_data_path(PATHS.ODA_DATA)
+
     gni_to_parquet()

@@ -4,8 +4,7 @@ import pandas as pd
 from pydeflate import oecd_dac_deflate, set_pydeflate_path
 
 from src.data.config import logger, PATHS, TIME_RANGE, base_year
-
-set_pydeflate_path(PATHS.PYDEFLATE)
+from src.data.analysis_tools.helper_functions import check_cache_dir
 
 
 def create_df():
@@ -55,5 +54,10 @@ def get_conversion_table():
 
 
 if __name__ == "__main__":
+
     logger.info("Creating constant conversions table")
+
+    check_cache_dir()
+    set_pydeflate_path(PATHS.PYDEFLATE)
+
     get_conversion_table()

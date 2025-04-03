@@ -5,12 +5,11 @@ from oda_data import Indicators, set_data_path
 from src.data.config import PATHS, FINANCING_INDICATORS, TIME_RANGE, logger
 
 from src.data.analysis_tools.helper_functions import (
+    check_cache_dir,
     get_dac_ids,
     add_index_column,
     df_to_parquet,
 )
-
-set_data_path(PATHS.ODA_DATA)
 
 donor_ids = get_dac_ids(PATHS.DONORS)
 
@@ -107,5 +106,10 @@ def financing_to_parquet():
 
 
 if __name__ == "__main__":
+
     logger.info("Generating financing table...")
+
+    check_cache_dir()
+    set_data_path(PATHS.ODA_DATA)
+
     financing_to_parquet()

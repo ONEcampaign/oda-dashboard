@@ -1,31 +1,16 @@
-import pandas as pd
-
 from oda_data import CrsData, set_data_path
 from src.data.config import PATHS, TIME_RANGE, GENDER_INDICATORS, logger
 
 from src.data.analysis_tools.helper_functions import (
+    check_cache_dir,
     get_dac_ids,
     add_index_column,
     df_to_parquet,
 )
 
-set_data_path(PATHS.ODA_DATA)
-
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
-modality_ids = [
-    "A02",
-    "B01",
-    "B03",
-    "B031",
-    "B032",
-    "B033",
-    "B04",
-    "C01",
-    "D01",
-    "D02",
-    "E01",
-],
+
 
 def filter_transform_gender():
 
@@ -34,9 +19,25 @@ def filter_transform_gender():
         additional_filters=[
             ("donor_code", "in", donor_ids),
             ("recipient_code", "in", recipient_ids),
-            ("modality", "in", modality_ids),
+            (
+                "modality",
+                "in",
+                [
+                    "A02",
+                    "B01",
+                    "B03",
+                    "B031",
+                    "B032",
+                    "B033",
+                    "B04",
+                    "C01",
+                    "D01",
+                    "D02",
+                    "E01",
+                ],
+            ),
         ],
-        columns=["year", "donor_code", "recipient_code", "gender", "modality", "usd_disbursement"],
+        columns=["year", "donor_code", "recipient_code", "gender", "usd_disbursement"],
     )
 
     # Format gender df including all flows (flow_name)
@@ -76,5 +77,10 @@ def gender_to_parquet():
 
 
 if __name__ == "__main__":
+
     logger.info("Generating gender table...")
+
+    check_cache_dir()
+    set_data_path(PATHS.ODA_DATA)
+
     gender_to_parquet()

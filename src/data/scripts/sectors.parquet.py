@@ -9,12 +9,11 @@ from oda_data.indicators.research.sector_imputations import (
 from src.data.config import PATHS, TIME_RANGE, logger
 from src.data.analysis_tools import sector_lists
 from src.data.analysis_tools.helper_functions import (
+    check_cache_dir,
     get_dac_ids,
     add_index_column,
     df_to_parquet,
 )
-
-set_data_path(PATHS.ODA_DATA)
 
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
@@ -138,4 +137,8 @@ def sectors_to_parquet():
 
 if __name__ == "__main__":
     logger.info("Generating sectors table...")
+
+    check_cache_dir()
+    set_data_path(PATHS.ODA_DATA)
+
     sectors_to_parquet()
