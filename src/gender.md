@@ -151,8 +151,6 @@ function generateSubtitle(codes, indicatorMapping) {
         return html`<span class="subtitle-label ${className}">${name}</span>${i < codes.length - 1 ? ', ' : ''}`;
     });
 }
-
-console.log(indicator.length)
 ```
 
 <div class="header card">
