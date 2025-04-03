@@ -38,8 +38,7 @@ const donorInput = Inputs.select(
     donorMapping,
     {
         label: "Donor",
-        value: donorMapping.get("DAC countries"),
-        sort: true
+        value: donorMapping.get("DAC countries")
     })
 const donor = Generators.input(donorInput);
 
@@ -333,9 +332,9 @@ const tableData = data.table
                                         </h2>
                                         <div class="table-subtitle-panel">
                                             ${
-                                                indicator == "Total"
-                                                ? html`<h3 class="table-subtitle">Breakdown of ${selectedSector}; bilateral and imputed multilateral aid</h3>`
-                                                : html`<h3 class="table-subtitle">Breakdown of ${selectedSector}; ${indicator} aid</h3>`
+                                                indicator.length > 1
+                                                ? html`<h3 class="plot-subtitle">Breakdown of ${selectedSector}; Total ODA</h3>`
+                                                : html`<h3 class="plot-subtitle">Breakdown of ${selectedSector}; ${getNameByCode(indicatorMapping, indicator)} ODA</h3>`
                                             }
                                             ${unitInput}
                                         </div>
