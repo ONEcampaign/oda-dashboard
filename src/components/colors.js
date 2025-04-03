@@ -49,7 +49,7 @@ export const customPalette = {
     intlCommitment: ONEPalette.burgundy1,
     genderMain: ONEPalette.orange1,
     genderSecondary: ONEPalette.navy0,
-    genderNotTargeted: ONEPalette.purple1,
+    genderNotTargeted: ONEPalette.teal1,
     genderNotScreened: "#c2c2c4",
     darkGrey: "#333333",
     midGrey: "#646464",
