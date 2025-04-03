@@ -88,43 +88,6 @@ select, input {
     flex-flow: column wrap;
     gap: 20px;
     min-width: 200px;
-    visibility: block;
-}
-
-.settings-group.hidden {
-    visibility: hidden;
-}
-
-.settings-button{
-    width: 95px;
-}
-
-.settings-button > form {
-    margin: 0;
-}
-
-.settings-button > form > button {
-    border: none;
-    background-color: transparent;
-    cursor: pointer;
-    padding: 0;
-}
-
-.settings-button > form > button::after {
-    content: "arrow_right";
-    font-family: 'Material Symbols Outlined';
-    display: inline-block;
-    vertical-align: middle;
-    font-size: 20px;
-    padding-bottom: 2px;
-}
-
-.settings-button.active > form > button::after {
-    content: "arrow_drop_down";
-}
-
-.settings-button > form > button:hover {
-    text-decoration: underline;
 }
 
 .range-input > label {
@@ -150,21 +113,25 @@ select, input {
     margin: 0 !important;
 }
 
-.settings-group > form > div {
+[class*="inputs"] > div {
     display: flex;
     flex-flow: column wrap;
     align-items: flex-start !important;
 }
 
-.settings-group > form > div:has(> label:nth-of-type(3)) {
-    flex-direction: row;
+[class*="checkbox"] > div {
+    display: flex;
+    flex-flow: row wrap;
 }
 
-[class*="checkbox"] > div > label {
-    flex: 0 0 50%;
-    max-width: 150px !important;
-    margin: 2.5px 0;
-    box-sizing: border-box;
+.settings-group > form > div:has(> label:nth-of-type(3)) {
+    display: flex;
+    flex-flow: wrap-reverse;
+    max-width: 300px;
+}
+
+.settings-group > form > div:has(> label:nth-of-type(3)) > label{
+    padding: 2.5px 0;
 }
 
 .settings-group form > label {
@@ -378,9 +345,6 @@ select, input {
     .card.settings {
         justify-content: space-between;
         row-gap: 20px;
-    }
-    .settings-group.hidden {
-        display: none
     }
     .card.settings > * {
         flex: 1 1 48%;
