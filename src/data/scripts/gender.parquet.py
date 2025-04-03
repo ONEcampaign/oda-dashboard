@@ -13,7 +13,19 @@ set_data_path(PATHS.ODA_DATA)
 
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
-
+modality_ids = [
+    "A02",
+    "B01",
+    "B03",
+    "B031",
+    "B032",
+    "B033",
+    "B04",
+    "C01",
+    "D01",
+    "D02",
+    "E01",
+],
 
 def filter_transform_gender():
 
@@ -22,8 +34,9 @@ def filter_transform_gender():
         additional_filters=[
             ("donor_code", "in", donor_ids),
             ("recipient_code", "in", recipient_ids),
+            ("modality", "in", modality_ids),
         ],
-        columns=["year", "donor_code", "recipient_code", "gender", "usd_disbursement"],
+        columns=["year", "donor_code", "recipient_code", "gender", "modality", "usd_disbursement"],
     )
 
     # Format gender df including all flows (flow_name)
@@ -50,7 +63,7 @@ def filter_transform_gender():
         df=gender,
         column="indicator",
         json_path=PATHS.TOOLS / "gender_indicators.json",
-        ordered_list=list(GENDER_INDICATORS.values())
+        ordered_list=list(GENDER_INDICATORS.values()),
     )
 
     return gender
