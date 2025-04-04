@@ -136,11 +136,11 @@ export function linePlot(data, mode, width,
                             x: "year",
                             y: yValue,
                             fill: groupVar,
-                            fillOpacity: 0.85
+                            fillOpacity: 0.85,
                         }),
 
                         Plot.tip(arrayData,
-                            Plot.pointer(
+                            Plot.pointerX(
                                 Plot.stackY({
                                     x: "year",
                                     y: yValue,
@@ -261,15 +261,20 @@ export function barPlot(data, currency, mode, width) {
                     x: "year",
                     y: "value",
                     fill: fillVar,
-                    opacity: .85,
-                    tip: {
-                        lineHeight: 1.25,
-                        fontSize: 12,
-                        channels: {
-                            year: d => utcFormat("%Y")(d.year),
-                        }
-                    }
+                    opacity: .85
                 }
+            ),
+
+            Plot.tip(arrayData,
+                Plot.pointerX(
+                    Plot.stackY({
+                        x: "year",
+                        y: "value",
+                        fill: fillVar,
+                        lineHeight: 1.25,
+                        fontSize: 12
+                    })
+                )
             ),
 
             // Horizontal line at 0
