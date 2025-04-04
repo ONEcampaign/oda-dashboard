@@ -2,7 +2,7 @@ import * as Plot from "npm:@observablehq/plot";
 import {table} from "npm:@observablehq/inputs";
 import {html} from "npm:htl"
 import {utcYear} from "npm:d3-time";
-import {timeFormat, utcFormat} from "npm:d3-time-format";
+import {timeFormat} from "npm:d3-time-format";
 import {min, max} from "npm:d3-array"
 import {getCurrencyLabel, formatValue} from "./utils.js";
 import {customPalette, paletteFinancing, paletteRecipients, paletteSectors, paletteGender} from "./colors.js";
@@ -47,6 +47,7 @@ export function linePlot(data, mode, width,
             stroke: true,
             x: (d) => formatYear(d)
         }
+        stacked = new Set(arrayData.map(d => d[groupVar])).size > 1;
 
         if (breakdown) {
             const uniqueSubsectors = [
@@ -76,6 +77,7 @@ export function linePlot(data, mode, width,
             y: false
         }
         if (mode === "financing") {
+
             groupVar = "Type"
             customChannels = {
                 custom: {
@@ -84,10 +86,10 @@ export function linePlot(data, mode, width,
                 }
             }
             colorScale = paletteFinancing
+            stacked = false
         }
         else {
             groupVar = "Indicator"
-            stacked = new Set(arrayData.map(d => d[groupVar])).size > 1;
             customChannels = {
                 custom: {
                     value: yValue,
@@ -100,6 +102,7 @@ export function linePlot(data, mode, width,
             else if (mode === "gender") {
                 colorScale = paletteGender
             }
+            stacked = new Set(arrayData.map(d => d[groupVar])).size > 1;
         }
     }
 
@@ -134,7 +137,7 @@ export function linePlot(data, mode, width,
         marks: [
 
             ...(
-                stacked || breakdown
+                stacked
                     ? [
                         Plot.areaY(arrayData, {
                             x: "Year",
@@ -335,12 +338,12 @@ export function sparkbarTable(data, mode, {breakdown}) {
 
         tableData = Object.values(
             arrayData.reduce((acc, row) => {
-                const yearKey = row.year;
+                const yearKey = row.Year;
                 const group = row[groupVar];
                 const value = row[unitKey];
 
                 if (!acc[yearKey]) {
-                    acc[yearKey] = { year: yearKey };
+                    acc[yearKey] = { Year: yearKey };
                     uniqueGroups.forEach(s => {
                         acc[yearKey][s] = null;
                     });
@@ -398,7 +401,7 @@ export function sparkbarTable(data, mode, {breakdown}) {
         sort: "Year",
         reverse: true,
         format: {
-            year: (x) => x,
+            Year: x => String(x),
             ...Object.fromEntries(
                 valueColumns.map((column, index) => [
                     column,
