@@ -1,7 +1,7 @@
 ```js
 import {setCustomColors} from "./components/colors.js"
 import {financingQueries} from "./components/financingQueries.js"
-import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap} from "./components/utils.js";
+import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap, decodeHTML} from "./components/utils.js";
 import {rangeInput} from "./components/rangeInput.js";
 import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
 import {downloadPNG, downloadXLSX} from './components/downloads.js';
@@ -108,7 +108,7 @@ const unit = Generators.input(unitInput)
 
 function updateUnitOptions() {
     for (const o of unitInput.querySelectorAll("option")) {
-        if (o.innerHTML === "% of total ODA" & indicatorInput.value === indicatorMapping.get("Total ODA")) {
+        if (decodeHTML(o.innerHTML) === "% of total ODA" & indicatorInput.value === indicatorMapping.get("Total ODA")) {
             o.setAttribute("disabled", "disabled");
         }
         else o.removeAttribute("disabled");

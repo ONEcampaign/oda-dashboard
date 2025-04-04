@@ -1,6 +1,6 @@
 ```js 
 import {setCustomColors} from "./components/colors.js"
-import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap} from "./components/utils.js";
+import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap, decodeHTML} from "./components/utils.js";
 import {sectorsQueries} from "./components/sectorsQueries.js"
 import {rangeInput} from "./components/rangeInput.js";
 import {linePlot, sparkbarTable} from "./components/visuals.js";
@@ -138,27 +138,39 @@ const unitInput = Inputs.select(
 const unit = Generators.input(unitInput)
 
 
-console.log(indicatorInput.value)
-console.log(getNameByCode(indicatorMapping, indicator))
-
 function disableBreakdown() {
+
     const subsectorCount = Object.values(subsector2Sector).filter(
         (sector) => sector === selectedSector
     ).length;
 
+    const checkbox = breakdownInput.querySelector("input");
+    const parentDiv = checkbox.closest("form");
+
     const shouldDisable = subsectorCount === 1;
 
-    const option = breakdownInput.querySelector("input");
+    if (shouldDisable) {
+        // Save current user state
+        checkbox.dataset.userChecked = checkbox.checked;
+        
+        // Uncheck + disable
+        checkbox.checked = false;
+        checkbox.disabled = true;
+    } else {
+        // Enable
+        checkbox.disabled = false;
 
-    option.toggleAttribute("disabled", shouldDisable);
-
-    const parentDiv = option.closest("form");
-    if (parentDiv) {
-        parentDiv.classList.toggle("disabled", shouldDisable);
+        // Restore previous user state
+        if (checkbox.dataset.userChecked) {
+            checkbox.checked = checkbox.dataset.userChecked === "true";
+            delete checkbox.dataset.userChecked;
+        }
     }
-
+    
+    parentDiv.classList.toggle("disabled", shouldDisable);
+    
     for (const o of unitInput.querySelectorAll("option")) {
-        if (o.innerHTML === `% of ${selectedSector} ODA` && (shouldDisable || !breakdown)) {
+        if (decodeHTML(o.innerHTML) === `% of ${selectedSector} ODA` && (shouldDisable || !breakdown)) {
             o.setAttribute("disabled", "disabled");
         }
         else o.removeAttribute("disabled");
