@@ -16,10 +16,19 @@ export function linePlot(data, mode, width,
                              showIntlCommitment = false,
                          } = {}) {
 
-    let arrayData = data.map((row) => ({
-        ...row,
-        year: new Date(row.year, 1, 1)
-    }))
+    let arrayData = data.map((row) => {
+        const formattedRow = {};
+        for (const [key, value] of Object.entries({
+            ...row,
+            year: new Date(row.year, 1, 1)
+        })) {
+            const formattedKey = key
+                .replace(/_/g, "-")
+                .replace(/^./, char => char.toUpperCase());
+            formattedRow[formattedKey] = value;
+        }
+        return formattedRow;
+    });
 
     let labelSymbol,
         yValue,
@@ -31,8 +40,8 @@ export function linePlot(data, mode, width,
     if (mode === "sectors") {
 
         labelSymbol = getCurrencyLabel(currency, {})
-        yValue = "value"
-        groupVar = breakdown ? "sub_sector" : "sector"
+        yValue = "Value"
+        groupVar = breakdown ? "Sub-sector" : "Sector"
         customChannels = {}
         customFormat = {
             stroke: true,
@@ -41,21 +50,24 @@ export function linePlot(data, mode, width,
 
         if (breakdown) {
             const uniqueSubsectors = [
-                ...new Set(data.map(row => row["sub_sector"])).values()
+                ...new Set(arrayData.map(row => row[groupVar])).values()
             ].sort((a, b) => a.localeCompare(b));
 
             colorScale = {
                 domain: uniqueSubsectors,
                 range: paletteSectors
             }
-        } else {
+        }
+        else {
             colorScale = {
                 domain: [selectedSector],
                 range: [paletteSectors[0]]
             }
         }
 
-    } else {
+    }
+    else {
+        yValue = "Value"
         labelSymbol = "%"
         customFormat = {
             stroke: true,
@@ -64,8 +76,7 @@ export function linePlot(data, mode, width,
             y: false
         }
         if (mode === "financing") {
-            yValue = "value"
-            groupVar = "type"
+            groupVar = "Type"
             customChannels = {
                 custom: {
                     value: yValue,
@@ -73,31 +84,24 @@ export function linePlot(data, mode, width,
                 }
             }
             colorScale = paletteFinancing
-        } else if (mode === "recipients") {
-            yValue = "value"
-            groupVar = "indicator"
-            stacked = new Set(data.map(d => d[groupVar])).size > 1;
+        }
+        else {
+            groupVar = "Indicator"
+            stacked = new Set(arrayData.map(d => d[groupVar])).size > 1;
             customChannels = {
                 custom: {
                     value: yValue,
                     label: "Share of total"
                 }
             }
-            colorScale = paletteRecipients
-        } else if (mode === "gender") {
-            yValue = "value"
-            groupVar = "indicator"
-            stacked = new Set(data.map(d => d[groupVar])).size > 1;
-            customChannels = {
-                custom: {
-                    value: yValue,
-                    label: "Share of total"
-                }
+            if (mode === "recipients") {
+                colorScale = paletteRecipients
             }
-            colorScale = paletteGender
+            else if (mode === "gender") {
+                colorScale = paletteGender
+            }
         }
     }
-
 
     const formatYear = timeFormat("%Y");
 
@@ -133,7 +137,7 @@ export function linePlot(data, mode, width,
                 stacked || breakdown
                     ? [
                         Plot.areaY(arrayData, {
-                            x: "year",
+                            x: "Year",
                             y: yValue,
                             fill: groupVar,
                             fillOpacity: 0.85,
@@ -142,7 +146,7 @@ export function linePlot(data, mode, width,
                         Plot.tip(arrayData,
                             Plot.pointerX(
                                 Plot.stackY({
-                                    x: "year",
+                                    x: "Year",
                                     y: yValue,
                                     fill: groupVar,
                                     channels: customChannels,
@@ -156,7 +160,7 @@ export function linePlot(data, mode, width,
                     ]
                     : [
                         Plot.line(arrayData, {
-                            x: "year",
+                            x: "Year",
                             y: yValue,
                             z: groupVar,
                             stroke: groupVar,
@@ -167,7 +171,7 @@ export function linePlot(data, mode, width,
                         Plot.tip(
                             arrayData,
                             Plot.pointer({
-                                x: "year",
+                                x: "Year",
                                 y: yValue,
                                 stroke: groupVar,
                                 channels: customChannels,
@@ -212,22 +216,33 @@ export function linePlot(data, mode, width,
 
 export function barPlot(data, currency, mode, width) {
 
-    const arrayData = data.map((row) => ({
-        ...row,
-        year: new Date(row.year, 1, 1)
-    }))
+    let arrayData = data.map((row) => {
+        const formattedRow = {};
+        for (const [key, value] of Object.entries({
+            ...row,
+            year: new Date(row.year, 1, 1)
+        })) {
+            const formattedKey = key
+                .replace(/_/g, "-")
+                .replace(/^./, char => char.toUpperCase());
+            formattedRow[formattedKey] = value;
+        }
+        return formattedRow;
+    });
 
     let fillVar, colorScale
     if (mode === "financing") {
-        fillVar = "type"
+        fillVar = "Type"
         colorScale = paletteFinancing
-    } else if (mode === "recipients") {
-        fillVar = "indicator"
-        colorScale = paletteRecipients
     }
-    else if (mode === "gender") {
-        fillVar = "indicator"
-        colorScale = paletteGender
+    else {
+        fillVar = "Indicator"
+        if (mode === "recipients") {
+            colorScale = paletteRecipients
+        }
+        else if (mode === "gender") {
+            colorScale = paletteGender
+        }
     }
 
     return Plot.plot({
@@ -258,8 +273,8 @@ export function barPlot(data, currency, mode, width) {
         marks: [
             Plot.rectY(
                 arrayData, {
-                    x: "year",
-                    y: "value",
+                    x: "Year",
+                    y: "Value",
                     fill: fillVar,
                     opacity: .85
                 }
@@ -268,8 +283,8 @@ export function barPlot(data, currency, mode, width) {
             Plot.tip(arrayData,
                 Plot.pointerX(
                     Plot.stackY({
-                        x: "year",
-                        y: "value",
+                        x: "Year",
+                        y: "Value",
                         fill: fillVar,
                         lineHeight: 1.25,
                         fontSize: 12
@@ -290,6 +305,17 @@ export function barPlot(data, currency, mode, width) {
 
 export function sparkbarTable(data, mode, {breakdown}) {
 
+    let arrayData = data.map((row) => {
+        const formattedRow = {};
+        for (const [key, value] of Object.entries(row)) {
+            const formattedKey = key
+                .replace(/_/g, "-")
+                .replace(/^./, char => char.toUpperCase());
+            formattedRow[formattedKey] = value;
+        }
+        return formattedRow;
+    });
+
     let tableData,
         columnsToShow,
         valueColumns,
@@ -298,24 +324,24 @@ export function sparkbarTable(data, mode, {breakdown}) {
         maxValues
     if (mode === "sectors") {
 
-        const grouper = breakdown ? "sub_sector" : "sector"
+        const groupVar = breakdown ? "Sub-sector" : "Sector"
 
-        const uniqueGrups = [
-            ...new Set(data.map(row => row[grouper])).values()
+        const uniqueGroups = [
+            ...new Set(arrayData.map(row => row[groupVar])).values()
         ].sort((a, b) => a.localeCompare(b));
 
 
-        const unitKey = "value"; // make sure this matches actual key in the data
+        const unitKey = "Value"; // make sure this matches actual key in the data
 
         tableData = Object.values(
-            data.reduce((acc, row) => {
+            arrayData.reduce((acc, row) => {
                 const yearKey = row.year;
-                const group = row[grouper];
+                const group = row[groupVar];
                 const value = row[unitKey];
 
                 if (!acc[yearKey]) {
                     acc[yearKey] = { year: yearKey };
-                    uniqueGrups.forEach(s => {
+                    uniqueGroups.forEach(s => {
                         acc[yearKey][s] = null;
                     });
                 }
@@ -329,7 +355,7 @@ export function sparkbarTable(data, mode, {breakdown}) {
 
 
         columnsToShow = Object.keys(tableData[0]);
-        valueColumns = columnsToShow.filter(item => item !== "year")
+        valueColumns = columnsToShow.filter(item => item !== "Year")
 
         maxValues = Math.max(...valueColumns
             .flatMap(column => tableData
@@ -340,19 +366,22 @@ export function sparkbarTable(data, mode, {breakdown}) {
     } else {
 
         if (mode === "financing") {
+            colorColumn = "Type"
             colorMapping = paletteFinancing
-            colorColumn = "type"
-        } else if (mode === "recipients") {
-            colorMapping = paletteRecipients
-            colorColumn = "indicator"
-        } else if (mode === "gender") {
-            colorMapping = paletteGender
-            colorColumn = "indicator"
+        }
+        else {
+            colorColumn = "Indicator"
+            if (mode === "recipients") {
+                colorMapping = paletteRecipients
+            }
+            else if (mode === "gender") {
+                colorMapping = paletteGender
+            }
         }
 
-        tableData = data
-        valueColumns = ["value"];
-        columnsToShow = ["year", colorColumn, valueColumns[0]]
+        tableData = arrayData
+        valueColumns = ["Value"];
+        columnsToShow = ["Year", colorColumn, valueColumns[0]]
 
         maxValues = max(tableData, d => d[valueColumns]);
 
@@ -366,7 +395,7 @@ export function sparkbarTable(data, mode, {breakdown}) {
     return table(tableData, {
         columns: Object.keys(tableData[0])
             .filter(column => columnsToShow.includes(column)),
-        sort: "year",
+        sort: "Year",
         reverse: true,
         format: {
             year: (x) => x,
@@ -518,13 +547,15 @@ function hex2rgb(hex, alpha = 1) {
         r = parseInt(hex.slice(0, 2), 16);
         g = parseInt(hex.slice(2, 4), 16);
         b = parseInt(hex.slice(4, 6), 16);
-    } else if (hex.length === 8) {
+    }
+    else if (hex.length === 8) {
         // If hex is #RRGGBBAA
         r = parseInt(hex.slice(0, 2), 16);
         g = parseInt(hex.slice(2, 4), 16);
         b = parseInt(hex.slice(4, 6), 16);
         a = parseInt(hex.slice(6, 8), 16) / 255; // Alpha is in [0, 255]
-    } else {
+    }
+    else {
         throw new Error("Invalid hex format. Use #RRGGBB or #RRGGBBAA.");
     }
 
