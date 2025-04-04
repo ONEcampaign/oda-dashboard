@@ -231,7 +231,7 @@ function generateSubtitle(codes, indicatorMapping) {
                                                 </div>
                                                 <div class="logo-section">
                                                     <a href="https://data.one.org/" target="_blank">
-                                                        ${ONELogo}
+                                                        ${ONELogo.cloneNode(true)}
                                                     </a>
                                                 </div>
                                             </div>
@@ -287,7 +287,7 @@ function generateSubtitle(codes, indicatorMapping) {
                                                 </div>
                                                 <div class="logo-section">
                                                     <a href="https://data.one.org/" target="_blank">
-                                                        ${ONELogo}
+                                                        ${ONELogo.cloneNode(true)}
                                                     </a>
                                                 </div>
                                             </div>
@@ -343,7 +343,7 @@ function generateSubtitle(codes, indicatorMapping) {
                                             </div>
                                             <div class="logo-section">
                                                 <a href="https://data.one.org/" target="_blank">
-                                                    ${ONELogo}
+                                                    ${ONELogo.cloneNode(true)}
                                                 </a>
                                             </div>
                                         </div>

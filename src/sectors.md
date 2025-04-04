@@ -261,7 +261,7 @@ const tableData = data.table
                                                 </div>
                                                 <div class="logo-section">
                                                     <a href="https://data.one.org/" target="_blank">
-                                                        ${ONELogo}
+                                                        ${ONELogo.cloneNode(true)}
                                                     </a>
                                                 </div>
                                             </div>
@@ -323,7 +323,7 @@ const tableData = data.table
                                                 </div>
                                                 <div class="logo-section">
                                                     <a href="https://data.one.org/" target="_blank">
-                                                        ${ONELogo}
+                                                        ${ONELogo.cloneNode(true)}
                                                     </a>
                                                 </div>
                                             </div>
@@ -386,7 +386,7 @@ const tableData = data.table
                                             </div>
                                             <div class="logo-section">
                                                 <a href="https://data.one.org/" target="_blank">
-                                                    ${ONELogo}
+                                                    ${ONELogo.cloneNode(true)}
                                                 </a>
                                             </div>
                                         </div>
