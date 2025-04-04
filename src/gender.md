@@ -102,12 +102,14 @@ const timeRangeInput = rangeInput(
         enableTextInput: true
     })
 const timeRange = Generators.input(timeRangeInput)
-
+```
+    
+```js
 // Unit
 const unitInput = Inputs.select(
     new Map(
         [
-            [`Million ${getCurrencyLabel(currencyInput.value, {currencyOnly: true,})}`, "value"],
+            [`Million ${getCurrencyLabel(currency, {currencyOnly: true,})}`, "value"],
             ["% of total ODA", "total"]
         ]
     ),

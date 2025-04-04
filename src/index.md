@@ -87,12 +87,14 @@ const timeRangeInput = rangeInput(
         enableTextInput: true
     })
 const timeRange = Generators.input(timeRangeInput)
+```
 
+```js
 // Unit
 const unitInput = Inputs.select(
     new Map(
         [
-            [`Million ${getCurrencyLabel(currencyInput.value, {currencyOnly: true,})}`, "value"],
+            [`Million ${getCurrencyLabel(currency, {currencyOnly: true,})}`, "value"],
             ["% of GNI", "gni_pct"],
             ["% of total ODA", "total_pct"]
         ]
@@ -247,7 +249,7 @@ const tableData = data.table
                                             ? html`in <span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span>`
                                             : html`in ${[...new Set(relativeData.map(d => d.type))][0]}`
                                     }
-                                    ${indicator === indicatorMapping.get("Total ODA") ? html`as a share of GNI` : html`as a share of total aid`}
+                                    ${indicator === indicatorMapping.get("Total ODA") ? html`as a share of GNI` : html`as a share of total ODA`}
                                 </h3>
                                 ${
                                     indicator === indicatorMapping.get("Total ODA") 
