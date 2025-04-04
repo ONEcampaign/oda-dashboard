@@ -103,6 +103,7 @@ export function sectorsQueries(
         currency,
         prices,
         timeRange,
+        breakdown,
         unit
     )
 
@@ -126,25 +127,25 @@ async function treemapSectorsQuery(
     const query = await db.query(
         `
             WITH filtered AS (
-             SELECT
-                year,
-                donor_code AS donor,
-                sub_sector,
-                ${
-                        indicator.length === 2
-                                ? "'Total ODA'"
-                                : `CASE
+                SELECT
+                   year,
+                   donor_code AS donor,
+                   sub_sector,
+                   ${
+                    indicator.length === 2
+                        ? "'Total ODA'"
+                        : `CASE
                             ${indicatorCase} 
                         END`
-                } AS indicator,
+                   } AS indicator,
                 SUM(value * 1.1 / 1.1) AS value
-             FROM sectors 
-             WHERE
-                 donor_code IN (${donor})
-                 AND recipient_code IN (${recipient})
-                 AND indicator IN (${indicator})
-                 AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-            GROUP BY year, donor_code, sub_sector, indicator
+                FROM sectors 
+                WHERE
+                    donor_code IN (${donor})
+                    AND recipient_code IN (${recipient})
+                    AND indicator IN (${indicator})
+                    AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
+                GROUP BY year, donor_code, sub_sector, indicator
             ),
             conversion AS (
                 SELECT
@@ -280,9 +281,9 @@ async function tableSectorsQuery(
     currency,
     prices,
     timeRange,
+    breakdown,
     unit
 ) {
-
 
     const query = await db.query(
         `
@@ -320,7 +321,7 @@ async function tableSectorsQuery(
             converted_table AS (
                 SELECT
                     f.year, 
-                    f.sub_sector AS sub_sector,
+                    ${breakdown ? "f.sub_sector AS sub_sector," : ""}
                     f.indicator AS indicator,
                     SUM(f.value * 1.1 / 1.1) AS value,
                     SUM(f.value * c.factor) AS converted_value
@@ -328,24 +329,28 @@ async function tableSectorsQuery(
                     JOIN conversion c
                 ON f.year = c.year
                     ${prices === "constant" ? "AND f.donor = c.donor" : ""}
-                GROUP BY f.year, f.sub_sector, indicator
+                GROUP BY f.year, ${breakdown ? "f.sub_sector," : ""} indicator
             ),
             total_table AS (
                 SELECT
                     year,
                     SUM(value * 1.1 / 1.1) AS total_value
-                 FROM sectors 
-                 WHERE
-                    donor_code IN (${donor})
-                    AND recipient_code IN (${recipient})
-                    AND sub_sector IN (${subsectorCodes})
-                    AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
+                FROM sectors 
+                WHERE
+                   donor_code IN (${donor})
+                   AND recipient_code IN (${recipient})
+                   AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
+                   ${
+                        unit === "pct_sector" 
+                            ? `AND sub_sector IN (${subsectorCodes})`
+                            : `AND indicator IN (${indicator})`
+                   }
                 GROUP BY year  
             ),
             final_table AS (
                 SELECT
                     ct.year,
-                    ct.sub_sector,
+                    ${breakdown ? "ct.sub_sector," : ""}
                     ct.indicator,
                     ct.value,
                     ct.converted_value,
@@ -356,8 +361,8 @@ async function tableSectorsQuery(
             SELECT
                 year AS year,
                 '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
-                '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient, 
-                ${subsectorCaseSQL}
+                '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
+                ${breakdown ? subsectorCaseSQL : ""}
                 '${selectedSector}' AS sector,
                 indicator AS indicator,
                 ${

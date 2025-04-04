@@ -8,7 +8,6 @@ import {treemapPlot, selectedSector} from "./components/Treemap.js"
 import {downloadPNG, downloadXLSX} from './components/downloads.js';
 ```
 
-
 ```js
 setCustomColors();
 ```
@@ -28,8 +27,9 @@ const indicatorOptions = await FileAttachment("./data/analysis_tools/sectors_ind
 const indicatorMapping = new Map(
     Object.entries(indicatorOptions).map(([k, v]) => [v, Number(k)])
 );
-```
 
+const subsector2Sector = await FileAttachment("./data/analysis_tools/sectors.json").json()
+```
 
 ```js
 // USER INPUTS
@@ -113,13 +113,21 @@ const breakdownInput = Inputs.toggle(
     }
 )
 const breakdown = Generators.input(breakdownInput)
+```
 
+```js
 // Unit
 const unitInput = Inputs.select(
     new Map(
         [
-            [`Million ${currencyInput.value}`, "value"],
-            [`% of ${selectedSector} ODA`, "indicator"]
+            [`Million ${getCurrencyLabel(currency, {currencyOnly: true,})}`, "value"],
+            [`% of ${selectedSector} ODA`, "pct_sector"],
+            [
+                `% of ${indicator.length > 1 
+                    ? "total ODA" 
+                    : getNameByCode(indicatorMapping, indicator)}`, 
+                "pct_total"
+            ]
         ]
     ),
     {
@@ -128,6 +136,38 @@ const unitInput = Inputs.select(
     }
 )
 const unit = Generators.input(unitInput)
+
+
+console.log(indicatorInput.value)
+console.log(getNameByCode(indicatorMapping, indicator))
+
+function disableBreakdown() {
+    const subsectorCount = Object.values(subsector2Sector).filter(
+        (sector) => sector === selectedSector
+    ).length;
+
+    const shouldDisable = subsectorCount === 1;
+
+    const option = breakdownInput.querySelector("input");
+
+    option.toggleAttribute("disabled", shouldDisable);
+
+    const parentDiv = option.closest("form");
+    if (parentDiv) {
+        parentDiv.classList.toggle("disabled", shouldDisable);
+    }
+
+    for (const o of unitInput.querySelectorAll("option")) {
+        if (o.innerHTML === `% of ${selectedSector} ODA` && (shouldDisable || !breakdown)) {
+            o.setAttribute("disabled", "disabled");
+        }
+        else o.removeAttribute("disabled");
+    }
+}
+
+disableBreakdown();
+breakdownInput.addEventListener("input", disableBreakdown);
+unitInput.addEventListener("input", disableBreakdown);
 ```
 
 ```js
@@ -148,7 +188,6 @@ const treemapData = data.treemap
 const selectedData = data.selected
 const tableData = data.table
 ```
-
 
 <div class="header card">
     <a class="view-button" href="./">
@@ -357,7 +396,7 @@ const tableData = data.table
                                                 "Download data", {
                                                     reduce: () => downloadXLSX(
                                                         tableData,
-                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} breakdown ${unit}`, {fileMode: true})                    )
+                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} ${breakdown ? "breakdown" : ""} ${unit}`, {fileMode: true})                    )
                                                 }
                                             )
                                         }
