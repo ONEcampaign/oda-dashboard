@@ -318,7 +318,8 @@ const tableData = data.table
                         ${
                             sparkbarTable(
                                 tableData, 
-                                "financing"
+                                "financing", 
+                                {}
                             )
                         }
                         <div class="bottom-panel">

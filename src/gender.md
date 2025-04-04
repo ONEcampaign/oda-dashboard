@@ -326,7 +326,8 @@ function generateSubtitle(codes, indicatorMapping) {
                                         ${
                                             sparkbarTable(
                                                 tableData, 
-                                                "gender"
+                                                "gender",
+                                                {}
                                             )
                                         }
                                         <div class="bottom-panel">

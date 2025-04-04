@@ -326,7 +326,8 @@ const tableData = data.table
                                         ${
                                             sparkbarTable(  
                                                 tableData, 
-                                                "recipients"
+                                                "recipients",
+                                                {}
                                             )
                                         }
                                         <div class="bottom-panel">

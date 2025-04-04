@@ -283,7 +283,7 @@ export function barPlot(data, currency, mode, width) {
     })
 }
 
-export function sparkbarTable(data, mode) {
+export function sparkbarTable(data, mode, {breakdown}) {
 
     let tableData,
         columnsToShow,
@@ -293,8 +293,10 @@ export function sparkbarTable(data, mode) {
         maxValues
     if (mode === "sectors") {
 
-        const uniqueSubsectors = [
-            ...new Set(data.map(row => row["sub_sector"])).values()
+        const grouper = breakdown ? "sub_sector" : "sector"
+
+        const uniqueGrups = [
+            ...new Set(data.map(row => row[grouper])).values()
         ].sort((a, b) => a.localeCompare(b));
 
 
@@ -303,18 +305,18 @@ export function sparkbarTable(data, mode) {
         tableData = Object.values(
             data.reduce((acc, row) => {
                 const yearKey = row.year;
-                const subsector = row["sub_sector"];
+                const group = row[grouper];
                 const value = row[unitKey];
 
                 if (!acc[yearKey]) {
                     acc[yearKey] = { year: yearKey };
-                    uniqueSubsectors.forEach(s => {
+                    uniqueGrups.forEach(s => {
                         acc[yearKey][s] = null;
                     });
                 }
 
-                acc[yearKey][subsector] =
-                    (acc[yearKey][subsector] || 0) + (typeof value === "number" ? value : 0);
+                acc[yearKey][group] =
+                    (acc[yearKey][group] || 0) + (typeof value === "number" ? value : 0);
 
                 return acc;
             }, {})

@@ -109,7 +109,7 @@ const timeRange = Generators.input(timeRangeInput)
 const breakdownInput = Inputs.toggle(
     {
         label: "Sector breakdown",
-        value: false
+        value: true
     }
 )
 const breakdown = Generators.input(breakdownInput)
@@ -369,7 +369,8 @@ const tableData = data.table
                                         ${
                                             sparkbarTable(
                                                 tableData, 
-                                                "sectors"
+                                                "sectors",
+                                                {breakdown: breakdown}
                                             )
                                         }
                                         <div class="bottom-panel">
