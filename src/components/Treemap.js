@@ -3,10 +3,20 @@ import { formatValue, getCurrencyLabel } from "./utils.js";
 import { Mutable } from "observablehq:stdlib";
 import {paletteTreemap} from "./colors.js";
 
+
+const tooltip = d3.select("body")
+    .append("div")
+    .attr("class", "observable-tooltip")
+    .style("visibility", "hidden");
+
 // Declare an observable variable to hold the selected sector
 export const selectedSector = Mutable("Health"); // Default selected sector
 
 export function treemapPlot(data, width, { currency = null } = {}) {
+
+
+    const period = data[0].period
+    const indicator = data[0].indicator
 
     // Aggregate data by sector and calculate total values
     const aggregated = d3.rollups(
@@ -34,6 +44,9 @@ export function treemapPlot(data, width, { currency = null } = {}) {
         parentId: (d) => d.parentId,
         value: (d) => d.value,
         group: (d) => d.id,
+        currency: currency,
+        period: period,
+        indicator: indicator,
         width: width,
         height: 400,
         padding: 1,
@@ -60,6 +73,9 @@ function Treemap(data, { // data is either tabular (array of objects) or hierarc
     sort = (a, b) => d3.descending(a.value, b.value),
     label,
     group,
+    currency,
+    period,
+    indicator,
     title,
     link,
     linkTarget = "_blank",
@@ -192,21 +208,24 @@ function Treemap(data, { // data is either tabular (array of objects) or hierarc
         .attr("font-weight", "500")
         .attr("fill", (d) => d.id === selectedSector.value ? "white" : "black")
 
-    // node.append("text")
-    //     .attr("filter", "url(#text-shadow)")
-    //     .attr("clip-path", (d, i) => `url(${new URL(`#${uid}-clip-${i}`, location)})`)
-    //     .attr("x", (d) => (d.x1 - d.x0) / 2)
-    //     .attr("y", (d) => (d.y1 - d.y0) / 2)
-    //     .attr("text-anchor", "middle")
-    //     .text(
-    //         (d) => (d.x1 - d.x0) > 100
-    //             ? getCurrencyLabel("US Dollars", {value: formatValue(d.value).label, long: false})
-    //             : "..."
-    //     )
-    //     .attr("font-size", "12px")
-    //     .attr("font-family", "var(--sans-serif)")
-    //     .attr("font-weight", "500")
-    //     .attr("fill", (d) => darkColors.includes(color(group(d.data, d))) ? "white" : "black")
+    node.append("text")
+        .attr("filter", "url(#text-shadow)")
+        .attr("clip-path", (d, i) => `url(${new URL(`#${uid}-clip-${i}`, location)})`)
+        .attr("x", (d) => (d.x1 - d.x0) / 2)
+        .attr("y", (d) => (d.y1 - d.y0) / 2)
+        .attr("text-anchor", "middle")
+        .text(
+            (d) => (d.x1 - d.x0) > 150
+                ? getCurrencyLabel(currency, {value: formatValue(d.value).label, long: false})
+                : (d.x1 - d.x0) > 50
+                    ? "..."
+                    : ""
+
+        )
+        .attr("font-size", "10px")
+        .attr("font-family", "var(--sans-serif)")
+        .attr("font-weight", "500")
+        .attr("fill", (d) => d.id === selectedSector.value ? "white" : "black")
 
     node.append("rect")
         .attr("id", (d) => d.id)
@@ -219,28 +238,22 @@ function Treemap(data, { // data is either tabular (array of objects) or hierarc
                 onClick(d.id);
             }
 
-            // Re-color all rectangles on selection
             node.selectAll("rect")
                 .filter(function () {
                     return d3.select(this).attr("id")?.startsWith("rect-");
                 })
                 .transition()
-                // .duration(200)
                 .attr("fill", (rectD) => rectD.id === d.id ? paletteTreemap[0] : paletteTreemap[1])
                 .attr("stroke", (rectD) => rectD.id === d.id ? paletteTreemap[0] : paletteTreemap[1]);
         })
-        // Add hover effects: change opacity on hover
         .on("mouseenter", function (event, d) {
             const id = d.id.replace(/\s+/g, '-').replace(/[&/,]/g, '');
 
-            // Fade the main rect's fill and stroke
             d3.select(`#rect-${id}`)
                 .transition()
-                // .duration(150)
-                .style("fill-opacity", 0.6)
+                .style("fill-opacity", 0.6);
 
-            // Add highlight rect
-            d3.select(this.parentNode) // this is the <a> element
+            d3.select(this.parentNode)
                 .append("rect")
                 .attr("class", "hover-outline")
                 .attr("x", 0)
@@ -248,22 +261,40 @@ function Treemap(data, { // data is either tabular (array of objects) or hierarc
                 .attr("width", d.x1 - d.x0)
                 .attr("height", d.y1 - d.y0)
                 .attr("stroke", "black")
-                .attr("stroke-width", 1.5)
+                .attr("stroke-width", 1.25)
                 .attr("fill", "none")
                 .attr("pointer-events", "none");
+
+            const valueLabel = formatValue(d.value).label;
+            const label = `
+                    <b>Sector</b> ${d.id}<br>
+                    <b>Period</b> ${period}<br>
+                    <b>Indicator</b> ${indicator}<br>
+                    <b>${getCurrencyLabel(currency, {currencyLong: false})}</b> ${valueLabel}
+            `;
+
+            tooltip
+                .html(label)
+                .style("visibility", "visible");
+
+        })
+        .on("mousemove", function (event) {
+            tooltip
+                .style("top", `${event.pageY + 12}px`)
+                .style("left", `${event.pageX + 12}px`);
         })
         .on("mouseleave", function (event, d) {
             const id = d.id.replace(/\s+/g, '-').replace(/[&/,]/g, '');
 
-            // Reset fill and stroke opacity
             d3.select(`#rect-${id}`)
                 .transition()
-                // .duration(150)
-                .style("fill-opacity", fillOpacity)
+                .style("fill-opacity", fillOpacity);
 
-            // Remove highlight outline
             d3.select(this.parentNode).select(".hover-outline").remove();
+
+            tooltip.style("visibility", "hidden");
         });
+
 
 
     return Object.assign(svg.node(), {});

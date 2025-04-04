@@ -222,7 +222,6 @@ select, input {
 }
 
 
-
 #lines-sectors > .plot-subtitle {
     margin-bottom: 10px;
 }
@@ -267,6 +266,25 @@ select, input {
 [aria-label="y-grid"] {
     color: var(--midGrey);
 }
+
+/* Tool tip */
+
+.observable-tooltip {
+    position: absolute;
+    z-index: 9999;
+    background: #f6f6f6;
+    color: black;
+    padding: 6px 8px;
+    /*border-radius: 4px;*/
+    border: .75px solid black;
+    font: 12px var(--sans-serif, sans-serif);
+    line-height: 1.5;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    transform: translateY(-0.25em);
+}
+
 
 /* Tables */
 .table-title {
