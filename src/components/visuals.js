@@ -308,6 +308,10 @@ export function barPlot(data, currency, mode, width) {
 
 export function sparkbarTable(data, mode, {breakdown}) {
 
+    if (!data || data.length === 0) {
+        return table([], { columns: [] });
+    }
+
     let arrayData = data.map((row) => {
         const formattedRow = {};
         for (const [key, value] of Object.entries(row)) {
