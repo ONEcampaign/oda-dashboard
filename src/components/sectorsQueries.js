@@ -85,7 +85,7 @@ export function sectorsQueries(
         indicatorCase,
         selectedSector,
         subsectorCodes,
-        subsectorCaseSQL,
+        code2SubsectorCase,
         currency,
         prices,
         timeRange,
@@ -99,7 +99,7 @@ export function sectorsQueries(
         indicatorCase,
         selectedSector,
         subsectorCodes,
-        subsectorCaseSQL,
+        code2SubsectorCase,
         currency,
         prices,
         timeRange,
@@ -195,7 +195,7 @@ async function selectedSectorsQuery(
     indicatorCase,
     selectedSector,
     subsectorCodes,
-    subsectorCaseSQL,
+    code2SubsectorCase,
     currency,
     prices,
     timeRange,
@@ -238,28 +238,53 @@ async function selectedSectorsQuery(
             ),
             joined AS (
                 SELECT
-                    f.year, 
+                    f.year,
                     ${breakdown ? "f.sub_sector AS sub_sector," : ""}
-                    indicator,
+                        indicator,
                     SUM(f.value * c.factor) AS converted_value
                 FROM filtered f
                     JOIN conversion c
                 ON f.year = c.year
                     ${prices === "constant" ? "AND f.donor = c.donor" : ""}
                 GROUP BY f.year, ${breakdown ? "f.sub_sector," : ""} indicator
-            )
+            ), 
+            ${breakdown 
+                 ? `
+                    totals AS (
+                        SELECT 
+                            sub_sector, 
+                            SUM(converted_value) AS total_value
+                        FROM joined
+                        GROUP BY sub_sector
+                    )
+                    ` 
+                : ""
+            }
             SELECT
-                year AS year,
+                j.year AS year,
                 '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
                 '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
-                ${breakdown ? subsectorCaseSQL : ""}
+                ${
+                    breakdown 
+                        ? `
+                            CASE j.sub_sector 
+                                ${code2SubsectorCase}
+                            END AS 'sub_sector',
+                        ` 
+                        : ""
+                }
                 '${selectedSector}' AS sector,
-                indicator,
-                converted_value  AS value,
+                j.indicator,
+                j.converted_value AS value,
                 '${currency} ${prices} million' AS unit,
-                'OECD CRS, Multisystem'  AS source
-            FROM joined
-            ORDER BY year, ${breakdown ? "sub_sector,": ""} Sector
+                'OECD CRS, Multisystem' AS source
+            FROM joined j
+                ${breakdown ? "LEFT JOIN totals t ON j.sub_sector = t.sub_sector" : ""}
+            ORDER BY 
+                j.year, 
+                ${breakdown ? "t.total_value DESC," : ""} 
+                ${breakdown ? "j.sub_sector," : ""}
+                sector
         `
     )
 
@@ -277,7 +302,7 @@ async function tableSectorsQuery(
     indicatorCase,
     selectedSector,
     subsectorCodes,
-    subsectorCaseSQL,
+    code2SubsectorCase,
     currency,
     prices,
     timeRange,
@@ -331,6 +356,20 @@ async function tableSectorsQuery(
                     ${prices === "constant" ? "AND f.donor = c.donor" : ""}
                 GROUP BY f.year, ${breakdown ? "f.sub_sector," : ""} indicator
             ),
+            ${
+                breakdown 
+                    ? `
+                        totals_by_subsector AS (
+                            SELECT 
+                                sub_sector, 
+                                SUM(converted_value) AS total_subsector_value
+                            FROM converted_table
+                            GROUP BY sub_sector
+                        ),
+                    ` 
+                    : 
+                        ""
+            }
             total_table AS (
                 SELECT
                     year,
@@ -351,18 +390,28 @@ async function tableSectorsQuery(
                 SELECT
                     ct.year,
                     ${breakdown ? "ct.sub_sector," : ""}
-                    ct.indicator,
+                        ct.indicator,
                     ct.value,
                     ct.converted_value,
-                    tt.total_value,
+                    tt.total_value
+                    ${breakdown ? ", ts.total_subsector_value" : ""}
                 FROM converted_table ct
                     LEFT JOIN total_table tt ON ct.year = tt.year
+                    ${breakdown ? "LEFT JOIN totals_by_subsector ts ON ct.sub_sector = ts.sub_sector" : ""}
             )
             SELECT
                 year AS year,
                 '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
                 '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
-                ${breakdown ? subsectorCaseSQL : ""}
+                ${
+                    breakdown
+                            ? `
+                        CASE sub_sector 
+                            ${code2SubsectorCase}
+                        END AS 'sub_sector',
+                    `
+                            : ""
+                }
                 '${selectedSector}' AS sector,
                 indicator AS indicator,
                 ${
@@ -377,6 +426,10 @@ async function tableSectorsQuery(
                 } AS unit,
                 'OECD CRS, Multisystem'  AS source
             FROM final_table
+            ORDER BY
+                ${breakdown ? "total_subsector_value DESC," : ""}
+                year,
+                ${breakdown ? "sub_sector," : ""} indicator
         `
     )
 

@@ -52,7 +52,7 @@ export function linePlot(data, mode, width,
         if (breakdown) {
             const uniqueSubsectors = [
                 ...new Set(arrayData.map(row => row[groupVar])).values()
-            ].sort((a, b) => a.localeCompare(b));
+            ]
 
             colorScale = {
                 domain: uniqueSubsectors,
@@ -335,7 +335,7 @@ export function sparkbarTable(data, mode, {breakdown}) {
 
         const uniqueGroups = [
             ...new Set(arrayData.map(row => row[groupVar])).values()
-        ].sort((a, b) => a.localeCompare(b));
+        ]
 
 
         const unitKey = "Value"; // make sure this matches actual key in the data
