@@ -113,6 +113,16 @@ const breakdownInput = Inputs.toggle(
     }
 )
 const breakdown = Generators.input(breakdownInput)
+
+// Breakdown Placeholder
+const breakdownPlaceholderInput = Inputs.toggle(
+    {
+        label: "Sector breakdown",
+        value: false,
+        disabled: true
+    }
+)
+const breakdownPlaceholder = Generators.input(breakdownPlaceholderInput)
 ```
 
 ```js
@@ -136,38 +146,22 @@ const unitInput = Inputs.select(
     }
 )
 const unit = Generators.input(unitInput)
+```
+
+```js
+const subsectorCount = Object.values(subsector2Sector).filter(
+    (sector) => sector === selectedSector
+).length;
+
+const shouldDisable = subsectorCount === 1;
+
+const checkbox = breakdownPlaceholderInput.querySelector("input");
+const parentDiv = checkbox.closest("form");
+
+parentDiv.classList.add("disabled");
 
 
 function disableBreakdown() {
-
-    const subsectorCount = Object.values(subsector2Sector).filter(
-        (sector) => sector === selectedSector
-    ).length;
-
-    const checkbox = breakdownInput.querySelector("input");
-    const parentDiv = checkbox.closest("form");
-
-    const shouldDisable = subsectorCount === 1;
-
-    if (shouldDisable) {
-        // Save current user state
-        checkbox.dataset.userChecked = checkbox.checked;
-        
-        // Uncheck + disable
-        checkbox.checked = false;
-        checkbox.disabled = true;
-    } else {
-        // Enable
-        checkbox.disabled = false;
-
-        // Restore previous user state
-        if (checkbox.dataset.userChecked) {
-            checkbox.checked = checkbox.dataset.userChecked === "true";
-            delete checkbox.dataset.userChecked;
-        }
-    }
-    
-    parentDiv.classList.toggle("disabled", shouldDisable);
     
     for (const o of unitInput.querySelectorAll("option")) {
         if (decodeHTML(o.innerHTML) === `% of ${selectedSector} ODA` && (shouldDisable || !breakdown)) {
@@ -178,7 +172,6 @@ function disableBreakdown() {
 }
 
 disableBreakdown();
-breakdownInput.addEventListener("input", disableBreakdown);
 unitInput.addEventListener("input", disableBreakdown);
 ```
 
@@ -313,7 +306,7 @@ const tableData = data.table
                                                     ? html`<h3 class="plot-subtitle">${selectedSector}; Total ODA</h3>`
                                                     : html`<h3 class="plot-subtitle">${selectedSector}; ${getNameByCode(indicatorMapping, indicator)} ODA</h3>`
                                                 }
-                                                ${breakdownInput}
+                                                ${shouldDisable ? breakdownPlaceholderInput : breakdownInput}
                                             </div>
                                             ${
                                                 resize(
