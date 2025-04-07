@@ -6,7 +6,7 @@ const db = await DuckDBClient.of({
     financing: FileAttachment("../data/scripts/financing.parquet"),
     gni_table: FileAttachment("../data/scripts/gni_table.parquet"),
     current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv"),
-    // constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table.csv")
+    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table.csv")
 });
 
 const donorOptions = await FileAttachment("../data/analysis_tools/donors.json").json()
@@ -103,7 +103,7 @@ async function absoluteFinancingQuery(
                 year AS year,
                 '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
                 '${escapeSQL(getNameByCode(indicatorMapping, indicator))}' AS indicator,
-                CASE 
+                CASE
                     WHEN year < 2018 THEN 'Flows'
                     WHEN year >= 2018 THEN 'Grant equivalents'
                 END AS type,

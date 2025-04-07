@@ -71,7 +71,7 @@ const pricesInput = Inputs.radio(
     {
         label: "Prices",
         value: "current",
-        disabled: ["constant"]
+        // disabled: ["constant"]
     }
 )
 const prices = Generators.input(pricesInput)
