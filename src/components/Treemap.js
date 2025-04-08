@@ -3,32 +3,33 @@ import { formatValue, getCurrencyLabel } from "./utils.js";
 import { Mutable } from "observablehq:stdlib";
 import { paletteTreemap } from "./colors.js";
 
+// Tooltip setup
 const tooltip = d3.select("body")
     .append("div")
     .attr("class", "observable-tooltip")
     .style("visibility", "hidden");
 
+// Shared state for selected sector
 export const selectedSector = Mutable("Health");
 
 export function treemapPlot(data, width, { currency = null } = {}) {
+    // Layout config
     const height = 400;
     const margin = 0;
     const strokeWidth = 17.5;
     const padding = 1;
-    const marginTop = margin,
-        marginRight = margin,
-        marginBottom = margin,
-        marginLeft = margin;
 
     const period = data[0].period;
     const indicator = data[0].indicator;
 
+    // Aggregate data by sector
     const aggregated = d3.rollups(
         data,
         v => d3.sum(v, d => d.value),
         d => d.sector
     );
 
+    // Convert to hierarchy-friendly format
     const formattedData = [
         { id: "root", parentId: null, value: null },
         ...aggregated.map(([sector, value]) => ({
@@ -38,17 +39,20 @@ export function treemapPlot(data, width, { currency = null } = {}) {
         }))
     ];
 
+    // Create hierarchy root
     const root = d3
         .stratify()
         .id(d => d.id)
         .parentId(d => d.parentId)(formattedData)
         .sum(d => d.value);
 
+    // Sort sectors descending by value
     root.sort((a, b) => d3.descending(a.value, b.value));
 
+    // Generate treemap layout
     d3.treemap()
         .tile(d3.treemapBinary)
-        .size([width - marginLeft - marginRight, height - marginTop - marginBottom])
+        .size([width, height])
         .paddingInner(padding)
         .paddingTop(padding)
         .paddingRight(padding)
@@ -59,38 +63,51 @@ export function treemapPlot(data, width, { currency = null } = {}) {
     const leaves = root.leaves();
     const uid = `O-${Math.random().toString(16).slice(2)}`;
 
+    // Create SVG container
     const svg = d3
         .create("svg")
-        .attr("viewBox", [-marginLeft, -marginTop, width, height])
+        .attr("viewBox", [0, 0, width, height])
         .attr("width", width)
         .attr("height", height)
         .attr("style", "max-width: 100%; height: auto; height: intrinsic;")
         .attr("font-family", "sans-serif")
         .attr("font-size", 10);
 
+    // Create a group for each node
     const node = svg
         .selectAll("g")
         .data(leaves)
         .join("g")
         .attr("transform", d => `translate(${d.x0},${d.y0})`);
 
+    // Draw rects with color and stroke
     node.append("rect")
         .attr("id", d => `rect-${d.id.replace(/\s+/g, '-').replace(/[&/,]/g, '')}`)
         .attr("fill", d => d.id === selectedSector.value ? paletteTreemap[0] : paletteTreemap[1])
         .attr("fill-opacity", d => d.id === selectedSector.value ? 0.6 : 0.8)
-        .attr("stroke", d => d.id === selectedSector.value ? paletteTreemap[0] : paletteTreemap[1])
-        .attr("stroke-width", strokeWidth)
-        .attr("x", strokeWidth / 2)
-        .attr("y", strokeWidth / 2)
-        .attr("width", d => d.x1 - d.x0 - strokeWidth)
-        .attr("height", d => d.y1 - d.y0 - strokeWidth);
+        .attr("stroke", d => {
+            const w = d.x1 - d.x0;
+            const h = d.y1 - d.y0;
+            return (w < strokeWidth || h < strokeWidth) ? "none" : (d.id === selectedSector.value ? paletteTreemap[0] : paletteTreemap[1]);
+        })
+        .attr("stroke-width", d => {
+            const w = d.x1 - d.x0;
+            const h = d.y1 - d.y0;
+            return (w < strokeWidth || h < strokeWidth) ? 0 : strokeWidth;
+        })
+        .attr("x", d => ((d.x1 - d.x0 < strokeWidth || d.y1 - d.y0 < strokeWidth) ? 0 : strokeWidth / 2))
+        .attr("y", d => ((d.x1 - d.x0 < strokeWidth || d.y1 - d.y0 < strokeWidth) ? 0 : strokeWidth / 2))
+        .attr("width", d => Math.max(0, d.x1 - d.x0 - ((d.x1 - d.x0 < strokeWidth || d.y1 - d.y0 < strokeWidth) ? 0 : strokeWidth)))
+        .attr("height", d => Math.max(0, d.y1 - d.y0 - ((d.x1 - d.x0 < strokeWidth || d.y1 - d.y0 < strokeWidth) ? 0 : strokeWidth)));
 
+    // Define clip paths for text
     node.append("clipPath")
         .attr("id", (d, i) => `${uid}-clip-${i}`)
         .append("rect")
         .attr("width", d => d.x1 - d.x0 - 5)
         .attr("height", d => d.y1 - d.y0);
 
+    // Sector name (top left)
     node.append("text")
         .attr("clip-path", (d, i) => `url(${new URL(`#${uid}-clip-${i}`, location)})`)
         .attr("x", 5)
@@ -102,30 +119,31 @@ export function treemapPlot(data, width, { currency = null } = {}) {
         .attr("font-weight", "500")
         .attr("fill", d => d.id === selectedSector.value ? "white" : "black");
 
+    // Sector value label (centered)
     node.append("text")
         .attr("clip-path", (d, i) => `url(${new URL(`#${uid}-clip-${i}`, location)})`)
         .attr("x", d => (d.x1 - d.x0) / 2)
-        .attr("y", d => (d.y1 - d.y0) / 2)
+        .attr("y", d => (d.y1 - d.y0) / 1.8)
         .attr("text-anchor", "middle")
         .text(d => {
-            const w = d.x1 - d.x0;
-            const h = d.y1 - d.y0;
-            if (h > 40) {
-                if (w > 75) return formatValue(d.value).label;
-                if (w > 50) return "...";
-            }
+            const w = d.x1 - d.x0 - strokeWidth;
+            const h = d.y1 - d.y0 - strokeWidth;
+            if (h > 25 && w > 55) return formatValue(d.value).label;
             return "";
         })
         .attr("font-size", d => {
-            const w = d.x1 - d.x0;
-            if (w > 100) return "14px";
-            if (w > 75) return "10px";
-            return "8px"
+            const w = d.x1 - d.x0 - strokeWidth;
+            const h = d.y1 - d.y0 - strokeWidth;
+            const area = w * h;
+            if (h < 25 || w < 55) return "0px";
+            const size = Math.sqrt(area) / 10;
+            return `${Math.max(8, Math.min(size, 20))}px`;
         })
         .attr("font-family", "var(--sans-serif)")
         .attr("font-weight", "500")
         .attr("fill", d => d.id === selectedSector.value ? "white" : "black");
 
+    // Interactive overlay for hover/click
     node.append("rect")
         .attr("id", d => d.id)
         .attr("fill", "transparent")
@@ -165,8 +183,7 @@ export function treemapPlot(data, width, { currency = null } = {}) {
         <b>Sector</b> ${d.id}<br>
         <b>Period</b> ${period}<br>
         <b>Indicator</b> ${indicator}<br>
-        <b>${getCurrencyLabel(currency, { currencyLong: false })}</b> ${valueLabel}
-      `;
+        <b>${getCurrencyLabel(currency, { currencyLong: false })}</b> ${valueLabel}`;
 
             tooltip.html(label).style("visibility", "visible");
         })
