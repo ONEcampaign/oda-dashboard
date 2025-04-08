@@ -1,10 +1,9 @@
 import sys
 
 import pandas as pd
-import pydeflate
 from pydeflate import oecd_dac_exchange
 
-from src.data.config import logger, PATHS, TIME_RANGE
+from src.data.config import logger, TIME_RANGE
 from src.data.analysis_tools.helper_functions import set_cache_dir
 
 codes = {"USA": "usd", "CAN": "cad", "FRA": "eur", "GBR": "gbp"}

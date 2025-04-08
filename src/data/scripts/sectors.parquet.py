@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 
-from oda_data import CrsData, set_data_path
+from oda_data import CrsData
 from oda_data.indicators.research.sector_imputations import (
     imputed_multilateral_by_purpose,
 )

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from oda_data import Indicators, set_data_path
+from oda_data import Indicators
 
 from src.data.config import PATHS, FINANCING_INDICATORS, TIME_RANGE, logger
 

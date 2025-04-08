@@ -1,7 +1,6 @@
 import sys
 import json
 import pandas as pd
-import pydeflate
 from pydeflate import oecd_dac_deflate
 
 from src.data.config import logger, PATHS, TIME_RANGE, base_year

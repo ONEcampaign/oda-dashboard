@@ -1,4 +1,4 @@
-from oda_data import Dac1Data, set_data_path
+from oda_data import Dac1Data
 
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
