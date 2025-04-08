@@ -22,8 +22,7 @@ def filter_transform_recipients():
     ).get_indicators(list(RECIPIENTS_INDICATORS.keys()))
 
     recipients = (
-        dac2a_raw
-        .groupby(
+        dac2a_raw.groupby(
             ["year", "donor_code", "recipient_code", "one_indicator"],
             dropna=False,
             observed=True,

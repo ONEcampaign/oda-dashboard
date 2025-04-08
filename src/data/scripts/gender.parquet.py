@@ -14,6 +14,7 @@ from src.data.analysis_tools.helper_functions import (
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 
+
 def get_transform_gender():
 
     dfs = []
@@ -58,9 +59,11 @@ def get_transform_gender():
 
     return gender
 
+
 def gender_to_parquet():
     df = get_transform_gender()
     df_to_parquet(df)
+
 
 if __name__ == "__main__":
     logger.info("Generating gender table...")

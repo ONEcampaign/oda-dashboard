@@ -19,8 +19,10 @@ def set_cache_dir(path=PATHS.DATA, oda_data=False, pydeflate=False):
         logger(f"Creating directory for cached data: {path}")
         os.makedirs(path)
 
-    if oda_data: set_data_path(path)
-    if pydeflate: set_pydeflate_path(path)
+    if oda_data:
+        set_data_path(path)
+    if pydeflate:
+        set_pydeflate_path(path)
 
 
 def get_dac_ids(path):

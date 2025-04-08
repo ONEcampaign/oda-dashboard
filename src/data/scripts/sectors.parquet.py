@@ -21,9 +21,7 @@ recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 
 def get_bilateral_by_sector():
 
-    raw_bilateral = CrsData(
-        years=range(2013, TIME_RANGE["end"] + 1)
-    ).read(
+    raw_bilateral = CrsData(years=range(2013, TIME_RANGE["end"] + 1)).read(
         using_bulk_download=True,
         additional_filters=[
             ("donor_code", "in", donor_ids),
