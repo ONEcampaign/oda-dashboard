@@ -9,7 +9,7 @@ from oda_data.indicators.research.sector_imputations import (
 from src.data.config import PATHS, TIME_RANGE, logger
 from src.data.analysis_tools import sector_lists
 from src.data.analysis_tools.helper_functions import (
-    check_cache_dir,
+    set_cache_dir,
     get_dac_ids,
     add_index_column,
     df_to_parquet,
@@ -22,7 +22,7 @@ recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 def get_bilateral_by_sector():
 
     raw_bilateral = CrsData(
-        years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)
+        years=range(2013, TIME_RANGE["end"] + 1)
     ).read(
         using_bulk_download=True,
         additional_filters=[
@@ -130,15 +130,11 @@ def merge_transform_sectors():
 
 
 def sectors_to_parquet():
-
     df = merge_transform_sectors()
     df_to_parquet(df)
 
 
 if __name__ == "__main__":
     logger.info("Generating sectors table...")
-
-    check_cache_dir()
-    set_data_path(PATHS.ODA_DATA)
-
+    set_cache_dir(oda_data=True)
     sectors_to_parquet()

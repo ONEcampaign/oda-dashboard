@@ -1,10 +1,11 @@
 import sys
 import json
 import pandas as pd
-from pydeflate import oecd_dac_deflate, set_pydeflate_path
+import pydeflate
+from pydeflate import oecd_dac_deflate
 
 from src.data.config import logger, PATHS, TIME_RANGE, base_year
-from src.data.analysis_tools.helper_functions import check_cache_dir
+from src.data.analysis_tools.helper_functions import set_cache_dir
 
 
 def create_df():
@@ -49,15 +50,10 @@ def deflate_current_usd():
 
 def get_conversion_table():
     constant_df = deflate_current_usd()
-
     constant_df.to_csv(sys.stdout, index=False)
 
 
 if __name__ == "__main__":
-
     logger.info("Creating constant conversions table")
-
-    check_cache_dir()
-    set_pydeflate_path(PATHS.PYDEFLATE)
-
+    set_cache_dir(pydeflate=True)
     get_conversion_table()

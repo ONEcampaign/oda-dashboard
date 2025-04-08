@@ -1,10 +1,11 @@
 import sys
 
 import pandas as pd
-from pydeflate import oecd_dac_exchange, set_pydeflate_path
+import pydeflate
+from pydeflate import oecd_dac_exchange
 
 from src.data.config import logger, PATHS, TIME_RANGE
-from src.data.analysis_tools.helper_functions import check_cache_dir
+from src.data.analysis_tools.helper_functions import set_cache_dir
 
 codes = {"USA": "usd", "CAN": "cad", "FRA": "eur", "GBR": "gbp"}
 
@@ -38,15 +39,10 @@ def convert_currencies():
 
 def get_conversion_table():
     df = convert_currencies()
-
     df.to_csv(sys.stdout, index=False)
 
 
 if __name__ == "__main__":
-
     logger.info("Creating exchange conversions table")
-
-    check_cache_dir()
-    set_pydeflate_path(PATHS.PYDEFLATE)
-
+    set_cache_dir(pydeflate=True)
     get_conversion_table()

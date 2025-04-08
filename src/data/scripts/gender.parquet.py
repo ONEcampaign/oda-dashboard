@@ -2,7 +2,7 @@ from oda_data import CrsData, set_data_path
 from src.data.config import PATHS, TIME_RANGE, GENDER_INDICATORS, logger
 
 from src.data.analysis_tools.helper_functions import (
-    check_cache_dir,
+    set_cache_dir,
     get_dac_ids,
     add_index_column,
     df_to_parquet,
@@ -71,16 +71,11 @@ def filter_transform_gender():
 
 
 def gender_to_parquet():
-
     df = filter_transform_gender()
     df_to_parquet(df)
 
 
 if __name__ == "__main__":
-
     logger.info("Generating gender table...")
-
-    check_cache_dir()
-    set_data_path(PATHS.ODA_DATA)
-
+    set_cache_dir(oda_data=True)
     gender_to_parquet()

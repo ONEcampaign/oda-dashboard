@@ -1,8 +1,8 @@
-from oda_data import Indicators, set_data_path
+from oda_data import Indicators
 from src.data.config import PATHS, RECIPIENTS_INDICATORS, TIME_RANGE, logger
 
 from src.data.analysis_tools.helper_functions import (
-    check_cache_dir,
+    set_cache_dir,
     get_dac_ids,
     add_index_column,
     df_to_parquet,
@@ -22,7 +22,7 @@ def filter_transform_recipients():
     ).get_indicators(list(RECIPIENTS_INDICATORS.keys()))
 
     recipients = (
-        dac2a_raw.query("donor_code in @donor_ids and recipient_code in @recipient_ids")
+        dac2a_raw
         .groupby(
             ["year", "donor_code", "recipient_code", "one_indicator"],
             dropna=False,
@@ -47,15 +47,11 @@ def filter_transform_recipients():
 
 
 def recipients_to_parquet():
-
     df = filter_transform_recipients()
     df_to_parquet(df)
 
 
 if __name__ == "__main__":
     logger.info("Generating recipients table...")
-
-    check_cache_dir()
-    set_data_path(PATHS.ODA_DATA)
-
+    set_cache_dir(oda_data=True)
     recipients_to_parquet()

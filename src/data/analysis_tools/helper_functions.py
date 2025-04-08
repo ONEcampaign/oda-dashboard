@@ -8,13 +8,19 @@ import pyarrow.parquet as pq
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_EVEN
 
+from oda_data import set_data_path
+from pydeflate import set_pydeflate_path
+
 from src.data.config import PATHS, logger
 
 
-def check_cache_dir(path=PATHS.DATA):
+def set_cache_dir(path=PATHS.DATA, oda_data=False, pydeflate=False):
     if not os.path.exists(path):
-        logger(f"Creating directory for cached data: {PATHS.DATA}")
+        logger(f"Creating directory for cached data: {path}")
         os.makedirs(path)
+
+    if oda_data: set_data_path(path)
+    if pydeflate: set_pydeflate_path(path)
 
 
 def get_dac_ids(path):
