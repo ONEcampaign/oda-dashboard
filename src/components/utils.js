@@ -38,13 +38,7 @@ export function formatValue(value) {
     // Determine the label
     let label;
     if (value === 0) {
-        label = "0";
-    } else if (value > -0.01 && value < 0.01) {
-        if (value > -0.01) {
-            label = "> -0.01";
-        } else {
-            label = "< 0.01";
-        }
+        label = "< 0.01";
     } else {
         label = roundedValue.toLocaleString("en-US", {
             minimumFractionDigits: 1,
