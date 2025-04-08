@@ -220,7 +220,8 @@ function generateSubtitle(codes, indicatorMapping) {
                                                         absoluteData, 
                                                         currency, 
                                                         "gender", 
-                                                        width
+                                                        width,
+                                                        {}
                                                     )
                                                 )
                                             }

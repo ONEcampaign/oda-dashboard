@@ -196,7 +196,8 @@ const tableData = data.table
                                         absoluteData, 
                                         currency, 
                                         "financing", 
-                                        width
+                                        width, 
+                                        {}
                                     )
                                 )
                             }
