@@ -169,7 +169,7 @@ function generateSubtitle(codes, indicatorMapping) {
         Gender
     </a>
 </div>
-${Inputs.table(absoluteData)}
+
 <div>
     ${
         !data
