@@ -96,7 +96,7 @@ const prices = Generators.input(pricesInput)
 // Year
 const timeRangeInput = rangeInput(
     {
-        min: 2000,
+        min: 2013,
         max: 2023,
         step: 1,
         value: [2013, 2023],
