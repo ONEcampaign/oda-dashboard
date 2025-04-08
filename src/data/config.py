@@ -41,10 +41,10 @@ RECIPIENTS_INDICATORS = {
 }
 
 GENDER_INDICATORS = {
-    "2": "Main target",
-    "1": "Secondary target",
-    "0": "Not targeted",
-    pd.NA: "Not screened",
+    "principal": "Main target",
+    "significant": "Secondary target",
+    "not_targeted": "Not targeted",
+    "not_screened": "Not screened",
 }
 
 

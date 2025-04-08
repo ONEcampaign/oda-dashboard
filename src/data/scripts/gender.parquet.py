@@ -1,4 +1,7 @@
-from oda_data import CrsData, set_data_path
+import pandas as pd
+
+from oda_data import bilateral_policy_marker
+
 from src.data.config import PATHS, TIME_RANGE, GENDER_INDICATORS, logger
 
 from src.data.analysis_tools.helper_functions import (
@@ -11,38 +14,25 @@ from src.data.analysis_tools.helper_functions import (
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 
+def get_transform_gender():
 
-def filter_transform_gender():
+    dfs = []
+    for scr in GENDER_INDICATORS.keys():
+        df = bilateral_policy_marker(
+            years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1),
+            providers=donor_ids,
+            recipients=recipient_ids,
+            measure="gross_disbursement",
+            marker="gender",
+            marker_score=scr,
+        )
 
-    crs = CrsData(years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)).read(
-        using_bulk_download=True,
-        additional_filters=[
-            ("donor_code", "in", donor_ids),
-            ("recipient_code", "in", recipient_ids),
-            (
-                "modality",
-                "in",
-                [
-                    "A02",
-                    "B01",
-                    "B03",
-                    "B031",
-                    "B032",
-                    "B033",
-                    "B04",
-                    "C01",
-                    "D01",
-                    "D02",
-                    "E01",
-                ],
-            ),
-        ],
-        columns=["year", "donor_code", "recipient_code", "gender", "usd_disbursement"],
-    )
+        dfs.append(df)
 
-    # Format gender df including all flows (flow_name)
+    gender_raw = pd.concat(dfs, ignore_index=True)
+
     gender = (
-        crs.assign(indicator=lambda d: d["gender"].map(GENDER_INDICATORS))
+        gender_raw.assign(indicator=lambda d: d["gender"].map(GENDER_INDICATORS))
         .groupby(
             [
                 "year",
@@ -52,10 +42,9 @@ def filter_transform_gender():
             ],
             dropna=False,
             observed=True,
-        )["usd_disbursement"]
+        )["value"]
         .sum()
         .reset_index()
-        .rename(columns={"usd_disbursement": "value"})
     )
 
     gender = gender[gender["value"] != 0]
@@ -69,11 +58,9 @@ def filter_transform_gender():
 
     return gender
 
-
 def gender_to_parquet():
-    df = filter_transform_gender()
+    df = get_transform_gender()
     df_to_parquet(df)
-
 
 if __name__ == "__main__":
     logger.info("Generating gender table...")
