@@ -6,8 +6,7 @@ export default {
 
   head: `<link rel="icon" href="ONE-logo-favicon.png" type="image/png" sizes="32x32">'
       <script src="npm:@one-data/observable-themes/header.js" defer></script>
-      <script src="npm:@one-data/observable-themes/footer.js" defer></script>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />`,
+      <script src="npm:@one-data/observable-themes/footer.js" defer></script>`,
 
   root: "src",
   theme: ["light", "wide", "alt"],
