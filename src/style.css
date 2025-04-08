@@ -180,6 +180,7 @@ select, input {
     font-size: var(--size-l) !important;
     color: var(--darkGrey) !important;
     font-weight: normal !important;
+    max-width: none !important;
 }
 .plot-subtitle-panel > form {
     width: auto !important;
