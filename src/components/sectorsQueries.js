@@ -247,9 +247,9 @@ async function selectedSectorsQuery(
                 ON f.year = c.year
                     ${prices === "constant" ? "AND f.donor = c.donor" : ""}
                 GROUP BY f.year, ${breakdown ? "f.sub_sector," : ""} indicator
-            ), 
+            ) 
             ${breakdown 
-                 ? `
+                 ? `,
                     totals AS (
                         SELECT 
                             sub_sector, 
