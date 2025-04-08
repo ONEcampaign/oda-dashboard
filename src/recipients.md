@@ -108,7 +108,7 @@ const unitInput = Inputs.select(
     new Map(
         [
             [`Million ${getCurrencyLabel(currency, {currencyOnly: true,})}`, "value"],
-            ["% of total ODA", "pct_total"],
+            ["% of Bilateral + Imputed multilateral ODA", "pct_total"],
         ]
     ),
     {
@@ -121,7 +121,7 @@ const unit = Generators.input(unitInput)
 function updateUnitOptions() {
     for (const o of unitInput.querySelectorAll("option")) {
         if (
-            indicatorInput.value.length === 2 && decodeHTML(o.innerHTML) === "% of total ODA" 
+            indicatorInput.value.length === 2 && decodeHTML(o.innerHTML) === "% of Bilateral + Imputed multilateral ODA" 
         ) {
             o.setAttribute("disabled", "disabled")
         } else o.removeAttribute("disabled");
@@ -218,7 +218,8 @@ const tableData = data.table
                                                         absoluteData, 
                                                         currency, 
                                                         "recipients", 
-                                                        width
+                                                        width, 
+                                                        {}
                                                     )
                                                 )
                                             }
@@ -267,7 +268,7 @@ const tableData = data.table
                                                 ${
                                                     indicator.length > 1
                                                     ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span> as a share of total ODA</h3>`
-                                                    : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} as a share of total ODA</h3>`
+                                                    : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} as a share of bilateral + imputed multilateral ODA</h3>`
                                                 }
                                             </div>
                                             ${

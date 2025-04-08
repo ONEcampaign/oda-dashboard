@@ -236,7 +236,7 @@ async function tableRecipientsQuery(
                     f.year,
                     ${
                         indicator.length === 2 
-                            ? "'Total ODA'"
+                            ? "'Bilateral + imputed multilateral ODA'"
                             : `CASE
                                     ${indicatorCase} 
                                 END`
@@ -283,7 +283,7 @@ async function tableRecipientsQuery(
                 ${
                     unit === "value"
                         ? `'${currency} ${prices} million'`
-                        : "'% of total ODA'"
+                        : "'% of bilateral + imputed multilateral ODA'"
                 } AS unit,
                 'OECD DAC2A' AS source
             FROM final_table
