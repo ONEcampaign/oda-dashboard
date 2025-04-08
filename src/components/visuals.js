@@ -217,7 +217,7 @@ export function linePlot(data, mode, width,
     });
 }
 
-export function barPlot(data, currency, mode, width) {
+export function barPlot(data, currency, mode, width, {breakdown=false}) {
 
     let arrayData = data.map((row) => {
         const formattedRow = {};
@@ -237,6 +237,17 @@ export function barPlot(data, currency, mode, width) {
     if (mode === "financing") {
         fillVar = "Type"
         colorScale = paletteFinancing
+    }
+    else if (mode === "sectors") {
+
+        fillVar = breakdown ? "Sub-sector" : "Sector"
+        const uniqueGroups = [
+            ...new Set(arrayData.map(row => row[fillVar])).values()
+        ]
+        colorScale = {
+            domain: uniqueGroups,
+            range: breakdown ? paletteSectors.slice(1) : [paletteSectors[0]]
+        }
     }
     else {
         fillVar = "Indicator"
@@ -411,7 +422,7 @@ export function sparkbarTable(data, mode, {breakdown}) {
                     column,
                     (rowValue, row) => {
                         if (mode === "sectors") {
-                            const colors = paletteSectors;
+                            const colors = breakdown ? paletteSectors.slice(1) : [paletteSectors[0]];
                             return sparkbar(
                                 colors[index % colors.length],
                                 "left",

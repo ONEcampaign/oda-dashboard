@@ -72,7 +72,7 @@ export const paletteRecipients = {
     domain: [
         "Bilateral",
         "Imputed multilateral",
-        "Total ODA"
+        "Bilateral + imputed multilateral ODA"
     ],
     range: [
         customPalette.bilateral,
@@ -83,14 +83,13 @@ export const paletteRecipients = {
 
 export const paletteSectors = [
     ONEPalette.teal1,
-    ONEPalette.orange1,
     ONEPalette.navy0,
+    ONEPalette.orange1,
     ONEPalette.purple1,
     ONEPalette.blue0,
     ONEPalette.yellow1,
     ONEPalette.burgundy1,
     ONEPalette.red1
-
 ]
 
 export const paletteTreemap = [

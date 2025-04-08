@@ -3,7 +3,7 @@ import {setCustomColors} from "./components/colors.js"
 import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap, decodeHTML} from "./components/utils.js";
 import {sectorsQueries} from "./components/sectorsQueries.js"
 import {rangeInput} from "./components/rangeInput.js";
-import {linePlot, sparkbarTable} from "./components/visuals.js";
+import {barPlot, sparkbarTable} from "./components/visuals.js";
 import {treemapPlot, selectedSector} from "./components/Treemap.js"
 import {downloadPNG, downloadXLSX} from './components/downloads.js';
 ```
@@ -134,7 +134,7 @@ const unitInput = Inputs.select(
             [`% of ${selectedSector} ODA`, "pct_sector"],
             [
                 `% of ${indicator.length > 1 
-                    ? "total ODA" 
+                    ? "Bilateral + Imputed multilateral ODA" 
                     : getNameByCode(indicatorMapping, indicator)}`, 
                 "pct_total"
             ]
@@ -250,7 +250,7 @@ const tableData = data.table
                                             <div class="plot-subtitle-panel">
                                                 ${
                                                     indicator.length > 1
-                                                    ? html`<h3 class="plot-subtitle">Total ODA; ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
+                                                    ? html`<h3 class="plot-subtitle">Bilateral + Imputed multilateral ODA; ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
                                                     : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} ODA; ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
                                                 }
                                             </div>
@@ -303,20 +303,19 @@ const tableData = data.table
                                             <div class="plot-subtitle-panel">
                                                 ${
                                                     indicator.length > 1
-                                                    ? html`<h3 class="plot-subtitle">${selectedSector}; Total ODA</h3>`
+                                                    ? html`<h3 class="plot-subtitle">${selectedSector}; Bilateral + Imputed multilateral ODA</h3>`
                                                     : html`<h3 class="plot-subtitle">${selectedSector}; ${getNameByCode(indicatorMapping, indicator)} ODA</h3>`
                                                 }
                                                 ${shouldDisable ? breakdownPlaceholderInput : breakdownInput}
                                             </div>
                                             ${
                                                 resize(
-                                                    (width) => linePlot(
-                                                        selectedData,
+                                                    (width) => barPlot(
+                                                        selectedData,   
+                                                        currency,
                                                         "sectors",
                                                         width, {
-                                                            selectedSector: selectedSector,
-                                                            currency: currency,
-                                                            breakdown: breakdown
+                                                            breakdown: shouldDisable ? breakdownPlaceholder : breakdown
                                                         }
                                                     )
                                                 )
@@ -366,7 +365,7 @@ const tableData = data.table
                                         <div class="table-subtitle-panel">
                                             ${
                                                 indicator.length > 1
-                                                ? html`<h3 class="plot-subtitle">Breakdown of ${selectedSector}; Total ODA</h3>`
+                                                ? html`<h3 class="plot-subtitle">Breakdown of ${selectedSector}; Bilateral + Imputed multilateral ODA</h3>`
                                                 : html`<h3 class="plot-subtitle">Breakdown of ${selectedSector}; ${getNameByCode(indicatorMapping, indicator)} ODA</h3>`
                                             }
                                             ${unitInput}
@@ -375,7 +374,7 @@ const tableData = data.table
                                             sparkbarTable(
                                                 tableData, 
                                                 "sectors",
-                                                {breakdown: breakdown}
+                                                {breakdown: shouldDisable ? breakdownPlaceholder : breakdown}
                                             )
                                         }
                                         <div class="bottom-panel">
