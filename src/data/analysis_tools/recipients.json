@@ -1720,7 +1720,7 @@
   },
   "1027": {
     "name": "Eastern Africa, unspecified",
-    "groups" : [
+    "groups": [
       "Africa, region",
       "Sub-Saharan Africa, region",
       "Eastern Africa, region",
@@ -1747,7 +1747,7 @@
   },
   "1031": {
     "name": "Caribbean, unspecified",
-    "group": [
+    "groups": [
       "America, region",
       "Central America and the Caribbean, region",
       "Caribbean, region",
