@@ -133,7 +133,7 @@ async function treemapSectorsQuery(
                    sub_sector,
                    ${
                     indicator.length === 2
-                        ? "'Total ODA'"
+                        ? "'Bilateral + Imputed multilateral ODA'"
                         : `CASE
                             ${indicatorCase} 
                         END`
@@ -175,7 +175,7 @@ async function treemapSectorsQuery(
                 indicator,
                 SUM(converted_value)  AS value,
                 '${currency} ${prices} million' AS unit,
-                'OECD CRS, Multisystem'  AS source
+                'OECD CRS, MultiSystem'  AS source
             FROM joined
             GROUP BY sector, indicator
         `
@@ -212,7 +212,7 @@ async function selectedSectorsQuery(
                 ${breakdown ? "sub_sector,": ""}
                 ${
                     indicator.length === 2
-                        ? "'Total ODA'"
+                        ? "'Bilateral + Imputed multilateral ODA'"
                         : `CASE
                             ${indicatorCase} 
                         END`
@@ -277,7 +277,7 @@ async function selectedSectorsQuery(
                 j.indicator,
                 j.converted_value AS value,
                 '${currency} ${prices} million' AS unit,
-                'OECD CRS, Multisystem' AS source
+                'OECD CRS, MultiSystem' AS source
             FROM joined j
                 ${breakdown ? "LEFT JOIN totals t ON j.sub_sector = t.sub_sector" : ""}
             ORDER BY 
@@ -319,7 +319,7 @@ async function tableSectorsQuery(
                 sub_sector,
                 ${
                     indicator.length === 2
-                        ? "'Total ODA'"
+                        ? "'Bilateral + Imputed multilateral ODA'"
                         : `CASE
                             ${indicatorCase} 
                         END`
@@ -424,7 +424,7 @@ async function tableSectorsQuery(
                         ? `'${currency} ${prices} million'`
                         : `'% of ${selectedSector}'`
                 } AS unit,
-                'OECD CRS, Multisystem'  AS source
+                'OECD CRS, MultiSystem'  AS source
             FROM final_table
             ORDER BY
                 ${breakdown ? "total_subsector_value DESC," : ""}
