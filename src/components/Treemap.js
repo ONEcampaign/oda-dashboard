@@ -15,12 +15,10 @@ export const selectedSector = Mutable("Health");
 export function treemapPlot(data, width, { currency = null } = {}) {
     // Layout config
     const height = 400;
-    const margin = 0;
     const strokeWidth = 17.5;
     const padding = 1;
 
     const period = data[0].period;
-    const indicator = data[0].indicator;
 
     // Aggregate data by sector
     const aggregated = d3.rollups(
@@ -182,7 +180,6 @@ export function treemapPlot(data, width, { currency = null } = {}) {
             const label = `
         <b>Sector</b> ${d.id}<br>
         <b>Period</b> ${period}<br>
-        <b>Indicator</b> ${indicator}<br>
         <b>${getCurrencyLabel(currency, { currencyLong: false })}</b> ${valueLabel}`;
 
             tooltip.html(label).style("visibility", "visible");
