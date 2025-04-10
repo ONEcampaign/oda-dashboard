@@ -169,6 +169,7 @@ select, input {
     font-size: var(--size-xl) !important;
     color: var(--darkGrey) !important;
     font-weight: bold;
+    max-width: none !important;
 }
 .plot-subtitle-panel {
     display: flex;
@@ -293,6 +294,7 @@ select, input {
     color: var(--darkGrey) !important;
     font-weight: bold;
     margin-bottom: 10px;
+    max-width: none !important;
 }
 .table-subtitle-panel {
     display: flex;
@@ -305,6 +307,7 @@ select, input {
     font-size: var(--size-l) !important;
     color: var(--darkGrey) !important;
     font-weight: normal !important;
+    max-width: none !important;
 }
 
 .table-subtitle-panel > form {
