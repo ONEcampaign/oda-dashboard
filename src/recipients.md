@@ -240,7 +240,7 @@ const tableData = data.table
                                                         }
                                                         <div class="bottom-panel">
                                                             <div class="text-section">
-                                                                <p class="plot-source">Source: OECD DAC Table 2a.</p>
+                                                                <p class="plot-source">Source: OECD DAC2A table.</p>
                                                                 <p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
                                                             </div>
                                                             <div class="logo-section">
@@ -312,7 +312,7 @@ const tableData = data.table
                                                         }
                                                         <div class="bottom-panel">
                                                             <div class="text-section">
-                                                                <p class="plot-source">Source: OECD DAC Table 2a.</p>
+                                                                <p class="plot-source">Source: OECD DAC2A table.</p>
                                                                 <p class="plot-note">ODA values as a share of all aid received by ${getNameByCode(recipientMapping, recipient)}.</p>
                                                             </div>
                                                             <div class="logo-section">
@@ -372,7 +372,7 @@ const tableData = data.table
                                                 }
                                                 <div class="bottom-panel">
                                                     <div class="text-section">
-                                                        <p class="plot-source">Source: OECD DAC Table 2a.</p>
+                                                        <p class="plot-source">Source: OECD DAC2A table.</p>
                                                         ${
                                                             unit === "value" 
                                                                 ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`

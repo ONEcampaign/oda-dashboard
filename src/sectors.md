@@ -275,7 +275,7 @@ const tableData = data.table
                                                         }
                                                         <div class="bottom-panel">
                                                             <div class="text-section">
-                                                                <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>
+                                                                <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
                                                                 <p class="plot-note">ODA values in million ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
                                                             </div>
                                                             <div class="logo-section">
@@ -351,7 +351,7 @@ const tableData = data.table
                                                         }
                                                         <div class="bottom-panel">
                                                             <div class="text-section">
-                                                                <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>
+                                                                <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
                                                                 <p class="plot-note">ODA values in million ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
                                                             </div>
                                                             <div class="logo-section">
@@ -417,7 +417,7 @@ const tableData = data.table
                                                     }
                                                     <div class="bottom-panel">
                                                         <div class="text-section">
-                                                            <p class="plot-source">Source: OECD DAC Creditor Reporting System database.</p>
+                                                                <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
                                                             ${
                                                                 unit === "value" 
                                                                     ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`

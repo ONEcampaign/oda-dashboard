@@ -217,7 +217,7 @@ const tableData = data.table
                                         }
                                         <div class="bottom-panel">
                                             <div class="text-section">
-                                                <p class="plot-source">Source: OECD DAC Table 1.</p>
+                                                <p class="plot-source">Source: OECD DAC1 table.</p>
                                                 <p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>                
                                             </div>
                                             <div class="logo-section">
@@ -301,7 +301,7 @@ const tableData = data.table
                                         }
                                         <div class="bottom-panel">
                                             <div class="text-section">
-                                                <p class="plot-source">Source: OECD DAC Table 1.</p>
+                                                <p class="plot-source">Source: OECD DAC1 table.</p>
                                                 <p class="plot-note">ODA values as a share of GNI of ${formatString(getNameByCode(donorMapping, donor))}.</p>
                                             </div>
                                             <div class="logo-section">
@@ -363,7 +363,7 @@ const tableData = data.table
                                 }
                                 <div class="bottom-panel">
                                     <div class="text-section">
-                                        <p class="plot-source">Source: OECD DAC Table 1.</p>
+                                        <p class="plot-source">Source: OECD DAC1 table.</p>
                                         ${
                                             unit === "value" 
                                                 ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
