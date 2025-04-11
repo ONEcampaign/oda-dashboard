@@ -9,6 +9,7 @@ from src.data.analysis_tools.helper_functions import (
     get_dac_ids,
     add_index_column,
     df_to_parquet,
+    save_time_range_to_json
 )
 
 donor_ids = get_dac_ids(PATHS.DONORS)
@@ -105,6 +106,7 @@ def financing_to_parquet():
 
 
 if __name__ == "__main__":
+    save_time_range_to_json()
     logger.info("Generating financing table...")
     set_cache_dir(oda_data=True)
     financing_to_parquet()
