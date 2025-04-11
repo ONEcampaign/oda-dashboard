@@ -36,7 +36,8 @@ export function linePlot(data, mode, width,
         stacked = false,
         customChannels,
         customFormat,
-        colorScale
+        colorScale,
+        stackOrder
 
     yValue = "Value"
     labelSymbol = "%"
@@ -71,6 +72,7 @@ export function linePlot(data, mode, width,
         } else if (mode === "gender") {
             colorScale = paletteGender
             stacked = true
+            stackOrder = [ ...new Set(arrayData.map(d => d[groupVar]))].slice().reverse()
         }
     }
 
@@ -116,6 +118,7 @@ export function linePlot(data, mode, width,
                             y: yValue,
                             fill: groupVar,
                             fillOpacity: 0.85,
+                            order: stackOrder
                         }),
 
                         Plot.tip(arrayData,
@@ -206,7 +209,7 @@ export function barPlot(data, currency, mode, width, {breakdown = false}) {
         return formattedRow;
     });
 
-    let fillVar, colorScale
+    let fillVar, colorScale, stackOrder
     if (mode === "financing") {
         fillVar = "Type"
         colorScale = paletteFinancing
@@ -226,6 +229,7 @@ export function barPlot(data, currency, mode, width, {breakdown = false}) {
             colorScale = paletteRecipients
         } else if (mode === "gender") {
             colorScale = paletteGender
+            stackOrder = [ ...new Set(arrayData.map(d => d[fillVar]))].slice().reverse()
         }
     }
 
@@ -260,6 +264,7 @@ export function barPlot(data, currency, mode, width, {breakdown = false}) {
                     x: "Year",
                     y: "Value",
                     fill: fillVar,
+                    order: stackOrder,
                     opacity: .85
                 }
             ),
