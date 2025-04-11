@@ -71,7 +71,7 @@ def get_bilateral_by_sector():
 def get_imputed_multi_by_sector():
 
     raw_multi = imputed_multilateral_by_purpose(
-        years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1),
+        years=range(2013, TIME_RANGE["end"] + 1),
         providers=donor_ids,
         measure="gross_disbursement",
         currency="USD",
@@ -116,13 +116,22 @@ def merge_transform_sectors():
         json_path=PATHS.TOOLS / "sectors_indicators.json",
     )
     sectors = add_index_column(
-        df=sectors, column="sub_sector", json_path=PATHS.TOOLS / "sub_sectors.json"
+        df=sectors,
+        column="sub_sector",
+        json_path=PATHS.TOOLS / "sub_sectors.json"
     )
 
-    sector_mapping = sector_lists.get_broad_sector_groups()
+    with open(PATHS.TOOLS / "sub_sectors.json", 'r') as f:
+        subsector_mapping = json.load(f)
 
-    with open(PATHS.TOOLS / "sectors.json", "w") as f:
-        json.dump(sector_mapping, f, indent=2)
+    sector_mapping = sector_lists.get_broad_sector_groups()
+    valid_subsectors = set(subsector_mapping.values())
+    sector_mapping_filtered = {
+        k: v for k, v in sector_mapping.items() if k in valid_subsectors
+    }
+
+    with open(PATHS.TOOLS / "sectors.json", 'w') as f:
+        json.dump(sector_mapping_filtered, f, indent=2)
 
     return sectors
 
