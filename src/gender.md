@@ -110,7 +110,7 @@ const unitInput = Inputs.select(
     new Map(
         [
             [`Million ${getCurrencyLabel(currency, {currencyOnly: true,})}`, "value"],
-            ["% of total ODA", "total"]
+            ["% of total", "total"]
         ]
     ),
     {
@@ -382,7 +382,7 @@ function generateSubtitle(codes, indicatorMapping) {
                                                             </a>
                                                         </div>
                                                     </div>
-                                                    <div class="download-panel">
+                                                    <div class="download-panel table">
                                                         ${
                                                             Inputs.button(
                                                                 "Download data", {

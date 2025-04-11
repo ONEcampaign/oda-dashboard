@@ -455,7 +455,7 @@ function generateSubtitle() {
                                                             </a>
                                                         </div>
                                                     </div>
-                                                    <div class="download-panel">
+                                                    <div class="download-panel table">
                                                         ${
                                                             Inputs.button(
                                                                 "Download data", {

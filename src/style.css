@@ -176,12 +176,12 @@ select, input {
     flex-flow: row wrap;
     justify-content: space-between;
     margin-bottom: 20px;
+    max-width: none !important;
 }
 .plot-subtitle {
     font-size: var(--size-l) !important;
     color: var(--darkGrey) !important;
     font-weight: normal !important;
-    max-width: none !important;
 }
 .plot-subtitle-panel > form {
     width: auto !important;
@@ -332,6 +332,11 @@ select, input {
     justify-content: flex-start;
     gap: 20px;
 }
+
+.download-panel.table {
+    padding: 1rem 1rem 0 0;
+}
+
 
 .download-panel > form {
     width: auto !important;
