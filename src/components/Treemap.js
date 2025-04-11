@@ -104,24 +104,42 @@ export function treemapPlot(data, width, { currency = null } = {}) {
         .attr("width", d => Math.max(0, d.x1 - d.x0 - ((d.x1 - d.x0 < strokeWidth || d.y1 - d.y0 < strokeWidth) ? 0 : strokeWidth)))
         .attr("height", d => Math.max(0, d.y1 - d.y0 - ((d.x1 - d.x0 < strokeWidth || d.y1 - d.y0 < strokeWidth) ? 0 : strokeWidth)));
 
-    // Define clip paths for text
-    node.append("clipPath")
-        .attr("id", (d, i) => `${uid}-clip-${i}`)
-        .append("rect")
-        .attr("width", d => d.x1 - d.x0 - 5)
-        .attr("height", d => d.y1 - d.y0);
+    // // Define clip paths for text
+    // node.append("clipPath")
+    //     .attr("id", (d, i) => `${uid}-clip-${i}`)
+    //     .append("rect")
+    //     .attr("width", d => d.x1 - d.x0 - 5)
+    //     .attr("height", d => d.y1 - d.y0);
+    //
+    //
+    // // Sector name (top left)
+    // node.append("text")
+    //     .attr("clip-path", (d, i) => `url(${new URL(`#${uid}-clip-${i}`, location)})`)
+    //     .attr("x", 5)
+    //     .attr("y", strokeWidth / 1.5)
+    //     .text(d => d.id.toUpperCase())
+    //     .attr("vertical-align", "middle")
+    //     .attr("font-size", "12px")
+    //     .attr("font-family", "var(--sans-serif)")
+    //     .attr("font-weight", "500")
+    //     .attr("fill", d => d.id === selectedSector.value ? "white" : "black");
 
-    // Sector name (top left)
     node.append("text")
-        .attr("clip-path", (d, i) => `url(${new URL(`#${uid}-clip-${i}`, location)})`)
         .attr("x", 5)
         .attr("y", strokeWidth / 1.5)
-        .text(d => d.id.toUpperCase())
         .attr("vertical-align", "middle")
         .attr("font-size", "12px")
         .attr("font-family", "var(--sans-serif)")
         .attr("font-weight", "500")
-        .attr("fill", d => d.id === selectedSector.value ? "white" : "black");
+        .attr("fill", d => d.id === selectedSector.value ? "white" : "black")
+        .text(d => {
+            const w = d.x1 - d.x0;
+            const estimatedCharLimit = Math.floor(w / 7); // crude estimate
+            const sliceLength = Math.max(0, estimatedCharLimit - 5);
+            return d.id.length > estimatedCharLimit
+                ? d.id.toUpperCase().slice(0, sliceLength) + "…"
+                : d.id.toUpperCase();
+        });
 
     // Sector value label (centered)
     node.append("text")
