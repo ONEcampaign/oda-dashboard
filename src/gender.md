@@ -280,7 +280,7 @@ function generateSubtitle(codes, indicatorMapping) {
                                             ? html`
                                                 <div class="card">
                                                     <h2 class="plot-title">
-                                                        Gender ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)} as a share of total ODA
+                                                        Gender ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)} as a share of the total
                                                     </h2>
                                                     <div class="warning">
                                                         No data available
@@ -295,7 +295,7 @@ function generateSubtitle(codes, indicatorMapping) {
                                                         </h2>
                                                         <div class="plot-subtitle-panel">
                                                             <div class="plot-subtitle">
-                                                                Gender is ${generateSubtitle(indicator, indicatorMapping)} as a share of total ODA
+                                                                Gender is ${generateSubtitle(indicator, indicatorMapping)} as a share of the total
                                                             </div>
                                                         </div>
                                                         ${

@@ -297,8 +297,8 @@ const tableData = data.table
                                                         <div class="plot-subtitle-panel">
                                                             ${
                                                                 indicator.length > 1
-                                                                ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span> as a share of bilateral + imputed multilateral ODA</h3>`
-                                                                : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} as a share of bilateral + imputed multilateral ODA</h3>`
+                                                                ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span> as a share of the total</h3>`
+                                                                : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} as a share of the total</h3>`
                                                             }
                                                         </div>
                                                         ${
