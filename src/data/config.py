@@ -18,7 +18,7 @@ logger.setLevel(logging.INFO)
 
 base_year: int = 2023  # for currency conversions
 
-TIME_RANGE: dict = {"start": 2000, "end": 2023}
+TIME_RANGE: dict = {"start": 1990, "end": 2023}
 
 FINANCING_INDICATORS = {
     "ONE.10.1010_11010": "Total ODA",
