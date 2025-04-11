@@ -42,11 +42,9 @@
   "Business & other services": "Banking & financial services and business",
   "Industry, mining, construction": "Industry, mining, construction",
   "Trade policies & regulations": "Trade policies & regulations",
-  "Trade other": "Trade policies & regulations",
   "Environmental policy and admin management": "Environment protection",
   "Biosphere protection": "Environment protection",
   "Bio-diversity": "Environment protection",
-  "Site-preservation": "Environment protection",
   "Environment education/training": "Environment protection",
   "Environmental research": "Environment protection",
   "Emergency response": "Humanitarian",
@@ -60,10 +58,8 @@
   "General budget support": "General budget support",
   "Developmental food aid/food security assistance": "Other",
   "Other commodity assistance": "Other",
-  "Null": "Other",
   "Action relating to debt": "Action relating to debt",
   "Administrative costs of donors": "Administrative costs of donors",
   "Refugees in donor countries": "Refugees in donor countries",
-  "Unallocated/unspecificed": "Unallocated/unspecificed",
-  "Government & civil society": "Government & civil society"
+  "Unallocated/unspecificed": "Unallocated/unspecificed"
 }

@@ -4,35 +4,55 @@ const ONEPalette = {
     teal2: "#4DAEB4",
     teal3: "#80C0C4",
     teal4: "#9ACACD",
+
     orange0: "#FF5E1F",
     orange1: "#FF7F4C",
     orange2: "#FF9970",
     orange3: "#FFA785",
     orange4: "#FFB699",
+
     yellow0: "#F5BE29",
     yellow1: "#F7CE5B",
     yellow2: "#F9D677",
     yellow3: "#F9DC8A",
     yellow4: "#FAE29E",
+
     burgundy0: "#7A0018",
     burgundy1: "#A20021",
     burgundy2: "#CC0029",
     burgundy3: "#F50031",
     burgundy4: "#FF1F4B",
+
     purple0: "#661450",
     purple1: "#73175A",
     purple2: "#991E79",
     purple3: "#BB2593",
     purple4: "#D733AB",
+    purple5: "#DD55B9",
+    purple6: "#E477C7",
+    purple7: "#EB99D5",
+
     navy0: "#081248",
     navy1: "#0C1B6E",
     navy2: "#102493",
     navy3: "#142DB8",
     navy4: "#1836DC",
+    navy5: "#3550E9",
+    navy6: "#5A70ED",
+    navy7: "#A3AFF5",
+
     blue0: "#7ECBF1",
     blue1: "#A3DAF5",
+    blue2: "#D1EDFA",
+    blue3: "#E8F6FD",
+    blue4: "#F4FBFE",
+
     red0: "#ED8282",
     red1: "#F2A6A6",
+    red2: "#F9D3D3",
+    red3: "#FCE9E9",
+    red4: "#FEF4F4",
+
     grey0: "#000000",
     grey1: "#AAAAAA",
     grey2: "#BBBBBB",
@@ -47,14 +67,14 @@ export const customPalette = {
     multilateral: ONEPalette.orange1,
     total: ONEPalette.purple2,
     intlCommitment: ONEPalette.burgundy1,
-    genderMain: ONEPalette.orange1,
-    genderSecondary: ONEPalette.navy0,
-    genderNotTargeted: ONEPalette.teal1,
-    genderNotScreened: "#c2c2c4",
+    genderMain: ONEPalette.navy1,
+    genderSecondary: ONEPalette.navy6,
+    genderNotTargeted: ONEPalette.grey1,
+    genderNotScreened: ONEPalette.grey3,
     darkGrey: "#333333",
     midGrey: "#646464",
+    neutralGrey: "#C2C2C4",
     lightGrey: "#E8E8E8",
-    neutralGrey: "#c2c2c4",
 }
 
 export const paletteFinancing = {
@@ -81,19 +101,24 @@ export const paletteRecipients = {
     ],
 }
 
-export const paletteSectors = [
-    ONEPalette.teal1,
-    ONEPalette.navy0,
+export const colorSector = ONEPalette.teal1
+
+export const paletteSubsectors = [
+    ONEPalette.navy1,
     ONEPalette.orange1,
     ONEPalette.purple1,
     ONEPalette.blue0,
     ONEPalette.yellow1,
-    ONEPalette.burgundy1,
-    ONEPalette.red1
+    ONEPalette.navy4,
+    ONEPalette.orange4,
+    ONEPalette.purple4,
+    ONEPalette.blue3,
+    ONEPalette.yellow4
+
 ]
 
 export const paletteTreemap = [
-    ONEPalette.teal1,
+    colorSector,
     customPalette.neutralGrey
 ]
 
