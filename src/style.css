@@ -162,7 +162,7 @@ select, input {
 .card:has(.plot-container) {
     padding: 0;
 }
-.card:has(#bars-sectors) {
+.card:has(#bars-sectors), .card:has(#area-gender) {
     height: calc(100% - 2rem);
     box-sizing: border-box
 }

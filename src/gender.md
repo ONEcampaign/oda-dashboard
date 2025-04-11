@@ -289,7 +289,7 @@ function generateSubtitle(codes, indicatorMapping) {
                                             `
                                             : html`
                                                 <div class="card">
-                                                    <div class="plot-container" id="lines-gender">
+                                                    <div class="plot-container" id="area-gender">
                                                         <h2 class="plot-title">
                                                             Gender ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
                                                         </h2>
@@ -323,7 +323,7 @@ function generateSubtitle(codes, indicatorMapping) {
                                                             Inputs.button(
                                                                 "Download plot", {
                                                                     reduce: () => downloadPNG(
-                                                                        "lines-gender",
+                                                                        "area-gender",
                                                                          formatString(`gender ODA ${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} share`, {fileMode: true})                        )
                                                                 }
                                                             )
