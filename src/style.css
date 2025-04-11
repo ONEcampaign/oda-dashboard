@@ -162,6 +162,11 @@ select, input {
 .card:has(.plot-container) {
     padding: 0;
 }
+.card:has(#bars-sectors) {
+    height: calc(100% - 2rem);
+    box-sizing: border-box
+}
+
 .plot-container {
     padding: 1rem;
 }
