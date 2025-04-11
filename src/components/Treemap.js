@@ -13,6 +13,12 @@ const tooltip = d3.select("body")
 export const selectedSector = Mutable("Health");
 
 export function treemapPlot(data, width, { currency = null } = {}) {
+
+    const uniqueSectors = [...new Set(data.map(d => d.sector))];
+    if (!uniqueSectors.includes(selectedSector.value)) {
+        selectedSector.value = uniqueSectors[0];
+    }
+
     // Layout config
     const height = 400;
     const strokeWidth = 17.5;
