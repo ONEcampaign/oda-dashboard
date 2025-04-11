@@ -180,7 +180,7 @@ export function linePlot(data, mode, width,
                     {
                         x: "Year",
                         y: 0.7,
-                        text: ["International commitment"],
+                        text: ["International commitment - 0.7%"],
                         fill: customPalette.intlCommitment,
                         textAnchor: "start",
                         dy: -10
@@ -235,7 +235,8 @@ export function barPlot(data, currency, mode, width, {breakdown = false}) {
 
     return Plot.plot({
         width: width,
-        ...(mode !== "sectors" && {height: width * 0.5}),
+        height: width * 0.5,
+        // ...(mode !== "sectors" && {height: width * 0.5}),
         marginTop: 25,
         marginRight: 25,
         marginBottom: 25,
