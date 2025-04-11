@@ -5,6 +5,7 @@ import {sectorsQueries} from "./components/sectorsQueries.js"
 import {rangeInput} from "./components/rangeInput.js";
 import {barPlot, sparkbarTable} from "./components/visuals.js";
 import {treemapPlot, selectedSector} from "./components/Treemap.js"
+import {paletteSubsectors} from './components/colors.js'
 import {downloadPNG, downloadXLSX} from './components/downloads.js';
 ```
 
@@ -195,6 +196,29 @@ const selectedData = data.selected
 const tableData = data.table
 ```
 
+```js
+const uniqueSubsectors =  [
+    ...new Set(selectedData.map(row => row["sub_sector"])).values()
+]
+
+function generateSubtitle() {
+    const limit = 3;
+    const shown = uniqueSubsectors.slice(0, limit);
+    const subtitleSpans = shown.map((name, i) => {
+        return html`<span class="subtitle-label" style=color:${paletteSubsectors[i]}>${name}</span>${i < shown.length - 1 ? ', ' : ''}`;
+    });
+
+    if (uniqueSubsectors.length > limit) {
+        subtitleSpans.push(", and other");
+    }
+    
+    subtitleSpans.push("; ")
+
+    return subtitleSpans;
+}
+
+```
+
 <div class="header card">
     <a class="view-button" href="./">
         Financing
@@ -330,11 +354,10 @@ const tableData = data.table
                                                             ${selectedSector} ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
                                                         </h2>
                                                         <div class="plot-subtitle-panel">
-                                                            ${
-                                                                indicator.length > 1
-                                                                ? html`<h3 class="plot-subtitle">Bilateral + Imputed multilateral ODA</h3>`
-                                                                : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} ODA</h3>`
-                                                            }
+                                                            <h3 class="plot-subtitle">
+                                                                ${breakdown && !breakdownIsDisabled ? generateSubtitle() : html` `}
+                                                                ${indicator.length > 1 ? "Bilateral + Imputed multilateral" : getNameByCode(indicatorMapping, indicator)} ODA
+                                                            </h3>
                                                             ${breakdownIsDisabled ? breakdownPlaceholderInput : breakdownInput}
                                                         </div>
                                                         ${
