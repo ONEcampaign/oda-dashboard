@@ -30,6 +30,8 @@ const indicatorMapping = new Map(
 );
 
 const subsector2Sector = await FileAttachment("./data/analysis_tools/sectors.json").json()
+
+const timeRangeOptions = await FileAttachment("./data/analysis_tools/time_range.json").json()
 ```
 
 ```js
@@ -99,9 +101,9 @@ const prices = Generators.input(pricesInput)
 const timeRangeInput = rangeInput(
     {
         min: 2013,
-        max: 2023,
+        max: timeRangeOptions.end,
         step: 1,
-        value: [2013, 2023],
+        value: [2013, timeRangeOptions.end],
         label: "Time range",
         enableTextInput: true
     })

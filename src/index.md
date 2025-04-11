@@ -24,7 +24,7 @@ const indicatorMapping = new Map(
     Object.entries(indicatorOptions).map(([k, v]) => [v, Number(k)])
 );
 
-
+const timeRangeOptions = await FileAttachment("./data/analysis_tools/time_range.json").json()
 ```
 
 ```js
@@ -80,10 +80,10 @@ const prices = Generators.input(pricesInput)
 // Year
 const timeRangeInput = rangeInput(
     {
-        min: 2000,
-        max: 2023,
+        min: timeRangeOptions.start,
+        max: timeRangeOptions.end,
         step: 1,
-        value: [2013, 2023],
+        value: [timeRangeOptions.end - 20, timeRangeOptions.end],
         label: "Time range",
         enableTextInput: true
     })
