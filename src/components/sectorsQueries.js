@@ -178,6 +178,7 @@ async function treemapSectorsQuery(
                 'OECD CRS, MultiSystem'  AS source
             FROM joined
             GROUP BY sector, indicator
+            ORDER BY value DESC
         `
     )
 
@@ -265,12 +266,12 @@ async function selectedSectorsQuery(
                 '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
                 '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
                 ${
-                    breakdown 
+                    breakdown
                         ? `
-                            CASE j.sub_sector 
+                            CASE j.sub_sector
                                 ${code2SubsectorCase}
                             END AS 'sub_sector',
-                        ` 
+                        `
                         : ""
                 }
                 '${selectedSector}' AS sector,
@@ -280,11 +281,9 @@ async function selectedSectorsQuery(
                 'OECD CRS, MultiSystem' AS source
             FROM joined j
                 ${breakdown ? "LEFT JOIN totals t ON j.sub_sector = t.sub_sector" : ""}
-            ORDER BY 
-                j.year, 
-                ${breakdown ? "t.total_value DESC," : ""} 
-                ${breakdown ? "j.sub_sector," : ""}
-                sector
+            ORDER BY
+                ${breakdown ? "t.total_value DESC," : ""}
+                j.year
         `
     )
 
