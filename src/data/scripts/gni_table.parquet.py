@@ -1,4 +1,4 @@
-from oda_data import Dac1Data
+from oda_data import DAC1Data
 
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
@@ -11,7 +11,7 @@ from src.data.config import PATHS, TIME_RANGE, logger
 def get_gni():
     donor_ids = get_dac_ids(PATHS.DONORS)
 
-    df = Dac1Data(years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)).read(
+    df = DAC1Data(years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)).read(
         using_bulk_download=True,
         additional_filters=[
             ("amount_type", "==", "Current prices"),
