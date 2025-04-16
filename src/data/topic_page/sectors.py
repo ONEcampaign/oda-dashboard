@@ -4,8 +4,8 @@ from oda_data.clean_data.common import convert_units
 from oda_data.indicators.research.sector_imputations import (
     imputed_multilateral_by_purpose,
 )
+from oda_data.tools import sector_lists
 
-from src.data.analysis_tools import sector_lists
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
 )
