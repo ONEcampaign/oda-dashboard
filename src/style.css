@@ -403,18 +403,9 @@ select, input {
     padding: 0 2em 0 4em !important;
 }
 
-.italic {
-    font-style: italic;
-}
-
-.bold {
-    font-weight: bold;
-}
-
 .sub-section-header {
     font-size: var(--size-m) !important;
 }
-
 
 .section-header + .base-text {
     margin-top: 0 !important;

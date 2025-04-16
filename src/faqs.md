@@ -38,7 +38,7 @@ const sectorMapping = await FileAttachment("./data/analysis_tools/sectors.json")
         The dashboard is divided into four tabs:
     </p> 
     <p class="base-text">
-        <span class="bold">Financing</span> offers data on various ODA indicators from the perspective of provider 
+        <strong>Financing</strong> offers data on various ODA indicators from the perspective of provider 
         countries and country groups. Use this tab to answer questions like:
     </p> 
     <ul class="group-list">
@@ -46,7 +46,7 @@ const sectorMapping = await FileAttachment("./data/analysis_tools/sectors.json")
         <li>Is Country X meeting the 0.7% GNI target for its ODA contributions?</li>
     </ul>
     <p class="base-text">
-        <span class="bold">Recipients</span> shows ODA flows from providers to recipient countries and groups. This tab 
+        <strong>Recipients</strong> shows ODA flows from providers to recipient countries and groups. This tab 
         is useful if you're interested in:
     </p>
     <ul class="group-list">
@@ -54,7 +54,7 @@ const sectorMapping = await FileAttachment("./data/analysis_tools/sectors.json")
         <li>How much ODA does Country X channel to Country Y via multilateral organisations?</li>
     </ul>
     <p class="base-text">
-        <span class="bold">Sectors</span> breaks down ODA data by economic sectors, which can be broke down into
+        <strong>Sectors</strong> breaks down ODA data by economic sectors, which can be broke down into
         sub-sectors. Use this tab to explore questions like:
     </p>
     <ul class="group-list">
@@ -63,7 +63,7 @@ const sectorMapping = await FileAttachment("./data/analysis_tools/sectors.json")
         <li>How much ODA does Country X direct to Country Y’s education sector?</li>
     </ul>
     <p class="base-text">
-        <span class="bold">Gender</span> categorises ODA by whether it targets gender equality as a policy objective. 
+        <strong>Gender</strong> categorises ODA by whether it targets gender equality as a policy objective. 
         This tab helps you explore questions such as:
     </p>
     <ul class="group-list">
@@ -101,7 +101,7 @@ const sectorMapping = await FileAttachment("./data/analysis_tools/sectors.json")
         How are sectors and sub-sectors defined?
     </h2>
     <p class="base-text">
-        The groupings are based on the purpose fields from the Creditor Reporting System (CRS) database. Below is a list
+        The groupings are based on the <i>purpose</i> fields from the Creditor Reporting System (CRS) database. Below is a list
         of all sectors currently present in the data. If a sector has sub-sectors, they’re listed after the sector name.
     </p>
     ${generateList(sectorMapping, "sectors")}
