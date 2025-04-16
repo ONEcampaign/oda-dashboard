@@ -1,3 +1,4 @@
+import pandas as pd
 from oda_data import OECDClient, provider_groupings
 
 from src.data.analysis_tools.helper_functions import set_cache_dir
@@ -71,6 +72,18 @@ def total_oda_excluding_covid_ukraine_idrc() -> None:
         }
     )
 
+    dac_idrc_24 = (
+        full_data.loc[lambda d: d.Year == 2024]
+        .loc[lambda d: d.Donor != "DAC countries"]
+        .assign(Donor="DAC countries")
+        .groupby(["Year", "Donor"], as_index=False)[["IDRC"]]
+        .sum()
+    )
+
+    full_data.loc[lambda d: (d.Year == 2024) & (d.Donor == "DAC countries"), "IDRC"] = (
+        dac_idrc_24.IDRC.item()
+    )
+
     full_data["Other ODA"] = round(
         full_data["Total ODA"].fillna(0)
         - full_data["COVID ODA"].fillna(0)
@@ -93,6 +106,11 @@ def total_oda_excluding_covid_ukraine_idrc() -> None:
 
     full_data["Preliminary"] = full_data.loc[lambda d: d.Year == 2024, "Other ODA"]
     full_data.loc[lambda d: d.Year == 2024, "Other ODA"] = None
+
+    dac = full_data.loc[lambda d: d.Donor == "DAC countries"]
+    full_data = full_data.loc[lambda d: d.Donor != "DAC countries"]
+
+    full_data = pd.concat([dac, full_data], ignore_index=True)
 
     # live version
     full_data.to_csv(f"{PATHS.TOPIC_PAGE}/oda_covid.csv", index=False)
