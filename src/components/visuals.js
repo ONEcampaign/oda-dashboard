@@ -110,6 +110,33 @@ export function linePlot(data, mode, width,
 
         marks: [
 
+            // Horizontal line to show international commitment
+            showIntlCommitment
+                ? Plot.ruleY([0.7],
+                    {
+                        stroke: customPalette.intlCommitment,
+                        strokeDasharray: [5, 5],
+                        strokeWidth: 1,
+
+                    }
+                )
+                : null,
+
+            showIntlCommitment
+                ? Plot.text(
+                    arrayData.filter(d => d.Year === min(arrayData, d => d.Year)),
+                    {
+                        x: "Year",
+                        y: 0.7,
+                        text: ["International commitment - 0.7%"],
+                        fill: customPalette.intlCommitment,
+                        textAnchor: "start",
+                        dy: -10
+                    }
+                )
+                :
+                null,
+
             ...(
                 stacked
                     ? [
@@ -129,6 +156,7 @@ export function linePlot(data, mode, width,
                                     fill: groupVar,
                                     channels: customChannels,
                                     format: customFormat,
+                                    order: stackOrder,
                                     lineHeight: 1.25,
                                     fontSize: 12
                                 })
@@ -160,34 +188,7 @@ export function linePlot(data, mode, width,
                         )
                     ]
 
-            ),
-
-            // Horizontal line to show international commitment
-            showIntlCommitment
-                ? Plot.ruleY([0.7],
-                    {
-                        stroke: customPalette.intlCommitment,
-                        strokeDasharray: [5, 5],
-                        strokeWidth: 1,
-
-                    }
-                )
-                : null,
-
-            showIntlCommitment
-                ? Plot.text(
-                    arrayData.filter(d => d.Year === min(arrayData, d => d.Year)),
-                    {
-                        x: "Year",
-                        y: 0.7,
-                        text: ["International commitment - 0.7%"],
-                        fill: customPalette.intlCommitment,
-                        textAnchor: "start",
-                        dy: -10
-                    }
-                )
-                :
-                null
+            )
 
         ]
     });
@@ -276,6 +277,7 @@ export function barPlot(data, currency, mode, width, {breakdown = false}) {
                         x: "Year",
                         y: "Value",
                         fill: fillVar,
+                        order: stackOrder,
                         lineHeight: 1.25,
                         fontSize: 12
                     })
