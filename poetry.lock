@@ -1162,14 +1162,14 @@ dev = ["black (>=24)", "pytest (>=8)", "pytest-cov (>=4.0.0)", "pytest-mock (>=3
 
 [[package]]
 name = "oda-reader"
-version = "1.1.0"
+version = "1.1.1"
 description = "A simple package to import ODA data using the OECD Data API"
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "oda_reader-1.1.0-py3-none-any.whl", hash = "sha256:b67d240417efc5f9e738a076dea124041962135aa08503eae547807878e2cc9c"},
-    {file = "oda_reader-1.1.0.tar.gz", hash = "sha256:5bc98bf4460e072de424389df644167f8f9d1681e253d8d66d60a47550104461"},
+    {file = "oda_reader-1.1.1-py3-none-any.whl", hash = "sha256:c4db0edef4eb8c121e5af557c64832a94d648ed30f0728a62fed20bb556ac1c5"},
+    {file = "oda_reader-1.1.1.tar.gz", hash = "sha256:83a30495f4a694f3396813ef77ba8e01fb402df6aa9b0b99d9a44f0c7cca17e6"},
 ]
 
 [package.dependencies]
@@ -2631,4 +2631,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "e5a407bc75c86c6c41851658ced8e9d7b3fdcfc9550f08c3baa5202becc907ad"
+content-hash = "e192bcd14d3a31f801cb27912864c422b06fb1a2b06ac3bf5db6701f56438406"

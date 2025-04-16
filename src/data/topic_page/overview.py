@@ -2,6 +2,7 @@ import pandas as pd
 from bblocks import format_number
 
 from src.data.analysis_tools.helper_functions import set_cache_dir
+from oda_reader import disable_cache
 
 from oda_data import OECDClient
 
@@ -16,6 +17,8 @@ from src.data.topic_page.common import (
     df_to_key_number,
 )
 from src.data.topic_page.sectors import total_sectors
+
+disable_cache()
 
 
 def total_aid_key_number() -> None:
