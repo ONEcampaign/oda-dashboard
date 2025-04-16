@@ -838,6 +838,19 @@ MarkupSafe = ">=2.0"
 i18n = ["Babel (>=2.7)"]
 
 [[package]]
+name = "joblib"
+version = "1.4.2"
+description = "Lightweight pipelining with Python functions"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+markers = "python_version == \"3.11\" or python_version >= \"3.12\""
+files = [
+    {file = "joblib-1.4.2-py3-none-any.whl", hash = "sha256:06d478d5674cbc267e7496a410ee875abd68e4340feff4490bcb7afb88060ae6"},
+    {file = "joblib-1.4.2.tar.gz", hash = "sha256:2382c5816b2636fbd20a09e0f4e9dad4736765fdfb7dca582943b9c1366b3f0e"},
+]
+
+[[package]]
 name = "jsonlines"
 version = "4.0.0"
 description = "Library with helpers for the jsonlines file format"
@@ -1163,15 +1176,15 @@ files = [
 
 [[package]]
 name = "oda-data"
-version = "2.0.0b5"
+version = "2.0.0b11"
 description = "A python package to work with Official Development Assistance data from the OECD DAC."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 markers = "python_version == \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "oda_data-2.0.0b5-py3-none-any.whl", hash = "sha256:c325caca27e7d05557b5e1d36d9b9c2cf3e0a1317687a7edde7859a734226688"},
-    {file = "oda_data-2.0.0b5.tar.gz", hash = "sha256:f55d92d14586d38ab27118b22b494b4e65ed55a8d550bdddb853964136ae3688"},
+    {file = "oda_data-2.0.0b11-py3-none-any.whl", hash = "sha256:e47e81a6c3ae4b24e3bb5de8f2f51357e6128c42809ad7a6888c4a4266f90eb5"},
+    {file = "oda_data-2.0.0b11.tar.gz", hash = "sha256:3337e99de8cc72873b6ce3a7c32dd83b4e188878a03cafd8a484edc96284736d"},
 ]
 
 [package.dependencies]
@@ -1187,18 +1200,19 @@ dev = ["black (>=24)", "pytest (>=8)", "pytest-cov (>=4.0.0)", "pytest-mock (>=3
 
 [[package]]
 name = "oda-reader"
-version = "1.0.5"
+version = "1.1.0"
 description = "A simple package to import ODA data using the OECD Data API"
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 markers = "python_version == \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "oda_reader-1.0.5-py3-none-any.whl", hash = "sha256:0310251003a0340e5a342cb217dfc5cc88442a9601981093899c0f6ba79d6b49"},
-    {file = "oda_reader-1.0.5.tar.gz", hash = "sha256:14d7af6224e56dfdaa6b336b5e8c22846fb65d6947e2e5a41172154afba67641"},
+    {file = "oda_reader-1.1.0-py3-none-any.whl", hash = "sha256:b67d240417efc5f9e738a076dea124041962135aa08503eae547807878e2cc9c"},
+    {file = "oda_reader-1.1.0.tar.gz", hash = "sha256:5bc98bf4460e072de424389df644167f8f9d1681e253d8d66d60a47550104461"},
 ]
 
 [package.dependencies]
+joblib = ">=1.4.2,<2.0.0"
 pandas = ">=2.2.2,<3.0.0"
 pyarrow = ">=16.0.0"
 requests = ">=2.31.0,<3.0.0"
@@ -1521,15 +1535,15 @@ files = [
 
 [[package]]
 name = "pydantic"
-version = "2.11.2"
+version = "2.11.3"
 description = "Data validation using Python type hints"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 markers = "python_version == \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "pydantic-2.11.2-py3-none-any.whl", hash = "sha256:7f17d25846bcdf89b670a86cdfe7b29a9f1c9ca23dee154221c9aa81845cfca7"},
-    {file = "pydantic-2.11.2.tar.gz", hash = "sha256:2138628e050bd7a1e70b91d4bf4a91167f4ad76fdb83209b107c8d84b854917e"},
+    {file = "pydantic-2.11.3-py3-none-any.whl", hash = "sha256:a082753436a07f9ba1289c6ffa01cd93db3548776088aa917cc43b63f68fa60f"},
+    {file = "pydantic-2.11.3.tar.gz", hash = "sha256:7471657138c16adad9322fe3070c0116dd6c3ad8d649300e3cbdfe91f4db4ec3"},
 ]
 
 [package.dependencies]
@@ -2501,15 +2515,15 @@ typing-extensions = ">=3.7.4.3"
 
 [[package]]
 name = "typing-extensions"
-version = "4.13.1"
+version = "4.13.2"
 description = "Backported and Experimental Type Hints for Python 3.8+"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 markers = "python_version == \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "typing_extensions-4.13.1-py3-none-any.whl", hash = "sha256:4b6cf02909eb5495cfbc3f6e8fd49217e6cc7944e145cdda8caa3734777f9e69"},
-    {file = "typing_extensions-4.13.1.tar.gz", hash = "sha256:98795af00fb9640edec5b8e31fc647597b4691f099ad75f469a2616be1a76dff"},
+    {file = "typing_extensions-4.13.2-py3-none-any.whl", hash = "sha256:a439e7c04b49fec3e5d3e2beaa21755cadbbdc391694e28ccdd36ca4a1408f8c"},
+    {file = "typing_extensions-4.13.2.tar.gz", hash = "sha256:e6c81219bd689f51865d9e372991c540bda33a0379d5573cddb9a3a23f7caaef"},
 ]
 
 [[package]]
@@ -2556,15 +2570,15 @@ files = [
 
 [[package]]
 name = "urllib3"
-version = "2.3.0"
+version = "2.4.0"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 markers = "python_version == \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "urllib3-2.3.0-py3-none-any.whl", hash = "sha256:1cee9ad369867bfdbbb48b7dd50374c0967a0bb7710050facf0dd6911440e3df"},
-    {file = "urllib3-2.3.0.tar.gz", hash = "sha256:f8c5449b3cf0861679ce7e0503c7b44b5ec981bec0d1d3795a07f1ba96f0204d"},
+    {file = "urllib3-2.4.0-py3-none-any.whl", hash = "sha256:4e16665048960a0900c702d4a66415956a584919c03361cac9f1df5c5dd7e813"},
+    {file = "urllib3-2.4.0.tar.gz", hash = "sha256:414bc6535b787febd7567804cc015fee39daab8ad86268f1310a9250697de466"},
 ]
 
 [package.extras]
@@ -2712,4 +2726,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "4a5b2cba295caa9c00406e83bd714ed38b6cba8be2332f1e37046fd305d5eaeb"
+content-hash = "7219dccf11c500a59636987c904ca3f182b446f80c6f782c2c6a2cd597c1c6fd"
