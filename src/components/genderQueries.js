@@ -4,9 +4,9 @@ import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
 
 
 const db = await DuckDBClient.of({
-    gender: FileAttachment("../data/scripts/gender.parquet"),
-    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv"),
-    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table.csv")
+    gender: FileAttachment("../data/scripts/gender.parquet").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
+    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
+    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "")
 });
 
 const donorOptions = await FileAttachment("../data/analysis_tools/donors.json").json()

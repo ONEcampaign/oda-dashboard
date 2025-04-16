@@ -3,10 +3,10 @@ import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
 
 const db = await DuckDBClient.of({
-    financing: FileAttachment("../data/scripts/financing.parquet"),
-    gni_table: FileAttachment("../data/scripts/gni_table.parquet"),
-    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv"),
-    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table.csv")
+    financing: FileAttachment("../data/scripts/financing.parquet").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
+    gni_table: FileAttachment("../data/scripts/gni_table.parquet").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
+    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
+    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2024.csv").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "")
 });
 
 const donorOptions = await FileAttachment("../data/analysis_tools/donors.json").json()
@@ -69,13 +69,13 @@ async function absoluteFinancingQuery(
     const query = await db.query(
         `
             WITH filtered AS (
-                SELECT 
-                    year, 
+                SELECT
+                    year,
                     donor_code AS donor,
-                    indicator, 
+                    indicator,
                     (value * 1.1 / 1.1) AS value
                 FROM financing
-                WHERE 
+                WHERE
                     donor_code IN (${donor})
                     AND indicator = ${indicator}
                     AND year between ${timeRange[0]} AND ${timeRange[1]}
