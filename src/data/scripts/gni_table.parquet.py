@@ -8,14 +8,15 @@ from src.data.analysis_tools.helper_functions import (
     get_dac_ids,
     df_to_parquet,
 )
-from src.data.config import PATHS, TIME_RANGE, logger
+from src.data.config import PATHS, FINANCING_TIME, logger
 
 eu_ids = provider_groupings()["eu27_countries"]
+
 
 def get_gni():
     donor_ids = get_dac_ids(PATHS.DONORS)
 
-    bilateral_df = DAC1Data(years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)).read(
+    bilateral_df = DAC1Data(years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1)).read(
         using_bulk_download=True,
         additional_filters=[
             ("amount_type", "==", "Current prices"),

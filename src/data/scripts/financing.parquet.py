@@ -2,7 +2,7 @@ import pandas as pd
 
 from oda_data import OECDClient
 
-from src.data.config import PATHS, FINANCING_INDICATORS, TIME_RANGE, logger
+from src.data.config import PATHS, FINANCING_INDICATORS, FINANCING_TIME, logger
 
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
@@ -14,11 +14,10 @@ from src.data.analysis_tools.helper_functions import (
 
 donor_ids = get_dac_ids(PATHS.DONORS)
 
-
 def get_dac1():
 
     dac1_raw = OECDClient(
-        years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1),
+        years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1),
         providers=donor_ids,
         measure=["net_disbursement", "grant_equivalent"],
         use_bulk_download=True,
@@ -51,7 +50,7 @@ def get_grants():
     }
 
     grants_raw = OECDClient(
-        years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1),
+        years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1),
         providers=donor_ids,
         measure=["net_disbursement_grant", "net_disbursement", "grant_equivalent"],
         use_bulk_download=True,
@@ -106,7 +105,7 @@ def financing_to_parquet():
 
 
 if __name__ == "__main__":
-    save_time_range_to_json()
+    save_time_range_to_json(FINANCING_TIME, "financing_time.json")
     logger.info("Generating financing table...")
     set_cache_dir(oda_data=True)
     financing_to_parquet()

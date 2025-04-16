@@ -27,7 +27,7 @@ const indicatorMapping = new Map(
     Object.entries(indicatorOptions).map(([k, v]) => [v, Number(k)])
 );
 
-const timeRangeOptions = await FileAttachment("./data/analysis_tools/time_range.json").json()
+const timeRangeOptions = await FileAttachment("./data/analysis_tools/base_time.json").json()
 ```
 
 ```js
@@ -82,13 +82,12 @@ const currency = Generators.input(currencyInput);
 // Prices
 const pricesInput = Inputs.radio(
     new Map([
-        ["Current", "current"],
-        ["Constant", "constant"]
+        ["Constant", "constant"],
+        ["Current", "current"]
     ]),
     {
         label: "Prices",
-        value: "current",
-        // disabled: ["constant"]
+        value: "constant",
     }
 )
 const prices = Generators.input(pricesInput)
@@ -245,7 +244,7 @@ function generateSubtitle(codes, indicatorMapping) {
                                                         <div class="bottom-panel">
                                                             <div class="text-section">
                                                                 <p class="plot-source">Source: OECD Creditor Reporting System.</p>
-                                                                <p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
+                                                                <p class="plot-note">ODA values in ${prices}  ${prices === "constant" ? timeRangeOptions.base: ""}${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
                                                             </div>
                                                             <div class="logo-section">
                                                                 <a href="https://data.one.org/" target="_blank">
@@ -375,7 +374,7 @@ function generateSubtitle(codes, indicatorMapping) {
                                                             <p class="plot-source">Source: OECD DAC Table Creditor Reporting System.</p>
                                                             ${
                                                                 unit === "value" 
-                                                                    ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
+                                                                    ? html`<p class="plot-note">ODA values in ${prices}  ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
                                                                     : unit === "total"
                                                                         ? html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)}.</p>`
                                                                         : html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`

@@ -1,7 +1,8 @@
 from oda_data import OECDClient
-from src.data.config import PATHS, RECIPIENTS_INDICATORS, TIME_RANGE, logger
+from src.data.config import PATHS, RECIPIENTS_INDICATORS, BASE_TIME, logger
 
 from src.data.analysis_tools.helper_functions import (
+    save_time_range_to_json,
     set_cache_dir,
     get_dac_ids,
     add_index_column,
@@ -15,7 +16,7 @@ recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 def filter_transform_recipients():
 
     dac2a_raw = OECDClient(
-        years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1),
+        years=range(BASE_TIME["start"], BASE_TIME["end"] + 1),
         providers=donor_ids,
         recipients=recipient_ids,
         use_bulk_download=True,
@@ -51,6 +52,7 @@ def recipients_to_parquet():
 
 
 if __name__ == "__main__":
+    save_time_range_to_json(BASE_TIME, "base_time.json")
     logger.info("Generating recipients table...")
     set_cache_dir(oda_data=True)
     recipients_to_parquet()

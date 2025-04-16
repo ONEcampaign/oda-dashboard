@@ -24,7 +24,7 @@ const indicatorMapping = new Map(
     Object.entries(indicatorOptions).map(([k, v]) => [v, Number(k)])
 );
 
-const timeRangeOptions = await FileAttachment("./data/analysis_tools/time_range.json").json()
+const timeRangeOptions = await FileAttachment("./data/analysis_tools/financing_time.json").json()
 ```
 
 ```js
@@ -66,13 +66,12 @@ const currency = Generators.input(currencyInput);
 // Prices
 const pricesInput = Inputs.radio(
     new Map([
-        ["Current", "current"],
-        ["Constant", "constant"]
+        ["Constant", "constant"],
+        ["Current", "current"]
     ]),
     {
         label: "Prices",
-        value: "current",
-        // disabled: ["constant"]
+        value: "constant",
     }
 )
 const prices = Generators.input(pricesInput)
@@ -221,7 +220,7 @@ const tableData = data.table
                                         <div class="bottom-panel">
                                             <div class="text-section">
                                                 <p class="plot-source">Source: OECD DAC1 table.</p>
-                                                <p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>                
+                                                <p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>                
                                             </div>
                                             <div class="logo-section">
                                                 <a href="https://data.one.org/" target="_blank">
@@ -369,7 +368,7 @@ const tableData = data.table
                                         <p class="plot-source">Source: OECD DAC1 table.</p>
                                         ${
                                             unit === "value" 
-                                                ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
+                                                ? html`<p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
                                                 : unit === "gni_pct"
                                                     ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(getNameByCode(donorMapping, donor))}.</p>`
                                                     : html`<p class="plot-note">ODA values as a share of total contributions from ${formatString(getNameByCode(donorMapping, donor))}.</p>`

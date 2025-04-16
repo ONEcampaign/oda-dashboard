@@ -2,7 +2,7 @@ import pandas as pd
 
 from oda_data import bilateral_policy_marker
 
-from src.data.config import PATHS, TIME_RANGE, GENDER_INDICATORS, logger
+from src.data.config import PATHS, BASE_TIME, GENDER_INDICATORS, logger
 
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
@@ -20,7 +20,7 @@ def get_transform_gender():
     dfs = []
     for scr in GENDER_INDICATORS.keys():
         df = bilateral_policy_marker(
-            years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1),
+            years=range(BASE_TIME["start"], BASE_TIME["end"] + 1),
             providers=donor_ids,
             recipients=recipient_ids,
             measure="gross_disbursement",

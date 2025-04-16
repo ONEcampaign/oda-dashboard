@@ -11,17 +11,17 @@ from decimal import Decimal, ROUND_HALF_EVEN
 from oda_data import set_data_path
 from pydeflate import set_pydeflate_path
 
-from src.data.config import PATHS, TIME_RANGE, logger
+from src.data.config import PATHS, logger
 
 
-def save_time_range_to_json():
-    logger.info(f"Saving time range to {PATHS.TOOLS}/time_range.json")
-    with open(PATHS.TOOLS / "time_range.json", 'w') as f:
-        json.dump(TIME_RANGE, f, indent=2)
+def save_time_range_to_json(dict, file_name):
+    logger.info(f"Saving time range to {PATHS.TOOLS}/{file_name}")
+    with open(PATHS.TOOLS / file_name, 'w') as f:
+        json.dump(dict, f, indent=2)
 
 def set_cache_dir(path=PATHS.DATA, oda_data=False, pydeflate=False):
     if not os.path.exists(path):
-        logger(f"Creating directory for cached data: {path}")
+        logger.info(f"Creating directory for cached data: {path}")
         os.makedirs(path)
 
     if oda_data:

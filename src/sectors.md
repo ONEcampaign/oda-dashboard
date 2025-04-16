@@ -31,7 +31,7 @@ const indicatorMapping = new Map(
 
 const subsector2Sector = await FileAttachment("./data/analysis_tools/sectors.json").json()
 
-const timeRangeOptions = await FileAttachment("./data/analysis_tools/time_range.json").json()
+const timeRangeOptions = await FileAttachment("./data/analysis_tools/base_time.json").json()
 ```
 
 ```js
@@ -86,13 +86,12 @@ const currency = Generators.input(currencyInput);
 // Prices
 const pricesInput = Inputs.radio(
     new Map([
-        ["Current", "current"],
-        ["Constant", "constant"]
+        ["Constant", "constant"],
+        ["Current", "current"]
     ]),
     {
         label: "Prices",
-        value: "current",
-        // disabled: ["constant"]
+        value: "constant",
     }
 )
 const prices = Generators.input(pricesInput)
@@ -305,7 +304,7 @@ function generateSubtitle() {
                                                         <div class="bottom-panel">
                                                             <div class="text-section">
                                                                 <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
-                                                                <p class="plot-note">ODA values in million ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
+                                                                <p class="plot-note">ODA values in million ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
                                                             </div>
                                                             <div class="logo-section">
                                                                 <a href="https://data.one.org/" target="_blank">
@@ -380,7 +379,7 @@ function generateSubtitle() {
                                                         <div class="bottom-panel">
                                                             <div class="text-section">
                                                                 <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
-                                                                <p class="plot-note">ODA values in million ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
+                                                                <p class="plot-note">ODA values in million ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
                                                             </div>
                                                             <div class="logo-section">
                                                                 <a href="https://data.one.org/" target="_blank">
@@ -448,7 +447,7 @@ function generateSubtitle() {
                                                                 <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
                                                             ${
                                                                 unit === "value" 
-                                                                    ? html`<p class="plot-note">ODA values in ${prices} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
+                                                                    ? html`<p class="plot-note">ODA values in ${timeRangeOptions.base} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
                                                                     : unit === "indicator"
                                                                         ? html`<p class="plot-note">ODA values as a share of ${selectedSector} ODA received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
                                                                         : html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`

@@ -3,15 +3,14 @@ import sys
 import pandas as pd
 from pydeflate import oecd_dac_exchange
 
-from src.data.config import logger, TIME_RANGE
+from src.data.config import logger, FINANCING_TIME
 from src.data.analysis_tools.helper_functions import set_cache_dir
 
 codes = {"USA": "usd", "CAN": "cad", "FRA": "eur", "GBR": "gbp"}
 
-
 def create_df():
     return pd.DataFrame(
-        {"year": range(TIME_RANGE["start"], TIME_RANGE["end"] + 1), "value": 1}
+        {"year": range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1), "value": 1}
     )
 
 

@@ -3,9 +3,8 @@ import json
 import pandas as pd
 from pydeflate import oecd_dac_deflate
 
-from src.data.config import logger, PATHS, TIME_RANGE, base_year
+from src.data.config import logger, PATHS, BASE_TIME
 from src.data.analysis_tools.helper_functions import set_cache_dir
-
 
 def create_df():
     with open(PATHS.DONORS) as f:
@@ -13,7 +12,7 @@ def create_df():
 
     donor_codes = [int(k) for k in donor_dict.keys()]
 
-    years = range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)
+    years = range(BASE_TIME["start"], BASE_TIME["end"] + 1)
 
     df = pd.DataFrame(
         index=pd.MultiIndex.from_product(
@@ -34,7 +33,7 @@ def deflate_current_usd():
     for country, code in codes.items():
         df = oecd_dac_deflate(
             data=df,
-            base_year=base_year,
+            base_year=BASE_TIME["base"],
             source_currency="USA",
             target_currency=country,
             year_column="year",

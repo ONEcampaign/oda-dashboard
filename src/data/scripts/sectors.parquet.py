@@ -7,7 +7,7 @@ from oda_data.indicators.research.sector_imputations import (
     imputed_multilateral_by_purpose,
 )
 
-from src.data.config import PATHS, TIME_RANGE, logger
+from src.data.config import PATHS, SECTORS_TIME, logger
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
     get_dac_ids,
@@ -21,7 +21,7 @@ recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 
 def get_bilateral_by_sector():
 
-    raw_bilateral = CRSData(years=range(2013, TIME_RANGE["end"] + 1)).read(
+    raw_bilateral = CRSData(years=range(2013, SECTORS_TIME["end"] + 1)).read(
         using_bulk_download=True,
         additional_filters=[
             ("donor_code", "in", donor_ids),
@@ -71,7 +71,7 @@ def get_bilateral_by_sector():
 def get_imputed_multi_by_sector():
 
     raw_multi = imputed_multilateral_by_purpose(
-        years=range(2013, TIME_RANGE["end"] + 1),
+        years=range(2013, SECTORS_TIME["end"] + 1),
         providers=donor_ids,
         measure="gross_disbursement",
         currency="USD",
