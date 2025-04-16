@@ -1,7 +1,6 @@
 import pandas as pd
 
 from oda_data import OECDClient
-from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_indicator
 
 from src.data.config import PATHS, FINANCING_INDICATORS, TIME_RANGE, logger
 

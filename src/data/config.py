@@ -53,6 +53,8 @@ class PATHS:
 
     SRC = Path(__file__).resolve().parent.parent
 
+    TOPIC_PAGE = SRC.parent / "topic_page"
+
     TOOLS = SRC / "data" / "analysis_tools"
     INDICATORS = TOOLS / "indicators.json"
     DONORS = TOOLS / "donors.json"
