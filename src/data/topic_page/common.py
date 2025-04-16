@@ -4,6 +4,7 @@ import os
 import pandas as pd
 from bblocks import format_number
 
+LONG_START_YEAR: int = 2000
 START_YEAR: int = 2010
 LATEST_YEAR_AGG: int = 2023
 LATEST_YEAR_DETAIL: int = 2023
@@ -68,3 +69,13 @@ def df_to_key_number(
         )
         .to_dict()
     )
+
+
+def sort_dac_first(df: pd.DataFrame, keep_current_sorting=True):
+    if not keep_current_sorting:
+        df = df.sort_values(["year", "name"], ascending=[True, False])
+
+    dac = df.query("name == 'DAC Countries, Total'").reset_index(drop=True)
+    other = df.query("name != 'DAC Countries, Total'").reset_index(drop=True)
+
+    return pd.concat([dac, other], ignore_index=True)
