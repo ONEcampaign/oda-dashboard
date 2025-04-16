@@ -1,1 +1,5 @@
 /.observablehq/cache/
+
+!./data/analysis_tools/donors.json
+!./data/analysis_tools/recipients.json
+!./data/analysis_tools/helper_tools.py

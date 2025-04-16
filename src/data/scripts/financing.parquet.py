@@ -50,7 +50,7 @@ def get_grants():
         "Disbursements, grants": "Grants",
     }
 
-    grants_raw = Indicators(
+    grants_raw = OECDClient(
         years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1),
         providers=donor_ids,
         measure=["net_disbursement_grant", "net_disbursement", "grant_equivalent"],

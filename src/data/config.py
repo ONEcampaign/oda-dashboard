@@ -22,7 +22,7 @@ TIME_RANGE: dict = {"start": 1990, "end": 2023}
 
 FINANCING_INDICATORS = {
     "ONE.10.1010_11010": "Total ODA",
-    # 'ONE.10.1010C', # Total Core ODA (ONE Definition)
+    'ONE.10.1010C': "Total Core ODA (ONE Definition)",
     "DAC1.10.1015": "Bilateral ODA",
     "DAC1.10.2000": "Multilateral ODA",
     "DAC1.10.1600": "Debt relief",
