@@ -42,33 +42,33 @@ const sectorMapping = await FileAttachment("./data/analysis_tools/sectors.json")
         countries and country groups. Use this tab to answer questions like:
     </p> 
     <ul class="group-list">
-        <li>How much aid does Country X provide?</li>
-        <li>Is Country X meeting the 0.7% GNI target for its ODA contributions?</li>
+        <li>How much aid does <i>Country X</i> provide?</li>
+        <li>Is <i>Country X</i> meeting the 0.7% GNI target for its ODA contributions?</li>
     </ul>
     <p class="base-text">
         <strong>Recipients</strong> shows ODA flows from providers to recipient countries and groups. This tab 
         is useful if you're interested in:
     </p>
     <ul class="group-list">
-        <li>How much ODA does Country X give directly to Country Y?</li>
-        <li>How much ODA does Country X channel to Country Y via multilateral organisations?</li>
+        <li>How much ODA does <i>Country X</i> give directly to <i>Country Y</i>?</li>
+        <li>How much ODA does <i>Country X</i> channel to <i>Country Y</i> via multilateral organisations?</li>
     </ul>
     <p class="base-text">
-        <strong>Sectors</strong> breaks down ODA data by economic sectors, which can be broke down into
+        <strong>Sectors</strong> breaks down ODA data by economic sectors, which can be broken down into
         sub-sectors. Use this tab to explore questions like:
     </p>
     <ul class="group-list">
-        <li>How much ODA does Country X allocate to humanitarian aid?</li>
-        <li>How much ODA does Country Y receive for health?</li>
-        <li>How much ODA does Country X direct to Country Y’s education sector?</li>
+        <li>How much ODA does <i>Country X</i> allocate to humanitarian aid?</li>
+        <li>How much ODA does <i>Country Y</i> receive for health?</li>
+        <li>How much ODA does <i>Country X</i> direct to <i>Country Y</i>’s education sector?</li>
     </ul>
     <p class="base-text">
         <strong>Gender</strong> categorises ODA by whether it targets gender equality as a policy objective. 
         This tab helps you explore questions such as:
     </p>
     <ul class="group-list">
-        <li>How much ODA from Country X targets gender as a principal or secondary goal?</li>
-        <li>What share of ODA received by Country Y focuses on gender equality?</li>
+        <li>How much ODA from <i>Country X</i> targets gender as a principal or secondary goal?</li>
+        <li>What share of ODA received by <i>Country Y</i> focuses on gender equality?</li>
     </ul>
     <h2 class="section-header">
         Where does the data come from?
