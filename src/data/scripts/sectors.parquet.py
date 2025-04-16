@@ -1,13 +1,13 @@
 import json
 import pandas as pd
 
-from oda_data import CrsData
+from oda_data import CRSData
+from oda_data.tools import sector_lists
 from oda_data.indicators.research.sector_imputations import (
     imputed_multilateral_by_purpose,
 )
 
 from src.data.config import PATHS, TIME_RANGE, logger
-from src.data.analysis_tools import sector_lists
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
     get_dac_ids,
@@ -21,7 +21,7 @@ recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 
 def get_bilateral_by_sector():
 
-    raw_bilateral = CrsData(years=range(2013, TIME_RANGE["end"] + 1)).read(
+    raw_bilateral = CRSData(years=range(2013, TIME_RANGE["end"] + 1)).read(
         using_bulk_download=True,
         additional_filters=[
             ("donor_code", "in", donor_ids),

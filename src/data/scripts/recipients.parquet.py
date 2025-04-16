@@ -1,4 +1,4 @@
-from oda_data import Indicators
+from oda_data import OECDClient
 from src.data.config import PATHS, RECIPIENTS_INDICATORS, TIME_RANGE, logger
 
 from src.data.analysis_tools.helper_functions import (
@@ -14,7 +14,7 @@ recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 
 def filter_transform_recipients():
 
-    dac2a_raw = Indicators(
+    dac2a_raw = OECDClient(
         years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1),
         providers=donor_ids,
         recipients=recipient_ids,

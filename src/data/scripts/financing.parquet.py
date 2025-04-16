@@ -1,6 +1,7 @@
 import pandas as pd
 
-from oda_data import Indicators
+from oda_data import OECDClient
+from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_indicator
 
 from src.data.config import PATHS, FINANCING_INDICATORS, TIME_RANGE, logger
 
@@ -17,7 +18,7 @@ donor_ids = get_dac_ids(PATHS.DONORS)
 
 def get_dac1():
 
-    dac1_raw = Indicators(
+    dac1_raw = OECDClient(
         years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1),
         providers=donor_ids,
         measure=["net_disbursement", "grant_equivalent"],
@@ -50,7 +51,7 @@ def get_grants():
         "Disbursements, grants": "Grants",
     }
 
-    grants_raw = Indicators(
+    grants_raw = OECDClient(
         years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1),
         providers=donor_ids,
         measure=["net_disbursement_grant", "net_disbursement", "grant_equivalent"],
