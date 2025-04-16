@@ -6,6 +6,7 @@ from bblocks import format_number
 
 LONG_START_YEAR: int = 2000
 START_YEAR: int = 2010
+SHORT_START_YEAR: int = 2015
 LATEST_YEAR_AGG: int = 2023
 LATEST_YEAR_DETAIL: int = 2023
 CONSTANT_YEAR: int = 2023
