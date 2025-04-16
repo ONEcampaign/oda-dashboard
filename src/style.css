@@ -400,32 +400,23 @@ select, input {
 }
 
 .base-text {
-    padding-left: 2em !important;
-}
-
-.italic {
-    font-style: italic;
-}
-
-.bold {
-    font-weight: bold;
+    padding: 0 2em 0 4em !important;
 }
 
 .sub-section-header {
     font-size: var(--size-m) !important;
 }
 
-
 .section-header + .base-text {
     margin-top: 0 !important;
 }
 
 .group-list {
-    padding-left: 30px;
+    padding: 0 2em 0 6em !important;
 }
 
 .group-list > li {
-    margin-bottom: 10px;
+    margin-bottom: 7.5px;
 }
 .group-name {
     font-weight: bold;
