@@ -1139,14 +1139,14 @@ files = [
 
 [[package]]
 name = "oda-data"
-version = "2.0.0b11"
+version = "2.0.0b12"
 description = "A python package to work with Official Development Assistance data from the OECD DAC."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "oda_data-2.0.0b11-py3-none-any.whl", hash = "sha256:e47e81a6c3ae4b24e3bb5de8f2f51357e6128c42809ad7a6888c4a4266f90eb5"},
-    {file = "oda_data-2.0.0b11.tar.gz", hash = "sha256:3337e99de8cc72873b6ce3a7c32dd83b4e188878a03cafd8a484edc96284736d"},
+    {file = "oda_data-2.0.0b12-py3-none-any.whl", hash = "sha256:89bd86cd178385526d7ab10cb1949ffcbf081bc679b952009f9afe82c8d336af"},
+    {file = "oda_data-2.0.0b12.tar.gz", hash = "sha256:87e46f1b667db237cd24edb936fd988db13ba09b021bc7dfce084980c12c8680"},
 ]
 
 [package.dependencies]
@@ -1340,14 +1340,14 @@ files = [
 
 [[package]]
 name = "pdfminer-six"
-version = "20250327"
+version = "20250416"
 description = "PDF parser and analyzer"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "pdfminer_six-20250327-py3-none-any.whl", hash = "sha256:5af494c85b1ecb7c28df5e3a26bb5234a8226a307503d9a09f4958bc154b16a9"},
-    {file = "pdfminer_six-20250327.tar.gz", hash = "sha256:57f6c34c2702df04cfa3191622a3db0a922ced686d35283232b00094f8914aa1"},
+    {file = "pdfminer_six-20250416-py3-none-any.whl", hash = "sha256:dd2a9ad7bc7dd6b62d009aaa9c101ac9d069a47937724569c375a6a9078da303"},
+    {file = "pdfminer_six-20250416.tar.gz", hash = "sha256:30956a85f9d0add806a4e460ed0d67c2b6a48b53323c7ac87de23174596d3acd"},
 ]
 
 [package.dependencies]
@@ -2631,4 +2631,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "7219dccf11c500a59636987c904ca3f182b446f80c6f782c2c6a2cd597c1c6fd"
+content-hash = "e5a407bc75c86c6c41851658ced8e9d7b3fdcfc9550f08c3baa5202becc907ad"
