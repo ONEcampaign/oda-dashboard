@@ -1,20 +1,4 @@
-export function convertUint32Array(uint32Array, scale = 2) {
-    // Handle missing or non-Uint32Array inputs
-    if (!uint32Array || !(uint32Array instanceof Uint32Array) || uint32Array.length !== 4) {
-        // console.warn("Skipping conversion: Invalid Uint32Array(4) format", uint32Array);
-        return null; // Return null or original value instead of throwing an error
-    }
-
-    // Convert Uint32Array(4) to a BigInt (Apache Arrow stores it in little-endian order)
-    let bigIntValue =
-        (BigInt(uint32Array[3]) << BigInt(96)) +
-        (BigInt(uint32Array[2]) << BigInt(64)) +
-        (BigInt(uint32Array[1]) << BigInt(32)) +
-        BigInt(uint32Array[0]);
-
-    // Scale down by 10^scale to get the correct decimal value
-    return Number(bigIntValue) / Math.pow(10, scale);
-}
+import { html } from "htl";
 
 export function formatString(str, options = {fileMode: false}) {
     let result = str.replace(/, Total/g, '');
@@ -81,24 +65,23 @@ export function getCurrencyLabel(tag, {
 }
 
 
-
 export function name2CodeMap(obj) {
-        const map = new Map();
+    const map = new Map();
 
-        for (const [code, { name, groups }] of Object.entries(obj)) {
-            // Add country name → code
-            if (!map.has(name)) map.set(name, []);
-            map.get(name).push(Number(code));
+    for (const [code, {name, groups}] of Object.entries(obj)) {
+        // Add country name → code
+        if (!map.has(name)) map.set(name, []);
+        map.get(name).push(Number(code));
 
-            // Add each group → code
-            for (const group of groups) {
-                if (!map.has(group)) map.set(group, []);
-                map.get(group).push(Number(code));
-            }
+        // Add each group → code
+        for (const group of groups) {
+            if (!map.has(group)) map.set(group, []);
+            map.get(group).push(Number(code));
         }
-
-        return map;
     }
+
+    return map;
+}
 
 
 export function getNameByCode(map, codes) {
@@ -116,7 +99,6 @@ export function getNameByCode(map, codes) {
 
     return undefined;
 }
-
 
 
 export function generateIndicatorMap(data, page) {
@@ -150,5 +132,62 @@ export function decodeHTML(html) {
     txt.innerHTML = html;
     return txt.value;
 }
+
+export function generateList(data, mode) {
+    if (mode === "sectors") {
+        const grouped = Object.entries(data).reduce((acc, [subsector, sector]) => {
+            (acc[sector] ??= []).push(subsector);
+            return acc;
+        }, {});
+
+        return html`
+      <ul class="group-list">
+        ${
+            Object.entries(grouped)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([sector, subsectors]) =>
+                    subsectors.length === 1
+                        ? html`<li><strong>${sector}</strong></li>`
+                        : html`<li><strong>${sector}</strong>: ${subsectors.join("; ")}</li>`
+                )
+        }
+      </ul>
+    `;
+    }
+
+    if (mode === "countries") {
+        const groupToCountries = {};
+
+        for (const donor of Object.values(data)) {
+            for (const group of donor.groups) {
+                (groupToCountries[group] ??= []).push(donor.name);
+            }
+        }
+
+        return html`
+      <ul class="group-list">
+        ${
+            Object.entries(groupToCountries)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([group, countries]) => {
+                    let content;
+                    if (group === "All bilateral donors") {
+                        content = "DAC and Non-DAC countries";
+                    } else if (group === "Developing countries") {
+                        content = "All recipient countries and regions";
+                    } else {
+                        content = countries.join("; ");
+                    }
+
+                    return html`<li><strong>${group}</strong>: ${content}</li>`;
+                })
+        }
+      </ul>
+    `;
+    }
+
+    return html`<p>Unsupported mode: ${mode}</p>`;
+}
+
 
 
