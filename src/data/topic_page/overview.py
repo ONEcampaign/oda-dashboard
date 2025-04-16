@@ -261,8 +261,8 @@ def aid_to_sectors_ts() -> None:
 if __name__ == "__main__":
     set_cache_dir(oda_data=True, pydeflate=True)
 
-    # total_aid_key_number()
-    # aid_gni_key_number()
-    # aid_to_africa_ts()
-    # aid_to_incomes_latest()
+    total_aid_key_number()
+    aid_gni_key_number()
+    aid_to_africa_ts()
+    aid_to_incomes_latest()
     aid_to_sectors_ts()
