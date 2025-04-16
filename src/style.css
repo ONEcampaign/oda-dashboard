@@ -377,6 +377,60 @@ select, input {
     outline: 0;
 }
 
+/* Methodology */
+
+.card.methodology {
+    max-width: 700px;
+    margin: auto;
+    padding: 2em 0;
+}
+
+.card.methodology > * {
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.section-header {
+    font-size: var(--size-l) !important;
+    margin: 30px 0 10px !important;
+}
+
+.section-header:first-of-type {
+    margin-top: 0 !important;
+}
+
+.base-text {
+    padding-left: 2em !important;
+}
+
+.italic {
+    font-style: italic;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+.sub-section-header {
+    font-size: var(--size-m) !important;
+}
+
+
+.section-header + .base-text {
+    margin-top: 0 !important;
+}
+
+.group-list {
+    padding-left: 30px;
+}
+
+.group-list > li {
+    margin-bottom: 10px;
+}
+.group-name {
+    font-weight: bold;
+}
+
 /* Responsive design */
 
 @media (max-width: 1000px) {

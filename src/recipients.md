@@ -169,6 +169,9 @@ const tableData = data.table
     <a class="view-button" href="./gender">
         Gender
     </a>
+    <a class="view-button" href="./faqs">
+        FAQs
+    </a>
 </div>
 
 <div>
