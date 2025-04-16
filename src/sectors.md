@@ -234,6 +234,9 @@ function generateSubtitle() {
     <a class="view-button" href="./gender">
         Gender
     </a>
+    <a class="view-button" href="./faqs">
+        FAQs
+    </a>
 </div>
 
 <div>

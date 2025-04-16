@@ -170,6 +170,9 @@ function generateSubtitle(codes, indicatorMapping) {
     <a class="view-button active" href="./gender">
         Gender
     </a>
+    <a class="view-button" href="./faqs">
+        FAQs
+    </a>
 </div>
 
 <div>

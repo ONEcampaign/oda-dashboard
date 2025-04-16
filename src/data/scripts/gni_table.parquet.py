@@ -1,4 +1,7 @@
+import pandas as pd
+
 from oda_data import DAC1Data
+from oda_data.tools.groupings import provider_groupings
 
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
@@ -7,11 +10,12 @@ from src.data.analysis_tools.helper_functions import (
 )
 from src.data.config import PATHS, TIME_RANGE, logger
 
+eu_ids = provider_groupings()["eu27_countries"]
 
 def get_gni():
     donor_ids = get_dac_ids(PATHS.DONORS)
 
-    df = DAC1Data(years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)).read(
+    bilateral_df = DAC1Data(years=range(TIME_RANGE["start"], TIME_RANGE["end"] + 1)).read(
         using_bulk_download=True,
         additional_filters=[
             ("amount_type", "==", "Current prices"),
@@ -24,6 +28,26 @@ def get_gni():
             "value",
         ],
     )
+
+    if all(code in bilateral_df.donor_code.values for code in eu_ids):
+
+        eu_df = (
+            bilateral_df
+            .query("donor_code in @eu_ids")
+            .groupby(
+                ["year",],
+                observed=True,
+                dropna=False,
+            )["value"]
+            .sum()
+            .reset_index()
+            .assign(donor_code=918)
+        )
+
+    else:
+        raise Exception("Not all EU countries present in df")
+
+    df = pd.concat([bilateral_df, eu_df])
 
     return df
 

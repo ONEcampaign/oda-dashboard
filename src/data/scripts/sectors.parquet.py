@@ -2,12 +2,12 @@ import json
 import pandas as pd
 
 from oda_data import CRSData
+from oda_data.tools import sector_lists
 from oda_data.indicators.research.sector_imputations import (
     imputed_multilateral_by_purpose,
 )
 
 from src.data.config import PATHS, TIME_RANGE, logger
-from src.data.analysis_tools import sector_lists
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
     get_dac_ids,
