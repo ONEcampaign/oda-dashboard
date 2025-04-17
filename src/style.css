@@ -241,12 +241,15 @@ select, input {
 
 .text-section {
     margin: 0;
+    width: 100%;
 }
 
 .plot-note,
 .plot-source {
     font-size: var(--size-s);
     margin: 5px 0;
+    width: 100% !important;
+    max-width: none !important;
 }
 
 .logo-section {
