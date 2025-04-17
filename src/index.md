@@ -220,7 +220,7 @@ const tableData = data.table
                                         <div class="bottom-panel">
                                             <div class="text-section">
                                                 <p class="plot-source">Source: OECD DAC1 table.</p>
-                                                <p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>                
+                                                <p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}. ${indicator === indicatorMapping.get("Total Core ODA (ONE Definition)") ?"• Total Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>                
                                             </div>
                                             <div class="logo-section">
                                                 <a href="https://data.one.org/" target="_blank">
@@ -304,7 +304,7 @@ const tableData = data.table
                                         <div class="bottom-panel">
                                             <div class="text-section">
                                                 <p class="plot-source">Source: OECD DAC1 table.</p>
-                                                <p class="plot-note">ODA values as a share of GNI of ${formatString(getNameByCode(donorMapping, donor))}.</p>
+                                                <p class="plot-note">ODA values as a share of GNI of ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Total Core ODA (ONE Definition)") ?"• Total Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>
                                             </div>
                                             <div class="logo-section">
                                                 <a href="https://data.one.org/" target="_blank">
@@ -368,10 +368,10 @@ const tableData = data.table
                                         <p class="plot-source">Source: OECD DAC1 table.</p>
                                         ${
                                             unit === "value" 
-                                                ? html`<p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
+                                                ? html`<p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.  ${indicator === indicatorMapping.get("Total Core ODA (ONE Definition)") ?"• Total Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>`
                                                 : unit === "gni_pct"
-                                                    ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(getNameByCode(donorMapping, donor))}.</p>`
-                                                    : html`<p class="plot-note">ODA values as a share of total contributions from ${formatString(getNameByCode(donorMapping, donor))}.</p>`
+                                                    ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Total Core ODA (ONE Definition)") ?"• Total Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>`
+                                                    : html`<p class="plot-note">ODA values as a share of total contributions from ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Total Core ODA (ONE Definition)") ?"• Total Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>`
                                         }
                                     </div>
                                     <div class="logo-section">
