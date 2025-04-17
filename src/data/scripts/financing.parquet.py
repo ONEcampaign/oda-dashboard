@@ -23,13 +23,25 @@ def get_dac1():
         use_bulk_download=True,
     ).get_indicators(list(FINANCING_INDICATORS.keys()))
 
-    # Remove net disbursements after 2018
-    dac1_raw = dac1_raw[
-        ~((dac1_raw["year"] >= 2018) & (dac1_raw["fund_flows"] == "Disbursements, net"))
+    in_donor_codes = [1500, 1510, 1520, 1820]
+
+    # Filter in donor aid type to only include net disbursements
+    id_df = dac1_raw[
+        (dac1_raw["aidtype_code"].isin(in_donor_codes)) &
+        (dac1_raw["flows_code"] == 1140)
     ]
 
+    # Filter other aid types to include net disbursements before 2018 and grant equivalents after
+    other_df = dac1_raw[
+        ~dac1_raw["aidtype_code"].isin(in_donor_codes) & (
+                (dac1_raw["year"] < 2018) |
+                ((dac1_raw["year"] >= 2018) & (dac1_raw["flows_code"] == 1160))
+        )
+    ]
+    dac1_filtered = pd.concat([id_df, other_df], ignore_index=True)
+
     dac1 = (
-        dac1_raw.groupby(
+        dac1_filtered.groupby(
             ["year", "donor_code", "one_indicator"], dropna=False, observed=True
         )["value"]
         .sum()
@@ -49,20 +61,23 @@ def get_grants():
         "Disbursements, grants": "Grants",
     }
 
-    grants_raw = OECDClient(
-        years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1),
+    grants_flow_raw = OECDClient(
+        years=range(FINANCING_TIME["start"], 2018),
         providers=donor_ids,
-        measure=["net_disbursement_grant", "net_disbursement", "grant_equivalent"],
+        measure=["net_disbursement_grant", "net_disbursement"],
         use_bulk_download=True,
-    ).get_indicators(["DAC1.10.1010", "DAC1.10.11010"])
+    ).get_indicators(["DAC1.10.1010"])
+
+    grants_ge_raw = OECDClient(
+        years=range(2018, FINANCING_TIME["end"]),
+        providers=donor_ids,
+        measure=["net_disbursement_grant", "grant_equivalent"],
+        use_bulk_download=True,
+    ).get_indicators(["DAC1.10.1010"])
+
 
     # Remove net disbursements after 2018
-    grants_raw = grants_raw[
-        ~(
-            (grants_raw["year"] >= 2018)
-            & (grants_raw["fund_flows"] == "Disbursements, net")
-        )
-    ]
+    grants_raw = pd.concat([grants_flow_raw, grants_ge_raw])
 
     grants = (
         grants_raw.assign(indicator=lambda d: d["fund_flows"].map(mapping))
