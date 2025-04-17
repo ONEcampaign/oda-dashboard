@@ -16,7 +16,9 @@ eu_ids = provider_groupings()["eu27_countries"]
 def get_gni():
     donor_ids = get_dac_ids(PATHS.DONORS)
 
-    bilateral_df = DAC1Data(years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1)).read(
+    bilateral_df = DAC1Data(
+        years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1)
+    ).read(
         using_bulk_download=True,
         additional_filters=[
             ("amount_type", "==", "Current prices"),
@@ -33,10 +35,11 @@ def get_gni():
     if all(code in bilateral_df.donor_code.values for code in eu_ids):
 
         eu_df = (
-            bilateral_df
-            .query("donor_code in @eu_ids")
+            bilateral_df.query("donor_code in @eu_ids")
             .groupby(
-                ["year",],
+                [
+                    "year",
+                ],
                 observed=True,
                 dropna=False,
             )["value"]

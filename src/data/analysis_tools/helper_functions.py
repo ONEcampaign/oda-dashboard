@@ -16,8 +16,9 @@ from src.data.config import PATHS, logger
 
 def save_time_range_to_json(dict, file_name):
     logger.info(f"Saving time range to {PATHS.TOOLS}/{file_name}")
-    with open(PATHS.TOOLS / file_name, 'w') as f:
+    with open(PATHS.TOOLS / file_name, "w") as f:
         json.dump(dict, f, indent=2)
+
 
 def set_cache_dir(path=PATHS.DATA, oda_data=False, pydeflate=False):
     if not os.path.exists(path):

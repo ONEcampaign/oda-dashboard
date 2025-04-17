@@ -16,27 +16,15 @@ logger.addHandler(shell_handler)
 logger.setLevel(logging.INFO)
 
 
-BASE_TIME: dict = {
-    "start": 1990,
-    "end": 2023,
-    "base": 2023 # for currency conversions
-}
+BASE_TIME: dict = {"start": 1990, "end": 2023, "base": 2023}  # for currency conversions
 
-FINANCING_TIME: dict = {
-    "start": 1990,
-    "end": 2024,
-    "base": 2024
-}
+FINANCING_TIME: dict = {"start": 1990, "end": 2024, "base": 2024}
 
-SECTORS_TIME: dict = {
-    "start": 2013,
-    "end": 2023,
-    "base": 2023
-}
+SECTORS_TIME: dict = {"start": 2013, "end": 2023, "base": 2023}
 
 FINANCING_INDICATORS = {
     "ONE.10.1010_11010": "Total ODA",
-    'ONE.10.1010C': "Total Core ODA (ONE Definition)",
+    "ONE.10.1010C": "Total Core ODA (ONE Definition)",
     "DAC1.10.1015": "Bilateral ODA",
     "DAC1.10.2000": "Multilateral ODA",
     "DAC1.10.1600": "Debt relief",

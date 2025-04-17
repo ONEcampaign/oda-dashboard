@@ -9,10 +9,11 @@ from src.data.analysis_tools.helper_functions import (
     get_dac_ids,
     add_index_column,
     df_to_parquet,
-    save_time_range_to_json
+    save_time_range_to_json,
 )
 
 donor_ids = get_dac_ids(PATHS.DONORS)
+
 
 def get_dac1():
 
@@ -27,17 +28,19 @@ def get_dac1():
 
     # Filter in donor aid type to only include net disbursements
     id_df = dac1_raw[
-        (dac1_raw["aidtype_code"].isin(in_donor_codes)) &
-        (dac1_raw["flows_code"] == 1140)
+        (dac1_raw["aidtype_code"].isin(in_donor_codes))
+        & (dac1_raw["flows_code"] == 1140)
     ]
 
     # Filter other aid types to include net disbursements before 2018 and grant equivalents after
     other_df = dac1_raw[
-        ~dac1_raw["aidtype_code"].isin(in_donor_codes) & (
-                (dac1_raw["year"] < 2018) |
-                ((dac1_raw["year"] >= 2018) & (dac1_raw["flows_code"] == 1160))
+        ~dac1_raw["aidtype_code"].isin(in_donor_codes)
+        & (
+            (dac1_raw["year"] < 2018)
+            | ((dac1_raw["year"] >= 2018) & (dac1_raw["flows_code"] == 1160))
         )
     ]
+
     dac1_filtered = pd.concat([id_df, other_df], ignore_index=True)
 
     dac1 = (
@@ -74,7 +77,6 @@ def get_grants():
         measure=["net_disbursement_grant", "grant_equivalent"],
         use_bulk_download=True,
     ).get_indicators(["DAC1.10.1010"])
-
 
     # Remove net disbursements after 2018
     grants_raw = pd.concat([grants_flow_raw, grants_ge_raw])

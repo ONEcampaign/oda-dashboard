@@ -6,6 +6,7 @@ from pydeflate import oecd_dac_deflate
 from src.data.config import logger, PATHS, FINANCING_TIME
 from src.data.analysis_tools.helper_functions import set_cache_dir
 
+
 def create_df():
     with open(PATHS.DONORS) as f:
         donor_dict = json.load(f)

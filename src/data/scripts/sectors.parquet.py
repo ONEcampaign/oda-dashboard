@@ -116,12 +116,10 @@ def merge_transform_sectors():
         json_path=PATHS.TOOLS / "sectors_indicators.json",
     )
     sectors = add_index_column(
-        df=sectors,
-        column="sub_sector",
-        json_path=PATHS.TOOLS / "sub_sectors.json"
+        df=sectors, column="sub_sector", json_path=PATHS.TOOLS / "sub_sectors.json"
     )
 
-    with open(PATHS.TOOLS / "sub_sectors.json", 'r') as f:
+    with open(PATHS.TOOLS / "sub_sectors.json", "r") as f:
         subsector_mapping = json.load(f)
 
     sector_mapping = sector_lists.get_broad_sector_groups()
@@ -130,7 +128,7 @@ def merge_transform_sectors():
         k: v for k, v in sector_mapping.items() if k in valid_subsectors
     }
 
-    with open(PATHS.TOOLS / "sectors.json", 'w') as f:
+    with open(PATHS.TOOLS / "sectors.json", "w") as f:
         json.dump(sector_mapping_filtered, f, indent=2)
 
     return sectors

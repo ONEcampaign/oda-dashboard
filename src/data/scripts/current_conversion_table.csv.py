@@ -8,6 +8,7 @@ from src.data.analysis_tools.helper_functions import set_cache_dir
 
 codes = {"USA": "usd", "CAN": "cad", "FRA": "eur", "GBR": "gbp"}
 
+
 def create_df():
     return pd.DataFrame(
         {"year": range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1), "value": 1}
