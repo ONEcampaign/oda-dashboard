@@ -158,7 +158,7 @@ def aid_to_incomes_latest():
         years=LATEST_YEAR_DETAIL,
         providers=20001,
         recipients=list(recipients),
-        base_year=CONSTANT_YEAR,
+        base_year=LATEST_YEAR_DETAIL,
         measure=["net_disbursement"],
         use_bulk_download=True,
     )
@@ -207,7 +207,7 @@ def aid_to_sectors_ts() -> None:
             years=range(START_YEAR, LATEST_YEAR_DETAIL + 1),
             as_total=True,
             broad=True,
-            base_year=CONSTANT_YEAR,
+            base_year=LATEST_YEAR_DETAIL,
         )
         .assign(recipient="All Developing Countries", name="DAC Countries, Total")
         .groupby(
