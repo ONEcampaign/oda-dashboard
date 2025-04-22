@@ -1,4 +1,8 @@
+import pandas as pd
 from oda_data import OECDClient
+from oda_data.tools.groupings import provider_groupings
+from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_indicator
+
 from src.data.config import PATHS, RECIPIENTS_INDICATORS, BASE_TIME, logger
 
 from src.data.analysis_tools.helper_functions import (
@@ -7,13 +11,15 @@ from src.data.analysis_tools.helper_functions import (
     get_dac_ids,
     add_index_column,
     df_to_parquet,
+    eui_bi_code
 )
 
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
+eu_ids = provider_groupings()["eu27_total"]
 
 
-def filter_transform_recipients():
+def get_dac2a():
 
     dac2a_raw = OECDClient(
         years=range(BASE_TIME["start"], BASE_TIME["end"] + 1),
@@ -22,7 +28,7 @@ def filter_transform_recipients():
         use_bulk_download=True,
     ).get_indicators(list(RECIPIENTS_INDICATORS.keys()))
 
-    recipients = (
+    dac2a = (
         dac2a_raw.groupby(
             ["year", "donor_code", "recipient_code", "one_indicator"],
             dropna=False,
@@ -34,7 +40,42 @@ def filter_transform_recipients():
         .drop(columns=["one_indicator"])
     )
 
-    recipients = recipients[recipients["value"] != 0]
+    return dac2a
+
+
+def get_dac2a_eui_eu27():
+
+    dac2a_client = OECDClient(
+        years=range(BASE_TIME["start"], BASE_TIME["end"] + 1),
+        providers=donor_ids,
+        recipients=recipient_ids,
+        use_bulk_download=True,
+    )
+
+    eui_eu27_dac2a_raw = get_eui_plus_bilateral_providers_indicator(
+        dac2a_client,
+        indicator=list(RECIPIENTS_INDICATORS.keys())
+    )
+
+    eui_eu27_dac2a = (
+        eui_eu27_dac2a_raw.query("donor_code == 918")
+        .assign(donor_code=eui_bi_code)
+        .assign(indicator=lambda d: d["one_indicator"].map(RECIPIENTS_INDICATORS))
+        [["year", "donor_code", "recipient_code", "indicator", "value"]]
+    )
+
+    return eui_eu27_dac2a
+
+
+def combine_recipients():
+
+
+    dac2a = get_dac2a()
+    eui_eu27_dac2a = get_dac2a_eui_eu27()
+
+    recipients_raw = pd.concat([dac2a, eui_eu27_dac2a])
+
+    recipients = recipients_raw[recipients_raw["value"] != 0]
 
     recipients = add_index_column(
         df=recipients,
@@ -47,7 +88,7 @@ def filter_transform_recipients():
 
 
 def recipients_to_parquet():
-    df = filter_transform_recipients()
+    df = combine_recipients()
     df_to_parquet(df)
 
 
