@@ -10,7 +10,7 @@ const db = await DuckDBClient.of({
 });
 
 const donorOptions = await FileAttachment("../data/analysis_tools/donors.json").json()
-const donorMapping = name2CodeMap(donorOptions)
+const donorMapping = name2CodeMap(donorOptions, {})
 
 const financingIndicators = await FileAttachment('../data/analysis_tools/financing_indicators.json').json()
 const indicatorMapping = new Map(
