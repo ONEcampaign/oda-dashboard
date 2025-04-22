@@ -11,16 +11,16 @@ from decimal import Decimal, ROUND_HALF_EVEN
 from oda_data import set_data_path
 from pydeflate import set_pydeflate_path
 
-from src.data.config import PATHS, logger
+from src.data.config import PATHS, logger, eui_bi_code
 
 
-def save_time_range_to_json(dict, file_name):
+def save_time_range_to_json(time_dict: dict, file_name: str):
     logger.info(f"Saving time range to {PATHS.TOOLS}/{file_name}")
     with open(PATHS.TOOLS / file_name, "w") as f:
-        json.dump(dict, f, indent=2)
+        json.dump(time_dict, f, indent=2)
 
 
-def set_cache_dir(path=PATHS.DATA, oda_data=False, pydeflate=False):
+def set_cache_dir(path=PATHS.DATA, oda_data: bool = False, pydeflate: bool = False):
     if not os.path.exists(path):
         logger.info(f"Creating directory for cached data: {path}")
         os.makedirs(path)
@@ -31,13 +31,18 @@ def set_cache_dir(path=PATHS.DATA, oda_data=False, pydeflate=False):
         set_pydeflate_path(path)
 
 
-def get_dac_ids(path):
+def get_dac_ids(path, remove_eui_bi: bool = True) -> list:
     with open(path, "r") as f:
         data = json.load(f)
-    return [int(key) for key in data.keys()]
 
+    dac_ids = [int(key) for key in data.keys()]
 
-def load_indicators(page):
+    if remove_eui_bi:
+        dac_ids = [x for x in dac_ids if x != 919]
+
+    return dac_ids
+
+def load_indicators(page: str):
     with open(PATHS.INDICATORS, "r") as f:
         data = json.load(f)
 
@@ -84,7 +89,7 @@ def load_indicators(page):
         return result
 
 
-def return_pa_table(df):
+def return_pa_table(df: pd.DataFrame):
 
     schema = get_schema(df)
 
@@ -99,7 +104,7 @@ def return_pa_table(df):
     sys.stdout.buffer.write(buf_bytes)
 
 
-def get_schema(df):
+def get_schema(df: pd.DataFrame):
     def choose_int_type(min_val, max_val):
         if min_val >= 0:
             if max_val <= 255:
@@ -157,12 +162,12 @@ def get_schema(df):
     return pa.schema(fields)
 
 
-def to_decimal(val, precision=2):
+def to_decimal(val: float, precision: int =2):
     quantizer = Decimal("1." + "0" * precision)
     return Decimal(str(val)).quantize(quantizer, rounding=ROUND_HALF_EVEN)
 
 
-def convert_types(df):
+def convert_types(df: pd.DataFrame) -> pd.DataFrame:
     type_map = {
         "year": "category",
         "donor_code": "category",
@@ -181,13 +186,13 @@ def convert_types(df):
     return df
 
 
-def df_to_parquet(df):
+def df_to_parquet(df: pd.DataFrame):
 
     converted_df = convert_types(df)
     return_pa_table(converted_df)
 
 
-def add_index_column(df, column, json_path, ordered_list=None):
+def add_index_column(df: pd.DataFrame, column: str, json_path, ordered_list: list = None) -> pd.DataFrame:
     # If no custom order is provided, use unique values in appearance order
     if ordered_list is None:
         ordered_list = list(df[column].unique())

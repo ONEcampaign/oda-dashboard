@@ -1,17 +1,14 @@
 import sys
-import json
 import pandas as pd
 from pydeflate import oecd_dac_deflate
 
-from src.data.config import logger, PATHS, FINANCING_TIME
-from src.data.analysis_tools.helper_functions import set_cache_dir
+from src.data.config import logger, PATHS, FINANCING_TIME, eui_bi_code
+from src.data.analysis_tools.helper_functions import set_cache_dir, get_dac_ids
 
 
 def create_df():
-    with open(PATHS.DONORS) as f:
-        donor_dict = json.load(f)
 
-    donor_codes = [int(k) for k in donor_dict.keys()]
+    donor_codes = get_dac_ids(PATHS.DONORS)
 
     years = range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1)
 
@@ -25,6 +22,15 @@ def create_df():
 
     return df
 
+def get_eui(df: pd.DataFrame) -> pd.DataFrame:
+
+    eui_df = (
+        df
+        .query("dac_code == 918")
+        .assign(dac_code=eui_bi_code)
+    )
+
+    return eui_df
 
 def deflate_current_usd():
 
@@ -44,7 +50,13 @@ def deflate_current_usd():
             target_value_column=f"{code}_constant",
         )
 
-    return df.drop(columns=["value"])
+    df = df.drop(columns=["value"])
+
+    eui_df = get_eui(df)
+
+    df = pd.concat([df, eui_df])
+
+    return df
 
 
 def get_conversion_table():

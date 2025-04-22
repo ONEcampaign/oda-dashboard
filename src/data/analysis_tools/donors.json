@@ -4,6 +4,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -12,6 +13,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -20,6 +22,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -28,6 +31,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "G7 countries",
       "DAC countries"
     ]
@@ -37,6 +41,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "G7 countries",
       "DAC countries"
     ]
@@ -46,6 +51,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "G7 countries",
       "DAC countries"
     ]
@@ -55,6 +61,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -70,6 +77,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -78,6 +86,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -101,6 +110,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -116,6 +126,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -124,6 +135,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -132,6 +144,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -140,6 +153,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -148,6 +162,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -156,6 +171,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -164,6 +180,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -172,6 +189,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -180,6 +198,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -188,6 +207,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -196,6 +216,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "DAC countries"
     ]
   },
@@ -256,6 +277,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "non-DAC countries"
     ]
   },
@@ -264,6 +286,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "non-DAC countries"
     ]
   },
@@ -279,6 +302,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "non-DAC countries"
     ]
   },
@@ -294,6 +318,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "non-DAC countries"
     ]
   },
@@ -302,6 +327,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "non-DAC countries"
     ]
   },
@@ -310,6 +336,7 @@
      "groups": [
       "All bilateral donors",
       "EU27 countries",
+      "EU27 + EU Institutions",
       "non-DAC countries"
     ]
   },
@@ -393,6 +420,10 @@
   "918": {
     "name": "EU Institutions",
      "groups": []
+  },
+  "919": {
+    "name": "EU Institutions, bilateral",
+    "groups": ["EU27 + EU Institutions"]
   }
 }
 
