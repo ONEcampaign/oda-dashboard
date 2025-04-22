@@ -4,7 +4,7 @@ import pandas as pd
 from pydeflate import oecd_dac_deflate
 
 from src.data.config import logger, PATHS, BASE_TIME
-from src.data.analysis_tools.helper_functions import set_cache_dir
+from src.data.analysis_tools.helper_functions import set_cache_dir, get_eui
 
 
 def create_df():
@@ -44,7 +44,13 @@ def deflate_current_usd():
             target_value_column=f"{code}_constant",
         )
 
-    return df.drop(columns=["value"])
+    df = df.drop(columns=["value"])
+
+    eui_df = get_eui(df)
+
+    df = pd.concat([df, eui_df])
+
+    return df
 
 
 def get_conversion_table():

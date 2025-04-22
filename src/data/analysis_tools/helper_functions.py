@@ -210,3 +210,13 @@ def add_index_column(df: pd.DataFrame, column: str, json_path, ordered_list: lis
         json.dump(idx_to_str, f, indent=2)
 
     return df
+
+def get_eui(df: pd.DataFrame) -> pd.DataFrame:
+
+    eui_df = (
+        df
+        .query("dac_code == 918")
+        .assign(dac_code=eui_bi_code)
+    )
+
+    return eui_df

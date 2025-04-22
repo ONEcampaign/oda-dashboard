@@ -2,8 +2,8 @@ import sys
 import pandas as pd
 from pydeflate import oecd_dac_deflate
 
-from src.data.config import logger, PATHS, FINANCING_TIME, eui_bi_code
-from src.data.analysis_tools.helper_functions import set_cache_dir, get_dac_ids
+from src.data.config import logger, PATHS, FINANCING_TIME
+from src.data.analysis_tools.helper_functions import set_cache_dir, get_dac_ids, get_eui
 
 
 def create_df():
@@ -22,15 +22,6 @@ def create_df():
 
     return df
 
-def get_eui(df: pd.DataFrame) -> pd.DataFrame:
-
-    eui_df = (
-        df
-        .query("dac_code == 918")
-        .assign(dac_code=eui_bi_code)
-    )
-
-    return eui_df
 
 def deflate_current_usd():
 
