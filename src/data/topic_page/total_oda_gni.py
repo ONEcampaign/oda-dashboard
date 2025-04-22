@@ -64,7 +64,7 @@ def oda_gni_year_columns():
         .pivot(index=["donor_name", "year"], columns="one_indicator", values="value")
         .reset_index(drop=False)
         .assign(
-            oda_gni=lambda d: round(100 * d[oda_indicator] / d[gni_indicator], 3),
+            oda_gni=lambda d: round(100 * d[oda_indicator] / d[gni_indicator], 5),
             missing=lambda d: round(d[gni_indicator] * 0.007 - d[oda_indicator], 1),
         )
         .assign(missing=lambda d: d.missing.apply(lambda v: v if v > 0 else 0))
