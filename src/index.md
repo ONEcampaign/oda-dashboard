@@ -17,7 +17,7 @@ const ONELogo = await FileAttachment("./ONE-logo-black.png").image()
 
 ```js
 const donorOptions = await FileAttachment("./data/analysis_tools/donors.json").json()
-const donorMapping = name2CodeMap(donorOptions)
+const donorMapping = name2CodeMap(donorOptions, {})
 
 const indicatorOptions = await FileAttachment('./data/analysis_tools/financing_indicators.json').json()
 const indicatorMapping = new Map(
@@ -220,7 +220,7 @@ const tableData = data.table
                                         <div class="bottom-panel">
                                             <div class="text-section">
                                                 <p class="plot-source">Source: OECD DAC1 table.</p>
-                                                <p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}. ${indicator === indicatorMapping.get("Total Core ODA (ONE Definition)") ?"• Total Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>                
+                                                <p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}. ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""}</p>                
                                             </div>
                                             <div class="logo-section">
                                                 <a href="https://data.one.org/" target="_blank">
@@ -304,7 +304,7 @@ const tableData = data.table
                                         <div class="bottom-panel">
                                             <div class="text-section">
                                                 <p class="plot-source">Source: OECD DAC1 table.</p>
-                                                <p class="plot-note">ODA values as a share of GNI of ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Total Core ODA (ONE Definition)") ?"• Total Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>
+                                                <p class="plot-note">ODA values as a share of GNI of ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""}</p>
                                             </div>
                                             <div class="logo-section">
                                                 <a href="https://data.one.org/" target="_blank">
@@ -368,12 +368,13 @@ const tableData = data.table
                                         <p class="plot-source">Source: OECD DAC1 table.</p>
                                         ${
                                             unit === "value" 
-                                                ? html`<p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.  ${indicator === indicatorMapping.get("Total Core ODA (ONE Definition)") ?"• Total Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>`
+                                                ? html`<p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.  ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""}</p>`
                                                 : unit === "gni_pct"
-                                                    ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Total Core ODA (ONE Definition)") ?"• Total Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>`
-                                                    : html`<p class="plot-note">ODA values as a share of total contributions from ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Total Core ODA (ONE Definition)") ?"• Total Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>`
+                                                    ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""}</p>`
+                                                    : html`<p class="plot-note">ODA values as a share of total contributions from ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>`
                                         }
                                     </div>
+                                    <div class="logo-section">
                                     <div class="logo-section">
                                         <a href="https://data.one.org/" target="_blank">
                                             ${ONELogo.cloneNode(true)}
