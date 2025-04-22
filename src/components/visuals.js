@@ -22,7 +22,7 @@ export function linePlot(data, mode, width,
                              GNIShare = false,
                              showIntlCommitment = false,
                          } = {}) {
- 
+
     let arrayData = data.map((row) => {
         const formattedRow = {};
         for (const [key, value] of Object.entries({
