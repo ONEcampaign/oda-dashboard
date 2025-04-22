@@ -1,16 +1,16 @@
 {
   "0": "Total ODA",
-  "1": "Total Core ODA (ONE Definition)",
+  "1": "Core ODA (ONE Definition)",
   "2": "Bilateral ODA",
   "3": "Multilateral ODA",
   "4": "Debt relief",
-  "5": "Scholarships and student costs in donor countries",
-  "6": "Scholarships/training in donor country",
-  "7": "Imputed student costs",
+  "5": "Private sector instruments",
+  "6": "Private sector instruments - institutional approach",
+  "7": "Private sector instruments - instrument approach",
   "8": "Refugees in donor countries",
-  "9": "Private sector instruments",
-  "10": "Private sector instruments - institutional approach",
-  "11": "Private sector instruments - instrument approach",
+  "9": "Scholarships and student costs in donor countries",
+  "10": "Scholarships/training in donor country",
+  "11": "Imputed student costs",
   "12": "Grants",
   "13": "Non-grants"
 }
