@@ -5,7 +5,14 @@ import {utcYear} from "npm:d3-time";
 import {timeFormat} from "npm:d3-time-format";
 import {min, max} from "npm:d3-array"
 import {getCurrencyLabel, formatValue} from "./utils.js";
-import {customPalette, paletteFinancing, paletteRecipients, colorSector, paletteSubsectors, paletteGender} from "./colors.js";
+import {
+    customPalette,
+    paletteFinancing,
+    paletteRecipients,
+    colorSector,
+    paletteSubsectors,
+    paletteGender
+} from "./colors.js";
 
 export function linePlot(data, mode, width,
                          {
@@ -15,7 +22,7 @@ export function linePlot(data, mode, width,
                              GNIShare = false,
                              showIntlCommitment = false,
                          } = {}) {
-
+ 
     let arrayData = data.map((row) => {
         const formattedRow = {};
         for (const [key, value] of Object.entries({
@@ -72,7 +79,7 @@ export function linePlot(data, mode, width,
         } else if (mode === "gender") {
             colorScale = paletteGender
             stacked = true
-            stackOrder = [ ...new Set(arrayData.map(d => d[groupVar]))].slice().reverse()
+            stackOrder = [...new Set(arrayData.map(d => d[groupVar]))].slice().reverse()
         }
     }
 
@@ -230,7 +237,7 @@ export function barPlot(data, currency, mode, width, {breakdown = false}) {
             colorScale = paletteRecipients
         } else if (mode === "gender") {
             colorScale = paletteGender
-            stackOrder = [ ...new Set(arrayData.map(d => d[fillVar]))].slice().reverse()
+            stackOrder = [...new Set(arrayData.map(d => d[fillVar]))].slice().reverse()
         }
     }
 
