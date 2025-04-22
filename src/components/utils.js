@@ -65,7 +65,7 @@ export function getCurrencyLabel(tag, {
 }
 
 
-export function name2CodeMap(obj, { removeEUIBilateral = true } = {}) {
+export function name2CodeMap(obj, { removeEUIBilateral = true, removeEU27EUI = false } = {}) {
     const map = new Map();
 
     for (const [code, { name, groups }] of Object.entries(obj)) {
@@ -82,6 +82,10 @@ export function name2CodeMap(obj, { removeEUIBilateral = true } = {}) {
 
     if (removeEUIBilateral) {
         map.delete("EU Institutions, bilateral");
+    }
+
+    if (removeEU27EUI) {
+        map.delete("EU27 + EU Institutions");
     }
 
     return map;
