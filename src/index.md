@@ -375,7 +375,6 @@ const tableData = data.table
                                         }
                                     </div>
                                     <div class="logo-section">
-                                    <div class="logo-section">
                                         <a href="https://data.one.org/" target="_blank">
                                             ${ONELogo.cloneNode(true)}
                                         </a>
