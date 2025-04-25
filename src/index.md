@@ -1,6 +1,8 @@
 ```js
-import {setCustomColors} from "./components/colors.js"
-import {financingQueries} from "./components/financingQueries.js"
+import {setCustomColors} from "@one-data/observable-themes/use-colors";
+import {customPalette} from "./components/colors.js";
+import {logo} from "@one-data/observable-themes/use-images";
+import {financingQueries} from "./components/financingQueries.js";
 import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap, decodeHTML} from "./components/utils.js";
 import {rangeInput} from "./components/rangeInput.js";
 import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
@@ -8,11 +10,7 @@ import {downloadPNG, downloadXLSX} from './components/downloads.js';
 ```
 
 ```js
-setCustomColors();
-```
-
-```js
-const ONELogo = await FileAttachment("./ONE-logo-black.png").image()
+setCustomColors(customPalette);
 ```
 
 ```js
@@ -224,7 +222,7 @@ const tableData = data.table
                                             </div>
                                             <div class="logo-section">
                                                 <a href="https://data.one.org/" target="_blank">
-                                                    ${ONELogo.cloneNode(true)}
+                                                    <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
                                                 </a>
                                             </div>
                                         </div>
@@ -308,7 +306,7 @@ const tableData = data.table
                                             </div>
                                             <div class="logo-section">
                                                 <a href="https://data.one.org/" target="_blank">
-                                                    ${ONELogo.cloneNode(true)}
+                                                    <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
                                                 </a>
                                             </div>
                                         </div>
@@ -365,18 +363,18 @@ const tableData = data.table
                                 }
                                 <div class="bottom-panel">
                                     <div class="text-section">
-                                        <p class="plot-source">Source: OECD DAC1 table.</p>
+                                        <p class="table-source">Source: OECD DAC1 table.</p>
                                         ${
                                             unit === "value" 
-                                                ? html`<p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.  ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""}</p>`
+                                                ? html`<p class="table-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.  ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""}</p>`
                                                 : unit === "gni_pct"
-                                                    ? html`<p class="plot-note">ODA values as a share of the GNI of ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""}</p>`
-                                                    : html`<p class="plot-note">ODA values as a share of total contributions from ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>`
+                                                    ? html`<p class="table-note">ODA values as a share of the GNI of ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""}</p>`
+                                                    : html`<p class="table-note">ODA values as a share of total contributions from ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>`
                                         }
                                     </div>
                                     <div class="logo-section">
                                         <a href="https://data.one.org/" target="_blank">
-                                            ${ONELogo.cloneNode(true)}
+                                            <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
                                         </a>
                                     </div>
                                 </div>
