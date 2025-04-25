@@ -13,7 +13,7 @@
   "dependencies": {
     "@flourish/live-api": "^5.4.1",
     "@observablehq/framework": "latest",
-    "@one-data/observable-themes": "^0.2.0",
+    "@one-data/observable-themes": "^0.5.4",
     "observable": "^2.1.4"
   },
   "devDependencies": {
