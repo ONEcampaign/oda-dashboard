@@ -104,38 +104,21 @@ export function treemapPlot(data, width, { currency = null } = {}) {
         .attr("width", d => Math.max(0, d.x1 - d.x0 - ((d.x1 - d.x0 < strokeWidth || d.y1 - d.y0 < strokeWidth) ? 0 : strokeWidth)))
         .attr("height", d => Math.max(0, d.y1 - d.y0 - ((d.x1 - d.x0 < strokeWidth || d.y1 - d.y0 < strokeWidth) ? 0 : strokeWidth)));
 
-    // // Define clip paths for text
-    // node.append("clipPath")
-    //     .attr("id", (d, i) => `${uid}-clip-${i}`)
-    //     .append("rect")
-    //     .attr("width", d => d.x1 - d.x0 - 5)
-    //     .attr("height", d => d.y1 - d.y0);
-    //
-    //
-    // // Sector name (top left)
-    // node.append("text")
-    //     .attr("clip-path", (d, i) => `url(${new URL(`#${uid}-clip-${i}`, location)})`)
-    //     .attr("x", 5)
-    //     .attr("y", strokeWidth / 1.5)
-    //     .text(d => d.id.toUpperCase())
-    //     .attr("vertical-align", "middle")
-    //     .attr("font-size", "12px")
-    //     .attr("font-family", "var(--sans-serif)")
-    //     .attr("font-weight", "500")
-    //     .attr("fill", d => d.id === selectedSector.value ? "white" : "black");
-
     node.append("text")
         .attr("x", 5)
-        .attr("y", strokeWidth / 1.5)
+        .attr("y", strokeWidth / 1.3)
         .attr("vertical-align", "middle")
-        .attr("font-size", "12px")
-        .attr("font-family", "var(--sans-serif)")
-        .attr("font-weight", "500")
+        .attr("font-size", ".9rem")
+        .attr("font-family", "Italian Plate")
+        .attr("font-weight", d => d.id === selectedSector.value ? "700" : "500")
         .attr("fill", d => d.id === selectedSector.value ? "white" : "black")
         .text(d => {
             const w = d.x1 - d.x0;
+            if (w < 10) return "";
+
             const estimatedCharLimit = Math.floor(w / 7); // crude estimate
             const sliceLength = Math.max(0, estimatedCharLimit - 5);
+
             return d.id.length > estimatedCharLimit
                 ? d.id.toUpperCase().slice(0, sliceLength) + "…"
                 : d.id.toUpperCase();
@@ -145,7 +128,7 @@ export function treemapPlot(data, width, { currency = null } = {}) {
     node.append("text")
         .attr("clip-path", (d, i) => `url(${new URL(`#${uid}-clip-${i}`, location)})`)
         .attr("x", d => (d.x1 - d.x0) / 2)
-        .attr("y", d => (d.y1 - d.y0) / 1.8)
+        .attr("y", d => (d.y1 - d.y0) / 1.7)
         .attr("text-anchor", "middle")
         .text(d => {
             const w = d.x1 - d.x0 - strokeWidth;
@@ -158,10 +141,10 @@ export function treemapPlot(data, width, { currency = null } = {}) {
             const h = d.y1 - d.y0 - strokeWidth;
             const area = w * h;
             if (h < 25 || w < 55) return "0px";
-            const size = Math.sqrt(area) / 10;
-            return `${Math.max(8, Math.min(size, 20))}px`;
+            const size = Math.sqrt(area) / 8;
+            return `${Math.max(8, Math.min(size, 25))}px`;
         })
-        .attr("font-family", "var(--sans-serif)")
+        .attr("font-family", "Italian Plate")
         .attr("font-weight", "500")
         .attr("fill", d => d.id === selectedSector.value ? "white" : "black");
 
@@ -202,9 +185,12 @@ export function treemapPlot(data, width, { currency = null } = {}) {
 
             const valueLabel = formatValue(d.value).label;
             const label = `
-        <b>Sector</b> ${d.id}<br>
-        <b>Period</b> ${period}<br>
-        <b>${getCurrencyLabel(currency, { currencyLong: false })}</b> ${valueLabel}`;
+                <span style="font: calc(var(--table-base-font-size) * 1.15) 'Italian Plate', sans-serif;">
+                    <span style="line-height: 1.25"><b>Sector</b> ${d.id}</span><br>
+                    <span style="line-height: 1.25"><b>Period</b> ${period}</span><br>
+                    <span style="line-height: 1.25"><b>${getCurrencyLabel(currency, { currencyLong: false })}</b> ${valueLabel}</span>
+                </span>
+            `;
 
             tooltip.html(label).style("visibility", "visible");
         })

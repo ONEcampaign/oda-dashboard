@@ -458,8 +458,8 @@ function sparkbar(fillColor, alignment, globalMax) {
                 `
                 : `
                   position: absolute;
-                  height: 80%;
-                  top: 10%;
+                  height: 90%;
+                  top: 5%;
                   background: ${hex2rgb(fillColor, 0.4)};
                   width: ${barWidth}%;
                   ${alignment === "right" ? "right: 0;" : "left: 0;"};
@@ -521,7 +521,7 @@ function sparkbar(fillColor, alignment, globalMax) {
                 <span style="
                     position: relative;
                     z-index: 1;
-                    font-size: var(--size-m);
+                    font: calc(var(--table-base-font-size) * 1.25) 'Italian Plate', sans-serif;
                     color: black;
                     text-shadow: .5px .5px 0 ${customPalette.lightGrey};
                     padding: 0 3px;">
