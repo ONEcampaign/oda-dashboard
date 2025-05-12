@@ -2,20 +2,33 @@ import {FileAttachment} from "observablehq:stdlib";
 import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
 
+const [
+    gender,
+    current_conversion_table,
+    constant_conversion_table,
+    donorOptions,
+    recipientOptions,
+    genderIndicators
+] = await Promise.all([
+    FileAttachment("../data/scripts/gender.parquet").parquet(),
+    FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
+    FileAttachment("../data/scripts/constant_conversion_table_2023.csv").csv({typed: true}),
+    FileAttachment("../data/analysis_tools/donors.json").json(),
+    FileAttachment("../data/analysis_tools/recipients.json").json(),
+    FileAttachment('../data/analysis_tools/gender_indicators.json').json()
+])
+
 
 const db = await DuckDBClient.of({
-    gender: FileAttachment("../data/scripts/gender.parquet").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
-    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
-    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "")
+    gender,
+    current_conversion_table,
+    constant_conversion_table
 });
 
-const donorOptions = await FileAttachment("../data/analysis_tools/donors.json").json()
 const donorMapping = name2CodeMap(donorOptions, {})
 
-const recipientOptions = await FileAttachment("../data/analysis_tools/recipients.json").json()
 const recipientMapping = name2CodeMap(recipientOptions)
 
-const genderIndicators = await FileAttachment('../data/analysis_tools/gender_indicators.json').json()
 
 // GENDER VIEW
 export function genderQueries(

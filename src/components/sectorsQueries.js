@@ -2,23 +2,35 @@ import {FileAttachment} from "observablehq:stdlib";
 import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
 
+const [
+    sectors,
+    current_conversion_table,
+    constant_conversion_table,
+    donorOptions,
+    recipientOptions,
+    sectorsIndicators,
+    code2Subsector,
+    subsector2Sector
+] = await Promise.all([
+    FileAttachment("../data/scripts/sectors.parquet").parquet(),
+    FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
+    FileAttachment("../data/scripts/constant_conversion_table_2023.csv").csv({typed: true}),
+    FileAttachment("../data/analysis_tools/donors.json").json(),
+    FileAttachment("../data/analysis_tools/recipients.json").json(),
+    FileAttachment('../data/analysis_tools/sectors_indicators.json').json(),
+    FileAttachment("../data/analysis_tools/sub_sectors.json").json(),
+    FileAttachment("../data/analysis_tools/sectors.json").json()
+]);
+
 const db = await DuckDBClient.of({
-    sectors: FileAttachment("../data/scripts/sectors.parquet").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
-    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
-    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "")
+    sectors,
+    current_conversion_table,
+    constant_conversion_table
 });
 
-const donorOptions = await FileAttachment("../data/analysis_tools/donors.json").json()
 const donorMapping = name2CodeMap(donorOptions)
 
-const recipientOptions = await FileAttachment("../data/analysis_tools/recipients.json").json()
 const recipientMapping = name2CodeMap(recipientOptions)
-
-const sectorsIndicators = await FileAttachment('../data/analysis_tools/sectors_indicators.json').json()
-
-const code2Subsector = await FileAttachment("../data/analysis_tools/sub_sectors.json").json()
-const subsector2Sector = await FileAttachment("../data/analysis_tools/sectors.json").json()
-
 
 //  SECTORS VIEW
 export function sectorsQueries(

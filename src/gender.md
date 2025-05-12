@@ -12,21 +12,27 @@ setCustomColors();
 ```
 
 ```js
-const ONELogo = await FileAttachment("./ONE-logo-black.png").image()
+const ONELogo = FileAttachment("./ONE-logo-black.png").image()
 ```
 
 ```js
 const donorOptions = await FileAttachment("./data/analysis_tools/donors.json").json()
 const donorMapping = name2CodeMap(donorOptions, {removeEU27EUI:true})
+```
 
+```js
 const recipientOptions = await FileAttachment("./data/analysis_tools/recipients.json").json()
 const recipientMapping = name2CodeMap(recipientOptions)
+```
 
+```js
 const indicatorOptions = await FileAttachment("./data/analysis_tools/gender_indicators.json").json()
 const indicatorMapping = new Map(
     Object.entries(indicatorOptions).map(([k, v]) => [v, Number(k)])
 );
+```
 
+```js
 const timeRangeOptions = await FileAttachment("./data/analysis_tools/base_time.json").json()
 ```
 
