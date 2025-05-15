@@ -1,13 +1,7 @@
-@import url("@one-data/observable-themes/styles/base.css");
-@import url("@one-data/observable-themes/styles/footer.css");
-@import url("@one-data/observable-themes/styles/header.css");
-@import url("@one-data/observable-themes/styles/fonts.css");
-@import url("@one-data/observable-themes/styles/plot-theme.css");
-@import url("@one-data/observable-themes/styles/table-theme.css");
-@import url("observablehq:default.css");
+@import url("@one-data/observable-themes/styles/main.css");
+
 @import url("observablehq:theme-air.css");
 @import url("observablehq:theme-alt.css");
-
 
 /* ===== Root Variables ===== */
 :root {
@@ -18,14 +12,6 @@
     --size-l: calc(var(--base-size) * 1.5);
     --size-xl: calc(var(--base-size) * 2);
     --size-xxl: calc(var(--base-size) * 3);
-
-
-}
-
-html, body {
-    margin: 0;
-    padding: 0;
-    /*font-family: 'Colfax', Helvetica, sans-serif !important;*/
 }
 
 /* Header */
@@ -148,7 +134,9 @@ select, input {
     padding: 1rem;
 }
 .plot-title {
+    font-size: var(--size-xl) !important;
     color: var(--darkGrey) !important;
+    font-weight: 500 !important;
     max-width: none !important;
 }
 .plot-subtitle-panel {
@@ -158,7 +146,11 @@ select, input {
     margin-bottom: 20px;
     max-width: none !important;
 }
-
+.plot-subtitle {
+    font-size: var(--size-l) !important;
+    color: var(--darkGrey) !important;
+    font-weight: normal !important;
+}
 .plot-subtitle-panel > form {
     width: auto !important;
     flex-direction: row-reverse;
@@ -167,13 +159,9 @@ select, input {
     padding-bottom: 5px;
 }
 .plot-subtitle-panel > form > label {
-    font: calc(var(--table-base-font-size) * 1.5) "Italian Plate", sans-serif !important;
+    font-size: calc(var(--table-base-font-size) * 1.5);
     padding: 0;
     width: auto !important;
-}
-
-.plot-title, .plot-subtitle {
-    color: var(--darkGrey) !important;
 }
 
 .subtitle-label {
@@ -230,13 +218,14 @@ select, input {
 }
 
 [aria-label="text"] {
-    font: var(--table-base-font-size) "Italian Plate", sans-serif !important;
+    font-size: var(--size-m);
 }
 
 .plot-note,
 .plot-source,
 .table-note,
 .table-source{
+    font-size: var(--size-s);
     margin: 5px 0;
     width: 100% !important;
     max-width: none !important;
@@ -257,7 +246,7 @@ select, input {
 [aria-label="x-axis tick label"],
 [aria-label="y-axis label"] text,
 [aria-label="y-axis tick label"] {
-    /*font-size: var(--size-m);*/
+    font-size: var(--size-m);
     color: var(--midGrey);
 }
 
@@ -284,15 +273,16 @@ select, input {
 }
 
 
-/* Tables */
-
+/*!* Tables *!*/
 form:has(table) {
     margin: auto !important;
     max-width: 1200px !important;
 }
 
 .table-title {
+    font-size: var(--size-xl) !important;
     color: var(--darkGrey) !important;
+    font-weight: bold;
     margin-bottom: 10px;
     max-width: none !important;
 }
@@ -304,7 +294,9 @@ form:has(table) {
     margin-bottom: 30px;
 }
 .table-subtitle {
+    font-size: var(--size-l) !important;
     color: var(--darkGrey) !important;
+    font-weight: normal !important;
     max-width: none !important;
 }
 
@@ -312,11 +304,11 @@ form:has(table) {
     margin-left: 20px !important;
 }
 .table-subtitle-panel > form > label {
-    font: calc(var(--table-base-font-size) * 1.5) "Italian Plate", sans-serif !important;
+    /*font: calc(var(--table-base-font-size) * 1.5) "Italian Plate", sans-serif !important;*/
     width: 50px !important;
 }
 .table-subtitle-panel > form > select {
-    font: calc(var(--table-base-font-size) * 1.5) "Italian Plate", sans-serif !important;
+    /*font: calc(var(--table-base-font-size) * 1.5) "Italian Plate", sans-serif !important;*/
     width: 200px !important;
 }
 
@@ -336,7 +328,6 @@ form:has(table) {
 .download-panel.table {
     padding: 1rem 1rem 0 0;
 }
-
 
 .download-panel > form {
     width: auto !important;
@@ -460,7 +451,6 @@ form:has(table) {
         gap: 20px !important;
     }
 }
-
 
 
 

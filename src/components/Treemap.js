@@ -106,10 +106,9 @@ export function treemapPlot(data, width, { currency = null } = {}) {
 
     node.append("text")
         .attr("x", 5)
-        .attr("y", strokeWidth / 1.3)
+        .attr("y", strokeWidth / 1.5)
         .attr("vertical-align", "middle")
-        .attr("font-size", ".9rem")
-        .attr("font-family", "Italian Plate")
+        .attr("font-size", ".65rem")
         .attr("font-weight", d => d.id === selectedSector.value ? "700" : "500")
         .attr("fill", d => d.id === selectedSector.value ? "white" : "black")
         .text(d => {
@@ -128,7 +127,7 @@ export function treemapPlot(data, width, { currency = null } = {}) {
     node.append("text")
         .attr("clip-path", (d, i) => `url(${new URL(`#${uid}-clip-${i}`, location)})`)
         .attr("x", d => (d.x1 - d.x0) / 2)
-        .attr("y", d => (d.y1 - d.y0) / 1.7)
+        .attr("y", d => (d.y1 - d.y0) / 1.8)
         .attr("text-anchor", "middle")
         .text(d => {
             const w = d.x1 - d.x0 - strokeWidth;
@@ -141,10 +140,9 @@ export function treemapPlot(data, width, { currency = null } = {}) {
             const h = d.y1 - d.y0 - strokeWidth;
             const area = w * h;
             if (h < 25 || w < 55) return "0px";
-            const size = Math.sqrt(area) / 8;
-            return `${Math.max(8, Math.min(size, 25))}px`;
+            const size = Math.sqrt(area) / 10;
+            return `${Math.max(8, Math.min(size, 20))}px`;
         })
-        .attr("font-family", "Italian Plate")
         .attr("font-weight", "500")
         .attr("fill", d => d.id === selectedSector.value ? "white" : "black");
 
@@ -185,7 +183,7 @@ export function treemapPlot(data, width, { currency = null } = {}) {
 
             const valueLabel = formatValue(d.value).label;
             const label = `
-                <span style="font: calc(var(--table-base-font-size) * 1.15) 'Italian Plate', sans-serif;">
+                <span style="font-size: calc(var(--table-base-font-size) * 1.15)">
                     <span style="line-height: 1.25"><b>Sector</b> ${d.id}</span><br>
                     <span style="line-height: 1.25"><b>Period</b> ${period}</span><br>
                     <span style="line-height: 1.25"><b>${getCurrencyLabel(currency, { currencyLong: false })}</b> ${valueLabel}</span>

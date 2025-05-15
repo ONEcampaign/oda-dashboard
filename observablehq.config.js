@@ -6,6 +6,7 @@ export default {
   title: "ODA Dashboard",
   head: `<link rel="icon" href=${icon} type="image/png" sizes="32x32">`,
 
+
   root: "src",
 
   style: "style.css",
@@ -14,6 +15,6 @@ export default {
   footer: generateFooter(),
 
   toc: false,
-  sidebar: false,
   pager: false,
+  sidebar: false
 };

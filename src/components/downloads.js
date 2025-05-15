@@ -2,6 +2,7 @@ import {toPng} from 'npm:html-to-image';
 import {utils, writeFile} from "npm:xlsx";
 
 export function downloadPNG(elementId, filename) {
+
     const element = document.getElementById(elementId);
     if (!element) {
         console.error(`Element with ID "${elementId}" not found.`);
