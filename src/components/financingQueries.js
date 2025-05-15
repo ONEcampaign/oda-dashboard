@@ -2,17 +2,32 @@ import {FileAttachment} from "observablehq:stdlib";
 import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
 
+const [
+    financing,
+    gni_table,
+    current_conversion_table,
+    constant_conversion_table,
+    donorOptions,
+    financingIndicators
+] = await Promise.all([
+    FileAttachment("../data/scripts/financing.parquet").parquet(),
+    FileAttachment("../data/scripts/gni_table.parquet").parquet(),
+    FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
+    FileAttachment("../data/scripts/constant_conversion_table_2024.csv").csv({typed: true}),
+    FileAttachment("../data/analysis_tools/donors.json").json(),
+    FileAttachment('../data/analysis_tools/financing_indicators.json').json()
+]);
+
 const db = await DuckDBClient.of({
-    financing: FileAttachment("../data/scripts/financing.parquet").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
-    gni_table: FileAttachment("../data/scripts/gni_table.parquet").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
-    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
-    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2024.csv").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "")
+    financing,
+    gni_table,
+    current_conversion_table,
+    constant_conversion_table
 });
 
-const donorOptions = await FileAttachment("../data/analysis_tools/donors.json").json()
+
 const donorMapping = name2CodeMap(donorOptions, {})
 
-const financingIndicators = await FileAttachment('../data/analysis_tools/financing_indicators.json').json()
 const indicatorMapping = new Map(
     Object.entries(financingIndicators).map(([k, v]) => [v, Number(k)])
 );

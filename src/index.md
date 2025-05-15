@@ -16,12 +16,16 @@ setCustomColors(customPalette);
 ```js
 const donorOptions = await FileAttachment("./data/analysis_tools/donors.json").json()
 const donorMapping = name2CodeMap(donorOptions, {})
+```
 
+```js
 const indicatorOptions = await FileAttachment('./data/analysis_tools/financing_indicators.json').json()
 const indicatorMapping = new Map(
     Object.entries(indicatorOptions).map(([k, v]) => [v, Number(k)])
 );
+```
 
+```js
 const timeRangeOptions = await FileAttachment("./data/analysis_tools/financing_time.json").json()
 ```
 
