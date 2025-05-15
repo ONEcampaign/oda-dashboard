@@ -1,20 +1,13 @@
 ```js 
-import {setCustomColors} from "./components/colors.js"
+import {setCustomColors} from "@one-data/observable-themes/use-colors";
+import {logo} from "@one-data/observable-themes/use-images";
 import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap, decodeHTML} from "./components/utils.js";
-import {sectorsQueries} from "./components/sectorsQueries.js"
+import {sectorsQueries} from "./components/sectorsQueries.js";
 import {rangeInput} from "./components/rangeInput.js";
 import {barPlot, sparkbarTable} from "./components/visuals.js";
-import {treemapPlot, selectedSector} from "./components/Treemap.js"
-import {paletteSubsectors} from './components/colors.js'
+import {treemapPlot, selectedSector} from "./components/Treemap.js";
+import {paletteSubsectors} from './components/colors.js';
 import {downloadPNG, downloadXLSX} from './components/downloads.js';
-```
-
-```js
-setCustomColors();
-```
-
-```js
-const ONELogo = FileAttachment("./ONE-logo-black.png").image()
 ```
 
 ```js
@@ -316,7 +309,7 @@ function generateSubtitle() {
                                                             </div>
                                                             <div class="logo-section">
                                                                 <a href="https://data.one.org/" target="_blank">
-                                                                    ${ONELogo.cloneNode(true)}
+                                                                    <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
                                                                 </a>
                                                             </div>
                                                         </div>
@@ -391,7 +384,7 @@ function generateSubtitle() {
                                                             </div>
                                                             <div class="logo-section">
                                                                 <a href="https://data.one.org/" target="_blank">
-                                                                    ${ONELogo.cloneNode(true)}
+                                                                    <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
                                                                 </a>
                                                             </div>
                                                         </div>
@@ -463,7 +456,7 @@ function generateSubtitle() {
                                                         </div>
                                                         <div class="logo-section">
                                                             <a href="https://data.one.org/" target="_blank">
-                                                                ${ONELogo.cloneNode(true)}
+                                                                <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
                                                             </a>
                                                         </div>
                                                     </div>

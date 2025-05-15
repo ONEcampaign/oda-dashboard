@@ -1,52 +1,17 @@
-@import url("observablehq:default.css");
-@import url("@one-data/observable-themes/styles/header.css");
-@import url("@one-data/observable-themes/styles/footer.css");
+@import url("@one-data/observable-themes/styles/main.css");
+
 @import url("observablehq:theme-air.css");
 @import url("observablehq:theme-alt.css");
 
-
 /* ===== Root Variables ===== */
 :root {
-    --base-size: 12px;
+    --base-size: .75rem;
     --size-xs: calc(var(--base-size) * 0.5);
     --size-s: calc(var(--base-size) * 0.9);
     --size-m: var(--base-size);
     --size-l: calc(var(--base-size) * 1.5);
     --size-xl: calc(var(--base-size) * 2);
     --size-xxl: calc(var(--base-size) * 3);
-}
-
-html, body {
-    margin: 0;
-    padding: 0;
-}
-
-/* Title */
-.title-container {
-    display: flex;
-    flex-direction: row;
-    margin: 40px 20px;
-}
-.title-container > * {
-    padding: 10px 20px;
-    margin: auto 0;
-}
-.title-logo {
-    width: 45px;
-    height: 45px;
-    opacity: 1;
-    transition: all 250ms ease-in-out;
-}
-.title-logo:hover {
-    opacity: 0.6;
-    transform: scale(1.1);
-}
-
-.title-text {
-    font-size: var(--size-xxl);
-    font-family: var(--sans-serif);
-    font-weight: normal;
-    border-left: 1px black solid;
 }
 
 /* Header */
@@ -171,7 +136,7 @@ select, input {
 .plot-title {
     font-size: var(--size-xl) !important;
     color: var(--darkGrey) !important;
-    font-weight: bold;
+    font-weight: 500 !important;
     max-width: none !important;
 }
 .plot-subtitle-panel {
@@ -189,6 +154,14 @@ select, input {
 .plot-subtitle-panel > form {
     width: auto !important;
     flex-direction: row-reverse;
+}
+.plot-subtitle-panel > form > input {
+    padding-bottom: 5px;
+}
+.plot-subtitle-panel > form > label {
+    font-size: calc(var(--table-base-font-size) * 1.5);
+    padding: 0;
+    width: auto !important;
 }
 
 .subtitle-label {
@@ -235,7 +208,7 @@ select, input {
     display: flex;
     flex-flow: row nowrap;
     justify-content: space-between;
-    margin-top: var(--size-m);
+    margin-top: 20px;
     width: 100%;
 }
 
@@ -244,8 +217,14 @@ select, input {
     width: 100%;
 }
 
+[aria-label="text"] {
+    font-size: var(--size-m);
+}
+
 .plot-note,
-.plot-source {
+.plot-source,
+.table-note,
+.table-source{
     font-size: var(--size-s);
     margin: 5px 0;
     width: 100% !important;
@@ -294,7 +273,12 @@ select, input {
 }
 
 
-/* Tables */
+/*!* Tables *!*/
+form:has(table) {
+    margin: auto !important;
+    max-width: 1200px !important;
+}
+
 .table-title {
     font-size: var(--size-xl) !important;
     color: var(--darkGrey) !important;
@@ -320,9 +304,11 @@ select, input {
     margin-left: 20px !important;
 }
 .table-subtitle-panel > form > label {
+    /*font: calc(var(--table-base-font-size) * 1.5) "Italian Plate", sans-serif !important;*/
     width: 50px !important;
 }
 .table-subtitle-panel > form > select {
+    /*font: calc(var(--table-base-font-size) * 1.5) "Italian Plate", sans-serif !important;*/
     width: 200px !important;
 }
 
@@ -343,7 +329,6 @@ select, input {
     padding: 1rem 1rem 0 0;
 }
 
-
 .download-panel > form {
     width: auto !important;
 }
@@ -357,7 +342,7 @@ select, input {
     color: #0f1111;
     cursor: pointer;
     display: inline-block;
-    font-family: Colfax, Helvetica, sans-serif;
+    /*font-family: Colfax, Helvetica, sans-serif;*/
     font-size: var(--size-m);
     line-height: var(--size-xl);
     padding: 5px 10px;
@@ -466,3 +451,6 @@ select, input {
         gap: 20px !important;
     }
 }
+
+
+
