@@ -3,16 +3,10 @@ import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
 
 const [
-    gender,
-    current_conversion_table,
-    constant_conversion_table,
     donorOptions,
     recipientOptions,
     genderIndicators
 ] = await Promise.all([
-    FileAttachment("../data/scripts/gender.parquet").parquet(),
-    FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
-    FileAttachment("../data/scripts/constant_conversion_table_2023.csv").csv({typed: true}),
     FileAttachment("../data/analysis_tools/donors.json").json(),
     FileAttachment("../data/analysis_tools/recipients.json").json(),
     FileAttachment('../data/analysis_tools/gender_indicators.json').json()
@@ -20,9 +14,9 @@ const [
 
 
 const db = await DuckDBClient.of({
-    gender,
-    current_conversion_table,
-    constant_conversion_table
+    gender: FileAttachment("../data/scripts/gender.parquet"),
+    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv"),
+    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv")
 });
 
 const donorMapping = name2CodeMap(donorOptions, {})

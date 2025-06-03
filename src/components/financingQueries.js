@@ -3,26 +3,18 @@ import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
 
 const [
-    financing,
-    gni_table,
-    current_conversion_table,
-    constant_conversion_table,
     donorOptions,
     financingIndicators
 ] = await Promise.all([
-    FileAttachment("../data/scripts/financing.parquet").parquet(),
-    FileAttachment("../data/scripts/gni_table.parquet").parquet(),
-    FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
-    FileAttachment("../data/scripts/constant_conversion_table_2024.csv").csv({typed: true}),
     FileAttachment("../data/analysis_tools/donors.json").json(),
     FileAttachment('../data/analysis_tools/financing_indicators.json').json()
 ]);
 
 const db = await DuckDBClient.of({
-    financing,
-    gni_table,
-    current_conversion_table,
-    constant_conversion_table
+    financing: FileAttachment("../data/scripts/financing.parquet").parquet(),
+    gni_table: FileAttachment("../data/scripts/gni_table.parquet").parquet(),
+    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
+    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2024.csv").csv({typed: true}),
 });
 
 

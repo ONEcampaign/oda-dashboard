@@ -3,18 +3,12 @@ import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
 
 const [
-    sectors,
-    current_conversion_table,
-    constant_conversion_table,
     donorOptions,
     recipientOptions,
     sectorsIndicators,
     code2Subsector,
     subsector2Sector
 ] = await Promise.all([
-    FileAttachment("../data/scripts/sectors.parquet").parquet(),
-    FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
-    FileAttachment("../data/scripts/constant_conversion_table_2023.csv").csv({typed: true}),
     FileAttachment("../data/analysis_tools/donors.json").json(),
     FileAttachment("../data/analysis_tools/recipients.json").json(),
     FileAttachment('../data/analysis_tools/sectors_indicators.json').json(),
@@ -23,9 +17,9 @@ const [
 ]);
 
 const db = await DuckDBClient.of({
-    sectors,
-    current_conversion_table,
-    constant_conversion_table
+    sectors: FileAttachment("../data/scripts/sectors.parquet"),
+    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv"),
+    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv")
 });
 
 const donorMapping = name2CodeMap(donorOptions)

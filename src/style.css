@@ -123,10 +123,14 @@ select, input {
     color: var(--neutralGrey) !important;
 }
 
+.grid .card {
+    margin: 0;
+}
+
 /* Plots */
 .card:has(.plot-container) {
     padding: 0;
-    height: calc(100% - 2rem);
+    height: 100%;
     box-sizing: border-box
 }
 
