@@ -13,7 +13,7 @@ const [
 ])
 
 const db = await DuckDBClient.of({
-    recipients: FileAttachment("../data/scripts/recipients.parquet").parquet(),
+    recipients: FileAttachment("../data/scripts/recipients.parquet").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
     current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
     constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv").csv({typed: true}),
 });
