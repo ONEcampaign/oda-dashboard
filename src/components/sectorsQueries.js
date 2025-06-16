@@ -17,9 +17,9 @@ const [
 ]);
 
 const db = await DuckDBClient.of({
-    sectors: FileAttachment("../data/scripts/sectors.parquet"),
-    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv"),
-    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv")
+    sectors: FileAttachment("../data/scripts/sectors.parquet").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
+    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
+    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv").csv({typed: true}),
 });
 
 const donorMapping = name2CodeMap(donorOptions)
