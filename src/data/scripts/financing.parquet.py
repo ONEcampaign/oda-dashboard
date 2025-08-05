@@ -230,7 +230,8 @@ def get_financing_data():
 
 def financing_to_parquet():
     df = get_financing_data()
-    df_to_parquet(df)
+    # Write parquet with a low compression level to favour fast reads in DuckDB
+    df_to_parquet(df, compression="zstd", compression_level=1)
 
 
 if __name__ == "__main__":

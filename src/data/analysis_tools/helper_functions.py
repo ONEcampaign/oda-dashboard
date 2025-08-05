@@ -89,7 +89,29 @@ def load_indicators(page: str):
         return result
 
 
-def return_pa_table(df: pd.DataFrame):
+def return_pa_table(
+    df: pd.DataFrame,
+    *,
+    compression: str | None = "snappy",
+    compression_level: int | None = None,
+):
+    """Return a PyArrow table to STDOUT as a parquet file.
+
+    Parameters
+    ----------
+    df:
+        DataFrame to serialise.
+    compression:
+        Compression codec used by :func:`pyarrow.parquet.write_table`.  The
+        default remains ``"snappy"`` to preserve the previous behaviour, but it
+        can now be tuned by callers in order to trade off size vs. read speed
+        (e.g. ``"zstd"`` or ``None`` for uncompressed output which is faster for
+        DuckDB to load).
+    compression_level:
+        Optional compression level passed through to PyArrow.  Lower values
+        generally favour faster decompression which is beneficial for the
+        in-browser DuckDB instance used by the dashboard.
+    """
 
     schema = get_schema(df)
 
@@ -97,7 +119,12 @@ def return_pa_table(df: pd.DataFrame):
 
     # Write PyArrow Table to Parquet
     buf = pa.BufferOutputStream()
-    pq.write_table(table, buf, compression="snappy")
+    pq.write_table(
+        table,
+        buf,
+        compression=compression,
+        compression_level=compression_level,
+    )
 
     # Get the Parquet bytes
     buf_bytes = buf.getvalue().to_pybytes()
@@ -186,10 +213,24 @@ def convert_types(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def df_to_parquet(df: pd.DataFrame):
+def df_to_parquet(
+    df: pd.DataFrame,
+    *,
+    compression: str | None = "snappy",
+    compression_level: int | None = None,
+):
+    """Serialise ``df`` to parquet and write the bytes to STDOUT.
+
+    ``df_to_parquet`` previously wrote all parquet files using ``snappy``
+    compression.  This helper now exposes the compression parameters so that
+    callers can reduce compression (or disable it altogether) when optimising
+    for faster loading times in DuckDB.
+    """
 
     converted_df = convert_types(df)
-    return_pa_table(converted_df)
+    return_pa_table(
+        converted_df, compression=compression, compression_level=compression_level
+    )
 
 
 def add_index_column(df: pd.DataFrame, column: str, json_path, ordered_list: list = None) -> pd.DataFrame:

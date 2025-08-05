@@ -58,7 +58,8 @@ def get_gni():
 
 def gni_to_parquet():
     df = get_gni()
-    df_to_parquet(df)
+    # Store with light compression to optimise browser-side DuckDB reads
+    df_to_parquet(df, compression="zstd", compression_level=1)
 
 
 if __name__ == "__main__":

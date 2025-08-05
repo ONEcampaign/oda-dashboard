@@ -89,7 +89,8 @@ def combine_recipients():
 
 def recipients_to_parquet():
     df = combine_recipients()
-    df_to_parquet(df)
+    # Apply light compression so that DuckDB can load data quickly in the UI
+    df_to_parquet(df, compression="zstd", compression_level=1)
 
 
 if __name__ == "__main__":
