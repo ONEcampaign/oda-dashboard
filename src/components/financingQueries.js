@@ -80,7 +80,7 @@ async function absoluteFinancingQuery(
                     year,
                     donor_code AS donor,
                     indicator,
-                    (value * 1.1 / 1.1) AS value
+                    CAST(value AS DOUBLE) AS value
                 FROM financing
                 WHERE
                     donor_code IN (${donor})
@@ -142,7 +142,7 @@ async function relativeFinancingQuery(
             WITH filtered AS (
                 SELECT 
                     year,
-                    SUM(value * 1.1 / 1.1) AS value
+                    SUM(CAST(value AS DOUBLE)) AS value
                 FROM financing
                 WHERE 
                     donor_code IN (${donor})
@@ -153,7 +153,7 @@ async function relativeFinancingQuery(
             gni AS (
                 SELECT 
                     year,
-                    SUM(value * 1.1 / 1.1) AS gni
+                    SUM(CAST(value AS DOUBLE)) AS gni
                 FROM gni_table
                 WHERE
                     donor_code IN (${donor})
@@ -163,7 +163,7 @@ async function relativeFinancingQuery(
             total AS (
                 SELECT
                     year,
-                    SUM(value * 1.1 / 1.1) AS total_value
+                    SUM(CAST(value AS DOUBLE)) AS total_value
                 FROM financing
                 WHERE
                     donor_code IN (${donor})
@@ -232,7 +232,7 @@ async function tableFinancingQuery(
             gni AS (
                 SELECT
                     year,
-                    SUM(value * 1.1 / 1.1) AS gni_value
+                    SUM(CAST(value AS DOUBLE)) AS gni_value
                 FROM gni_table
                 WHERE
                     donor_code IN (${donor})
@@ -242,7 +242,7 @@ async function tableFinancingQuery(
             total_table AS (
                 SELECT
                     year,
-                    SUM(value * 1.1 / 1.1) AS total_value
+                    SUM(CAST(value AS DOUBLE)) AS total_value
                 FROM financing
                 WHERE
                     donor_code IN (${donor})
@@ -261,8 +261,8 @@ async function tableFinancingQuery(
                     converted_table AS (
                 SELECT
                     f.year,
-                    SUM(f.value * 1.1 / 1.1) AS value,
-                    SUM(f.value * c.factor * 1.1 / 1.1) AS converted_value
+                    SUM(CAST(f.value AS DOUBLE)) AS value,
+                    SUM(CAST(f.value * c.factor AS DOUBLE)) AS converted_value
                 FROM filtered f
                     JOIN conversion c
                 ON f.year = c.year

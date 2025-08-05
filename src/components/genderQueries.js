@@ -93,7 +93,7 @@ async function absoluteGenderQuery(
                     year, 
                     donor_code AS donor,
                     indicator, 
-                    (value * 1.1 / 1.1) AS value
+                    CAST(value AS DOUBLE) AS value
                 FROM gender
                 WHERE 
                     donor_code IN (${donor})
@@ -158,7 +158,7 @@ async function relativeGenderQuery(
                 SELECT 
                     year,
                     indicator,
-                    SUM(value * 1.1 / 1.1) AS value
+                    SUM(CAST(value AS DOUBLE)) AS value
                 FROM gender
                 WHERE 
                     donor_code IN (${donor})
@@ -170,7 +170,7 @@ async function relativeGenderQuery(
             total AS (
                 SELECT 
                     year,
-                    SUM(value * 1.1 / 1.1) AS total_value
+                    SUM(CAST(value AS DOUBLE)) AS total_value
                 FROM gender
                 WHERE
                     donor_code IN (${donor})
@@ -219,7 +219,7 @@ async function tableGenderQuery(
                     year, 
                     donor_code AS donor,
                     indicator, 
-                    (value * 1.1 / 1.1) AS value
+                    CAST(value AS DOUBLE) AS value
                 FROM gender
                 WHERE 
                     donor_code IN (${donor})
@@ -230,7 +230,7 @@ async function tableGenderQuery(
             total_table AS (
                 SELECT
                     year,
-                    SUM(value * 1.1 / 1.1) AS total_value
+                    SUM(CAST(value AS DOUBLE)) AS total_value
                 FROM gender
                 WHERE
                     donor_code IN (${donor})
@@ -251,7 +251,7 @@ async function tableGenderQuery(
                 SELECT
                     f.year,
                     f.indicator,
-                    SUM(f.value * 1.1 / 1.1) AS value,
+                    SUM(CAST(f.value AS DOUBLE)) AS value,
                     SUM(f.value * c.factor) AS converted_value
                 FROM filtered f
                     JOIN conversion c

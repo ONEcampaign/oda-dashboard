@@ -93,7 +93,7 @@ async function absoluteRecipientsQuery(
                     year, 
                     donor_code AS donor,
                     indicator, 
-                    (value * 1.1 / 1.1) AS value
+                    CAST(value AS DOUBLE) AS value
                 FROM recipients
                 WHERE 
                     donor_code IN (${donor})
@@ -159,7 +159,7 @@ async function relativeRecipientsQuery(
                 SELECT 
                     year,
                     indicator,
-                    SUM(value * 1.1 / 1.1) AS value
+                    SUM(CAST(value AS DOUBLE)) AS value
                 FROM recipients
                 WHERE 
                     donor_code IN (${donor})
@@ -171,7 +171,7 @@ async function relativeRecipientsQuery(
             total AS (
                 SELECT 
                     year,
-                    SUM(value * 1.1 / 1.1) AS total_value
+                    SUM(CAST(value AS DOUBLE)) AS total_value
                 FROM recipients
                 WHERE
                     recipient_code IN (${recipient})
@@ -220,7 +220,7 @@ async function tableRecipientsQuery(
                     year, 
                     donor_code AS donor,
                     indicator, 
-                    (value * 1.1 / 1.1) AS value
+                    CAST(value AS DOUBLE) AS value
                 FROM recipients
                 WHERE 
                     donor_code IN (${donor})
@@ -258,7 +258,7 @@ async function tableRecipientsQuery(
             total_table AS (
                 SELECT
                     year,
-                    SUM(value * 1.1 / 1.1) AS total_value
+                    SUM(CAST(value AS DOUBLE)) AS total_value
                 FROM recipients
                 WHERE
                     donor_code IN (${donor})

@@ -144,7 +144,7 @@ async function treemapSectorsQuery(
                             ${indicatorCase} 
                         END`
                    } AS indicator,
-                SUM(value * 1.1 / 1.1) AS value
+                SUM(CAST(value AS DOUBLE)) AS value
                 FROM sectors 
                 WHERE
                     donor_code IN (${donor})
@@ -224,7 +224,7 @@ async function selectedSectorsQuery(
                             ${indicatorCase} 
                         END`
                 } AS indicator,
-                SUM(value * 1.1 / 1.1) AS value
+                SUM(CAST(value AS DOUBLE)) AS value
              FROM sectors 
              WHERE
                 donor_code IN (${donor})
@@ -329,7 +329,7 @@ async function tableSectorsQuery(
                             ${indicatorCase} 
                         END`
                 } AS indicator,
-                SUM(value * 1.1 / 1.1) AS value
+                SUM(CAST(value AS DOUBLE)) AS value
              FROM sectors 
              WHERE
                 donor_code IN (${donor})
@@ -353,7 +353,7 @@ async function tableSectorsQuery(
                     f.year, 
                     ${breakdown ? "f.sub_sector AS sub_sector," : ""}
                     f.indicator AS indicator,
-                    SUM(f.value * 1.1 / 1.1) AS value,
+                    SUM(CAST(f.value AS DOUBLE)) AS value,
                     SUM(f.value * c.factor) AS converted_value
                 FROM filtered f
                     JOIN conversion c
@@ -378,7 +378,7 @@ async function tableSectorsQuery(
             total_table AS (
                 SELECT
                     year,
-                    SUM(value * 1.1 / 1.1) AS total_value
+                    SUM(CAST(value AS DOUBLE)) AS total_value
                 FROM sectors 
                 WHERE
                    donor_code IN (${donor})
