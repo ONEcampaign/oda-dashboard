@@ -64,7 +64,7 @@ def gender_to_parquet():
     df = get_transform_gender()
     # Use a lightweight compression setting so DuckDB can read the files
     # in the browser without incurring heavy decompression costs.
-    df_to_parquet(df, compression="zstd", compression_level=1)
+    df_to_parquet(df)
 
 
 if __name__ == "__main__":

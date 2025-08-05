@@ -89,29 +89,7 @@ def load_indicators(page: str):
         return result
 
 
-def return_pa_table(
-    df: pd.DataFrame,
-    *,
-    compression: str | None = "snappy",
-    compression_level: int | None = None,
-):
-    """Return a PyArrow table to STDOUT as a parquet file.
-
-    Parameters
-    ----------
-    df:
-        DataFrame to serialise.
-    compression:
-        Compression codec used by :func:`pyarrow.parquet.write_table`.  The
-        default remains ``"snappy"`` to preserve the previous behaviour, but it
-        can now be tuned by callers in order to trade off size vs. read speed
-        (e.g. ``"zstd"`` or ``None`` for uncompressed output which is faster for
-        DuckDB to load).
-    compression_level:
-        Optional compression level passed through to PyArrow.  Lower values
-        generally favour faster decompression which is beneficial for the
-        in-browser DuckDB instance used by the dashboard.
-    """
+def return_pa_table(df: pd.DataFrame):
 
     schema = get_schema(df)
 
@@ -119,12 +97,7 @@ def return_pa_table(
 
     # Write PyArrow Table to Parquet
     buf = pa.BufferOutputStream()
-    pq.write_table(
-        table,
-        buf,
-        compression=compression,
-        compression_level=compression_level,
-    )
+    pq.write_table(table, buf, compression="snappy")
 
     # Get the Parquet bytes
     buf_bytes = buf.getvalue().to_pybytes()
@@ -178,10 +151,18 @@ def get_schema(df: pd.DataFrame):
             precision = series.dropna().apply(total_digits).max()
             field_type = pa.decimal128(precision, 2)
 
+        elif pd.api.types.is_integer_dtype(series):
+            min_val = int(series.min())
+            max_val = int(series.max())
+            field_type = choose_int_type(min_val, max_val)
+
+        elif pd.api.types.is_float_dtype(series):
+            field_type = pa.float64()
+
         else:
             raise TypeError(
                 f"Column '{col}' is not a supported type. "
-                "Expected either a categorical of integers or a Decimal column."
+                "Expected a categorical, Decimal, integer, or float column."
             )
 
         fields.append(pa.field(col, field_type))
@@ -189,12 +170,33 @@ def get_schema(df: pd.DataFrame):
     return pa.schema(fields)
 
 
-def to_decimal(val: float, precision: int =2):
-    quantizer = Decimal("1." + "0" * precision)
-    return Decimal(str(val)).quantize(quantizer, rounding=ROUND_HALF_EVEN)
+def to_decimal(val: float, precision: int = 2, encoding: str = "float"):
+    """Convert a numeric value according to the desired encoding.
+
+    Parameters
+    ----------
+    val: float
+        Value to convert.
+    precision: int, default 2
+        Number of decimal places for rounding/scaling.
+    encoding: {"float", "decimal", "scaled_int"}, default "float"
+        Storage format for the value.
+    """
+
+    if encoding == "decimal":
+        quantizer = Decimal("1." + "0" * precision)
+        return Decimal(str(val)).quantize(quantizer, rounding=ROUND_HALF_EVEN)
+    if encoding == "scaled_int":
+        scale = 10**precision
+        return int(round(float(val) * scale))
+    if encoding == "float":
+        return round(float(val), precision)
+    raise ValueError("encoding must be 'float', 'decimal', or 'scaled_int'")
 
 
-def convert_types(df: pd.DataFrame) -> pd.DataFrame:
+def convert_types(
+    df: pd.DataFrame, value_encoding: str = "float", precision: int = 2
+) -> pd.DataFrame:
     type_map = {
         "year": "category",
         "donor_code": "category",
@@ -208,32 +210,22 @@ def convert_types(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = df[col].astype(dtype)
 
     if "value" in df.columns:
-        df["value"] = df["value"].apply(to_decimal)
+        df["value"] = df["value"].apply(
+            lambda x: to_decimal(x, precision=precision, encoding=value_encoding)
+        )
 
     return df
 
 
-def df_to_parquet(
-    df: pd.DataFrame,
-    *,
-    compression: str | None = "snappy",
-    compression_level: int | None = None,
-):
-    """Serialise ``df`` to parquet and write the bytes to STDOUT.
+def df_to_parquet(df: pd.DataFrame, value_encoding: str = "float", precision: int = 2):
 
-    ``df_to_parquet`` previously wrote all parquet files using ``snappy``
-    compression.  This helper now exposes the compression parameters so that
-    callers can reduce compression (or disable it altogether) when optimising
-    for faster loading times in DuckDB.
-    """
-
-    converted_df = convert_types(df)
-    return_pa_table(
-        converted_df, compression=compression, compression_level=compression_level
-    )
+    converted_df = convert_types(df, value_encoding=value_encoding, precision=precision)
+    return_pa_table(converted_df)
 
 
-def add_index_column(df: pd.DataFrame, column: str, json_path, ordered_list: list = None) -> pd.DataFrame:
+def add_index_column(
+    df: pd.DataFrame, column: str, json_path, ordered_list: list = None
+) -> pd.DataFrame:
     # If no custom order is provided, use unique values in appearance order
     if ordered_list is None:
         ordered_list = list(df[column].unique())
@@ -252,12 +244,9 @@ def add_index_column(df: pd.DataFrame, column: str, json_path, ordered_list: lis
 
     return df
 
+
 def get_eui(df: pd.DataFrame) -> pd.DataFrame:
 
-    eui_df = (
-        df
-        .query("dac_code == 918")
-        .assign(dac_code=eui_bi_code)
-    )
+    eui_df = df.query("dac_code == 918").assign(dac_code=eui_bi_code)
 
     return eui_df
