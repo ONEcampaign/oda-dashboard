@@ -136,7 +136,8 @@ def merge_transform_sectors():
 
 def sectors_to_parquet():
     df = merge_transform_sectors()
-    df_to_parquet(df)
+    # Use a low compression level for quicker DuckDB queries in the browser
+    df_to_parquet(df, compression="zstd", compression_level=1)
 
 
 if __name__ == "__main__":
