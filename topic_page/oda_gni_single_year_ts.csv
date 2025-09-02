@@ -18,6 +18,7 @@ DAC countries,2024,212.09 billion,231.17 billion,0.33493
 Iceland,2024,111.7 million,121.9 million,0.33474
 New Zealand,2024,780.8 million,922.2 million,0.32093
 Italy,2024,6.67 billion,9.83 billion,0.283
+Latvia,2024,111.6 million,187.6 million,0.26111
 Spain,2024,4.35 billion,7.65 billion,0.25378
 Lithuania,2024,193.4 million,374.4 million,0.23846
 Portugal,2024,669.1 million,1.31 billion,0.23722
@@ -31,762 +32,784 @@ Czechia,2024,572.2 million,1.80 billion,0.16902
 Greece,2024,357.6 million,1.39 billion,0.14366
 Slovak Republic,2024,191.4 million,766.9 million,0.13981
 Hungary,2024,190.6 million,1.25 billion,0.09237
-Norway,2023,5.38 billion,0.0 million,1.05973
-Luxembourg,2023,598.2 million,0.0 million,1.01653
-Sweden,2023,5.78 billion,0.0 million,0.9527
-Germany,2023,39.16 billion,0.0 million,0.84462
-Denmark,2023,3.10 billion,0.0 million,0.74016
-Netherlands,2023,7.74 billion,27.3 million,0.69754
-Ireland,2023,2.87 billion,68.3 million,0.68375
-Switzerland,2023,5.41 billion,660.8 million,0.62379
-United Kingdom,2023,20.16 billion,2.92 billion,0.61137
-Finland,2023,1.62 billion,456.6 million,0.5459
-France,2023,15.44 billion,6.33 billion,0.49649
-Belgium,2023,2.87 billion,1.65 billion,0.44508
-Japan,2023,18.70 billion,12.46 billion,0.42003
-Austria,2023,2.01 billion,1.60 billion,0.38994
-Canada,2023,8.07 billion,6.72 billion,0.38184
-DAC countries,2023,228.28 billion,191.30 billion,0.38085
-Iceland,2023,115.9 million,106.0 million,0.36554
-Poland,2023,2.82 billion,2.60 billion,0.36432
-New Zealand,2023,777.0 million,939.2 million,0.31694
-Lithuania,2023,221.9 million,270.5 million,0.31551
-Estonia,2023,113.2 million,164.0 million,0.28584
-Italy,2023,6.25 billion,9.51 billion,0.27767
-Slovenia,2023,167.4 million,304.7 million,0.24815
-Spain,2023,3.99 billion,7.30 billion,0.24749
-United States,2023,66.23 billion,122.88 billion,0.24516
-Czechia,2023,807.1 million,1.56 billion,0.23854
-Australia,2023,3.31 billion,8.45 billion,0.19707
-Portugal,2023,551.6 million,1.42 billion,0.19579
-Korea,2023,3.16 billion,9.94 billion,0.16888
-Greece,2023,346.2 million,1.29 billion,0.14793
-Slovak Republic,2023,184.2 million,720.4 million,0.14255
-Hungary,2023,278.2 million,1.17 billion,0.13486
-Luxembourg,2022,582.0 million,0.0 million,1.09315
-Germany,2022,40.19 billion,0.0 million,0.95512
-Sweden,2022,5.68 billion,0.0 million,0.92747
-Netherlands,2022,7.50 billion,0.0 million,0.77494
-Ireland,2022,2.63 billion,49.9 million,0.68696
-Norway,2022,4.05 billion,130.4 million,0.67818
-Poland,2022,4.45 billion,166.3 million,0.67478
-Denmark,2022,2.78 billion,117.9 million,0.67148
-Finland,2022,1.76 billion,211.3 million,0.62497
-Switzerland,2022,5.00 billion,618.1 million,0.62294
-France,2022,17.79 billion,2.25 billion,0.62148
-Estonia,2022,231.3 million,29.8 million,0.62019
-United Kingdom,2022,18.02 billion,3.60 billion,0.58347
-Belgium,2022,2.91 billion,1.19 billion,0.49706
-Austria,2022,2.08 billion,1.20 billion,0.4433
-Czechia,2022,1.19 billion,747.5 million,0.43013
-Lithuania,2022,283.6 million,191.9 million,0.41749
-DAC countries,2022,225.69 billion,170.90 billion,0.39835
-Canada,2022,7.78 billion,7.04 billion,0.36747
-Iceland,2022,102.3 million,92.9 million,0.36696
-Italy,2022,7.38 billion,6.84 billion,0.36349
-Japan,2022,16.21 billion,15.41 billion,0.35889
-Spain,2022,4.80 billion,5.08 billion,0.34009
-Slovenia,2022,195.2 million,216.6 million,0.33184
-Hungary,2022,466.5 million,536.7 million,0.32552
-United States,2022,64.20 billion,116.42 billion,0.24881
-Portugal,2022,598.7 million,1.14 billion,0.24135
-New Zealand,2022,534.6 million,1.12 billion,0.22572
-Australia,2022,3.07 billion,8.30 billion,0.18916
-Greece,2022,406.4 million,1.12 billion,0.18633
-Slovak Republic,2022,204.4 million,577.5 million,0.18297
-Korea,2022,2.83 billion,9.06 billion,0.16662
-Luxembourg,2021,558.9 million,0.0 million,1.02353
-Sweden,2021,5.54 billion,0.0 million,0.84641
-Norway,2021,4.21 billion,0.0 million,0.83493
-Germany,2021,35.40 billion,0.0 million,0.81383
-Denmark,2021,2.84 billion,39.3 million,0.69045
-Netherlands,2021,5.79 billion,1.28 billion,0.57348
-Switzerland,2021,4.29 billion,1.19 billion,0.54786
-United Kingdom,2021,16.98 billion,4.85 billion,0.54447
-France,2021,15.81 billion,5.49 billion,0.51957
-Finland,2021,1.47 billion,656.7 million,0.48412
-Belgium,2021,2.73 billion,1.51 billion,0.45061
-DAC countries,2021,193.15 billion,197.46 billion,0.34613
-Canada,2021,6.48 billion,7.34 billion,0.32839
-Hungary,2021,508.1 million,577.1 million,0.32774
-Austria,2021,1.54 billion,1.79 billion,0.32316
-Ireland,2021,1.20 billion,1.48 billion,0.31267
-Iceland,2021,78.5 million,100.4 million,0.30724
-Italy,2021,6.23 billion,8.65 billion,0.293
-New Zealand,2021,673.4 million,1.04 billion,0.2752
-Spain,2021,3.81 billion,6.11 billion,0.26884
-Japan,2021,13.70 billion,23.04 billion,0.26104
-United States,2021,54.32 billion,112.18 billion,0.22839
-Australia,2021,3.58 billion,7.63 billion,0.2234
-Slovenia,2021,127.3 million,298.7 million,0.20921
-Portugal,2021,492.2 million,1.26 billion,0.19645
-Estonia,2021,71.5 million,184.3 million,0.1956
-Poland,2021,1.20 billion,3.34 billion,0.18459
-Greece,2021,363.9 million,1.15 billion,0.16785
-Lithuania,2021,103.9 million,337.4 million,0.16486
-Slovak Republic,2021,176.5 million,616.9 million,0.15571
-Czechia,2021,418.7 million,1.48 billion,0.15429
-Korea,2021,2.61 billion,10.20 billion,0.14263
-Norway,2020,4.98 billion,0.0 million,1.31683
-Sweden,2020,6.54 billion,0.0 million,1.17261
-Luxembourg,2020,508.3 million,0.0 million,1.15798
-Germany,2020,32.58 billion,0.0 million,0.83321
-United Kingdom,2020,21.53 billion,0.0 million,0.80949
-Denmark,2020,2.75 billion,0.0 million,0.74739
-Netherlands,2020,6.26 billion,74.7 million,0.69174
-France,2020,15.13 billion,3.53 billion,0.56741
-Switzerland,2020,4.06 billion,1.01 billion,0.56042
-Belgium,2020,2.60 billion,826.5 million,0.53133
-Finland,2020,1.39 billion,525.0 million,0.50793
-Canada,2020,5.99 billion,5.40 billion,0.36816
-DAC countries,2020,178.34 billion,171.10 billion,0.35725
-Hungary,2020,526.8 million,553.3 million,0.34142
-Iceland,2020,72.8 million,78.0 million,0.33797
-Ireland,2020,1.07 billion,1.19 billion,0.33209
-Austria,2020,1.41 billion,1.60 billion,0.32857
-New Zealand,2020,584.6 million,841.3 million,0.28698
-Spain,2020,3.33 billion,5.66 billion,0.25898
-Australia,2020,3.34 billion,6.04 billion,0.2491
-Italy,2020,4.57 billion,8.74 billion,0.24024
-Japan,2020,12.26 billion,24.30 billion,0.23472
-Estonia,2020,64.7 million,146.2 million,0.21479
-Portugal,2020,469.0 million,1.10 billion,0.20897
-Slovenia,2020,106.0 million,258.4 million,0.20359
-United States,2020,42.27 billion,106.73 billion,0.19859
-Greece,2020,365.9 million,950.8 million,0.1945
-Poland,2020,1.07 billion,2.97 billion,0.18599
-Lithuania,2020,95.3 million,284.0 million,0.17593
-Slovak Republic,2020,170.3 million,547.5 million,0.16605
-Czechia,2020,381.0 million,1.28 billion,0.16093
-Korea,2020,2.18 billion,9.38 billion,0.13181
-Luxembourg,2019,564.4 million,0.0 million,1.23755
-Norway,2019,4.65 billion,0.0 million,1.11009
-Sweden,2019,5.61 billion,0.0 million,1.02968
-United Kingdom,2019,23.69 billion,0.0 million,0.86034
-Denmark,2019,2.78 billion,0.0 million,0.78048
-Germany,2019,28.45 billion,0.0 million,0.71891
-Netherlands,2019,6.44 billion,0.0 million,0.71393
-Switzerland,2019,3.72 billion,1.22 billion,0.5267
-France,2019,13.71 billion,5.67 billion,0.49514
-Belgium,2019,2.50 billion,1.22 billion,0.4701
-Finland,2019,1.27 billion,628.0 million,0.46849
-Ireland,2019,1.07 billion,1.09 billion,0.34708
-DAC countries,2019,171.44 billion,186.15 billion,0.3356
-Canada,2019,5.60 billion,6.43 billion,0.32574
-Austria,2019,1.42 billion,1.70 billion,0.3193
-New Zealand,2019,616.3 million,792.4 million,0.30626
-Iceland,2019,72.7 million,100.1 million,0.29455
-Hungary,2019,395.1 million,632.5 million,0.26912
-Australia,2019,3.38 billion,6.04 billion,0.2513
-Italy,2019,4.91 billion,9.22 billion,0.24303
-Spain,2019,3.37 billion,6.49 billion,0.23945
-Japan,2019,12.12 billion,25.31 billion,0.22665
-Estonia,2019,64.3 million,151.0 million,0.20899
-Portugal,2019,484.1 million,1.19 billion,0.20272
-Greece,2019,419.0 million,1.05 billion,0.19958
-Slovenia,2019,105.6 million,265.8 million,0.19896
-United States,2019,40.33 billion,111.50 billion,0.18592
-Poland,2019,1.03 billion,2.89 billion,0.18432
-Lithuania,2019,93.0 million,276.6 million,0.1762
-Czechia,2019,406.7 million,1.24 billion,0.17272
-Korea,2019,2.39 billion,9.21 billion,0.14413
-Slovak Republic,2019,145.5 million,581.6 million,0.14012
-Luxembourg,2018,540.6 million,0.0 million,1.12364
-Sweden,2018,6.08 billion,0.0 million,1.08648
-Norway,2018,4.24 billion,0.0 million,0.93583
-United Kingdom,2018,23.19 billion,0.0 million,0.83128
-Denmark,2018,2.69 billion,0.0 million,0.74755
-Netherlands,2018,6.73 billion,0.0 million,0.73614
-Germany,2018,28.41 billion,160.9 million,0.69606
-Switzerland,2018,3.65 billion,1.29 billion,0.51753
-Belgium,2018,2.57 billion,1.20 billion,0.47754
-France,2018,13.08 billion,6.79 billion,0.4607
-Finland,2018,1.06 billion,854.4 million,0.3883
-DAC countries,2018,170.65 billion,182.36 billion,0.33839
-Ireland,2018,1.00 billion,1.08 billion,0.33725
-Canada,2018,5.50 billion,6.33 billion,0.32543
-Iceland,2018,81.1 million,101.3 million,0.31121
-New Zealand,2018,602.2 million,765.3 million,0.30826
-Austria,2018,1.30 billion,1.87 billion,0.28722
-Italy,2018,5.53 billion,9.08 billion,0.26497
-Hungary,2018,351.4 million,602.5 million,0.25784
-Australia,2018,3.53 billion,6.07 billion,0.25754
-Spain,2018,3.19 billion,6.79 billion,0.22358
-Japan,2018,11.22 billion,24.73 billion,0.21851
-Estonia,2018,63.7 million,147.3 million,0.21138
-Portugal,2018,469.0 million,1.15 billion,0.20227
-United States,2018,41.80 billion,103.82 billion,0.20093
-Slovenia,2018,97.5 million,277.1 million,0.18224
-Poland,2018,987.2 million,2.96 billion,0.17524
-Czechia,2018,395.2 million,1.23 billion,0.17059
-Lithuania,2018,86.7 million,287.6 million,0.16211
-Slovak Republic,2018,168.2 million,565.6 million,0.16044
-Greece,2018,314.7 million,1.21 billion,0.14434
-Korea,2018,2.15 billion,9.93 billion,0.12437
-Luxembourg,2017,516.4 million,0.0 million,1.21211
-Norway,2017,4.45 billion,0.0 million,1.07174
-Sweden,2017,5.69 billion,0.0 million,1.04193
-United Kingdom,2017,22.83 billion,0.0 million,0.8815
-Germany,2017,30.33 billion,0.0 million,0.80966
-Denmark,2017,2.68 billion,0.0 million,0.80708
-Netherlands,2017,6.33 billion,0.0 million,0.77029
-Switzerland,2017,3.76 billion,1.10 billion,0.5414
-Belgium,2017,2.60 billion,856.2 million,0.52638
-Finland,2017,1.25 billion,535.4 million,0.49031
-France,2017,12.93 billion,5.60 billion,0.4883
-DAC countries,2017,171.51 billion,160.20 billion,0.36193
-Ireland,2017,951.3 million,896.9 million,0.36031
-Austria,2017,1.49 billion,1.43 billion,0.35624
-Italy,2017,6.61 billion,7.02 billion,0.33947
-Canada,2017,5.15 billion,6.26 billion,0.31608
-Iceland,2017,75.5 million,92.9 million,0.31386
-Australia,2017,3.40 billion,5.76 billion,0.25956
-New Zealand,2017,481.1 million,882.0 million,0.24706
-Estonia,2017,61.7 million,121.0 million,0.23632
-Spain,2017,2.99 billion,6.20 billion,0.22775
-United States,2017,43.48 billion,94.03 billion,0.22135
-Portugal,2017,462.8 million,1.03 billion,0.21774
-Czechia,2017,435.5 million,981.9 million,0.21506
-Slovenia,2017,94.7 million,239.2 million,0.19854
-Lithuania,2017,85.8 million,233.8 million,0.18785
-Poland,2017,927.8 million,2.60 billion,0.18391
-Japan,2017,9.22 billion,26.01 billion,0.18325
-Greece,2017,354.9 million,1.05 billion,0.17682
-Slovak Republic,2017,155.6 million,476.7 million,0.17227
-Hungary,2017,195.2 million,744.0 million,0.14551
-Korea,2017,2.07 billion,8.64 billion,0.13528
-Norway,2016,5.00 billion,0.0 million,1.27999
-Luxembourg,2016,497.1 million,0.0 million,1.27222
-Sweden,2016,5.12 billion,0.0 million,0.9842
-Germany,2016,31.04 billion,0.0 million,0.87753
-United Kingdom,2016,22.14 billion,0.0 million,0.85869
-Netherlands,2016,6.55 billion,0.0 million,0.85607
-Denmark,2016,2.67 billion,0.0 million,0.84836
-Switzerland,2016,4.27 billion,442.2 million,0.6343
-Belgium,2016,2.83 billion,402.8 million,0.61269
-Finland,2016,1.26 billion,427.8 million,0.52235
-Austria,2016,2.00 billion,703.0 million,0.51786
-France,2016,11.25 billion,6.27 billion,0.44947
-Spain,2016,5.09 billion,3.53 billion,0.41323
-DAC countries,2016,172.45 billion,143.11 billion,0.38254
-Ireland,2016,935.5 million,827.4 million,0.37146
-Iceland,2016,74.1 million,70.4 million,0.35906
-Canada,2016,4.93 billion,5.63 billion,0.32659
-Italy,2016,5.89 billion,7.07 billion,0.31801
-Australia,2016,3.91 billion,4.72 billion,0.31747
-Estonia,2016,66.0 million,94.2 million,0.28836
-New Zealand,2016,503.5 million,732.5 million,0.28517
-Slovenia,2016,104.9 million,199.4 million,0.24129
-United States,2016,43.87 billion,85.61 billion,0.23716
-Hungary,2016,279.0 million,560.4 million,0.23269
-Greece,2016,426.0 million,937.8 million,0.21865
-Czechia,2016,396.0 million,883.6 million,0.21662
-Portugal,2016,432.0 million,970.0 million,0.21569
-Lithuania,2016,87.8 million,199.7 million,0.21379
-Poland,2016,960.3 million,2.19 billion,0.21305
-Slovak Republic,2016,142.7 million,470.3 million,0.16297
-Japan,2016,8.12 billion,27.68 billion,0.15885
-Korea,2016,2.21 billion,7.67 billion,0.15664
-Sweden,2015,7.43 billion,0.0 million,1.47245
-Luxembourg,2015,453.3 million,0.0 million,1.18969
-Norway,2015,4.61 billion,0.0 million,1.12737
-Netherlands,2015,7.58 billion,0.0 million,0.99066
-Denmark,2015,2.90 billion,0.0 million,0.95922
-United Kingdom,2015,20.49 billion,0.0 million,0.77848
-Germany,2015,22.73 billion,1.28 billion,0.66276
-Finland,2015,1.53 billion,112.5 million,0.65192
-Switzerland,2015,4.08 billion,780.1 million,0.58775
-Belgium,2015,2.38 billion,826.7 million,0.51937
-Austria,2015,1.64 billion,977.3 million,0.43878
-France,2015,10.60 billion,6.61 billion,0.43098
-Ireland,2015,830.0 million,753.2 million,0.36697
-DAC countries,2015,154.95 billion,154.69 billion,0.3503
-Australia,2015,4.17 billion,4.24 billion,0.34709
-Canada,2015,5.21 billion,5.50 billion,0.34041
-Iceland,2015,56.2 million,60.3 million,0.33762
-New Zealand,2015,506.1 million,660.1 million,0.3038
-Italy,2015,4.68 billion,8.00 billion,0.2582
-Estonia,2015,52.6 million,101.4 million,0.23922
-United States,2015,39.86 billion,89.61 billion,0.21552
-Portugal,2015,393.8 million,969.3 million,0.20224
-Slovenia,2015,82.1 million,214.8 million,0.1936
-Hungary,2015,219.0 million,593.7 million,0.18865
-Lithuania,2015,74.4 million,202.9 million,0.18785
-Czechia,2015,309.2 million,874.6 million,0.18285
-Japan,2015,8.02 billion,23.86 billion,0.17604
-Spain,2015,1.69 billion,6.69 billion,0.14088
-Greece,2015,273.7 million,1.10 billion,0.13981
-Korea,2015,1.88 billion,7.83 billion,0.13541
-Slovak Republic,2015,113.5 million,473.5 million,0.13538
-Poland,2015,611.3 million,2.61 billion,0.13288
-Luxembourg,2014,452.9 million,0.0 million,1.13899
-Sweden,2014,5.44 billion,0.0 million,0.95544
-Norway,2014,4.16 billion,0.0 million,0.81919
-Denmark,2014,2.85 billion,0.0 million,0.81285
-United Kingdom,2014,19.88 billion,0.0 million,0.72302
-Netherlands,2014,6.22 billion,0.0 million,0.70891
-Finland,2014,1.64 billion,281.2 million,0.59779
-Switzerland,2014,3.83 billion,1.16 billion,0.53667
-Belgium,2014,2.58 billion,1.12 billion,0.48864
-Germany,2014,17.84 billion,9.85 billion,0.45094
-Ireland,2014,877.5 million,644.9 million,0.40347
-France,2014,10.53 billion,9.67 billion,0.36486
-DAC countries,2014,146.38 billion,179.77 billion,0.31416
-Australia,2014,4.32 billion,5.44 billion,0.31014
-Austria,2014,1.31 billion,1.73 billion,0.30152
-Iceland,2014,49.4 million,69.0 million,0.292
-New Zealand,2014,489.3 million,825.5 million,0.2605
-Canada,2014,4.42 billion,7.89 billion,0.25137
-United States,2014,42.97 billion,81.79 billion,0.2411
-Portugal,2014,468.9 million,1.12 billion,0.20655
-Estonia,2014,49.1 million,132.0 million,0.18988
-Italy,2014,3.95 billion,11.04 billion,0.18434
-Japan,2014,7.38 billion,26.13 billion,0.15415
-Czechia,2014,281.7 million,1.04 billion,0.14892
-Spain,2014,1.90 billion,7.87 billion,0.13637
-Slovenia,2014,67.3 million,278.6 million,0.13626
-Hungary,2014,173.7 million,751.8 million,0.1314
-Lithuania,2014,58.9 million,268.1 million,0.12607
-Korea,2014,1.75 billion,8.20 billion,0.12303
-Greece,2014,236.8 million,1.41 billion,0.10095
-Poland,2014,530.8 million,3.16 billion,0.1006
-Slovak Republic,2014,92.8 million,583.8 million,0.09605
-Luxembourg,2013,473.4 million,0.0 million,1.10456
-Sweden,2013,4.92 billion,0.0 million,0.85543
-Norway,2013,4.27 billion,0.0 million,0.823
-Denmark,2013,2.81 billion,0.0 million,0.81687
-United Kingdom,2013,19.67 billion,0.0 million,0.77577
-Netherlands,2013,6.08 billion,0.0 million,0.74861
-Finland,2013,1.47 billion,409.7 million,0.54719
-Ireland,2013,913.4 million,368.4 million,0.49883
-Switzerland,2013,3.50 billion,1.42 billion,0.49769
-Belgium,2013,2.45 billion,1.11 billion,0.48174
-Germany,2013,15.60 billion,10.55 billion,0.41767
-France,2013,11.29 billion,8.26 billion,0.40427
-Iceland,2013,50.3 million,56.7 million,0.3292
-DAC countries,2013,143.51 billion,174.60 billion,0.3158
-Australia,2013,4.48 billion,5.77 billion,0.30591
-Austria,2013,1.27 billion,1.73 billion,0.29553
-Canada,2013,4.91 billion,7.69 billion,0.27267
-New Zealand,2013,457.7 million,761.9 million,0.26271
-Portugal,2013,535.7 million,972.1 million,0.24871
-United States,2013,41.30 billion,79.13 billion,0.24008
-Spain,2013,2.38 billion,7.08 billion,0.17589
-Estonia,2013,41.4 million,128.4 million,0.17058
-Italy,2013,3.41 billion,11.01 billion,0.16542
-Japan,2013,8.37 billion,27.34 billion,0.16402
-Lithuania,2013,65.6 million,244.4 million,0.14805
-Czechia,2013,271.0 million,1.03 billion,0.14618
-Slovenia,2013,67.7 million,264.1 million,0.14285
-Korea,2013,1.74 billion,7.47 billion,0.13206
-Hungary,2013,154.1 million,716.8 million,0.12383
-Poland,2013,576.4 million,2.97 billion,0.11372
-Slovak Republic,2013,95.8 million,549.3 million,0.10396
-Greece,2013,224.3 million,1.47 billion,0.09286
-Luxembourg,2012,465.3 million,0.0 million,1.17053
-Sweden,2012,4.64 billion,0.0 million,0.8627
-Netherlands,2012,6.46 billion,0.0 million,0.83016
-Denmark,2012,2.68 billion,0.0 million,0.82739
-Norway,2012,3.69 billion,0.0 million,0.722
-United Kingdom,2012,15.41 billion,1.90 billion,0.62327
-Finland,2012,1.43 billion,301.2 million,0.57813
-Belgium,2012,2.58 billion,835.5 million,0.52871
-Ireland,2012,903.1 million,301.3 million,0.52488
-Switzerland,2012,3.37 billion,1.20 billion,0.51671
-France,2012,12.47 billion,6.13 billion,0.4693
-Germany,2012,14.95 billion,9.42 billion,0.4295
-Portugal,2012,673.1 million,776.1 million,0.32511
-Austria,2012,1.25 billion,1.51 billion,0.31803
-Australia,2012,4.72 billion,5.76 billion,0.31505
-Canada,2012,5.53 billion,6.99 billion,0.30909
-DAC countries,2012,137.01 billion,176.24 billion,0.30616
-Iceland,2012,39.4 million,50.8 million,0.30582
-New Zealand,2012,470.1 million,666.8 million,0.28944
-United States,2012,41.18 billion,74.42 billion,0.24937
-Lithuania,2012,70.6 million,215.2 million,0.17293
-Spain,2012,2.14 billion,7.01 billion,0.16354
-Czechia,2012,285.5 million,990.3 million,0.15665
-Estonia,2012,33.7 million,119.2 million,0.15437
-Slovenia,2012,67.2 million,247.1 million,0.14963
-Korea,2012,1.64 billion,6.31 billion,0.14466
-Italy,2012,2.84 billion,11.15 billion,0.14207
-Greece,2012,311.0 million,1.44 billion,0.12427
-Hungary,2012,147.2 million,688.2 million,0.1233
-Poland,2012,514.4 million,2.76 billion,0.10984
-Japan,2012,6.30 billion,36.57 billion,0.10293
-Slovak Republic,2012,92.1 million,537.3 million,0.10246
-Luxembourg,2011,452.8 million,0.0 million,1.07648
-Sweden,2011,4.80 billion,0.0 million,0.87272
-Netherlands,2011,6.95 billion,0.0 million,0.82543
-Denmark,2011,2.77 billion,0.0 million,0.80537
-Norway,2011,3.68 billion,0.0 million,0.74587
-United Kingdom,2011,15.40 billion,1.82 billion,0.62619
-Belgium,2011,2.95 billion,709.5 million,0.56446
-Finland,2011,1.45 billion,404.2 million,0.54731
-Ireland,2011,970.4 million,278.4 million,0.54394
-Switzerland,2011,3.19 billion,1.47 billion,0.47973
-France,2011,12.59 billion,7.21 billion,0.44511
-Germany,2011,15.27 billion,10.24 billion,0.41904
-Portugal,2011,755.5 million,848.5 million,0.32969
-DAC countries,2011,142.31 billion,167.17 billion,0.32188
-Canada,2011,5.35 billion,6.60 billion,0.31344
-Australia,2011,4.33 billion,5.82 billion,0.29878
-New Zealand,2011,453.9 million,621.3 million,0.29551
-Iceland,2011,37.0 million,52.8 million,0.2883
-Austria,2011,1.19 billion,1.72 billion,0.28596
-United States,2011,42.38 billion,64.10 billion,0.2786
-Spain,2011,4.04 billion,6.16 billion,0.27721
-Italy,2011,4.22 billion,11.06 billion,0.19325
-Estonia,2011,33.8 million,113.7 million,0.16057
-Lithuania,2011,66.3 million,222.8 million,0.16048
-Czechia,2011,298.4 million,1.11 billion,0.14853
-Slovenia,2011,67.1 million,274.0 million,0.1377
-Greece,2011,371.7 million,1.66 billion,0.12839
-Hungary,2011,159.7 million,748.2 million,0.12311
-Korea,2011,1.36 billion,6.47 billion,0.12141
-Japan,2011,6.53 billion,36.09 billion,0.10727
-Slovak Republic,2011,93.2 million,566.3 million,0.09891
-Poland,2011,474.7 million,3.00 billion,0.0957
-Luxembourg,2010,485.4 million,0.0 million,1.26161
-Netherlands,2010,7.33 billion,0.0 million,0.93963
-Norway,2010,3.89 billion,0.0 million,0.93569
-Sweden,2010,4.36 billion,0.0 million,0.93233
-Denmark,2010,2.86 billion,0.0 million,0.90706
-Belgium,2010,3.40 billion,0.0 million,0.72303
-United Kingdom,2010,15.41 billion,542.5 million,0.6762
-Finland,2010,1.48 billion,215.7 million,0.61091
-Ireland,2010,1.02 billion,182.9 million,0.59322
-France,2010,13.25 billion,5.00 billion,0.50813
-Switzerland,2010,2.83 billion,1.27 billion,0.48325
-Germany,2010,14.95 billion,8.56 billion,0.44519
-Spain,2010,6.04 billion,3.68 billion,0.43474
-Iceland,2010,45.2 million,32.7 million,0.40626
-Austria,2010,1.38 billion,1.24 billion,0.36897
-Canada,2010,5.50 billion,5.35 billion,0.35475
-DAC countries,2010,143.39 billion,144.75 billion,0.34835
-Australia,2010,3.92 billion,4.38 billion,0.33061
-Portugal,2010,725.2 million,821.5 million,0.32821
-New Zealand,2010,413.0 million,525.2 million,0.30812
-United States,2010,41.42 billion,61.03 billion,0.28303
-Czechia,2010,292.1 million,965.9 million,0.16254
-Estonia,2010,29.1 million,99.2 million,0.1589
-Greece,2010,471.0 million,1.60 billion,0.15886
-Italy,2010,3.12 billion,11.05 billion,0.15416
-Lithuania,2010,52.3 million,193.4 million,0.14892
-Slovenia,2010,66.7 million,256.8 million,0.14425
-Japan,2010,7.06 billion,32.35 billion,0.12536
-Korea,2010,1.27 billion,5.83 billion,0.12523
-Hungary,2010,137.7 million,729.2 million,0.11121
-Poland,2010,450.4 million,2.72 billion,0.09956
-Slovak Republic,2010,85.2 million,518.8 million,0.09872
-Luxembourg,2009,497.3 million,0.0 million,1.25034
-Sweden,2009,4.68 billion,0.0 million,1.15505
-Norway,2009,4.00 billion,0.0 million,1.03717
-Netherlands,2009,7.10 billion,0.0 million,0.90613
-Denmark,2009,2.75 billion,0.0 million,0.86191
-United Kingdom,2009,13.38 billion,2.18 billion,0.60204
-Belgium,2009,2.85 billion,468.3 million,0.60131
-Ireland,2009,1.06 billion,230.2 million,0.57532
-Finland,2009,1.37 billion,298.7 million,0.57445
-Switzerland,2009,2.96 billion,698.9 million,0.56636
-Iceland,2009,58.1 million,16.0 million,0.54882
-France,2009,12.43 billion,6.32 billion,0.46404
-Spain,2009,6.37 billion,3.66 billion,0.44455
-New Zealand,2009,442.5 million,337.1 million,0.39732
-Germany,2009,13.32 billion,10.51 billion,0.39129
-Australia,2009,3.50 billion,3.08 billion,0.37246
-Canada,2009,4.80 billion,4.43 billion,0.36401
-DAC countries,2009,136.08 billion,139.98 billion,0.34506
-Austria,2009,1.25 billion,1.39 billion,0.33176
-United States,2009,40.76 billion,57.32 billion,0.29092
-Portugal,2009,549.2 million,983.2 million,0.25088
-Greece,2009,542.2 million,1.71 billion,0.16859
-Slovenia,2009,76.7 million,258.4 million,0.16022
-Italy,2009,3.29 billion,11.28 billion,0.15785
-Lithuania,2009,50.1 million,178.4 million,0.15349
-Czechia,2009,273.0 million,984.4 million,0.15197
-Estonia,2009,27.8 million,102.0 million,0.15009
-Japan,2009,6.31 billion,29.95 billion,0.12178
-Korea,2009,1.00 billion,4.86 billion,0.11949
-Hungary,2009,140.0 million,719.5 million,0.11402
-Poland,2009,467.8 million,2.47 billion,0.11164
-Slovak Republic,2009,83.3 million,526.7 million,0.09555
-Luxembourg,2008,484.6 million,0.0 million,1.13057
-Sweden,2008,4.37 billion,0.0 million,0.90387
-Netherlands,2008,7.49 billion,0.0 million,0.86166
-Denmark,2008,2.67 billion,0.0 million,0.77785
-Norway,2008,3.39 billion,0.0 million,0.75134
-Ireland,2008,1.31 billion,268.9 million,0.58042
-Switzerland,2008,2.66 billion,726.7 million,0.5496
-Belgium,2008,2.54 billion,951.4 million,0.50914
-Iceland,2008,66.7 million,28.6 million,0.49016
-Austria,2008,1.85 billion,952.0 million,0.46205
-Finland,2008,1.21 billion,647.5 million,0.45644
-United Kingdom,2008,12.00 billion,6.70 billion,0.44908
-Spain,2008,6.43 billion,4.33 billion,0.41839
-Germany,2008,15.18 billion,10.39 billion,0.4156
-New Zealand,2008,454.2 million,347.2 million,0.39671
-Australia,2008,3.56 billion,2.99 billion,0.3806
-France,2008,10.39 billion,9.43 billion,0.36712
-Canada,2008,5.30 billion,5.01 billion,0.35974
-DAC countries,2008,133.70 billion,157.17 billion,0.32177
-Portugal,2008,648.4 million,957.6 million,0.28262
-United States,2008,37.61 billion,63.27 billion,0.26096
-Italy,2008,4.76 billion,10.87 billion,0.21309
-Greece,2008,620.4 million,1.71 billion,0.18599
-Czechia,2008,297.1 million,1.11 billion,0.14807
-Estonia,2008,31.3 million,120.3 million,0.14474
-Lithuania,2008,60.9 million,243.5 million,0.14005
-Japan,2008,7.05 billion,28.25 billion,0.13981
-Slovenia,2008,72.2 million,294.3 million,0.13788
-Slovak Republic,2008,100.5 million,542.0 million,0.10947
-Korea,2008,887.2 million,5.66 billion,0.09491
-Hungary,2008,116.3 million,879.9 million,0.08173
-Poland,2008,379.9 million,3.08 billion,0.07688
-Luxembourg,2007,492.7 million,0.0 million,1.21238
-Netherlands,2007,7.19 billion,0.0 million,0.93322
-Norway,2007,3.58 billion,0.0 million,0.91303
-Sweden,2007,4.19 billion,0.0 million,0.90192
-Denmark,2007,2.68 billion,0.0 million,0.84388
-Austria,2007,2.09 billion,447.2 million,0.57684
-Ireland,2007,1.23 billion,288.0 million,0.56678
-Switzerland,2007,2.44 billion,743.7 million,0.53634
-Belgium,2007,2.23 billion,976.3 million,0.48674
-Finland,2007,1.11 billion,634.2 million,0.44533
-Germany,2007,14.19 billion,9.26 billion,0.42362
-Australia,2007,3.37 billion,2.42 billion,0.40756
-France,2007,10.15 billion,8.07 billion,0.38993
-Spain,2007,5.20 billion,4.60 billion,0.37118
-United Kingdom,2007,9.61 billion,9.79 billion,0.34669
-New Zealand,2007,408.3 million,432.1 million,0.34013
-Canada,2007,4.69 billion,5.18 billion,0.3324
-DAC countries,2007,119.60 billion,154.26 billion,0.30571
-Iceland,2007,52.5 million,74.8 million,0.28873
-Portugal,2007,527.4 million,972.5 million,0.24614
-United States,2007,31.59 billion,65.89 billion,0.22684
-Italy,2007,4.19 billion,10.44 billion,0.20059
-Lithuania,2007,71.2 million,225.8 million,0.16777
-Greece,2007,484.5 million,1.67 billion,0.15711
-Czechia,2007,254.5 million,887.0 million,0.15608
-Slovenia,2007,63.7 million,251.0 million,0.14161
-Japan,2007,6.37 billion,25.29 billion,0.1409
-Estonia,2007,26.1 million,114.3 million,0.13004
-Poland,2007,435.6 million,2.07 billion,0.12174
-Slovak Republic,2007,86.2 million,419.6 million,0.11936
-Hungary,2007,123.3 million,816.7 million,0.09184
-Korea,2007,663.4 million,6.14 billion,0.0683
-Luxembourg,2006,424.0 million,0.0 million,1.29754
-Sweden,2006,4.28 billion,0.0 million,1.10982
-Netherlands,2006,7.01 billion,0.0 million,1.03666
-Norway,2006,3.19 billion,0.0 million,0.95841
-Denmark,2006,2.61 billion,0.0 million,0.93284
-Belgium,2006,2.51 billion,261.3 million,0.634
-Ireland,2006,1.16 billion,163.3 million,0.61356
-Austria,2006,1.94 billion,301.9 million,0.60554
-Switzerland,2006,2.55 billion,522.9 million,0.58076
-United Kingdom,2006,13.52 billion,3.45 billion,0.55774
-France,2006,12.16 billion,3.71 billion,0.5365
-Finland,2006,1.06 billion,418.7 million,0.50134
-Germany,2006,13.38 billion,7.13 billion,0.45664
-Australia,2006,3.11 billion,1.92 billion,0.43259
-New Zealand,2006,390.6 million,285.2 million,0.40458
-Canada,2006,4.61 billion,4.16 billion,0.36801
-DAC countries,2006,129.08 billion,121.76 billion,0.36021
-Spain,2006,4.36 billion,4.12 billion,0.35989
-Iceland,2006,51.4 million,56.5 million,0.33342
-Portugal,2006,498.9 million,811.3 million,0.26654
-United States,2006,35.04 billion,57.78 billion,0.26428
-Italy,2006,4.30 billion,8.63 billion,0.23272
-Japan,2006,9.05 billion,22.35 billion,0.20168
-Czechia,2006,263.9 million,673.4 million,0.19706
-Greece,2006,462.4 million,1.25 billion,0.18867
-Hungary,2006,215.3 million,589.1 million,0.18737
-Estonia,2006,27.9 million,83.0 million,0.17609
-Slovak Republic,2006,85.9 million,287.7 million,0.16099
-Slovenia,2006,58.8 million,199.2 million,0.15961
-Lithuania,2006,44.5 million,183.5 million,0.13656
-Poland,2006,419.0 million,1.94 billion,0.12422
-Korea,2006,455.4 million,5.76 billion,0.05133
-Luxembourg,2005,401.9 million,0.0 million,1.2435
-Norway,2005,3.30 billion,0.0 million,1.1116
-Netherlands,2005,6.81 billion,0.0 million,1.09045
-Sweden,2005,3.75 billion,0.0 million,1.05176
-Denmark,2005,2.54 billion,0.0 million,0.97705
-Austria,2005,2.09 billion,17.1 million,0.69434
-Belgium,2005,2.57 billion,39.3 million,0.68947
-Switzerland,2005,2.78 billion,157.1 million,0.66259
-Finland,2005,1.16 billion,204.7 million,0.59532
-France,2005,11.85 billion,2.97 billion,0.55956
-United Kingdom,2005,12.16 billion,3.79 billion,0.53366
-Ireland,2005,851.9 million,347.4 million,0.49723
-Germany,2005,13.12 billion,6.47 billion,0.46882
-Canada,2005,5.16 billion,2.64 billion,0.46321
-DAC countries,2005,136.84 billion,99.92 billion,0.40457
-New Zealand,2005,390.5 million,315.5 million,0.38715
-Australia,2005,2.56 billion,2.19 billion,0.37668
-Italy,2005,6.20 billion,6.09 billion,0.35332
-United States,2005,42.88 billion,43.63 billion,0.34698
-Spain,2005,3.62 billion,4.15 billion,0.3264
-Portugal,2005,494.6 million,756.1 million,0.27684
-Japan,2005,10.00 billion,22.72 billion,0.21391
-Iceland,2005,33.0 million,75.8 million,0.2123
-Czechia,2005,236.7 million,593.2 million,0.19967
-Greece,2005,437.5 million,1.13 billion,0.19534
-Estonia,2005,20.8 million,66.2 million,0.16721
-Hungary,2005,142.1 million,512.0 million,0.1521
-Slovenia,2005,47.8 million,180.3 million,0.14676
-Lithuania,2005,29.6 million,146.8 million,0.11749
-Korea,2005,808.5 million,4.72 billion,0.10234
-Poland,2005,303.2 million,1.79 billion,0.10135
+Norway,2023,5.38 billion,0.0 million,1.09193
+Luxembourg,2023,598.2 million,0.0 million,0.98616
+Sweden,2023,5.78 billion,0.0 million,0.92616
+Germany,2023,39.16 billion,0.0 million,0.81754
+Denmark,2023,3.10 billion,0.0 million,0.72999
+Ireland,2023,2.87 billion,125.3 million,0.67073
+Netherlands,2023,7.74 billion,422.4 million,0.66376
+Switzerland,2023,5.41 billion,881.3 million,0.60192
+United Kingdom,2023,20.16 billion,4.23 billion,0.57851
+Finland,2023,1.62 billion,497.7 million,0.53529
+France,2023,15.44 billion,6.89 billion,0.48406
+Japan,2023,18.70 billion,11.03 billion,0.44034
+Belgium,2023,2.87 billion,1.74 billion,0.43615
+Austria,2023,2.01 billion,1.69 billion,0.37994
+Canada,2023,8.07 billion,6.92 billion,0.37685
+DAC countries,2023,228.17 billion,200.49 billion,0.3726
+Iceland,2023,115.9 million,116.3 million,0.34938
+Latvia,2023,143.3 million,150.3 million,0.34167
+Poland,2023,2.82 billion,3.10 billion,0.33347
+New Zealand,2023,777.0 million,968.7 million,0.31158
+Lithuania,2023,221.9 million,290.1 million,0.30339
+Estonia,2023,113.2 million,173.5 million,0.27645
+Italy,2023,6.25 billion,9.84 billion,0.27193
+Slovenia,2023,167.4 million,315.4 million,0.24269
+Spain,2023,3.99 billion,7.62 billion,0.24063
+Czechia,2023,807.1 million,1.55 billion,0.23949
+United States,2023,66.12 billion,127.51 billion,0.23902
+Australia,2023,3.31 billion,8.65 billion,0.1937
+Portugal,2023,551.6 million,1.50 billion,0.1878
+Korea,2023,3.16 billion,9.93 billion,0.16892
+Greece,2023,346.2 million,1.35 billion,0.14285
+Slovak Republic,2023,184.2 million,765.6 million,0.13576
+Hungary,2023,278.2 million,1.22 billion,0.12974
+Luxembourg,2022,582.0 million,0.0 million,0.99566
+Sweden,2022,5.68 billion,0.0 million,0.89122
+Norway,2022,4.05 billion,0.0 million,0.86346
+Germany,2022,40.19 billion,0.0 million,0.8471
+Denmark,2022,2.78 billion,123.4 million,0.67021
+Netherlands,2022,7.50 billion,358.6 million,0.66807
+Ireland,2022,2.63 billion,290.2 million,0.63036
+Finland,2022,1.76 billion,388.1 million,0.57356
+Switzerland,2022,5.00 billion,1.24 billion,0.56074
+France,2022,17.79 billion,4.46 billion,0.55955
+Estonia,2022,231.3 million,69.2 million,0.53882
+Poland,2022,4.45 billion,1.43 billion,0.5302
+United Kingdom,2022,18.02 billion,6.70 billion,0.5103
+Belgium,2022,2.91 billion,1.59 billion,0.45329
+Austria,2022,2.08 billion,1.61 billion,0.39395
+Japan,2022,16.21 billion,13.08 billion,0.38738
+Czechia,2022,1.19 billion,1.01 billion,0.37952
+DAC countries,2022,225.69 billion,198.89 billion,0.37209
+Canada,2022,7.78 billion,6.93 billion,0.37024
+Lithuania,2022,283.6 million,270.7 million,0.35813
+Latvia,2022,160.7 million,153.8 million,0.3576
+Iceland,2022,102.3 million,109.4 million,0.3384
+Italy,2022,7.38 billion,8.41 billion,0.32718
+Spain,2022,4.80 billion,6.30 billion,0.30272
+Slovenia,2022,195.2 million,281.3 million,0.28679
+Hungary,2022,466.5 million,793.9 million,0.25908
+United States,2022,64.20 billion,127.39 billion,0.23456
+New Zealand,2022,534.6 million,1.19 billion,0.21753
+Portugal,2022,598.7 million,1.39 billion,0.21061
+Australia,2022,3.07 billion,8.41 billion,0.18739
+Korea,2022,2.83 billion,9.15 billion,0.16541
+Greece,2022,406.4 million,1.31 billion,0.16527
+Slovak Republic,2022,204.4 million,725.4 million,0.15388
+Luxembourg,2021,558.9 million,0.0 million,0.98785
+Norway,2021,4.21 billion,0.0 million,0.9262
+Sweden,2021,5.54 billion,0.0 million,0.90676
+Germany,2021,35.40 billion,0.0 million,0.76499
+Denmark,2021,2.84 billion,0.0 million,0.71078
+Netherlands,2021,5.79 billion,1.95 billion,0.52366
+France,2021,15.81 billion,5.90 billion,0.50965
+United Kingdom,2021,16.98 billion,6.61 billion,0.50392
+Switzerland,2021,4.29 billion,1.72 billion,0.49995
+Finland,2021,1.47 billion,703.0 million,0.4738
+Belgium,2021,2.73 billion,1.69 billion,0.4325
+Japan,2021,13.70 billion,14.84 billion,0.33605
+DAC countries,2021,193.15 billion,212.18 billion,0.33356
+Canada,2021,6.48 billion,7.74 billion,0.31916
+Austria,2021,1.54 billion,1.95 billion,0.30827
+Ireland,2021,1.20 billion,1.58 billion,0.3019
+Italy,2021,6.23 billion,8.99 billion,0.28638
+Hungary,2021,508.1 million,759.1 million,0.28065
+New Zealand,2021,673.4 million,1.01 billion,0.28006
+Iceland,2021,78.5 million,119.7 million,0.27725
+Spain,2021,3.81 billion,6.57 billion,0.25698
+Australia,2021,3.58 billion,7.73 billion,0.22145
+United States,2021,54.32 billion,134.88 billion,0.20098
+Slovenia,2021,127.3 million,339.6 million,0.19088
+Portugal,2021,492.2 million,1.39 billion,0.18303
+Estonia,2021,71.5 million,232.1 million,0.16482
+Greece,2021,363.9 million,1.26 billion,0.15722
+Korea,2021,2.61 billion,9.03 billion,0.15694
+Poland,2021,1.20 billion,4.32 billion,0.15185
+Lithuania,2021,103.9 million,427.1 million,0.13702
+Slovak Republic,2021,176.5 million,725.2 million,0.13701
+Czechia,2021,418.7 million,1.75 billion,0.13491
+Latvia,2021,51.8 million,245.3 million,0.12195
+Sweden,2020,6.54 billion,0.0 million,1.13891
+Norway,2020,4.98 billion,0.0 million,1.10909
+Luxembourg,2020,508.3 million,0.0 million,1.03045
+Germany,2020,32.58 billion,0.0 million,0.73419
+Denmark,2020,2.75 billion,0.0 million,0.71961
+United Kingdom,2020,21.53 billion,58.8 million,0.69809
+Netherlands,2020,6.26 billion,1.14 billion,0.59235
+France,2020,15.13 billion,4.86 billion,0.52986
+Switzerland,2020,4.06 billion,1.73 billion,0.49132
+Belgium,2020,2.60 billion,1.21 billion,0.47831
+Finland,2020,1.39 billion,689.8 million,0.46764
+DAC countries,2020,178.34 billion,205.50 billion,0.32524
+Japan,2020,12.26 billion,15.31 billion,0.31129
+Canada,2020,5.99 billion,7.51 billion,0.31061
+Ireland,2020,1.07 billion,1.39 billion,0.30549
+Austria,2020,1.41 billion,1.92 billion,0.29641
+Hungary,2020,526.8 million,834.9 million,0.27082
+Iceland,2020,72.8 million,116.7 million,0.26888
+New Zealand,2020,584.6 million,989.0 million,0.26005
+Spain,2020,3.33 billion,6.68 billion,0.23261
+Italy,2020,4.57 billion,9.75 billion,0.22341
+Australia,2020,3.34 billion,7.58 billion,0.21404
+Portugal,2020,469.0 million,1.32 billion,0.1839
+Slovenia,2020,106.0 million,319.5 million,0.17432
+Greece,2020,365.9 million,1.11 billion,0.17314
+United States,2020,42.27 billion,134.78 billion,0.16713
+Estonia,2020,64.7 million,208.6 million,0.16575
+Poland,2020,1.07 billion,4.16 billion,0.14363
+Slovak Republic,2020,170.3 million,695.3 million,0.1377
+Korea,2020,2.18 billion,9.00 billion,0.13631
+Lithuania,2020,95.3 million,406.7 million,0.13292
+Czechia,2020,381.0 million,1.73 billion,0.12634
+Latvia,2020,47.3 million,223.0 million,0.12253
+Luxembourg,2019,564.4 million,0.0 million,1.03401
+Norway,2019,4.65 billion,0.0 million,1.0261
+Sweden,2019,5.61 billion,0.0 million,0.9562
+Denmark,2019,2.78 billion,0.0 million,0.71687
+United Kingdom,2019,23.69 billion,0.0 million,0.7033
+Germany,2019,28.45 billion,4.12 billion,0.61151
+Netherlands,2019,6.44 billion,1.24 billion,0.58682
+France,2019,13.71 billion,8.05 billion,0.44106
+Switzerland,2019,3.72 billion,2.20 billion,0.43934
+Finland,2019,1.27 billion,863.0 million,0.41688
+Belgium,2019,2.50 billion,1.78 billion,0.40918
+Ireland,2019,1.07 billion,1.30 billion,0.31566
+DAC countries,2019,171.44 billion,232.24 billion,0.29729
+Japan,2019,12.12 billion,16.97 billion,0.29157
+Austria,2019,1.42 billion,2.19 billion,0.27582
+New Zealand,2019,616.3 million,948.7 million,0.27567
+Canada,2019,5.60 billion,8.67 billion,0.27482
+Iceland,2019,72.7 million,132.0 million,0.24869
+Italy,2019,4.91 billion,10.80 billion,0.21856
+Australia,2019,3.38 billion,7.60 billion,0.21544
+Hungary,2019,395.1 million,905.8 million,0.21259
+Spain,2019,3.37 billion,7.93 billion,0.2089
+Greece,2019,419.0 million,1.26 billion,0.17516
+Portugal,2019,484.1 million,1.49 billion,0.17164
+Slovenia,2019,105.6 million,341.2 million,0.16538
+Estonia,2019,64.3 million,221.1 million,0.15765
+United States,2019,40.33 billion,142.49 billion,0.15441
+Korea,2019,2.39 billion,8.87 billion,0.1486
+Poland,2019,1.03 billion,4.18 billion,0.13865
+Czechia,2019,406.7 million,1.76 billion,0.13133
+Lithuania,2019,93.0 million,415.1 million,0.12816
+Slovak Republic,2019,145.5 million,768.6 million,0.11145
+Latvia,2019,41.7 million,244.1 million,0.1022
+Sweden,2018,6.08 billion,0.0 million,1.07187
+Luxembourg,2018,540.6 million,0.0 million,0.98382
+Norway,2018,4.24 billion,0.0 million,0.94077
+Denmark,2018,2.69 billion,0.0 million,0.71848
+United Kingdom,2018,23.19 billion,152.2 million,0.69544
+Netherlands,2018,6.73 billion,876.6 million,0.6193
+Germany,2018,28.41 billion,4.09 billion,0.61191
+Switzerland,2018,3.65 billion,2.17 billion,0.43916
+Belgium,2018,2.57 billion,1.61 billion,0.43024
+France,2018,13.08 billion,8.34 billion,0.42749
+Finland,2018,1.06 billion,1.01 billion,0.35896
+Ireland,2018,1.00 billion,1.23 billion,0.31434
+DAC countries,2018,170.65 billion,221.47 billion,0.30464
+Iceland,2018,81.1 million,118.1 million,0.28493
+New Zealand,2018,602.2 million,879.0 million,0.28461
+Canada,2018,5.50 billion,8.41 billion,0.27682
+Japan,2018,11.22 billion,17.26 billion,0.27581
+Austria,2018,1.30 billion,2.23 billion,0.25782
+Italy,2018,5.53 billion,10.04 billion,0.24862
+Australia,2018,3.53 billion,7.24 billion,0.22957
+Hungary,2018,351.4 million,824.9 million,0.2091
+Spain,2018,3.19 billion,7.82 billion,0.20275
+Portugal,2018,469.0 million,1.38 billion,0.1773
+United States,2018,41.80 billion,136.43 billion,0.16417
+Estonia,2018,63.7 million,212.1 million,0.16172
+Slovenia,2018,97.5 million,340.0 million,0.15605
+Korea,2018,2.15 billion,8.85 billion,0.13666
+Poland,2018,987.2 million,4.09 billion,0.13598
+Greece,2018,314.7 million,1.34 billion,0.13323
+Czechia,2018,395.2 million,1.70 billion,0.13181
+Slovak Republic,2018,168.2 million,727.8 million,0.1314
+Lithuania,2018,86.7 million,413.0 million,0.12143
+Latvia,2018,41.4 million,243.1 million,0.1018
+Sweden,2017,5.69 billion,0.0 million,1.01888
+Luxembourg,2017,516.4 million,0.0 million,0.99574
+Norway,2017,4.45 billion,0.0 million,0.99272
+Denmark,2017,2.68 billion,0.0 million,0.73745
+United Kingdom,2017,22.83 billion,49.5 million,0.69849
+Germany,2017,30.33 billion,1.48 billion,0.66741
+Netherlands,2017,6.33 billion,1.01 billion,0.60369
+Switzerland,2017,3.76 billion,2.05 billion,0.45279
+Belgium,2017,2.60 billion,1.48 billion,0.44532
+France,2017,12.93 billion,8.22 billion,0.428
+Finland,2017,1.25 billion,812.5 million,0.4245
+Ireland,2017,951.3 million,1.15 billion,0.3174
+DAC countries,2017,171.51 billion,214.73 billion,0.31083
+Italy,2017,6.61 billion,8.76 billion,0.30102
+Austria,2017,1.49 billion,1.98 billion,0.30004
+Iceland,2017,75.5 million,110.8 million,0.28377
+Canada,2017,5.15 billion,8.50 billion,0.26409
+Australia,2017,3.40 billion,6.85 billion,0.232
+New Zealand,2017,481.1 million,977.1 million,0.23096
+Japan,2017,9.22 billion,19.13 billion,0.2277
+Spain,2017,2.99 billion,7.75 billion,0.19495
+Portugal,2017,462.8 million,1.35 billion,0.17898
+United States,2017,43.48 billion,128.68 billion,0.1768
+Estonia,2017,61.7 million,200.2 million,0.16482
+Slovenia,2017,94.7 million,322.4 million,0.15892
+Greece,2017,354.9 million,1.23 billion,0.15625
+Czechia,2017,435.5 million,1.59 billion,0.15019
+Korea,2017,2.07 billion,8.01 billion,0.14383
+Poland,2017,927.8 million,3.89 billion,0.13469
+Slovak Republic,2017,155.6 million,669.8 million,0.13196
+Lithuania,2017,85.8 million,377.0 million,0.12973
+Hungary,2017,195.2 million,1.04 billion,0.11081
+Latvia,2017,41.7 million,234.8 million,0.10548
+Norway,2016,5.00 billion,0.0 million,1.12161
+Luxembourg,2016,497.1 million,0.0 million,1.00077
+Sweden,2016,5.12 billion,0.0 million,0.94068
+Denmark,2016,2.67 billion,0.0 million,0.75203
+United Kingdom,2016,22.14 billion,0.0 million,0.70011
+Germany,2016,31.04 billion,31.2 million,0.6993
+Netherlands,2016,6.55 billion,517.8 million,0.64874
+Switzerland,2016,4.27 billion,1.35 billion,0.53224
+Belgium,2016,2.83 billion,1.14 billion,0.49859
+Finland,2016,1.26 billion,743.6 million,0.43996
+Austria,2016,2.00 billion,1.30 billion,0.42371
+France,2016,11.25 billion,9.25 billion,0.38426
+Spain,2016,5.09 billion,5.31 billion,0.34268
+DAC countries,2016,172.45 billion,202.73 billion,0.32176
+Ireland,2016,935.5 million,1.12 billion,0.31869
+Iceland,2016,74.1 million,108.3 million,0.28439
+Italy,2016,5.89 billion,9.12 billion,0.27468
+Australia,2016,3.91 billion,6.39 billion,0.26583
+Canada,2016,4.93 billion,8.31 billion,0.26055
+New Zealand,2016,503.5 million,889.3 million,0.25307
+Japan,2016,8.12 billion,19.80 billion,0.20367
+Estonia,2016,66.0 million,177.4 million,0.18976
+Greece,2016,426.0 million,1.15 billion,0.18915
+Slovenia,2016,104.9 million,287.6 million,0.18706
+United States,2016,43.87 billion,121.13 billion,0.1861
+Portugal,2016,432.0 million,1.33 billion,0.1713
+Hungary,2016,279.0 million,897.2 million,0.16605
+Korea,2016,2.21 billion,7.53 billion,0.15903
+Poland,2016,960.3 million,3.61 billion,0.14709
+Czechia,2016,396.0 million,1.55 billion,0.14236
+Lithuania,2016,87.8 million,354.0 million,0.13914
+Slovak Republic,2016,142.7 million,682.7 million,0.12104
+Latvia,2016,41.2 million,224.3 million,0.10872
+Sweden,2015,7.43 billion,0.0 million,1.40455
+Norway,2015,4.61 billion,0.0 million,1.04574
+Luxembourg,2015,453.3 million,0.0 million,0.9523
+Denmark,2015,2.90 billion,0.0 million,0.84737
+Netherlands,2015,7.58 billion,0.0 million,0.74868
+United Kingdom,2015,20.49 billion,0.0 million,0.70476
+Finland,2015,1.53 billion,414.3 million,0.55049
+Germany,2015,22.73 billion,7.68 billion,0.52318
+Switzerland,2015,4.08 billion,1.55 billion,0.50784
+Belgium,2015,2.38 billion,1.62 billion,0.41608
+France,2015,10.60 billion,9.58 billion,0.36765
+Austria,2015,1.64 billion,1.61 billion,0.35375
+Ireland,2015,830.0 million,999.2 million,0.31761
+DAC countries,2015,154.95 billion,209.44 billion,0.29766
+Australia,2015,4.17 billion,5.85 billion,0.29111
+Canada,2015,5.21 billion,7.83 billion,0.27958
+New Zealand,2015,506.1 million,830.1 million,0.26514
+Iceland,2015,56.2 million,108.0 million,0.23952
+Italy,2015,4.68 billion,10.14 billion,0.22096
+Japan,2015,8.02 billion,19.75 billion,0.20211
+United States,2015,39.86 billion,126.70 billion,0.16753
+Portugal,2015,393.8 million,1.35 billion,0.15819
+Estonia,2015,52.6 million,186.5 million,0.15404
+Slovenia,2015,82.1 million,303.0 million,0.14923
+Korea,2015,1.88 billion,7.63 billion,0.13818
+Hungary,2015,219.0 million,925.4 million,0.13397
+Greece,2015,273.7 million,1.30 billion,0.12192
+Lithuania,2015,74.4 million,354.5 million,0.12144
+Czechia,2015,309.2 million,1.53 billion,0.11767
+Spain,2015,1.69 billion,8.42 billion,0.11676
+Slovak Republic,2015,113.5 million,671.3 million,0.10126
+Poland,2015,611.3 million,3.85 billion,0.09584
+Latvia,2015,31.8 million,227.6 million,0.08569
+Sweden,2014,5.44 billion,0.0 million,1.0944
+Luxembourg,2014,452.9 million,0.0 million,1.06433
+Norway,2014,4.16 billion,0.0 million,1.00043
+Denmark,2014,2.85 billion,0.0 million,0.85601
+United Kingdom,2014,19.88 billion,0.0 million,0.7007
+Netherlands,2014,6.22 billion,636.2 million,0.63505
+Finland,2014,1.64 billion,293.3 million,0.59407
+Switzerland,2014,3.83 billion,1.60 billion,0.49387
+Belgium,2014,2.58 billion,1.32 billion,0.46302
+Germany,2014,17.84 billion,11.98 billion,0.41873
+Ireland,2014,877.5 million,760.0 million,0.37511
+France,2014,10.53 billion,9.49 billion,0.36811
+Australia,2014,4.32 billion,5.31 billion,0.31431
+DAC countries,2014,146.38 billion,200.45 billion,0.29543
+Austria,2014,1.31 billion,1.91 billion,0.28437
+New Zealand,2014,489.3 million,781.8 million,0.26946
+Canada,2014,4.42 billion,8.42 billion,0.24099
+Iceland,2014,49.4 million,107.2 million,0.22078
+Japan,2014,7.38 billion,18.69 billion,0.19813
+Portugal,2014,468.9 million,1.26 billion,0.18952
+Italy,2014,3.95 billion,10.81 billion,0.18722
+United States,2014,42.97 billion,119.02 billion,0.18569
+Estonia,2014,49.1 million,188.1 million,0.145
+Spain,2014,1.90 billion,8.01 billion,0.13443
+Korea,2014,1.75 billion,7.62 billion,0.13067
+Slovenia,2014,67.3 million,311.1 million,0.12453
+Czechia,2014,281.7 million,1.48 billion,0.11215
+Hungary,2014,173.7 million,942.7 million,0.10893
+Greece,2014,236.8 million,1.33 billion,0.10548
+Lithuania,2014,58.9 million,363.6 million,0.09757
+Slovak Republic,2014,92.8 million,662.1 million,0.08609
+Poland,2014,530.8 million,3.81 billion,0.08563
+Latvia,2014,29.2 million,225.3 million,0.08025
+Norway,2013,4.27 billion,0.0 million,1.07479
+Sweden,2013,4.92 billion,0.0 million,1.01378
+Luxembourg,2013,473.4 million,0.0 million,1.00162
+Denmark,2013,2.81 billion,0.0 million,0.85183
+United Kingdom,2013,19.67 billion,0.0 million,0.70467
+Netherlands,2013,6.08 billion,284.2 million,0.66877
+Finland,2013,1.47 billion,451.3 million,0.53534
+Ireland,2013,913.4 million,470.7 million,0.46194
+Switzerland,2013,3.50 billion,1.88 billion,0.45514
+Belgium,2013,2.45 billion,1.33 billion,0.45299
+France,2013,11.29 billion,8.19 billion,0.40584
+Germany,2013,15.60 billion,13.07 billion,0.38087
+Australia,2013,4.48 billion,5.00 billion,0.3309
+DAC countries,2013,143.51 billion,194.77 billion,0.29696
+Canada,2013,4.91 billion,7.58 billion,0.27498
+Austria,2013,1.27 billion,1.97 billion,0.27352
+New Zealand,2013,457.7 million,762.9 million,0.26248
+Iceland,2013,50.3 million,104.0 million,0.22831
+Portugal,2013,535.7 million,1.12 billion,0.2267
+Japan,2013,8.37 billion,17.68 billion,0.22486
+United States,2013,41.30 billion,117.79 billion,0.18174
+Spain,2013,2.38 billion,7.19 billion,0.1739
+Italy,2013,3.41 billion,10.90 billion,0.16661
+Korea,2013,1.74 billion,7.37 billion,0.13352
+Slovenia,2013,67.7 million,297.4 million,0.12984
+Estonia,2013,41.4 million,187.5 million,0.12651
+Lithuania,2013,65.6 million,337.5 million,0.11384
+Czechia,2013,271.0 million,1.40 billion,0.11376
+Hungary,2013,154.1 million,892.6 million,0.10303
+Greece,2013,224.3 million,1.36 billion,0.099
+Poland,2013,576.4 million,3.62 billion,0.0961
+Slovak Republic,2013,95.8 million,622.6 million,0.09336
+Latvia,2013,27.8 million,226.5 million,0.07642
+Luxembourg,2012,465.3 million,0.0 million,1.0038
+Sweden,2012,4.64 billion,0.0 million,0.9739
+Norway,2012,3.69 billion,0.0 million,0.92939
+Denmark,2012,2.68 billion,0.0 million,0.83
+Netherlands,2012,6.46 billion,0.0 million,0.7097
+United Kingdom,2012,15.41 billion,3.79 billion,0.56192
+Finland,2012,1.43 billion,444.5 million,0.53392
+Belgium,2012,2.58 billion,1.22 billion,0.4746
+Ireland,2012,903.1 million,442.5 million,0.46981
+Switzerland,2012,3.37 billion,1.68 billion,0.46756
+France,2012,12.47 billion,6.81 billion,0.45269
+Germany,2012,14.95 billion,13.20 billion,0.37176
+Australia,2012,4.72 billion,4.43 billion,0.36093
+Canada,2012,5.53 billion,6.72 billion,0.31587
+DAC countries,2012,137.01 billion,200.59 billion,0.28408
+Portugal,2012,673.1 million,1.01 billion,0.28053
+Austria,2012,1.25 billion,1.88 billion,0.28022
+New Zealand,2012,470.1 million,720.0 million,0.27651
+Iceland,2012,39.4 million,96.6 million,0.20278
+United States,2012,41.18 billion,114.13 billion,0.18561
+Japan,2012,6.30 billion,19.18 billion,0.17315
+Spain,2012,2.14 billion,7.46 billion,0.15585
+Korea,2012,1.64 billion,6.53 billion,0.14069
+Italy,2012,2.84 billion,11.67 billion,0.13699
+Greece,2012,311.0 million,1.35 billion,0.13083
+Slovenia,2012,67.2 million,294.0 million,0.13018
+Lithuania,2012,70.6 million,318.0 million,0.12717
+Czechia,2012,285.5 million,1.37 billion,0.12051
+Estonia,2012,33.7 million,188.2 million,0.10637
+Hungary,2012,147.2 million,891.3 million,0.09919
+Poland,2012,514.4 million,3.49 billion,0.08992
+Slovak Republic,2012,92.1 million,635.7 million,0.08861
+Latvia,2012,26.1 million,218.7 million,0.07467
+Sweden,2011,4.80 billion,0.0 million,1.0188
+Luxembourg,2011,452.8 million,0.0 million,0.97295
+Norway,2011,3.68 billion,0.0 million,0.96383
+Denmark,2011,2.77 billion,0.0 million,0.85212
+Netherlands,2011,6.95 billion,0.0 million,0.75335
+United Kingdom,2011,15.40 billion,3.76 billion,0.56249
+Belgium,2011,2.95 billion,902.0 million,0.53629
+Finland,2011,1.45 billion,460.7 million,0.53112
+Ireland,2011,970.4 million,356.0 million,0.5121
+France,2011,12.59 billion,6.59 billion,0.45952
+Switzerland,2011,3.19 billion,1.68 billion,0.45844
+Germany,2011,15.27 billion,12.36 billion,0.38679
+Australia,2011,4.33 billion,4.50 billion,0.34357
+Canada,2011,5.35 billion,6.37 billion,0.31969
+Portugal,2011,755.5 million,956.5 million,0.3089
+DAC countries,2011,142.31 billion,183.43 billion,0.30582
+Spain,2011,4.04 billion,5.84 billion,0.28635
+New Zealand,2011,453.9 million,696.8 million,0.27612
+Austria,2011,1.19 billion,1.93 billion,0.26713
+United States,2011,42.38 billion,103.34 billion,0.20357
+Iceland,2011,37.0 million,93.0 million,0.1992
+Italy,2011,4.22 billion,10.68 billion,0.1982
+Japan,2011,6.53 billion,18.58 billion,0.18208
+Greece,2011,371.7 million,1.40 billion,0.1467
+Slovenia,2011,67.1 million,297.6 million,0.1288
+Lithuania,2011,66.3 million,304.5 million,0.12514
+Czechia,2011,298.4 million,1.38 billion,0.12465
+Korea,2011,1.36 billion,6.66 billion,0.11852
+Estonia,2011,33.8 million,172.4 million,0.11487
+Hungary,2011,159.7 million,877.8 million,0.10773
+Slovak Republic,2011,93.2 million,621.1 million,0.09131
+Poland,2011,474.7 million,3.47 billion,0.08417
+Latvia,2011,22.4 million,208.7 million,0.06773
+Norway,2010,3.89 billion,0.0 million,1.05099
+Luxembourg,2010,485.4 million,0.0 million,1.04655
+Sweden,2010,4.36 billion,0.0 million,0.96953
+Denmark,2010,2.86 billion,0.0 million,0.90922
+Netherlands,2010,7.33 billion,0.0 million,0.81486
+Belgium,2010,3.40 billion,320.0 million,0.63971
+United Kingdom,2010,15.41 billion,3.43 billion,0.5726
+Finland,2010,1.48 billion,402.0 million,0.55042
+Ireland,2010,1.02 billion,344.6 million,0.52269
+France,2010,13.25 billion,5.47 billion,0.49545
+Spain,2010,6.04 billion,3.83 billion,0.42841
+Switzerland,2010,2.83 billion,2.21 billion,0.39303
+Germany,2010,14.95 billion,12.11 billion,0.3867
+Canada,2010,5.50 billion,5.94 billion,0.33648
+Australia,2010,3.92 billion,4.58 billion,0.32273
+Austria,2010,1.38 billion,1.62 billion,0.32242
+DAC countries,2010,143.39 billion,177.99 billion,0.31232
+Portugal,2010,725.2 million,1.00 billion,0.2937
+Iceland,2010,45.2 million,77.1 million,0.25853
+New Zealand,2010,413.0 million,719.2 million,0.25533
+United States,2010,41.42 billion,101.68 billion,0.20263
+Japan,2010,7.06 billion,18.09 billion,0.19643
+Greece,2010,471.0 million,1.45 billion,0.17124
+Italy,2010,3.12 billion,11.63 billion,0.14805
+Slovenia,2010,66.7 million,301.4 million,0.12679
+Czechia,2010,292.1 million,1.32 billion,0.12662
+Korea,2010,1.27 billion,6.42 billion,0.11569
+Lithuania,2010,52.3 million,297.3 million,0.10468
+Estonia,2010,29.1 million,170.2 million,0.10231
+Hungary,2010,137.7 million,906.6 million,0.09232
+Slovak Republic,2010,85.2 million,612.7 million,0.08543
+Poland,2010,450.4 million,3.33 billion,0.08351
+Latvia,2010,20.1 million,200.5 million,0.06374
+Sweden,2009,4.68 billion,0.0 million,1.12141
+Norway,2009,4.00 billion,0.0 million,1.05854
+Luxembourg,2009,497.3 million,0.0 million,1.04284
+Denmark,2009,2.75 billion,0.0 million,0.88039
+Netherlands,2009,7.10 billion,0.0 million,0.82051
+Belgium,2009,2.85 billion,778.3 million,0.54998
+Ireland,2009,1.06 billion,302.9 million,0.54468
+Finland,2009,1.37 billion,397.5 million,0.54227
+United Kingdom,2009,13.38 billion,5.07 billion,0.50755
+France,2009,12.43 billion,6.06 billion,0.4706
+Spain,2009,6.37 billion,3.34 billion,0.45924
+Switzerland,2009,2.96 billion,1.73 billion,0.44173
+Germany,2009,13.32 billion,12.95 billion,0.35492
+Iceland,2009,58.1 million,66.8 million,0.32538
+DAC countries,2009,136.08 billion,175.03 billion,0.30618
+Canada,2009,4.80 billion,6.29 billion,0.3031
+Austria,2009,1.25 billion,1.65 billion,0.30204
+Australia,2009,3.50 billion,4.85 billion,0.29362
+New Zealand,2009,442.5 million,672.8 million,0.27772
+Portugal,2009,549.2 million,1.09 billion,0.23421
+United States,2009,40.76 billion,97.90 billion,0.20578
+Greece,2009,542.2 million,1.47 billion,0.18883
+Japan,2009,6.31 billion,17.86 billion,0.18274
+Italy,2009,3.29 billion,11.23 billion,0.15843
+Slovenia,2009,76.7 million,284.2 million,0.1488
+Czechia,2009,273.0 million,1.33 billion,0.11952
+Lithuania,2009,50.1 million,266.2 million,0.1109
+Estonia,2009,27.8 million,168.1 million,0.09944
+Korea,2009,1.00 billion,6.18 billion,0.09747
+Hungary,2009,140.0 million,889.0 million,0.09523
+Poland,2009,467.8 million,3.19 billion,0.08946
+Slovak Republic,2009,83.3 million,590.3 million,0.08653
+Latvia,2009,25.3 million,212.4 million,0.0745
+Sweden,2008,4.37 billion,0.0 million,0.97958
+Luxembourg,2008,484.6 million,0.0 million,0.96805
+Norway,2008,3.39 billion,0.0 million,0.88903
+Denmark,2008,2.67 billion,0.0 million,0.81737
+Netherlands,2008,7.49 billion,0.0 million,0.80469
+Ireland,2008,1.31 billion,242.1 million,0.59047
+Belgium,2008,2.54 billion,1.17 billion,0.4786
+Spain,2008,6.43 billion,3.65 billion,0.44664
+Finland,2008,1.21 billion,723.6 million,0.4385
+United Kingdom,2008,12.00 billion,7.52 billion,0.43037
+Austria,2008,1.85 billion,1.17 billion,0.42828
+Switzerland,2008,2.66 billion,1.75 billion,0.42173
+France,2008,10.39 billion,8.49 billion,0.38523
+Germany,2008,15.18 billion,12.57 billion,0.38283
+Iceland,2008,66.7 million,64.6 million,0.3557
+Canada,2008,5.30 billion,6.10 billion,0.32541
+Australia,2008,3.56 billion,4.32 billion,0.31601
+New Zealand,2008,454.2 million,591.8 million,0.30394
+DAC countries,2008,133.70 billion,182.53 billion,0.29597
+Portugal,2008,648.4 million,1.03 billion,0.2703
+Italy,2008,4.76 billion,10.54 billion,0.21767
+Greece,2008,620.4 million,1.44 billion,0.21078
+Japan,2008,7.05 billion,18.87 billion,0.19041
+United States,2008,37.61 billion,105.88 billion,0.18346
+Slovenia,2008,72.2 million,319.2 million,0.12911
+Czechia,2008,297.1 million,1.38 billion,0.12419
+Lithuania,2008,60.9 million,326.7 million,0.11
+Estonia,2008,31.3 million,184.6 million,0.10162
+Slovak Republic,2008,100.5 million,602.3 million,0.10007
+Korea,2008,887.2 million,6.35 billion,0.08584
+Poland,2008,379.9 million,3.15 billion,0.07539
+Hungary,2008,116.3 million,967.3 million,0.07514
+Latvia,2008,23.8 million,229.3 million,0.06585
+Norway,2007,3.58 billion,0.0 million,0.95191
+Sweden,2007,4.19 billion,0.0 million,0.93472
+Luxembourg,2007,492.7 million,0.0 million,0.92399
+Netherlands,2007,7.19 billion,0.0 million,0.80789
+Denmark,2007,2.68 billion,0.0 million,0.80758
+Ireland,2007,1.23 billion,329.8 million,0.55153
+Austria,2007,2.09 billion,849.2 million,0.49806
+Belgium,2007,2.23 billion,1.43 billion,0.42611
+Finland,2007,1.11 billion,860.9 million,0.39407
+France,2007,10.15 billion,8.57 billion,0.37958
+Switzerland,2007,2.44 billion,2.16 billion,0.37077
+Spain,2007,5.20 billion,4.71 billion,0.36706
+Germany,2007,14.19 billion,12.89 billion,0.36685
+United Kingdom,2007,9.61 billion,9.32 billion,0.35531
+Australia,2007,3.37 billion,3.94 billion,0.32259
+Canada,2007,4.69 billion,6.65 billion,0.28939
+DAC countries,2007,119.60 billion,192.03 billion,0.26865
+New Zealand,2007,408.3 million,664.7 million,0.26637
+Iceland,2007,52.5 million,86.1 million,0.26524
+Portugal,2007,527.4 million,1.15 billion,0.2196
+Italy,2007,4.19 billion,11.27 billion,0.1899
+Japan,2007,6.37 billion,19.85 billion,0.17014
+Greece,2007,484.5 million,1.60 billion,0.16239
+United States,2007,31.59 billion,109.74 billion,0.15645
+Slovenia,2007,63.7 million,306.4 million,0.12043
+Lithuania,2007,71.2 million,372.9 million,0.1122
+Czechia,2007,254.5 million,1.37 billion,0.1097
+Poland,2007,435.6 million,2.57 billion,0.10143
+Slovak Republic,2007,86.2 million,562.6 million,0.09304
+Estonia,2007,26.1 million,201.0 million,0.08039
+Hungary,2007,123.3 million,997.1 million,0.07705
+Korea,2007,663.4 million,5.82 billion,0.07167
+Latvia,2007,20.6 million,219.7 million,0.05994
+Sweden,2006,4.28 billion,0.0 million,1.02481
+Luxembourg,2006,424.0 million,0.0 million,0.88967
+Norway,2006,3.19 billion,0.0 million,0.88531
+Netherlands,2006,7.01 billion,0.0 million,0.80636
+Denmark,2006,2.61 billion,0.0 million,0.79819
+Ireland,2006,1.16 billion,340.9 million,0.54088
+United Kingdom,2006,13.52 billion,4.89 billion,0.51408
+Belgium,2006,2.51 billion,1.01 billion,0.49926
+Austria,2006,1.94 billion,954.0 million,0.46887
+France,2006,12.16 billion,6.04 billion,0.46769
+Finland,2006,1.06 billion,811.8 million,0.39587
+Switzerland,2006,2.55 billion,2.20 billion,0.37545
+Germany,2006,13.38 billion,12.93 billion,0.35604
+Spain,2006,4.36 billion,5.32 billion,0.3151
+Australia,2006,3.11 billion,4.27 billion,0.29507
+DAC countries,2006,129.08 billion,177.49 billion,0.29473
+Canada,2006,4.61 billion,6.38 billion,0.29376
+Iceland,2006,51.4 million,82.4 million,0.26908
+New Zealand,2006,390.6 million,630.1 million,0.26789
+Japan,2006,9.05 billion,16.47 billion,0.24823
+Portugal,2006,498.9 million,1.15 billion,0.21177
+Italy,2006,4.30 billion,10.96 billion,0.19715
+United States,2006,35.04 billion,103.18 billion,0.17747
+Greece,2006,462.4 million,1.41 billion,0.17298
+Hungary,2006,215.3 million,943.3 million,0.13009
+Czechia,2006,263.9 million,1.27 billion,0.12014
+Slovenia,2006,58.8 million,286.0 million,0.11941
+Slovak Republic,2006,85.9 million,496.8 million,0.10323
+Poland,2006,419.0 million,2.88 billion,0.08884
+Estonia,2006,27.9 million,192.6 million,0.08853
+Lithuania,2006,44.5 million,360.3 million,0.0769
+Latvia,2006,20.2 million,213.8 million,0.06042
+Korea,2006,455.4 million,5.76 billion,0.05131
+Sweden,2005,3.75 billion,0.0 million,0.9422
+Norway,2005,3.30 billion,0.0 million,0.94045
+Netherlands,2005,6.81 billion,0.0 million,0.81881
+Denmark,2005,2.54 billion,0.0 million,0.81167
+Luxembourg,2005,401.9 million,0.0 million,0.79321
+Belgium,2005,2.57 billion,853.7 million,0.52571
+Austria,2005,2.09 billion,715.1 million,0.52178
+France,2005,11.85 billion,5.66 billion,0.47359
+United Kingdom,2005,12.16 billion,5.85 billion,0.47269
+Finland,2005,1.16 billion,602.7 million,0.46121
+Switzerland,2005,2.78 billion,1.84 billion,0.42182
+Ireland,2005,851.9 million,569.3 million,0.4196
+Germany,2005,13.12 billion,12.36 billion,0.36035
+Canada,2005,5.16 billion,5.54 billion,0.33746
+DAC countries,2005,136.84 billion,161.96 billion,0.32058
+Italy,2005,6.20 billion,8.77 billion,0.28997
+Japan,2005,10.00 billion,14.93 billion,0.28076
+Spain,2005,3.62 billion,5.70 billion,0.2719
+New Zealand,2005,390.5 million,617.5 million,0.27119
+Australia,2005,2.56 billion,4.67 billion,0.24757
+United States,2005,42.88 billion,89.92 billion,0.22603
+Portugal,2005,494.6 million,1.15 billion,0.21107
+Iceland,2005,33.0 million,98.7 million,0.17538
+Greece,2005,437.5 million,1.35 billion,0.17156
+Czechia,2005,236.7 million,1.22 billion,0.114
+Hungary,2005,142.1 million,784.2 million,0.10741
+Slovenia,2005,47.8 million,266.8 million,0.10639
+Korea,2005,808.5 million,5.14 billion,0.09522
+Estonia,2005,20.8 million,169.2 million,0.07651
+Poland,2005,303.2 million,2.80 billion,0.06846
+Latvia,2005,20.1 million,191.4 million,0.06646
+Lithuania,2005,29.6 million,306.9 million,0.0616
 Slovak Republic,2005,95.5 million,0.0 million,
-Luxembourg,2004,387.3 million,0.0 million,1.29967
-Norway,2004,2.96 billion,0.0 million,1.17552
-Denmark,2004,2.52 billion,0.0 million,1.04781
-Netherlands,2004,5.71 billion,0.0 million,0.9963
-Sweden,2004,3.01 billion,0.0 million,0.85936
-Portugal,2004,1.40 billion,0.0 million,0.85031
-Switzerland,2004,2.44 billion,358.0 million,0.61055
-Belgium,2004,1.96 billion,540.6 million,0.54866
-France,2004,10.21 billion,4.20 billion,0.49597
-Finland,2004,886.0 million,411.5 million,0.47801
-Ireland,2004,738.4 million,354.9 million,0.47276
-United Kingdom,2004,9.11 billion,6.14 billion,0.41812
-Canada,2004,3.95 billion,2.84 billion,0.40703
-Australia,2004,2.41 billion,1.76 billion,0.40403
-New Zealand,2004,330.0 million,304.4 million,0.36411
-Germany,2004,9.86 billion,9.25 billion,0.36123
-DAC countries,2004,104.12 billion,120.91 billion,0.32389
-Austria,2004,924.9 million,1.11 billion,0.31791
-Spain,2004,3.05 billion,4.08 billion,0.29952
-United States,2004,31.20 billion,50.40 billion,0.26765
-Iceland,2004,29.6 million,54.4 million,0.24682
-Czechia,2004,203.7 million,507.6 million,0.20047
-Italy,2004,3.06 billion,8.62 billion,0.18348
-Greece,2004,372.4 million,1.06 billion,0.18226
-Japan,2004,6.59 billion,26.72 billion,0.13857
-Slovak Republic,2004,50.5 million,223.3 million,0.12904
-Hungary,2004,103.5 million,562.3 million,0.10882
-Estonia,2004,11.2 million,62.4 million,0.10665
-Lithuania,2004,18.4 million,133.6 million,0.08488
-Poland,2004,201.9 million,1.49 billion,0.08346
-Korea,2004,514.5 million,4.26 billion,0.07539
-Luxembourg,2003,361.2 million,0.0 million,1.59607
-Norway,2003,3.06 billion,0.0 million,1.37503
-Netherlands,2003,6.01 billion,0.0 million,1.203
-Denmark,2003,2.42 billion,0.0 million,1.16216
-Sweden,2003,2.93 billion,0.0 million,0.9712
-Belgium,2003,2.78 billion,0.0 million,0.90323
-Switzerland,2003,2.23 billion,284.1 million,0.62093
-France,2003,9.77 billion,2.82 billion,0.54302
-Ireland,2003,681.1 million,212.2 million,0.53373
-Finland,2003,805.2 million,317.6 million,0.50198
-Australia,2003,2.36 billion,1.09 billion,0.47891
-United Kingdom,2003,8.31 billion,4.49 billion,0.4543
-New Zealand,2003,303.9 million,209.2 million,0.41465
-Germany,2003,9.87 billion,6.85 billion,0.41335
-Canada,2003,3.43 billion,2.55 billion,0.40176
-DAC countries,2003,97.59 billion,104.79 billion,0.33756
-Portugal,2003,487.9 million,530.5 million,0.33536
-Spain,2003,2.80 billion,3.07 billion,0.33408
-Austria,2003,770.3 million,982.3 million,0.30767
-Greece,2003,475.9 million,734.3 million,0.27528
-Iceland,2003,27.6 million,46.5 million,0.26055
-United States,2003,26.53 billion,50.33 billion,0.24162
-Czechia,2003,194.0 million,375.1 million,0.23866
-Italy,2003,3.42 billion,6.76 billion,0.23498
-Japan,2003,6.96 billion,23.67 billion,0.159
-Slovak Republic,2003,32.6 million,195.2 million,0.10014
-Korea,2003,477.5 million,3.76 billion,0.07878
-Hungary,2003,36.5 million,517.3 million,0.0461
-Poland,2003,52.1 million,1.39 billion,0.02524
-Lithuania,2003,4.4 million,119.7 million,0.02487
+Norway,2004,2.96 billion,0.0 million,0.87397
+Denmark,2004,2.52 billion,0.0 million,0.84713
+Luxembourg,2004,387.3 million,0.0 million,0.79054
+Sweden,2004,3.01 billion,0.0 million,0.77729
+Netherlands,2004,5.71 billion,0.0 million,0.73349
+Portugal,2004,1.40 billion,162.4 million,0.62715
+France,2004,10.21 billion,7.16 billion,0.41153
+Belgium,2004,1.96 billion,1.39 billion,0.40965
+Ireland,2004,738.4 million,590.6 million,0.38892
+Switzerland,2004,2.44 billion,1.99 billion,0.38613
+Finland,2004,886.0 million,805.0 million,0.36678
+United Kingdom,2004,9.11 billion,8.48 billion,0.36267
+Germany,2004,9.86 billion,15.14 billion,0.27606
+Canada,2004,3.95 billion,6.38 billion,0.2678
+DAC countries,2004,104.12 billion,187.97 billion,0.24954
+Australia,2004,2.41 billion,4.47 billion,0.24514
+Spain,2004,3.05 billion,5.87 billion,0.23934
+New Zealand,2004,330.0 million,656.9 million,0.23405
+Austria,2004,924.9 million,1.85 billion,0.23291
+Japan,2004,6.59 billion,18.03 billion,0.18749
+Iceland,2004,29.6 million,87.3 million,0.17722
+United States,2004,31.20 billion,97.98 billion,0.16905
+Greece,2004,372.4 million,1.29 billion,0.15704
+Italy,2004,3.06 billion,11.48 billion,0.14746
+Czechia,2004,203.7 million,1.13 billion,0.10656
+Hungary,2004,103.5 million,879.0 million,0.07374
+Slovak Republic,2004,50.5 million,439.7 million,0.07207
+Latvia,2004,16.7 million,171.8 million,0.06213
+Korea,2004,514.5 million,5.29 billion,0.06203
+Poland,2004,201.9 million,2.71 billion,0.04859
+Estonia,2004,11.2 million,159.1 million,0.04606
+Lithuania,2004,18.4 million,290.7 million,0.04175
+Norway,2003,3.06 billion,0.0 million,0.91945
+Luxembourg,2003,361.2 million,0.0 million,0.8566
+Denmark,2003,2.42 billion,0.0 million,0.83797
+Netherlands,2003,6.01 billion,0.0 million,0.79533
+Sweden,2003,2.93 billion,0.0 million,0.79454
+Belgium,2003,2.78 billion,454.2 million,0.60176
+France,2003,9.77 billion,7.19 billion,0.40315
+Ireland,2003,681.1 million,527.0 million,0.39463
+Switzerland,2003,2.23 billion,2.09 billion,0.36172
+Finland,2003,805.2 million,813.6 million,0.34818
+United Kingdom,2003,8.31 billion,8.69 billion,0.34228
+Germany,2003,9.87 billion,14.46 billion,0.28402
+Australia,2003,2.36 billion,4.32 billion,0.2472
+DAC countries,2003,97.59 billion,186.14 billion,0.24077
+Canada,2003,3.43 billion,6.66 billion,0.23789
+Spain,2003,2.80 billion,5.60 billion,0.23362
+New Zealand,2003,303.9 million,638.7 million,0.22571
+Portugal,2003,487.9 million,1.07 billion,0.21966
+Greece,2003,475.9 million,1.11 billion,0.20947
+Japan,2003,6.96 billion,17.04 billion,0.20293
+Austria,2003,770.3 million,1.90 billion,0.20161
+Italy,2003,3.42 billion,10.88 billion,0.16733
+Iceland,2003,27.6 million,88.2 million,0.16678
+United States,2003,26.53 billion,98.44 billion,0.14862
+Czechia,2003,194.0 million,1.03 billion,0.11137
+Korea,2003,477.5 million,5.06 billion,0.06038
+Slovak Republic,2003,32.6 million,459.8 million,0.04632
+Hungary,2003,36.5 million,914.7 million,0.02684
+Poland,2003,52.1 million,2.72 billion,0.01315
+Lithuania,2003,4.4 million,282.1 million,0.01077
+Latvia,2003,2.0 million,172.6 million,0.00799
 Estonia,2003,2.9 million,0.0 million,
-Luxembourg,2002,335.0 million,0.0 million,1.78649
-Denmark,2002,2.77 billion,0.0 million,1.62698
-Norway,2002,2.94 billion,0.0 million,1.5416
-Netherlands,2002,6.19 billion,0.0 million,1.503
-Sweden,2002,3.01 billion,0.0 million,1.25293
-Belgium,2002,1.96 billion,0.0 million,0.79259
-Ireland,2002,660.5 million,31.6 million,0.66806
-Switzerland,2002,1.89 billion,184.1 million,0.6378
-France,2002,9.02 billion,1.23 billion,0.61626
-Finland,2002,800.4 million,119.1 million,0.60935
-Australia,2002,2.35 billion,353.4 million,0.60864
-Canada,2002,3.92 billion,1.11 billion,0.54565
-New Zealand,2002,284.4 million,99.1 million,0.51911
-Portugal,2002,610.6 million,220.6 million,0.51425
-Germany,2002,9.41 billion,4.50 billion,0.47364
-Austria,2002,963.8 million,463.4 million,0.47274
-Spain,2002,3.05 billion,1.51 billion,0.46842
-United Kingdom,2002,7.29 billion,3.88 billion,0.45706
-DAC countries,2002,92.42 billion,86.10 billion,0.36239
-Italy,2002,4.05 billion,4.17 billion,0.34488
-Greece,2002,450.5 million,483.0 million,0.33783
-Iceland,2002,23.7 million,34.6 million,0.28471
-United States,2002,22.03 billion,51.40 billion,0.21004
-Japan,2002,7.73 billion,20.73 billion,0.19017
-Czechia,2002,114.9 million,371.7 million,0.16528
-Korea,2002,395.8 million,3.44 billion,0.07229
-Slovak Republic,2002,18.8 million,175.7 million,0.06756
+Denmark,2002,2.77 billion,0.0 million,0.96414
+Norway,2002,2.94 billion,0.0 million,0.8884
+Sweden,2002,3.01 billion,0.0 million,0.83638
+Netherlands,2002,6.19 billion,0.0 million,0.81054
+Luxembourg,2002,335.0 million,0.0 million,0.78263
+Belgium,2002,1.96 billion,1.22 billion,0.43246
+Ireland,2002,660.5 million,488.7 million,0.40232
+France,2002,9.02 billion,7.82 billion,0.3749
+Finland,2002,800.4 million,791.8 million,0.35188
+Switzerland,2002,1.89 billion,2.28 billion,0.31726
+United Kingdom,2002,7.29 billion,9.22 billion,0.30902
+Canada,2002,3.92 billion,5.91 billion,0.27906
+Portugal,2002,610.6 million,962.8 million,0.27166
+Germany,2002,9.41 billion,15.18 billion,0.26791
+Spain,2002,3.05 billion,5.08 billion,0.26272
+Australia,2002,2.35 billion,4.09 billion,0.2556
+Austria,2002,963.8 million,1.68 billion,0.25512
+DAC countries,2002,92.42 billion,188.84 billion,0.23001
+Japan,2002,7.73 billion,15.97 billion,0.22836
+New Zealand,2002,284.4 million,610.7 million,0.22241
+Greece,2002,450.5 million,1.07 billion,0.20706
+Italy,2002,4.05 billion,10.23 billion,0.19857
+Iceland,2002,23.7 million,85.6 million,0.15184
+United States,2002,22.03 billion,99.71 billion,0.12669
+Czechia,2002,114.9 million,1.12 billion,0.06535
+Korea,2002,395.8 million,5.05 billion,0.05092
+Slovak Republic,2002,18.8 million,527.9 million,0.02404
 Estonia,2002,4.2 million,0.0 million,
+Latvia,2002,3.8 million,0.0 million,
 Lithuania,2002,4.5 million,0.0 million,
 Poland,2002,28.9 million,0.0 million,
-Luxembourg,2001,338.5 million,0.0 million,1.88534
-Denmark,2001,2.98 billion,0.0 million,1.87845
-Netherlands,2001,6.43 billion,0.0 million,1.66551
-Norway,2001,2.59 billion,0.0 million,1.53459
-Sweden,2001,2.70 billion,0.0 million,1.24079
-Belgium,2001,1.70 billion,0.0 million,0.72203
-Switzerland,2001,1.97 billion,0.0 million,0.71944
-Austria,2001,1.25 billion,49.6 million,0.67325
-New Zealand,2001,288.9 million,18.4 million,0.65801
-Australia,2001,2.25 billion,175.5 million,0.64935
-Ireland,2001,528.0 million,78.5 million,0.60941
-Finland,2001,715.6 million,125.9 million,0.59529
-Spain,2001,3.39 billion,623.1 million,0.59138
-France,2001,7.41 billion,2.09 billion,0.54631
-Portugal,2001,557.2 million,191.6 million,0.52092
-Germany,2001,9.42 billion,3.47 billion,0.51174
-United Kingdom,2001,7.18 billion,2.83 billion,0.50194
-Canada,2001,2.99 billion,1.94 billion,0.42429
-DAC countries,2001,85.90 billion,86.29 billion,0.3492
-Greece,2001,356.3 million,464.1 million,0.30399
-Italy,2001,3.07 billion,4.51 billion,0.28353
-Iceland,2001,20.6 million,31.0 million,0.27971
-United States,2001,19.24 billion,51.87 billion,0.18942
-Japan,2001,7.85 billion,21.87 billion,0.18486
-Czechia,2001,80.0 million,306.1 million,0.14504
-Slovak Republic,2001,25.8 million,116.2 million,0.12725
-Korea,2001,399.3 million,2.97 billion,0.08299
-Poland,2001,73.9 million,1.14 billion,0.04256
+Denmark,2001,2.98 billion,0.0 million,1.03014
+Netherlands,2001,6.43 billion,0.0 million,0.82176
+Norway,2001,2.59 billion,0.0 million,0.79742
+Luxembourg,2001,338.5 million,0.0 million,0.77376
+Sweden,2001,2.70 billion,0.0 million,0.76625
+Belgium,2001,1.70 billion,1.53 billion,0.36833
+Austria,2001,1.25 billion,1.31 billion,0.34156
+Switzerland,2001,1.97 billion,2.20 billion,0.33109
+Ireland,2001,528.0 million,589.6 million,0.3307
+Finland,2001,715.6 million,832.2 million,0.32362
+United Kingdom,2001,7.18 billion,8.58 billion,0.31902
+France,2001,7.41 billion,9.36 billion,0.30942
+Spain,2001,3.39 billion,4.45 billion,0.3028
+Germany,2001,9.42 billion,14.91 billion,0.27101
+New Zealand,2001,288.9 million,506.4 million,0.25429
+Australia,2001,2.25 billion,4.00 billion,0.2519
+Portugal,2001,557.2 million,996.9 million,0.25098
+Japan,2001,7.85 billion,15.83 billion,0.23196
+Canada,2001,2.99 billion,6.65 billion,0.21729
+DAC countries,2001,85.90 billion,194.39 billion,0.21452
+Greece,2001,356.3 million,1.09 billion,0.17197
+Italy,2001,3.07 billion,11.25 billion,0.15016
+Iceland,2001,20.6 million,88.6 million,0.13211
+United States,2001,19.24 billion,100.49 billion,0.11251
+Korea,2001,399.3 million,4.68 billion,0.05501
+Czechia,2001,80.0 million,1.09 billion,0.04803
+Slovak Republic,2001,25.8 million,417.1 million,0.04081
+Poland,2001,73.9 million,2.45 billion,0.02047
 Estonia,2001,1.8 million,0.0 million,
 Lithuania,2001,5.3 million,0.0 million,
-Denmark,2000,3.02 billion,0.0 million,1.9276
-Netherlands,2000,6.44 billion,0.0 million,1.71959
-Luxembourg,2000,293.5 million,0.0 million,1.66116
-Norway,2000,2.42 billion,0.0 million,1.46303
-Sweden,2000,2.65 billion,0.0 million,1.17877
-Switzerland,2000,1.95 billion,0.0 million,0.71174
-Belgium,2000,1.59 billion,11.5 million,0.69498
-Australia,2000,2.35 billion,242.7 million,0.63445
-New Zealand,2000,282.8 million,32.3 million,0.62821
-Finland,2000,684.8 million,150.4 million,0.57398
-Ireland,2000,446.0 million,109.3 million,0.56221
-Portugal,2000,566.1 million,160.5 million,0.54541
-France,2000,7.18 billion,2.25 billion,0.53296
-Germany,2000,9.36 billion,3.67 billion,0.50273
-Canada,2000,3.32 billion,1.47 billion,0.48458
-United Kingdom,2000,6.84 billion,3.08 billion,0.48246
-Austria,2000,858.7 million,454.2 million,0.45783
-Spain,2000,2.36 billion,1.50 billion,0.42786
-Greece,2000,397.0 million,386.4 million,0.35474
-DAC countries,2000,82.85 billion,91.29 billion,0.33304
-Italy,2000,2.60 billion,4.92 billion,0.24226
-Japan,2000,9.45 billion,24.21 billion,0.19652
-Iceland,2000,16.0 million,41.9 million,0.19332
-United States,2000,17.14 billion,52.36 billion,0.17261
-Czechia,2000,52.0 million,294.5 million,0.10512
-Slovak Republic,2000,18.4 million,114.3 million,0.09715
-Korea,2000,290.2 million,3.28 billion,0.05695
-Poland,2000,65.9 million,1.04 billion,0.04175
+Denmark,2000,3.02 billion,0.0 million,1.06082
+Netherlands,2000,6.44 billion,0.0 million,0.83673
+Sweden,2000,2.65 billion,0.0 million,0.80126
+Norway,2000,2.42 billion,0.0 million,0.76411
+Luxembourg,2000,293.5 million,1.7 million,0.69605
+Belgium,2000,1.59 billion,1.52 billion,0.35774
+Switzerland,2000,1.95 billion,2.27 billion,0.3242
+United Kingdom,2000,6.84 billion,8.24 billion,0.31749
+Finland,2000,684.8 million,857.4 million,0.31083
+France,2000,7.18 billion,9.30 billion,0.30483
+Ireland,2000,446.0 million,612.5 million,0.29495
+Japan,2000,9.45 billion,14.09 billion,0.28097
+Germany,2000,9.36 billion,14.90 billion,0.27009
+Australia,2000,2.35 billion,3.82 billion,0.26664
+Portugal,2000,566.1 million,953.8 million,0.26073
+Canada,2000,3.32 billion,5.80 billion,0.25473
+New Zealand,2000,282.8 million,504.3 million,0.2515
+Austria,2000,858.7 million,1.71 billion,0.23444
+DAC countries,2000,82.85 billion,184.23 billion,0.21715
+Spain,2000,2.36 billion,5.28 billion,0.21643
+Greece,2000,397.0 million,979.2 million,0.20194
+Italy,2000,2.60 billion,11.62 billion,0.12811
+Iceland,2000,16.0 million,91.6 million,0.10405
+United States,2000,17.14 billion,102.51 billion,0.10027
+Korea,2000,290.2 million,4.59 billion,0.04161
+Czechia,2000,52.0 million,1.06 billion,0.03265
+Slovak Republic,2000,18.4 million,399.1 million,0.03089
+Poland,2000,65.9 million,2.46 billion,0.01826
 Estonia,2000,2.0 million,0.0 million,
