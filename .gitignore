@@ -180,3 +180,4 @@ src/data/cache/*.csv
 /.idea-
 /src/data/cache
 /src/data/__pycache__
+*.pyc
