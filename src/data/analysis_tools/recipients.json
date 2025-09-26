@@ -2,29 +2,29 @@
   "30": {
     "name": "Cyprus",
     "groups": [
-      "Europe, region",
-      "Developing countries"
+      "Developing countries",
+      "Europe"
     ]
   },
   "35": {
     "name": "Gibraltar",
     "groups": [
-      "Europe, region",
-      "Developing countries"
+      "Developing countries",
+      "Europe"
     ]
   },
   "45": {
     "name": "Malta",
     "groups": [
-      "Europe, region",
-      "Developing countries"
+      "Developing countries",
+      "Europe"
     ]
   },
   "55": {
     "name": "Turkey",
     "groups": [
-      "Europe, region",
       "Developing countries",
+      "Europe",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -32,8 +32,8 @@
   "57": {
     "name": "Kosovo",
     "groups": [
-      "Europe, region",
       "Developing countries",
+      "Europe",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -41,22 +41,22 @@
   "61": {
     "name": "Slovenia",
     "groups": [
-      "Europe, region",
-      "Developing countries"
+      "Developing countries",
+      "Europe"
     ]
   },
   "62": {
     "name": "Croatia",
     "groups": [
-      "Europe, region",
-      "Developing countries"
+      "Developing countries",
+      "Europe"
     ]
   },
   "63": {
     "name": "Serbia",
     "groups": [
-      "Europe, region",
       "Developing countries",
+      "Europe",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -64,8 +64,8 @@
   "64": {
     "name": "Bosnia and Herzegovina",
     "groups": [
-      "Europe, region",
       "Developing countries",
+      "Europe",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -73,8 +73,8 @@
   "65": {
     "name": "Montenegro",
     "groups": [
-      "Europe, region",
       "Developing countries",
+      "Europe",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -82,8 +82,8 @@
   "66": {
     "name": "North Macedonia",
     "groups": [
-      "Europe, region",
       "Developing countries",
+      "Europe",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -91,8 +91,8 @@
   "71": {
     "name": "Albania",
     "groups": [
-      "Europe, region",
       "Developing countries",
+      "Europe",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -100,8 +100,8 @@
   "85": {
     "name": "Ukraine",
     "groups": [
-      "Europe, region",
       "Developing countries",
+      "Europe",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -109,8 +109,8 @@
   "86": {
     "name": "Belarus",
     "groups": [
-      "Europe, region",
       "Developing countries",
+      "Europe",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -118,15 +118,15 @@
   "89": {
     "name": "Europe, unspecified",
     "groups": [
-      "Europe, region",
-      "Developing countries"
+      "Developing countries",
+      "Europe"
     ]
   },
   "93": {
     "name": "Moldova",
     "groups": [
-      "Europe, region",
       "Developing countries",
+      "Europe",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -134,9 +134,9 @@
   "130": {
     "name": "Algeria",
     "groups": [
-      "Africa, region",
-      "Northern Africa, region",
       "Developing countries",
+      "Africa",
+      "Northern Africa",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -144,9 +144,9 @@
   "133": {
     "name": "Libya",
     "groups": [
-      "Africa, region",
-      "Northern Africa, region",
       "Developing countries",
+      "Africa",
+      "Northern Africa",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -154,9 +154,9 @@
   "136": {
     "name": "Morocco",
     "groups": [
-      "Africa, region",
-      "Northern Africa, region",
       "Developing countries",
+      "Africa",
+      "Northern Africa",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -164,9 +164,9 @@
   "139": {
     "name": "Tunisia",
     "groups": [
-      "Africa, region",
-      "Northern Africa, region",
       "Developing countries",
+      "Africa",
+      "Northern Africa",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -174,9 +174,9 @@
   "142": {
     "name": "Egypt",
     "groups": [
-      "Africa, region",
-      "Northern Africa, region",
       "Developing countries",
+      "Africa",
+      "Northern Africa",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -184,18 +184,18 @@
   "189": {
     "name": "Northern Africa, unspecified",
     "groups": [
-      "Africa, region",
-      "Northern Africa, region",
-      "Developing countries"
+      "Developing countries",
+      "Africa",
+      "Northern Africa"
     ]
   },
   "218": {
     "name": "South Africa",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Southern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Southern Africa",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -203,10 +203,10 @@
   "225": {
     "name": "Angola",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Middle Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Middle Africa",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -214,10 +214,10 @@
   "227": {
     "name": "Botswana",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Southern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Southern Africa",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -225,10 +225,10 @@
   "228": {
     "name": "Burundi",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "France priority countries",
       "Least developed countries",
       "Fragile and conflict-affected countries"
@@ -237,10 +237,10 @@
   "229": {
     "name": "Cameroon",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Middle Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Middle Africa",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -249,10 +249,10 @@
   "230": {
     "name": "Cabo Verde",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -260,10 +260,10 @@
   "231": {
     "name": "Central African Republic",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Middle Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Middle Africa",
       "France priority countries",
       "Least developed countries",
       "Fragile and conflict-affected countries"
@@ -272,10 +272,10 @@
   "232": {
     "name": "Chad",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Middle Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Middle Africa",
       "France priority countries",
       "Least developed countries",
       "Sahel countries",
@@ -285,10 +285,10 @@
   "233": {
     "name": "Comoros",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "France priority countries",
       "Least developed countries",
       "Fragile and conflict-affected countries"
@@ -297,10 +297,10 @@
   "234": {
     "name": "Congo",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Middle Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Middle Africa",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -309,10 +309,10 @@
   "235": {
     "name": "Democratic Republic of the Congo",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Middle Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Middle Africa",
       "France priority countries",
       "Least developed countries",
       "Fragile and conflict-affected countries"
@@ -321,10 +321,10 @@
   "236": {
     "name": "Benin",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "France priority countries",
       "Least developed countries",
       "Fragile and conflict-affected countries"
@@ -333,10 +333,10 @@
   "238": {
     "name": "Ethiopia",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "France priority countries",
       "Least developed countries",
       "Fragile and conflict-affected countries"
@@ -345,10 +345,10 @@
   "239": {
     "name": "Gabon",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Middle Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Middle Africa",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -356,10 +356,10 @@
   "240": {
     "name": "Gambia",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "France priority countries",
       "Least developed countries",
       "Fragile and conflict-affected countries"
@@ -368,10 +368,10 @@
   "241": {
     "name": "Ghana",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -379,10 +379,10 @@
   "243": {
     "name": "Guinea",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "France priority countries",
       "Least developed countries"
     ]
@@ -390,10 +390,10 @@
   "244": {
     "name": "Guinea-Bissau",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -401,10 +401,10 @@
   "245": {
     "name": "Equatorial Guinea",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Middle Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Middle Africa",
       "Upper-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -413,10 +413,10 @@
   "247": {
     "name": "Cote d'Ivoire",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -425,10 +425,10 @@
   "248": {
     "name": "Kenya",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -437,10 +437,10 @@
   "249": {
     "name": "Lesotho",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Southern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Southern Africa",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -448,10 +448,10 @@
   "251": {
     "name": "Liberia",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "France priority countries",
       "Least developed countries",
       "Fragile and conflict-affected countries"
@@ -460,10 +460,10 @@
   "252": {
     "name": "Madagascar",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "France priority countries",
       "Least developed countries",
       "Fragile and conflict-affected countries"
@@ -472,20 +472,20 @@
   "253": {
     "name": "Malawi",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "Least developed countries"
     ]
   },
   "255": {
     "name": "Mali",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "France priority countries",
       "Least developed countries",
       "Sahel countries",
@@ -495,10 +495,10 @@
   "256": {
     "name": "Mauritania",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "France priority countries",
       "Least developed countries",
       "Sahel countries",
@@ -508,10 +508,10 @@
   "257": {
     "name": "Mauritius",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -519,19 +519,19 @@
   "258": {
     "name": "Mayotte",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
-      "Developing countries"
+      "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa"
     ]
   },
   "259": {
     "name": "Mozambique",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -539,10 +539,10 @@
   "260": {
     "name": "Niger",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "France priority countries",
       "Least developed countries",
       "Sahel countries",
@@ -552,10 +552,10 @@
   "261": {
     "name": "Nigeria",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -564,10 +564,10 @@
   "265": {
     "name": "Zimbabwe",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -576,30 +576,30 @@
   "266": {
     "name": "Rwanda",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "Least developed countries"
     ]
   },
   "268": {
     "name": "Sao Tome and Principe",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Middle Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Middle Africa",
       "Least developed countries"
     ]
   },
   "269": {
     "name": "Senegal",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "France priority countries",
       "Least developed countries"
     ]
@@ -607,19 +607,19 @@
   "270": {
     "name": "Seychelles",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
-      "Developing countries"
+      "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa"
     ]
   },
   "271": {
     "name": "Eritrea",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -627,10 +627,10 @@
   "272": {
     "name": "Sierra Leone",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -638,10 +638,10 @@
   "273": {
     "name": "Somalia",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -649,10 +649,10 @@
   "274": {
     "name": "Djibouti",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "France priority countries",
       "Least developed countries",
       "Fragile and conflict-affected countries"
@@ -661,10 +661,10 @@
   "275": {
     "name": "Namibia",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Southern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Southern Africa",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -672,10 +672,10 @@
   "276": {
     "name": "Saint Helena",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -683,20 +683,20 @@
   "278": {
     "name": "Sudan",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "Least developed countries"
     ]
   },
   "279": {
     "name": "South Sudan",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -704,10 +704,10 @@
   "280": {
     "name": "Eswatini",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Southern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Southern Africa",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -716,10 +716,10 @@
   "282": {
     "name": "Tanzania",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -727,10 +727,10 @@
   "283": {
     "name": "Togo",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "France priority countries",
       "Least developed countries",
       "Fragile and conflict-affected countries"
@@ -739,10 +739,10 @@
   "285": {
     "name": "Uganda",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -750,10 +750,10 @@
   "287": {
     "name": "Burkina Faso",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa",
       "France priority countries",
       "Least developed countries",
       "Sahel countries",
@@ -763,10 +763,10 @@
   "288": {
     "name": "Zambia",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
       "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -774,51 +774,51 @@
   "289": {
     "name": "Sub-Saharan Africa, unspecified",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Developing countries"
+      "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa"
     ]
   },
   "298": {
     "name": "Africa, unspecified",
     "groups": [
-      "Africa, region",
-      "Developing countries"
+      "Developing countries",
+      "Africa"
     ]
   },
   "328": {
     "name": "Bahamas",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean"
     ]
   },
   "329": {
     "name": "Barbados",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean"
     ]
   },
   "331": {
     "name": "Bermuda",
     "groups": [
-      "America, region",
-      "North America, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "North America"
     ]
   },
   "336": {
     "name": "Costa Rica",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Central America, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Central America",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -826,10 +826,10 @@
   "338": {
     "name": "Cuba",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -837,10 +837,10 @@
   "340": {
     "name": "Dominican Republic",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -848,10 +848,10 @@
   "342": {
     "name": "El Salvador",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Central America, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Central America",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -859,10 +859,10 @@
   "347": {
     "name": "Guatemala",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Central America, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Central America",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -870,10 +870,10 @@
   "349": {
     "name": "Haiti",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean",
       "France priority countries",
       "Least developed countries",
       "Fragile and conflict-affected countries"
@@ -882,10 +882,10 @@
   "351": {
     "name": "Honduras",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Central America, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Central America",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -894,10 +894,10 @@
   "352": {
     "name": "Belize",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Central America, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Central America",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -905,10 +905,10 @@
   "354": {
     "name": "Jamaica",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -916,10 +916,10 @@
   "358": {
     "name": "Mexico",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Central America, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Central America",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -927,10 +927,10 @@
   "364": {
     "name": "Nicaragua",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Central America, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Central America",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -939,10 +939,10 @@
   "366": {
     "name": "Panama",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Central America, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Central America",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -950,46 +950,46 @@
   "373": {
     "name": "Aruba",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean"
     ]
   },
   "375": {
     "name": "Trinidad and Tobago",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean"
     ]
   },
   "376": {
     "name": "Anguilla",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean"
     ]
   },
   "377": {
     "name": "Antigua and Barbuda",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean"
     ]
   },
   "378": {
     "name": "Dominica",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -997,10 +997,10 @@
   "381": {
     "name": "Grenada",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1008,19 +1008,19 @@
   "382": {
     "name": "Saint Kitts and Nevis",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean"
     ]
   },
   "383": {
     "name": "Saint Lucia",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1028,10 +1028,10 @@
   "384": {
     "name": "Saint Vincent and the Grenadines",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1039,10 +1039,10 @@
   "385": {
     "name": "Montserrat",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
       "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1050,44 +1050,44 @@
   "386": {
     "name": "Cayman Islands",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean"
     ]
   },
   "387": {
     "name": "Turks and Caicos Islands",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean"
     ]
   },
   "388": {
     "name": "British Virgin Islands",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean"
     ]
   },
   "389": {
     "name": "Central America and the Caribbean, unspecified",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "Central America and the Caribbean"
     ]
   },
   "425": {
     "name": "Argentina",
     "groups": [
-      "America, region",
-      "South America, region",
       "Developing countries",
+      "America",
+      "South America",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1095,9 +1095,9 @@
   "428": {
     "name": "Bolivia",
     "groups": [
-      "America, region",
-      "South America, region",
       "Developing countries",
+      "America",
+      "South America",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -1105,9 +1105,9 @@
   "431": {
     "name": "Brazil",
     "groups": [
-      "America, region",
-      "South America, region",
       "Developing countries",
+      "America",
+      "South America",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1115,17 +1115,17 @@
   "434": {
     "name": "Chile",
     "groups": [
-      "America, region",
-      "South America, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "South America"
     ]
   },
   "437": {
     "name": "Colombia",
     "groups": [
-      "America, region",
-      "South America, region",
       "Developing countries",
+      "America",
+      "South America",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1133,9 +1133,9 @@
   "440": {
     "name": "Ecuador",
     "groups": [
-      "America, region",
-      "South America, region",
       "Developing countries",
+      "America",
+      "South America",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1143,9 +1143,9 @@
   "446": {
     "name": "Guyana",
     "groups": [
-      "America, region",
-      "South America, region",
       "Developing countries",
+      "America",
+      "South America",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1153,9 +1153,9 @@
   "451": {
     "name": "Paraguay",
     "groups": [
-      "America, region",
-      "South America, region",
       "Developing countries",
+      "America",
+      "South America",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1163,9 +1163,9 @@
   "454": {
     "name": "Peru",
     "groups": [
-      "America, region",
-      "South America, region",
       "Developing countries",
+      "America",
+      "South America",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1173,9 +1173,9 @@
   "457": {
     "name": "Suriname",
     "groups": [
-      "America, region",
-      "South America, region",
       "Developing countries",
+      "America",
+      "South America",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1183,17 +1183,17 @@
   "460": {
     "name": "Uruguay",
     "groups": [
-      "America, region",
-      "South America, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "South America"
     ]
   },
   "463": {
     "name": "Venezuela",
     "groups": [
-      "America, region",
-      "South America, region",
       "Developing countries",
+      "America",
+      "South America",
       "Upper-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -1202,32 +1202,32 @@
   "489": {
     "name": "South America, unspecified",
     "groups": [
-      "America, region",
-      "South America, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "South America"
     ]
   },
   "498": {
     "name": "America, unspecified",
     "groups": [
-      "America, region",
-      "Developing countries"
+      "Developing countries",
+      "America"
     ]
   },
   "530": {
     "name": "Bahrain",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Middle East"
     ]
   },
   "540": {
     "name": "Iran",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
       "Developing countries",
+      "Asia",
+      "Middle East",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -1236,9 +1236,9 @@
   "543": {
     "name": "Iraq",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
       "Developing countries",
+      "Asia",
+      "Middle East",
       "Upper-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -1247,17 +1247,17 @@
   "546": {
     "name": "Israel",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Middle East"
     ]
   },
   "549": {
     "name": "Jordan",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
       "Developing countries",
+      "Asia",
+      "Middle East",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1265,9 +1265,9 @@
   "550": {
     "name": "West Bank and Gaza Strip",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
       "Developing countries",
+      "Asia",
+      "Middle East",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -1276,17 +1276,17 @@
   "552": {
     "name": "Kuwait",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Middle East"
     ]
   },
   "555": {
     "name": "Lebanon",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
       "Developing countries",
+      "Asia",
+      "Middle East",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1294,33 +1294,33 @@
   "558": {
     "name": "Oman",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Middle East"
     ]
   },
   "561": {
     "name": "Qatar",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Middle East"
     ]
   },
   "566": {
     "name": "Saudi Arabia",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Middle East"
     ]
   },
   "573": {
     "name": "Syrian Arab Republic",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
       "Developing countries",
+      "Asia",
+      "Middle East",
       "Low income countries",
       "Fragile and conflict-affected countries"
     ]
@@ -1328,17 +1328,17 @@
   "576": {
     "name": "United Arab Emirates",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Middle East"
     ]
   },
   "580": {
     "name": "Yemen",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
       "Developing countries",
+      "Asia",
+      "Middle East",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -1346,17 +1346,17 @@
   "589": {
     "name": "Middle East, unspecified",
     "groups": [
-      "Asia, region",
-      "Middle East, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Middle East"
     ]
   },
   "610": {
     "name": "Armenia",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1364,9 +1364,9 @@
   "611": {
     "name": "Azerbaijan",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1374,9 +1374,9 @@
   "612": {
     "name": "Georgia",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1384,9 +1384,9 @@
   "613": {
     "name": "Kazakhstan",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1394,9 +1394,9 @@
   "614": {
     "name": "Kyrgyzstan",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -1404,9 +1404,9 @@
   "615": {
     "name": "Tajikistan",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -1415,9 +1415,9 @@
   "616": {
     "name": "Turkmenistan",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Upper-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -1426,9 +1426,9 @@
   "617": {
     "name": "Uzbekistan",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -1436,17 +1436,17 @@
   "619": {
     "name": "Central Asia, unspecified",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Southern and Central Asia"
     ]
   },
   "625": {
     "name": "Afghanistan",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -1454,18 +1454,18 @@
   "630": {
     "name": "Bhutan",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Least developed countries"
     ]
   },
   "635": {
     "name": "Myanmar",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -1473,9 +1473,9 @@
   "640": {
     "name": "Sri Lanka",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -1483,9 +1483,9 @@
   "645": {
     "name": "India",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -1493,9 +1493,9 @@
   "655": {
     "name": "Maldives",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1503,18 +1503,18 @@
   "660": {
     "name": "Nepal",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Least developed countries"
     ]
   },
   "665": {
     "name": "Pakistan",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -1523,9 +1523,9 @@
   "666": {
     "name": "Bangladesh",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
       "Developing countries",
+      "Asia",
+      "Southern and Central Asia",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -1533,25 +1533,25 @@
   "689": {
     "name": "Southern and Central Asia, unspecified",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Southern and Central Asia"
     ]
   },
   "725": {
     "name": "Brunei Darussalam",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Far East Asia"
     ]
   },
   "728": {
     "name": "Cambodia",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
       "Developing countries",
+      "Asia",
+      "Far East Asia",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -1559,9 +1559,9 @@
   "730": {
     "name": "China (People's Republic of)",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
       "Developing countries",
+      "Asia",
+      "Far East Asia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1569,9 +1569,9 @@
   "738": {
     "name": "Indonesia",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
       "Developing countries",
+      "Asia",
+      "Far East Asia",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -1579,9 +1579,9 @@
   "740": {
     "name": "Democratic People's Republic of Korea",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
       "Developing countries",
+      "Asia",
+      "Far East Asia",
       "Low income countries",
       "Fragile and conflict-affected countries"
     ]
@@ -1589,9 +1589,9 @@
   "745": {
     "name": "Lao People's Democratic Republic",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
       "Developing countries",
+      "Asia",
+      "Far East Asia",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -1599,17 +1599,17 @@
   "748": {
     "name": "Macau (China)",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Far East Asia"
     ]
   },
   "751": {
     "name": "Malaysia",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
       "Developing countries",
+      "Asia",
+      "Far East Asia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1617,9 +1617,9 @@
   "753": {
     "name": "Mongolia",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
       "Developing countries",
+      "Asia",
+      "Far East Asia",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -1627,9 +1627,9 @@
   "755": {
     "name": "Philippines",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
       "Developing countries",
+      "Asia",
+      "Far East Asia",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -1637,9 +1637,9 @@
   "764": {
     "name": "Thailand",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
       "Developing countries",
+      "Asia",
+      "Far East Asia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1647,9 +1647,9 @@
   "765": {
     "name": "Timor-Leste",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
       "Developing countries",
+      "Asia",
+      "Far East Asia",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -1657,9 +1657,9 @@
   "769": {
     "name": "Viet Nam",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
       "Developing countries",
+      "Asia",
+      "Far East Asia",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -1667,32 +1667,32 @@
   "789": {
     "name": "Far East Asia, unspecified",
     "groups": [
-      "Asia, region",
-      "Far East Asia, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Far East Asia"
     ]
   },
   "798": {
     "name": "Asia, unspecified",
     "groups": [
-      "Asia, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia"
     ]
   },
   "831": {
     "name": "Cook Islands",
     "groups": [
-      "Oceania, region",
-      "Polynesia, region",
-      "Developing countries"
+      "Developing countries",
+      "Oceania",
+      "Polynesia"
     ]
   },
   "832": {
     "name": "Fiji",
     "groups": [
-      "Oceania, region",
-      "Melanesia, region",
       "Developing countries",
+      "Oceania",
+      "Melanesia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1700,26 +1700,26 @@
   "836": {
     "name": "Kiribati",
     "groups": [
-      "Oceania, region",
-      "Micronesia, region",
       "Developing countries",
+      "Oceania",
+      "Micronesia",
       "Least developed countries"
     ]
   },
   "840": {
     "name": "French Polynesia",
     "groups": [
-      "Oceania, region",
-      "Polynesia, region",
-      "Developing countries"
+      "Developing countries",
+      "Oceania",
+      "Polynesia"
     ]
   },
   "845": {
     "name": "Nauru",
     "groups": [
-      "Oceania, region",
-      "Micronesia, region",
       "Developing countries",
+      "Oceania",
+      "Micronesia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1727,17 +1727,17 @@
   "850": {
     "name": "New Caledonia",
     "groups": [
-      "Oceania, region",
-      "Melanesia, region",
-      "Developing countries"
+      "Developing countries",
+      "Oceania",
+      "Melanesia"
     ]
   },
   "854": {
     "name": "Vanuatu",
     "groups": [
-      "Oceania, region",
-      "Melanesia, region",
       "Developing countries",
+      "Oceania",
+      "Melanesia",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -1745,9 +1745,9 @@
   "856": {
     "name": "Niue",
     "groups": [
-      "Oceania, region",
-      "Polynesia, region",
       "Developing countries",
+      "Oceania",
+      "Polynesia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1755,17 +1755,17 @@
   "858": {
     "name": "Northern Mariana Islands",
     "groups": [
-      "Oceania, region",
-      "Micronesia, region",
-      "Developing countries"
+      "Developing countries",
+      "Oceania",
+      "Micronesia"
     ]
   },
   "859": {
     "name": "Marshall Islands",
     "groups": [
-      "Oceania, region",
-      "Micronesia, region",
       "Developing countries",
+      "Oceania",
+      "Micronesia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1773,9 +1773,9 @@
   "860": {
     "name": "Micronesia",
     "groups": [
-      "Oceania, region",
-      "Micronesia, region",
       "Developing countries",
+      "Oceania",
+      "Micronesia",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -1783,9 +1783,9 @@
   "861": {
     "name": "Palau",
     "groups": [
-      "Oceania, region",
-      "Micronesia, region",
       "Developing countries",
+      "Oceania",
+      "Micronesia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1793,9 +1793,9 @@
   "862": {
     "name": "Papua New Guinea",
     "groups": [
-      "Oceania, region",
-      "Melanesia, region",
       "Developing countries",
+      "Oceania",
+      "Melanesia",
       "Lower-middle income countries",
       "Middle income countries",
       "Fragile and conflict-affected countries"
@@ -1804,9 +1804,9 @@
   "866": {
     "name": "Solomon Islands",
     "groups": [
-      "Oceania, region",
-      "Melanesia, region",
       "Developing countries",
+      "Oceania",
+      "Melanesia",
       "Least developed countries",
       "Fragile and conflict-affected countries"
     ]
@@ -1814,9 +1814,9 @@
   "868": {
     "name": "Tokelau",
     "groups": [
-      "Oceania, region",
-      "Polynesia, region",
       "Developing countries",
+      "Oceania",
+      "Polynesia",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -1824,9 +1824,9 @@
   "870": {
     "name": "Tonga",
     "groups": [
-      "Oceania, region",
-      "Polynesia, region",
       "Developing countries",
+      "Oceania",
+      "Polynesia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1834,18 +1834,18 @@
   "872": {
     "name": "Tuvalu",
     "groups": [
-      "Oceania, region",
-      "Polynesia, region",
       "Developing countries",
+      "Oceania",
+      "Polynesia",
       "Least developed countries"
     ]
   },
   "876": {
     "name": "Wallis and Futuna",
     "groups": [
-      "Oceania, region",
-      "Polynesia, region",
       "Developing countries",
+      "Oceania",
+      "Polynesia",
       "Upper-middle income countries",
       "Middle income countries"
     ]
@@ -1853,9 +1853,9 @@
   "880": {
     "name": "Samoa",
     "groups": [
-      "Oceania, region",
-      "Polynesia, region",
       "Developing countries",
+      "Oceania",
+      "Polynesia",
       "Lower-middle income countries",
       "Middle income countries"
     ]
@@ -1863,100 +1863,101 @@
   "889": {
     "name": "Oceania, unspecified",
     "groups": [
-      "Oceania, region",
-      "Developing countries"
+      "Developing countries",
+      "Oceania"
     ]
   },
   "1027": {
     "name": "Eastern Africa, unspecified",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Eastern Africa, region",
-      "Developing countries"
+      "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Eastern Africa"
     ]
   },
   "1029": {
     "name": "Southern Africa, unspecified",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Southern Africa, region",
-      "Developing countries"
+      "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Southern Africa"
     ]
   },
   "1030": {
     "name": "Western Africa, unspecified",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Western Africa, region",
-      "Developing countries"
+      "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Western Africa"
     ]
   },
   "1031": {
     "name": "Caribbean, unspecified",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Caribbean, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Caribbean"
     ]
   },
   "1032": {
     "name": "Central America, unspecified",
     "groups": [
-      "America, region",
-      "Central America and the Caribbean, region",
-      "Central America, region",
-      "Developing countries"
+      "Developing countries",
+      "America",
+      "Central America and the Caribbean",
+      "Central America"
     ]
   },
   "6790": {
     "name": "Southern Asia, unspecified",
     "groups": [
-      "Asia, region",
-      "Southern and Central Asia, region",
-      "Developing countries"
+      "Developing countries",
+      "Asia",
+      "Southern and Central Asia"
     ]
   },
   "8600": {
     "name": "Micronesia, unspecified",
     "groups": [
-      "Oceania, region",
-      "Micronesia, region",
-      "Developing countries"
+      "Developing countries",
+      "Oceania",
+      "Micronesia"
     ]
   },
   "9998": {
     "name": "Developing countries, unspecified",
     "groups": [
+      "Developing countries",
       "Developing countries"
     ]
   },
   "10280": {
     "name": "Middle Africa, unspecified",
     "groups": [
-      "Africa, region",
-      "Sub-Saharan Africa, region",
-      "Middle Africa, region",
-      "Developing countries"
+      "Developing countries",
+      "Africa",
+      "Sub-Saharan Africa",
+      "Middle Africa"
     ]
   },
   "10330": {
     "name": "Melanesia, unspecified",
     "groups": [
-      "Oceania, region",
-      "Melanesia, region",
-      "Developing countries"
+      "Developing countries",
+      "Oceania",
+      "Melanesia"
     ]
   },
   "10350": {
     "name": "Polynesia, unspecified",
     "groups": [
-      "Oceania, region",
-      "Polynesia, region",
-      "Developing countries"
+      "Developing countries",
+      "Oceania",
+      "Polynesia"
     ]
   }
 }
