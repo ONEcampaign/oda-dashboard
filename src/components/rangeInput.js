@@ -59,7 +59,8 @@ export function rangeInput(options = {}) {
 
 
     let value = [],
-        changed = false;
+        changed = false,
+        pendingTimeout = null;
     Object.defineProperty(dom, "value", {
         get: () => [...value],
         set: ([a, b]) => {
@@ -91,8 +92,27 @@ export function rangeInput(options = {}) {
         if (pmin === value[0] && pmax === value[1]) return;
         inputMin.value = value[0];
         inputMax.value = value[1];
-        dispatch("input");
+        scheduleInputDispatch();
         changed = true;
+    };
+
+    const scheduleInputDispatch = () => {
+        if (pendingTimeout !== null) {
+            clearTimeout(pendingTimeout);
+        }
+
+        pendingTimeout = setTimeout(() => {
+            pendingTimeout = null;
+            dispatch("input");
+        }, 150);
+    };
+
+    const flushScheduledInput = () => {
+        if (pendingTimeout !== null) {
+            clearTimeout(pendingTimeout);
+            pendingTimeout = null;
+            dispatch("input");
+        }
     };
 
     inputMin.addEventListener("input", () => {
@@ -173,23 +193,40 @@ export function rangeInput(options = {}) {
     function handleDragStop(e) {
         off("mousemove touchmove", handleDrag);
         off("mouseup touchend", handleDragStop);
+        flushScheduledInput();
         if (changed) dispatch("change");
     }
 
-    const observer = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-            if (mutation.removedNodes.length > 0) {
-                handleDragStop(); // Clean up when dom is removed
-                observer.disconnect(); // Stop observing
-                break;
+    const observer = new MutationObserver(() => {
+        if (!dom.isConnected) {
+            flushScheduledInput();
+            handleDragStop();
+            observer.disconnect();
+        }
+    });
+
+    queueMicrotask(() => {
+        const parent = dom.parentNode;
+        if (parent) {
+            try {
+                observer.observe(parent, {childList: true});
+            } catch (err) {
+                // Ignore if already observing
             }
         }
     });
-    observer.observe(document.body, {childList: true, subtree: true});
 
     dom.ontouchstart = dom.onmousedown = (e) => {
         dragging = false;
         changed = false;
+        const parent = dom.parentNode;
+        if (parent) {
+            try {
+                observer.observe(parent, {childList: true});
+            } catch (err) {
+                // Ignore if already observing
+            }
+        }
         if (!handlers.has(e.target)) return;
         on("mousemove touchmove", handleDrag);
         on("mouseup touchend", handleDragStop);
