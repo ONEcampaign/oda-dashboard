@@ -5,7 +5,7 @@ description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
     "bblocks>=1.4, <2.0",
-    "oda-data>=2.2.2",
+    "oda-data>=2.2.2post1",
     "pandas>=2.3.2",
     "pyarrow>=18.0.0",
     "pydeflate>=2.1.3",

@@ -812,7 +812,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "bblocks", specifier = ">=1.4,<2.0" },
-    { name = "oda-data", specifier = ">=2.2.2" },
+    { name = "oda-data", specifier = ">=2.2.2.post1" },
     { name = "pandas", specifier = ">=2.3.2" },
     { name = "pyarrow", specifier = ">=18.0.0" },
     { name = "pydeflate", specifier = ">=2.1.3" },
@@ -820,7 +820,7 @@ requires-dist = [
 
 [[package]]
 name = "oda-data"
-version = "2.2.2"
+version = "2.2.2.post1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -830,9 +830,9 @@ dependencies = [
     { name = "reader" },
     { name = "thefuzz" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8f/cb/4b96f199f83af558e05f8091f0a3dd7056c64fe77498c4cea55dd6db41ad/oda_data-2.2.2.tar.gz", hash = "sha256:f01f8d434257f361d81b7d810c0f59670a0b3636597d96550bcc1e2af040b533", size = 174161, upload-time = "2025-09-26T14:01:12.076Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/19/4a/eea9d7e2471440a5dc32c5dcb0afc9602dd156d567218a6c052575c91506/oda_data-2.2.2.post1.tar.gz", hash = "sha256:8ac9815758ce5bc9de21c047dcc06e104d01859653c9b06fdcbf9260bac0f261", size = 174186, upload-time = "2025-09-26T14:15:13.336Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/1a/12abf496e5292b2e97f52a7c4eef40e24290e627637d2ff59986c21a1dc9/oda_data-2.2.2-py3-none-any.whl", hash = "sha256:fd575ada9c7201fb78c8fa96dd2b668388500109a160c2626d089adc843efa94", size = 194186, upload-time = "2025-09-26T14:01:10.706Z" },
+    { url = "https://files.pythonhosted.org/packages/65/a0/650eb526dba861dad1e328ad8c9bd74ee69ee59675a23821fb34cbfd1173/oda_data-2.2.2.post1-py3-none-any.whl", hash = "sha256:2f29a302641fa5abd1ead1291a6d042932514b49ecf79e1da74b21087448f651", size = 194238, upload-time = "2025-09-26T14:15:12.278Z" },
 ]
 
 [[package]]
