@@ -60,8 +60,8 @@ export function rangeInput(options = {}) {
 
     let value = [],
         changed = false,
-        rafId = null,
-        pendingInput = false;
+        pendingTimeout = null,
+        lastInputDispatch = 0;
     Object.defineProperty(dom, "value", {
         get: () => [...value],
         set: ([a, b]) => {
@@ -97,24 +97,32 @@ export function rangeInput(options = {}) {
         changed = true;
     };
 
+    const MIN_INPUT_INTERVAL = 30;
+
     const scheduleInputDispatch = () => {
-        if (pendingInput) return;
-        pendingInput = true;
-        rafId = requestAnimationFrame(() => {
-            pendingInput = false;
-            rafId = null;
+        const now = performance.now();
+        const elapsed = now - lastInputDispatch;
+
+        if (elapsed >= MIN_INPUT_INTERVAL) {
+            lastInputDispatch = now;
             dispatch("input");
-        });
+            return;
+        }
+
+        if (pendingTimeout !== null) return;
+
+        pendingTimeout = setTimeout(() => {
+            pendingTimeout = null;
+            lastInputDispatch = performance.now();
+            dispatch("input");
+        }, MIN_INPUT_INTERVAL - elapsed);
     };
 
     const flushScheduledInput = () => {
-        if (rafId !== null) {
-            cancelAnimationFrame(rafId);
-            rafId = null;
-        }
-
-        if (pendingInput) {
-            pendingInput = false;
+        if (pendingTimeout !== null) {
+            clearTimeout(pendingTimeout);
+            pendingTimeout = null;
+            lastInputDispatch = performance.now();
             dispatch("input");
         }
     };
