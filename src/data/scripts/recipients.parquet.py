@@ -11,7 +11,7 @@ from src.data.analysis_tools.helper_functions import (
     get_dac_ids,
     add_index_column,
     df_to_parquet,
-    eui_bi_code
+    eui_bi_code,
 )
 
 donor_ids = get_dac_ids(PATHS.DONORS)
@@ -20,12 +20,11 @@ eu_ids = provider_groupings()["eu27_total"]
 
 
 def get_dac2a():
-
     dac2a_raw = OECDClient(
         years=range(BASE_TIME["start"], BASE_TIME["end"] + 1),
         providers=donor_ids,
         recipients=recipient_ids,
-        use_bulk_download=True,
+        use_bulk_download=False,
     ).get_indicators(list(RECIPIENTS_INDICATORS.keys()))
 
     dac2a = (
@@ -44,32 +43,29 @@ def get_dac2a():
 
 
 def get_dac2a_eui_eu27():
-
     dac2a_client = OECDClient(
         years=range(BASE_TIME["start"], BASE_TIME["end"] + 1),
         providers=donor_ids,
         recipients=recipient_ids,
-        use_bulk_download=True,
+        use_bulk_download=False,
     )
 
     eui_eu27_dac2a_raw = get_eui_plus_bilateral_providers_indicator(
-        dac2a_client,
-        indicator=list(RECIPIENTS_INDICATORS.keys())
+        dac2a_client, indicator=list(RECIPIENTS_INDICATORS.keys())
     )
 
     eui_eu27_dac2a = (
         eui_eu27_dac2a_raw.query("donor_code == 918")
         .assign(donor_code=eui_bi_code)
-        .assign(indicator=lambda d: d["one_indicator"].map(RECIPIENTS_INDICATORS))
-        [["year", "donor_code", "recipient_code", "indicator", "value"]]
+        .assign(indicator=lambda d: d["one_indicator"].map(RECIPIENTS_INDICATORS))[
+            ["year", "donor_code", "recipient_code", "indicator", "value"]
+        ]
     )
 
     return eui_eu27_dac2a
 
 
 def combine_recipients():
-
-
     dac2a = get_dac2a()
     eui_eu27_dac2a = get_dac2a_eui_eu27()
 

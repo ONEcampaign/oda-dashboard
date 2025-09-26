@@ -155,8 +155,6 @@ async function executeRecipientsSeries(
         .map(([code, label]) => `WHEN indicator = ${code} THEN '${escapeSQL(label)}'`)
         .join("\n");
 
-    const combineIndicators = indicators.length > 1;
-
     const indicatorSelection = indicators.join(", ");
 
     const query = await db.query(
@@ -187,20 +185,16 @@ async function executeRecipientsSeries(
             converted AS (
                 SELECT
                     f.year,
-                    ${
-                        combineIndicators
-                            ? "'Bilateral + Imputed multilateral ODA'"
-                            : `CASE
-                                    ${indicatorCase}
-                                END`
-                    } AS indicator_label,
+                    CASE
+                        ${indicatorCase}
+                    END AS indicator_label,
                     SUM(f.value) AS original_value,
                     SUM(f.value * c.factor) AS converted_value
                 FROM filtered f
                     JOIN conversion c
                         ON f.year = c.year
                         ${prices === "constant" ? "AND f.donor = c.donor" : ""}
-                GROUP BY f.year${combineIndicators ? "" : ", f.indicator"}
+                GROUP BY f.year, f.indicator
             ),
             totals AS (
                 SELECT 

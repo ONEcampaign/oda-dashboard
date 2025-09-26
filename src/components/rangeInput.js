@@ -60,8 +60,7 @@ export function rangeInput(options = {}) {
 
     let value = [],
         changed = false,
-        pendingTimeout = null,
-        lastInputDispatch = 0;
+        pendingTimeout = null;
     Object.defineProperty(dom, "value", {
         get: () => [...value],
         set: ([a, b]) => {
@@ -97,32 +96,21 @@ export function rangeInput(options = {}) {
         changed = true;
     };
 
-    const MIN_INPUT_INTERVAL = 30;
-
     const scheduleInputDispatch = () => {
-        const now = performance.now();
-        const elapsed = now - lastInputDispatch;
-
-        if (elapsed >= MIN_INPUT_INTERVAL) {
-            lastInputDispatch = now;
-            dispatch("input");
-            return;
+        if (pendingTimeout !== null) {
+            clearTimeout(pendingTimeout);
         }
-
-        if (pendingTimeout !== null) return;
 
         pendingTimeout = setTimeout(() => {
             pendingTimeout = null;
-            lastInputDispatch = performance.now();
             dispatch("input");
-        }, MIN_INPUT_INTERVAL - elapsed);
+        }, 150);
     };
 
     const flushScheduledInput = () => {
         if (pendingTimeout !== null) {
             clearTimeout(pendingTimeout);
             pendingTimeout = null;
-            lastInputDispatch = performance.now();
             dispatch("input");
         }
     };
@@ -220,7 +208,11 @@ export function rangeInput(options = {}) {
     queueMicrotask(() => {
         const parent = dom.parentNode;
         if (parent) {
-            observer.observe(parent, {childList: true});
+            try {
+                observer.observe(parent, {childList: true});
+            } catch (err) {
+                // Ignore if already observing
+            }
         }
     });
 

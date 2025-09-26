@@ -7,8 +7,8 @@
     "dev": "export PYTHONPATH=$(pwd) && observable preview",
     "deploy": "export PYTHONPATH=$(pwd) && observable deploy",
     "observable": "observable",
-    "preinstall": "pip install poetry --upgrade && pip uninstall opencv-python",
-    "install": "poetry install"
+    "preinstall": "pip install uv --upgrade && pip uninstall opencv-python",
+    "install": "uv sync"
   },
   "dependencies": {
     "@flourish/live-api": "^5.4.1",
