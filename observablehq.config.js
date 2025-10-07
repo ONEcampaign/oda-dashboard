@@ -5,7 +5,8 @@ import {icon} from "@one-data/observable-themes/use-images";
 export default {
   title: "ODA Dashboard",
   head: `<link rel="icon" href=${icon} type="image/png" sizes="32x32">`,
-
+  base: "/oda-dashboard",
+  preserveExtension: true,
 
   root: "src",
 
