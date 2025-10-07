@@ -160,14 +160,14 @@ async function executeRecipientsSeries(
     const query = await db.query(
         `
             WITH filtered AS (
-                SELECT 
+                SELECT
                     year,
                     donor_code AS donor,
                     recipient_code AS recipient,
                     indicator,
-                    (value * 1.1 / 1.1) AS value
+                    value
                 FROM recipients
-                WHERE 
+                WHERE
                     donor_code IN (${donor})
                     AND recipient_code IN (${recipient})
                     AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
@@ -197,9 +197,9 @@ async function executeRecipientsSeries(
                 GROUP BY f.year, f.indicator
             ),
             totals AS (
-                SELECT 
+                SELECT
                     year,
-                    SUM(value * 1.1 / 1.1) AS total_value
+                    SUM(value) AS total_value
                 FROM recipients
                 WHERE
                     donor_code IN (${donor})

@@ -6,7 +6,6 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from collections import defaultdict
-from decimal import Decimal, ROUND_HALF_EVEN
 
 from oda_data import set_data_path
 from pydeflate import set_pydeflate_path
@@ -89,107 +88,63 @@ def load_indicators(page: str):
         return result
 
 
-def return_pa_table(df: pd.DataFrame):
+def df_to_parquet(df: pd.DataFrame):
+    """
+    Convert DataFrame to Parquet and write to stdout.
+    Uses optimized schema with dictionary encoding for codes and float64 for values.
+    No Decimal conversion - frontend can work directly with float64.
+    """
+    # Convert to efficient types
+    df = df.copy()
 
-    schema = get_schema(df)
+    # Convert codes to categorical (for dictionary encoding)
+    if "year" in df.columns:
+        df["year"] = df["year"].astype("category")
+    if "donor_code" in df.columns:
+        df["donor_code"] = df["donor_code"].astype("category")
+    if "recipient_code" in df.columns:
+        df["recipient_code"] = df["recipient_code"].astype("category")
+    if "indicator" in df.columns:
+        df["indicator"] = df["indicator"].astype("category")
+    if "sub_sector" in df.columns:
+        df["sub_sector"] = df["sub_sector"].astype("category")
 
+    # Use float64 for values (standard, no conversion needed in frontend)
+    if "value" in df.columns:
+        df["value"] = df["value"].astype("float64")
+
+    # Create optimized schema with dictionary encoding
+    schema_fields = []
+    for col in df.columns:
+        if col == "value":
+            schema_fields.append(pa.field(col, pa.float64()))
+        elif isinstance(df[col].dtype, pd.CategoricalDtype):
+            # Use dictionary encoding with auto-selected int types
+            categories = df[col].cat.categories
+            if len(categories) <= 127:
+                index_type = pa.int8()
+            elif len(categories) <= 32767:
+                index_type = pa.int16()
+            else:
+                index_type = pa.int32()
+
+            # Determine value type based on category values
+            cat_min, cat_max = categories.min(), categories.max()
+            if cat_min >= 0 and cat_max <= 65535:
+                value_type = pa.int16()
+            else:
+                value_type = pa.int32()
+
+            schema_fields.append(pa.field(col, pa.dictionary(index_type, value_type)))
+
+    schema = pa.schema(schema_fields)
     table = pa.Table.from_pandas(df, schema=schema, preserve_index=False)
-
-    # Write PyArrow Table to Parquet
     buf = pa.BufferOutputStream()
     pq.write_table(table, buf, compression="snappy")
 
-    # Get the Parquet bytes
+    # Write to stdout
     buf_bytes = buf.getvalue().to_pybytes()
     sys.stdout.buffer.write(buf_bytes)
-
-
-def get_schema(df: pd.DataFrame):
-    def choose_int_type(min_val, max_val):
-        if min_val >= 0:
-            if max_val <= 255:
-                return pa.uint8()
-            elif max_val <= 65535:
-                return pa.uint16()
-            elif max_val <= 4294967295:
-                return pa.uint32()
-            else:
-                return pa.uint64()
-        else:
-            if -128 <= min_val and max_val <= 127:
-                return pa.int8()
-            elif -32768 <= min_val and max_val <= 32767:
-                return pa.int16()
-            elif -2147483648 <= min_val and max_val <= 2147483647:
-                return pa.int32()
-            else:
-                return pa.int64()
-
-    fields = []
-
-    for col in df.columns:
-        series = df[col]
-
-        if isinstance(series.dtype, pd.CategoricalDtype):
-            idx_min = series.cat.codes.min()
-            idx_max = series.cat.codes.max()
-            idx_type = choose_int_type(idx_min, idx_max)
-
-            val_min = series.cat.categories.astype(int).min()
-            val_max = series.cat.categories.astype(int).max()
-            val_type = choose_int_type(val_min, val_max)
-
-            field_type = pa.dictionary(index_type=idx_type, value_type=val_type)
-
-        elif series.dropna().apply(type).eq(Decimal).all():
-
-            def total_digits(d):
-                sign, digits, exponent = d.as_tuple()
-                int_digits = len(digits) + exponent if exponent < 0 else len(digits)
-                return max(int_digits, 1) + 2  # 2 decimal places
-
-            precision = series.dropna().apply(total_digits).max()
-            field_type = pa.decimal128(precision, 2)
-
-        else:
-            raise TypeError(
-                f"Column '{col}' is not a supported type. "
-                "Expected either a categorical of integers or a Decimal column."
-            )
-
-        fields.append(pa.field(col, field_type))
-
-    return pa.schema(fields)
-
-
-def to_decimal(val: float, precision: int =2):
-    quantizer = Decimal("1." + "0" * precision)
-    return Decimal(str(val)).quantize(quantizer, rounding=ROUND_HALF_EVEN)
-
-
-def convert_types(df: pd.DataFrame) -> pd.DataFrame:
-    type_map = {
-        "year": "category",
-        "donor_code": "category",
-        "recipient_code": "category",
-        "indicator": "category",
-        "sub_sector": "category",
-    }
-
-    for col, dtype in type_map.items():
-        if col in df.columns:
-            df[col] = df[col].astype(dtype)
-
-    if "value" in df.columns:
-        df["value"] = df["value"].apply(to_decimal)
-
-    return df
-
-
-def df_to_parquet(df: pd.DataFrame):
-
-    converted_df = convert_types(df)
-    return_pa_table(converted_df)
 
 
 def add_index_column(df: pd.DataFrame, column: str, json_path, ordered_list: list = None) -> pd.DataFrame:

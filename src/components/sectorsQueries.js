@@ -167,7 +167,7 @@ async function executeSectorsSeries({
                     recipient_code AS recipient,
                     sub_sector,
                     indicator,
-                    (value * 1.1 / 1.1) AS value
+                    value
                 FROM sectors
                 WHERE
                     donor_code IN (${donor})

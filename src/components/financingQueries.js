@@ -190,7 +190,7 @@ async function executeFinancingSeries(
                     year,
                     donor_code AS donor,
                     indicator,
-                    (value * 1.1 / 1.1) AS value
+                    value
                 FROM financing
                 WHERE
                     donor_code IN (${donor})
@@ -229,7 +229,7 @@ async function executeFinancingSeries(
             gni AS (
                 SELECT
                     year,
-                    SUM(value * 1.1 / 1.1) AS gni_value
+                    SUM(value) AS gni_value
                 FROM gni_table
                 WHERE
                     donor_code IN (${donor})
