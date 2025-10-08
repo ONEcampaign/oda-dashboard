@@ -1,22 +1,22 @@
 import {FileAttachment} from "observablehq:stdlib";
-import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
+import {donorOptions, financingIndicators} from "./sharedMetadata.js";
+import {createDuckDBClient} from "./duckdbFactory.js";
 
-const [
-    donorOptions,
-    financingIndicators
-] = await Promise.all([
-    FileAttachment("../data/analysis_tools/donors.json").json(),
-    FileAttachment('../data/analysis_tools/financing_indicators.json').json()
-]);
-
-const db = await DuckDBClient.of({
-    financing: FileAttachment("../data/scripts/financing.parquet").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
-    gni_table: FileAttachment("../data/scripts/gni_table.parquet").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
-    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
-    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2024.csv").csv({typed: true}),
-});
-
+// Lazy initialization: DuckDB instance is created on first query
+let dbPromise = null;
+function getDB() {
+    if (!dbPromise) {
+        const cacheBuster = navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "";
+        dbPromise = createDuckDBClient({
+            financing: FileAttachment("../data/scripts/financing.parquet").href + cacheBuster,
+            gni_table: FileAttachment("../data/scripts/gni_table.parquet").href + cacheBuster,
+            current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
+            constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2024.csv").csv({typed: true})
+        }, 'financing');
+    }
+    return dbPromise;
+}
 
 const donorMapping = name2CodeMap(donorOptions, {})
 
@@ -183,6 +183,7 @@ async function executeFinancingSeries(
         ? `${indicator}`
         : `${indicator}, ${totalIndicatorCode}`;
 
+    const db = await getDB();
     const query = await db.query(
         `
             WITH filtered AS (
