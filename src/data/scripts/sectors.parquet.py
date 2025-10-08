@@ -17,10 +17,10 @@ from src.data.analysis_tools.helper_functions import (
 
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
+set_cache_dir(oda_data=True)
 
 
 def get_bilateral_by_sector():
-
     raw_bilateral = CRSData(years=range(2013, SECTORS_TIME["end"] + 1)).read(
         using_bulk_download=True,
         additional_filters=[
@@ -69,7 +69,6 @@ def get_bilateral_by_sector():
 
 
 def get_imputed_multi_by_sector():
-
     raw_multi = imputed_multilateral_by_purpose(
         years=range(2013, SECTORS_TIME["end"] + 1),
         providers=donor_ids,
@@ -104,7 +103,6 @@ def get_imputed_multi_by_sector():
 
 
 def merge_transform_sectors():
-
     sectors_bi = get_bilateral_by_sector()
     sectors_multi = get_imputed_multi_by_sector()
 
@@ -135,11 +133,13 @@ def merge_transform_sectors():
 
 
 def sectors_to_parquet():
-    df = merge_transform_sectors()
-    df_to_parquet(df)
+    df = merge_transform_sectors().assign(value=lambda d: d["value"].round(6))
+    return df
 
 
 if __name__ == "__main__":
     logger.info("Generating sectors table...")
     set_cache_dir(oda_data=True)
-    sectors_to_parquet()
+    df = sectors_to_parquet()
+    logger.info("Writing parquet to stdout...")
+    df_to_parquet(df)

@@ -13,10 +13,10 @@ from src.data.analysis_tools.helper_functions import (
 
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
+set_cache_dir(oda_data=True)
 
 
 def get_transform_gender():
-
     dfs = []
     for scr in GENDER_INDICATORS.keys():
         df = bilateral_policy_marker(
@@ -62,10 +62,12 @@ def get_transform_gender():
 
 def gender_to_parquet():
     df = get_transform_gender()
-    df_to_parquet(df)
+    return df
 
 
 if __name__ == "__main__":
     logger.info("Generating gender table...")
     set_cache_dir(oda_data=True)
-    gender_to_parquet()
+    df = gender_to_parquet()
+    logger.info("Writing parquet to stdout...")
+    df_to_parquet(df)

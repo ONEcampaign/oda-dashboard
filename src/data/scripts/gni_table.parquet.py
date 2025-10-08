@@ -11,6 +11,7 @@ from src.data.analysis_tools.helper_functions import (
 from src.data.config import PATHS, FINANCING_TIME, logger
 
 eu_ids = provider_groupings()["eu27_countries"]
+set_cache_dir(oda_data=True)
 
 
 def get_gni():
@@ -33,7 +34,6 @@ def get_gni():
     )
 
     if all(code in bilateral_df.donor_code.values for code in eu_ids):
-
         eu_df = (
             bilateral_df.query("donor_code in @eu_ids")
             .groupby(
@@ -58,10 +58,12 @@ def get_gni():
 
 def gni_to_parquet():
     df = get_gni()
-    df_to_parquet(df)
+    return df
 
 
 if __name__ == "__main__":
     logger.info("Generating GNI table...")
     set_cache_dir(oda_data=True)
-    gni_to_parquet()
+    df = gni_to_parquet()
+    logger.info("Writing parquet to stdout...")
+    df_to_parquet(df)

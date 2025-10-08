@@ -27,7 +27,7 @@ IN_DONOR_FINANCING_INDICATORS: dict = {
     "DAC1.10.1820": "Refugees in donor countries",
     "DAC1.10.1500": "Scholarships and student costs in donor countries",
     "DAC1.10.1510": "Scholarships/training in donor country",
-    "DAC1.10.1520": "Imputed student costs"
+    "DAC1.10.1520": "Imputed student costs",
 }
 
 OTHER_FINANCING_INDICATORS: dict = {

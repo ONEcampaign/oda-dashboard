@@ -11,7 +11,7 @@ from src.data.config import (
     FINANCING_INDICATORS,
     FINANCING_TIME,
     eui_bi_code,
-    logger
+    logger,
 )
 
 from src.data.analysis_tools.helper_functions import (
@@ -24,24 +24,24 @@ from src.data.analysis_tools.helper_functions import (
 
 donor_ids = get_dac_ids(PATHS.DONORS)
 eu_ids = provider_groupings()["eu27_total"]
+set_cache_dir(oda_data=True)
 
 
 def get_dac1():
-
     # in-donor indicators in net flows
     in_donor_raw = OECDClient(
         years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1),
         providers=donor_ids,
         measure="net_disbursement",
-        use_bulk_download=True
+        use_bulk_download=True,
     ).get_indicators(list(IN_DONOR_FINANCING_INDICATORS))
 
     # other indicators in net flows up to 2017
     other_flow_raw = OECDClient(
-        years=range(FINANCING_TIME['start'], 2018),
+        years=range(FINANCING_TIME["start"], 2018),
         providers=donor_ids,
         measure="net_disbursement",
-        use_bulk_download=True
+        use_bulk_download=True,
     ).get_indicators(list(OTHER_FINANCING_INDICATORS))
 
     # other indicators in grant equivalents after 2017
@@ -49,7 +49,7 @@ def get_dac1():
         years=range(2018, FINANCING_TIME["end"] + 1),
         providers=donor_ids,
         measure="grant_equivalent",
-        use_bulk_download=True
+        use_bulk_download=True,
     ).get_indicators(list(OTHER_FINANCING_INDICATORS))
 
     dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw])
@@ -68,7 +68,6 @@ def get_dac1():
 
 
 def get_grants():
-
     mapping = {
         "Disbursements, net": "Total ODA",
         "Grant equivalents": "Total ODA",
@@ -106,32 +105,30 @@ def get_grants():
 
     return grants
 
-def get_eui_eu27_dac1():
 
+def get_eui_eu27_dac1():
     # in-donor indicators in net flows
     in_donor_client = OECDClient(
         years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1),
         providers=list(eu_ids),
         measure="net_disbursement",
-        use_bulk_download=True
+        use_bulk_download=True,
     )
 
     in_donor_raw = get_eui_plus_bilateral_providers_indicator(
-        in_donor_client,
-        indicator=list(IN_DONOR_FINANCING_INDICATORS)
+        in_donor_client, indicator=list(IN_DONOR_FINANCING_INDICATORS)
     )
 
     # other indicators in net flows up to 2017
     other_flow_client = OECDClient(
-        years=range(FINANCING_TIME['start'], 2018),
+        years=range(FINANCING_TIME["start"], 2018),
         providers=list(eu_ids),
         measure="net_disbursement",
-        use_bulk_download=True
+        use_bulk_download=True,
     )
 
     other_flow_raw = get_eui_plus_bilateral_providers_indicator(
-        other_flow_client,
-        indicator=list(OTHER_FINANCING_INDICATORS)
+        other_flow_client, indicator=list(OTHER_FINANCING_INDICATORS)
     )
 
     # other indicators in grant equivalents after 2017
@@ -139,12 +136,11 @@ def get_eui_eu27_dac1():
         years=range(2018, FINANCING_TIME["end"] + 1),
         providers=list(eu_ids),
         measure="grant_equivalent",
-        use_bulk_download=True
+        use_bulk_download=True,
     )
 
     other_ge_raw = get_eui_plus_bilateral_providers_indicator(
-        other_ge_client,
-        indicator=list(OTHER_FINANCING_INDICATORS)
+        other_ge_client, indicator=list(OTHER_FINANCING_INDICATORS)
     )
 
     eui_eu27_dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw])
@@ -152,14 +148,15 @@ def get_eui_eu27_dac1():
     eui_eu27_dac1 = (
         eui_eu27_dac1_raw.query("donor_code == 918")
         .assign(donor_code=eui_bi_code)
-        .assign(indicator=lambda d: d["one_indicator"].map(FINANCING_INDICATORS))
-        [["year", "donor_code", "indicator", "value"]]
+        .assign(indicator=lambda d: d["one_indicator"].map(FINANCING_INDICATORS))[
+            ["year", "donor_code", "indicator", "value"]
+        ]
     )
 
     return eui_eu27_dac1
 
-def get_eui_eu27_grants():
 
+def get_eui_eu27_grants():
     mapping = {
         "Disbursements, net": "Total ODA",
         "Grant equivalents": "Total ODA",
@@ -174,8 +171,7 @@ def get_eui_eu27_grants():
     )
 
     grants_flow_raw = get_eui_plus_bilateral_providers_indicator(
-        grants_flow_client,
-        indicator="DAC1.10.1010"
+        grants_flow_client, indicator="DAC1.10.1010"
     )
 
     grants_ge_client = OECDClient(
@@ -186,8 +182,7 @@ def get_eui_eu27_grants():
     )
 
     grants_ge_raw = get_eui_plus_bilateral_providers_indicator(
-        grants_ge_client,
-        indicator="DAC1.10.1010"
+        grants_ge_client, indicator="DAC1.10.1010"
     )
 
     eui_eu27_grants_raw = pd.concat([grants_flow_raw, grants_ge_raw])
@@ -199,15 +194,15 @@ def get_eui_eu27_grants():
         .pivot(index=["year", "donor_code"], columns="indicator", values="value")
         .reset_index()
         .assign(**{"Non-grants": lambda d: d["Total ODA"] - d["Grants"]})
-        .melt(id_vars=["year", "donor_code"], value_vars=["Grants", "Non-grants"])
-        [["year", "donor_code", "indicator", "value"]]
+        .melt(id_vars=["year", "donor_code"], value_vars=["Grants", "Non-grants"])[
+            ["year", "donor_code", "indicator", "value"]
+        ]
     )
 
     return eui_eu27_grants
 
 
 def get_financing_data():
-
     dac1 = get_dac1()
     grants = get_grants()
 
@@ -230,11 +225,13 @@ def get_financing_data():
 
 def financing_to_parquet():
     df = get_financing_data()
-    df_to_parquet(df)
+    return df
 
 
 if __name__ == "__main__":
     save_time_range_to_json(FINANCING_TIME, "financing_time.json")
     logger.info("Generating financing table...")
     set_cache_dir(oda_data=True)
-    financing_to_parquet()
+    df = financing_to_parquet()
+    logger.info("Writing parquet to stdout...")
+    df_to_parquet(df)

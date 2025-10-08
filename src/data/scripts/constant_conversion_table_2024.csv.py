@@ -7,7 +7,6 @@ from src.data.analysis_tools.helper_functions import set_cache_dir, get_dac_ids,
 
 
 def create_df():
-
     donor_codes = get_dac_ids(PATHS.DONORS)
 
     years = range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1)
@@ -24,7 +23,6 @@ def create_df():
 
 
 def deflate_current_usd():
-
     df = create_df()
 
     codes = {"USA": "usd", "CAN": "cad", "FRA": "eur", "GBR": "gbp"}
