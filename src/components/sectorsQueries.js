@@ -1,26 +1,27 @@
 import {FileAttachment} from "observablehq:stdlib";
-import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
-
-const [
+import {
     donorOptions,
     recipientOptions,
     sectorsIndicators,
     code2Subsector,
     subsector2Sector
-] = await Promise.all([
-    FileAttachment("../data/analysis_tools/donors.json").json(),
-    FileAttachment("../data/analysis_tools/recipients.json").json(),
-    FileAttachment("../data/analysis_tools/sectors_indicators.json").json(),
-    FileAttachment("../data/analysis_tools/sub_sectors.json").json(),
-    FileAttachment("../data/analysis_tools/sectors.json").json()
-]);
+} from "./sharedMetadata.js";
+import {createDuckDBClient} from "./duckdbFactory.js";
 
-const db = await DuckDBClient.of({
-    sectors: FileAttachment("../data/scripts/sectors.parquet").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
-    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
-    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv").csv({typed: true}),
-});
+// Lazy initialization: DuckDB instance is created on first query
+let dbPromise = null;
+function getDB() {
+    if (!dbPromise) {
+        const cacheBuster = navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "";
+        dbPromise = createDuckDBClient({
+            sectors: FileAttachment("../data/scripts/sectors.parquet").href + cacheBuster,
+            current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
+            constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv").csv({typed: true})
+        }, 'sectors');
+    }
+    return dbPromise;
+}
 
 const donorMapping = name2CodeMap(donorOptions);
 const recipientMapping = name2CodeMap(recipientOptions);
@@ -158,6 +159,7 @@ async function executeSectorsSeries({
     const donorLabel = escapeSQL(getNameByCode(donorMapping, donor) ?? "Unknown");
     const recipientLabel = escapeSQL(getNameByCode(recipientMapping, recipient) ?? "Unknown");
 
+    const db = await getDB();
     const query = await db.query(
         `
             WITH filtered AS (

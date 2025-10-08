@@ -1,22 +1,25 @@
 import {FileAttachment} from "observablehq:stdlib";
-import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
-
-const [
+import {
     donorOptions,
     recipientOptions,
     recipientsIndicators
-] = await Promise.all([
-    FileAttachment("../data/analysis_tools/donors.json").json(),
-    FileAttachment("../data/analysis_tools/recipients.json").json(),
-    FileAttachment('../data/analysis_tools/recipients_indicators.json').json()
-])
+} from "./sharedMetadata.js";
+import {createDuckDBClient} from "./duckdbFactory.js";
 
-const db = await DuckDBClient.of({
-    recipients: FileAttachment("../data/scripts/recipients.parquet").href + (navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : ""),
-    current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
-    constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv").csv({typed: true}),
-});
+// Lazy initialization: DuckDB instance is created on first query
+let dbPromise = null;
+function getDB() {
+    if (!dbPromise) {
+        const cacheBuster = navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "";
+        dbPromise = createDuckDBClient({
+            recipients: FileAttachment("../data/scripts/recipients.parquet").href + cacheBuster,
+            current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
+            constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv").csv({typed: true})
+        }, 'recipients');
+    }
+    return dbPromise;
+}
 
 const donorMapping = name2CodeMap(donorOptions, {})
 
@@ -157,6 +160,7 @@ async function executeRecipientsSeries(
 
     const indicatorSelection = indicators.join(", ");
 
+    const db = await getDB();
     const query = await db.query(
         `
             WITH filtered AS (
