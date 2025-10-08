@@ -41,6 +41,7 @@ def get_dac_ids(path, remove_eui_bi: bool = True) -> list:
 
     return dac_ids
 
+
 def load_indicators(page: str):
     with open(PATHS.INDICATORS, "r") as f:
         data = json.load(f)
@@ -140,14 +141,16 @@ def df_to_parquet(df: pd.DataFrame):
     schema = pa.schema(schema_fields)
     table = pa.Table.from_pandas(df, schema=schema, preserve_index=False)
     buf = pa.BufferOutputStream()
-    pq.write_table(table, buf, compression="snappy")
+    pq.write_table(table, buf, compression="ZSTD", compression_level=6)
 
     # Write to stdout
     buf_bytes = buf.getvalue().to_pybytes()
     sys.stdout.buffer.write(buf_bytes)
 
 
-def add_index_column(df: pd.DataFrame, column: str, json_path, ordered_list: list = None) -> pd.DataFrame:
+def add_index_column(
+    df: pd.DataFrame, column: str, json_path, ordered_list: list = None
+) -> pd.DataFrame:
     # If no custom order is provided, use unique values in appearance order
     if ordered_list is None:
         ordered_list = list(df[column].unique())
@@ -166,12 +169,8 @@ def add_index_column(df: pd.DataFrame, column: str, json_path, ordered_list: lis
 
     return df
 
-def get_eui(df: pd.DataFrame) -> pd.DataFrame:
 
-    eui_df = (
-        df
-        .query("dac_code == 918")
-        .assign(dac_code=eui_bi_code)
-    )
+def get_eui(df: pd.DataFrame) -> pd.DataFrame:
+    eui_df = df.query("dac_code == 918").assign(dac_code=eui_bi_code)
 
     return eui_df

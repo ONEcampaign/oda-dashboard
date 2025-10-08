@@ -27,7 +27,6 @@ def create_df():
 
 
 def deflate_current_usd():
-
     df = create_df()
 
     codes = {"USA": "usd", "CAN": "cad", "FRA": "eur", "GBR": "gbp"}

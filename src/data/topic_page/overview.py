@@ -43,7 +43,7 @@ def total_aid_key_number() -> None:
             value=lambda d: d.value * 1e6,
             pct_change=lambda d: d["pct_change"].str.replace("%", ""),
             first_line=lambda d: f"As of {d.year.item()}",
-            second_line=lambda d: f"real change from {d.year.item() -1}",
+            second_line=lambda d: f"real change from {d.year.item() - 1}",
             centre=lambda d: round(d["pct_change"].astype(float) / 10, 2),
         )
         .filter(["name", "first_line", "value", "second_line", "pct_change", "centre"])
@@ -63,7 +63,6 @@ def total_aid_key_number() -> None:
 
 
 def aid_gni_key_number() -> None:
-
     client = OECDClient(
         years=[LATEST_YEAR_AGG],
         providers=20001,

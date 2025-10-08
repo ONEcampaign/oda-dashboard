@@ -14,9 +14,11 @@ from src.data.analysis_tools.helper_functions import (
     eui_bi_code,
 )
 
+set_cache_dir(oda_data=True)
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 eu_ids = provider_groupings()["eu27_total"]
+set_cache_dir(oda_data=True)
 
 
 def get_dac2a():
@@ -85,11 +87,12 @@ def combine_recipients():
 
 def recipients_to_parquet():
     df = combine_recipients()
-    df_to_parquet(df)
+    return df
 
 
 if __name__ == "__main__":
     save_time_range_to_json(BASE_TIME, "base_time.json")
     logger.info("Generating recipients table...")
-    set_cache_dir(oda_data=True)
-    recipients_to_parquet()
+    df = recipients_to_parquet()
+    logger.info("Writing parquet to stdout...")
+    df_to_parquet(df)
