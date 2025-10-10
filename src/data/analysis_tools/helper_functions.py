@@ -1,6 +1,8 @@
 import os
 import sys
 import json
+from pathlib import Path
+
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -87,6 +89,164 @@ def load_indicators(page: str):
             code = name_to_code[name]
             result[key] = code
         return result
+
+
+def export_parquet(df: pd.DataFrame, file_path: Path):
+    """
+    Convert DataFrame to Parquet
+    Uses optimized schema with dictionary encoding for codes and float64 for values.
+    """
+    # Convert to efficient types
+    df = df.copy()
+
+    # Convert codes to categorical (for dictionary encoding)
+    if "year" in df.columns:
+        df["year"] = df["year"].astype("category")
+    if "donor_code" in df.columns:
+        df["donor_code"] = df["donor_code"].astype("category")
+    if "donor_name" in df.columns:
+        df["donor_name"] = df["donor_name"].astype("category")
+    if "recipient_code" in df.columns:
+        df["recipient_code"] = df["recipient_code"].astype("category")
+    if "indicator" in df.columns:
+        df["indicator"] = df["indicator"].astype("category")
+    if "indicator_name" in df.columns:
+        df["indicator_name"] = df["indicator_name"].astype("category")
+    if "sub_sector" in df.columns:
+        df["sub_sector"] = df["sub_sector"].astype("category")
+    if "price" in df.columns:
+        df["price"] = df["price"].astype("category")
+    if "currency" in df.columns:
+        df["currency"] = df["currency"].astype("category")
+
+    if "type" in df.columns:
+        df["type"] = df["type"].astype("category")
+
+    # Use float64 for values (standard, no conversion needed in frontend)
+    for col in df.columns:
+        if "value" in col:
+            df[col] = df[col].astype("float64").round(3)
+        if "pct" in col:
+            df[col] = df[col].astype("float64").round(6)
+
+    # Create optimized schema with dictionary encoding
+    schema_fields = []
+    for col in df.columns:
+        if "value" in col or "pct" in col:
+            schema_fields.append(pa.field(col, pa.float64()))
+        elif isinstance(df[col].dtype, pd.CategoricalDtype):
+            # Use dictionary encoding with auto-selected int types
+            categories = df[col].cat.categories
+            if len(categories) <= 127:
+                index_type = pa.int8()
+            elif len(categories) <= 32767:
+                index_type = pa.int16()
+            else:
+                index_type = pa.int32()
+
+            # Determine value type based on category values
+            cat_min, cat_max = categories.min(), categories.max()
+
+            try:
+                if cat_min >= 0 and cat_max <= 65535:
+                    value_type = pa.int16()
+                else:
+                    value_type = pa.int32()
+            except TypeError:
+                # Fallback for non-numeric categories
+                value_type = pa.string()
+
+            schema_fields.append(pa.field(col, pa.dictionary(index_type, value_type)))
+
+    schema = pa.schema(schema_fields)
+    table = pa.Table.from_pandas(df, schema=schema, preserve_index=False)
+    buf = pa.BufferOutputStream()
+    pq.write_table(table, buf, compression="ZSTD", compression_level=6)
+
+    # Save as Parquet file
+    with open(file_path, "wb") as f:
+        # Check the extension and add if missing
+        if not file_path.suffix == ".parquet":
+            file_path = file_path.with_suffix(".parquet")
+        f.write(buf.getvalue().to_pybytes())
+    logger.info(f"Parquet file saved to {file_path}")
+
+
+def parquet_to_stdout(df: pd.DataFrame):
+    """
+    Convert DataFrame to Parquet
+    Uses optimized schema with dictionary encoding for codes and float64 for values.
+    """
+    # Convert to efficient types
+    df = df.copy()
+
+    # Convert codes to categorical (for dictionary encoding)
+    if "year" in df.columns:
+        df["year"] = df["year"].astype("category")
+    if "donor_code" in df.columns:
+        df["donor_code"] = df["donor_code"].astype("category")
+    if "donor_name" in df.columns:
+        df["donor_name"] = df["donor_name"].astype("category")
+    if "recipient_code" in df.columns:
+        df["recipient_code"] = df["recipient_code"].astype("category")
+    if "indicator" in df.columns:
+        df["indicator"] = df["indicator"].astype("category")
+    if "indicator_name" in df.columns:
+        df["indicator_name"] = df["indicator_name"].astype("category")
+    if "sub_sector" in df.columns:
+        df["sub_sector"] = df["sub_sector"].astype("category")
+    if "price" in df.columns:
+        df["price"] = df["price"].astype("category")
+    if "currency" in df.columns:
+        df["currency"] = df["currency"].astype("category")
+
+    if "type" in df.columns:
+        df["type"] = df["type"].astype("category")
+
+    # Use float64 for values (standard, no conversion needed in frontend)
+    for col in df.columns:
+        if "value" in col:
+            df[col] = df[col].astype("float64").round(3)
+        if "pct" in col:
+            df[col] = df[col].astype("float64").round(6)
+
+    # Create optimized schema with dictionary encoding
+    schema_fields = []
+    for col in df.columns:
+        if "value" in col or "pct" in col:
+            schema_fields.append(pa.field(col, pa.float64()))
+        elif isinstance(df[col].dtype, pd.CategoricalDtype):
+            # Use dictionary encoding with auto-selected int types
+            categories = df[col].cat.categories
+            if len(categories) <= 127:
+                index_type = pa.int8()
+            elif len(categories) <= 32767:
+                index_type = pa.int16()
+            else:
+                index_type = pa.int32()
+
+            # Determine value type based on category values
+            cat_min, cat_max = categories.min(), categories.max()
+
+            try:
+                if cat_min >= 0 and cat_max <= 65535:
+                    value_type = pa.int16()
+                else:
+                    value_type = pa.int32()
+            except TypeError:
+                # Fallback for non-numeric categories
+                value_type = pa.string()
+
+            schema_fields.append(pa.field(col, pa.dictionary(index_type, value_type)))
+
+    schema = pa.schema(schema_fields)
+    table = pa.Table.from_pandas(df, schema=schema, preserve_index=False)
+    buf = pa.BufferOutputStream()
+    pq.write_table(table, buf, compression="ZSTD", compression_level=6)
+
+    # Write to stdout
+    buf_bytes = buf.getvalue().to_pybytes()
+    sys.stdout.buffer.write(buf_bytes)
 
 
 def df_to_parquet(df: pd.DataFrame):

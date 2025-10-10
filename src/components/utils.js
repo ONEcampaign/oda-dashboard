@@ -65,18 +65,36 @@ export function getCurrencyLabel(tag, {
 }
 
 
+// Donor group synthetic codes (must match config.py DONOR_GROUPS)
+const DONOR_GROUP_CODES = {
+    "All bilateral donors": 10_000,
+    "DAC countries": 10_001,
+    "EU27 countries": 10_002,
+    "EU27 + EU Institutions": 10_003,
+    "G7 countries": 10_004,
+    "non-DAC countries": 10_005,
+};
+
 export function name2CodeMap(obj, { removeEUIBilateral = true, removeEU27EUI = false } = {}) {
     const map = new Map();
 
     for (const [code, { name, groups }] of Object.entries(obj)) {
-        // Add country name → code
-        if (!map.has(name)) map.set(name, []);
-        map.get(name).push(Number(code));
+        // Add country name → code (single element)
+        if (!map.has(name)) {
+            map.set(name, Number(code));
+        }
 
-        // Add each group → code
+        // Add each group → collect member codes
         for (const group of groups) {
             if (!map.has(group)) map.set(group, []);
             map.get(group).push(Number(code));
+        }
+    }
+
+    // Replace group arrays with synthetic codes
+    for (const [groupName, syntheticCode] of Object.entries(DONOR_GROUP_CODES)) {
+        if (map.has(groupName)) {
+            map.set(groupName, syntheticCode);
         }
     }
 

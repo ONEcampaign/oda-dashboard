@@ -18,6 +18,7 @@ logger.setLevel(logging.INFO)
 eui_bi_code: int = 919
 
 BASE_TIME: dict = {"start": 1990, "end": 2023, "base": 2023}  # for currency conversions
+CURRENCIES: list = ["USD", "EUR", "GBP", "CAD"]
 
 FINANCING_TIME: dict = {"start": 1990, "end": 2024, "base": 2024}
 
@@ -55,6 +56,15 @@ GENDER_INDICATORS: dict = {
     "not_screened": "Not screened",
 }
 
+DONOR_GROUPS: dict = {
+    "All bilateral donors": 10_000,
+    "DAC countries": 10_001,
+    "EU27 countries": 10_002,
+    "EU27 + EU Institutions": 10_003,
+    "G7 countries": 10_004,
+    "non-DAC countries": 10_005,
+}
+
 
 class PATHS:
     """Class to store the paths to the data."""
@@ -62,11 +72,14 @@ class PATHS:
     SRC = Path(__file__).resolve().parent.parent
 
     TOPIC_PAGE = SRC.parent / "topic_page"
+    CDN_FILES = SRC.parent / "cdn_files"
 
     TOOLS = SRC / "data" / "analysis_tools"
     INDICATORS = TOOLS / "indicators.json"
     DONORS = TOOLS / "donors.json"
     RECIPIENTS = TOOLS / "recipients.json"
+
+    FINANCING_INDICATORS_CODES = TOOLS / "financing_indicators.json"
 
     DATA = SRC / "data" / "cache"
     PYDEFLATE = DATA

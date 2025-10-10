@@ -1,5 +1,5 @@
 import {FileAttachment} from "observablehq:stdlib";
-import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
+import {name2CodeMap} from "./utils.js";
 import {donorOptions, financingIndicators} from "./sharedMetadata.js";
 import {createDuckDBClient} from "./duckdbFactory.js";
 
@@ -9,10 +9,7 @@ function getDB() {
     if (!dbPromise) {
         const cacheBuster = navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "";
         dbPromise = createDuckDBClient({
-            financing: FileAttachment("../data/scripts/financing.parquet").href + cacheBuster,
-            gni_table: FileAttachment("../data/scripts/gni_table.parquet").href + cacheBuster,
-            current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
-            constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2024.csv").csv({typed: true})
+            financing: FileAttachment("../data/scripts/financing_view.parquet").href + cacheBuster
         }, 'financing');
     }
     return dbPromise;
@@ -50,7 +47,7 @@ export function financingQueries(
             donor: row.donor,
             indicator: row.indicator,
             type: row.type,
-            value: row.converted_value,
+            value: row.value,
             unit: `${currency} ${prices} million`,
             source: "OECD DAC1"
         }))
@@ -62,7 +59,9 @@ export function financingQueries(
             donor: row.donor,
             indicator: row.indicator,
             type: row.type,
-            value: deriveRelativeValue(row, indicator),
+            value: indicator === indicatorMapping.get("Total ODA")
+                ? row.pct_of_gni * 100
+                : row.pct_of_total_oda * 100,
             unit: indicator === indicatorMapping.get("Total ODA")
                 ? "% of GNI"
                 : "% of total ODA",
@@ -100,26 +99,16 @@ function financingCacheKey({donor, indicator, currency, prices, timeRange}) {
     });
 }
 
-function deriveRelativeValue(row, indicator) {
-    if (row.original_value == null) return null;
-
-    if (indicator === indicatorMapping.get("Total ODA")) {
-        return ratioAsPct(row.original_value, row.gni_value);
-    }
-
-    return ratioAsPct(row.original_value, row.total_original);
-}
-
 function deriveTableValue(row, unit, indicator) {
     switch (unit) {
         case "value":
-            return row.converted_value;
+            return row.value;
         case "gni_pct":
-            return ratioAsPct(row.original_value, row.gni_value);
+            return row.pct_of_gni * 100;
         case "total_pct":
-            return ratioAsPct(row.original_value, row.total_original);
+            return row.pct_of_total_oda * 100;
         default:
-            return row.converted_value;
+            return row.value;
     }
 }
 
@@ -133,20 +122,10 @@ function deriveTableUnit(unit, currency, prices, indicator) {
     }
 
     if (unit === "total_pct") {
-        return indicator === indicatorMapping.get("Total ODA")
-            ? "% of total ODA"
-            : "% of total ODA";
+        return "% of total ODA";
     }
 
     return `${currency} ${prices} million`;
-}
-
-function ratioAsPct(numerator, denominator) {
-    if (numerator == null || denominator == null || denominator === 0) {
-        return null;
-    }
-
-    return (numerator / denominator) * 100;
 }
 
 async function fetchFinancingSeries(
@@ -178,83 +157,25 @@ async function executeFinancingSeries(
     prices,
     timeRange
 ) {
-    const totalIndicatorCode = indicatorMapping.get("Total ODA");
-    const indicatorsForQuery = indicator === totalIndicatorCode
-        ? `${indicator}`
-        : `${indicator}, ${totalIndicatorCode}`;
-
     const db = await getDB();
+    const valueColumn = `value_${currency}_${prices}`;
+
     const query = await db.query(
         `
-            WITH filtered AS (
-                SELECT
-                    year,
-                    donor_code AS donor,
-                    indicator,
-                    value
-                FROM financing
-                WHERE
-                    donor_code IN (${donor})
-                    AND indicator IN (${indicatorsForQuery})
-                    AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-            ),
-            conversion AS (
-                SELECT
-                    year,
-                    ${prices === "constant" ? "dac_code AS donor," : ""}
-                    ${currency}_${prices} AS factor
-                FROM
-                    ${prices}_conversion_table
-                    ${prices === "constant" ? `WHERE dac_code IN (${donor})` : ""}
-            ),
-            converted AS (
-                SELECT
-                    f.year,
-                    f.indicator,
-                    SUM(f.value) AS original_value,
-                    SUM(f.value * c.factor) AS converted_value
-                FROM filtered f
-                    JOIN conversion c
-                ON f.year = c.year
-                    ${prices === "constant" ? "AND f.donor = c.donor" : ""}
-                GROUP BY f.year, f.indicator
-            ),
-            totals AS (
-                SELECT
-                    year,
-                    original_value AS total_original,
-                    converted_value AS total_converted
-                FROM converted
-                WHERE indicator = ${totalIndicatorCode}
-            ),
-            gni AS (
-                SELECT
-                    year,
-                    SUM(value) AS gni_value
-                FROM gni_table
-                WHERE
-                    donor_code IN (${donor})
-                    AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-                GROUP BY year
-            )
             SELECT
-                c.year AS year,
-                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
-                '${escapeSQL(getNameByCode(indicatorMapping, indicator))}' AS indicator,
-                CASE
-                    WHEN c.year < 2018 THEN 'Flows'
-                    WHEN c.year >= 2018 THEN 'Grant equivalents'
-                END AS type,
-                c.converted_value,
-                c.original_value,
-                t.total_original,
-                t.total_converted,
-                g.gni_value
-            FROM converted c
-                LEFT JOIN totals t ON c.year = t.year
-                LEFT JOIN gni g ON c.year = g.year
-            WHERE c.indicator = ${indicator}
-            ORDER BY c.year
+                year,
+                donor_name AS donor,
+                indicator_name AS indicator,
+                type,
+                ${valueColumn} AS value,
+                pct_of_gni,
+                pct_of_total_oda
+            FROM financing
+            WHERE
+                donor_code = ${donor}
+                AND indicator = ${indicator}
+                AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
+            ORDER BY year
         `
     );
 
@@ -263,10 +184,8 @@ async function executeFinancingSeries(
         donor: row.donor,
         indicator: row.indicator,
         type: row.type,
-        converted_value: row.converted_value ?? null,
-        original_value: row.original_value ?? null,
-        total_original: row.total_original ?? null,
-        total_converted: row.total_converted ?? null,
-        gni_value: row.gni_value ?? null
+        value: row.value ?? null,
+        pct_of_gni: row.pct_of_gni ?? null,
+        pct_of_total_oda: row.pct_of_total_oda ?? null
     }));
 }
