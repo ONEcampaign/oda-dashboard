@@ -67,19 +67,55 @@ export function getCurrencyLabel(tag, {
 
 // Donor group synthetic codes (must match config.py DONOR_GROUPS)
 const DONOR_GROUP_CODES = {
-    "All bilateral donors": 10_000,
-    "DAC countries": 10_001,
-    "EU27 countries": 10_002,
-    "EU27 + EU Institutions": 10_003,
-    "G7 countries": 10_004,
-    "non-DAC countries": 10_005,
+    "All bilateral donors": 20_000,
+    "DAC countries": 20_001,
+    "EU27 countries": 20_002,
+    "EU27 + EU Institutions": 20_003,
+    "G7 countries": 20_004,
+    "non-DAC countries": 20_005,
 };
 
-export function name2CodeMap(obj, { removeEUIBilateral = true, removeEU27EUI = false } = {}) {
+// Recipient group synthetic codes (must match config.py RECIPIENT_GROUPS)
+const RECIPIENT_GROUP_CODES = {
+    "Developing countries": 100_000,
+    "Africa": 100_001,
+    "America": 100_002,
+    "Asia": 100_003,
+    "Caribbean": 100_004,
+    "Central America": 100_006,
+    "Central America and the Caribbean": 10_005,
+    "Eastern Africa": 100_007,
+    "Europe": 100_008,
+    "Far East Asia": 100_009,
+    "Fragile and conflict-affected countries": 100_010,
+    "France priority countries": 100_011,
+    "Least developed countries": 100_012,
+    "Low income countries": 100_013,
+    "Lower-middle income countries": 100_014,
+    "Melanesia": 100_015,
+    "Micronesia": 100_016,
+    "Middle Africa": 100_017,
+    "Middle East": 100_018,
+    "North America": 100_019,
+    "Northern Africa": 100_02,
+    "Oceania": 100_021,
+    "Polynesia": 100_022,
+    "Sahel countries": 100_023,
+    "South America": 100_024,
+    "Southern Africa": 100_025,
+    "Southern and Central Asia": 100_026,
+    "Sub-Saharan Africa": 10_003,
+    "Upper-middle income countries": 100_028,
+    "Western Africa": 100_029,
+    "Middle income countries": 100_030,
+};
+
+export function name2CodeMap(obj, { removeEUIBilateral = true, removeEU27EUI = false, useRecipientGroups = false } = {}) {
     const map = new Map();
+    const groupCodes = useRecipientGroups ? RECIPIENT_GROUP_CODES : DONOR_GROUP_CODES;
 
     for (const [code, { name, groups }] of Object.entries(obj)) {
-        // Add country name → code (single element)
+        // Add country/recipient name → code (single element)
         if (!map.has(name)) {
             map.set(name, Number(code));
         }
@@ -92,7 +128,7 @@ export function name2CodeMap(obj, { removeEUIBilateral = true, removeEU27EUI = f
     }
 
     // Replace group arrays with synthetic codes
-    for (const [groupName, syntheticCode] of Object.entries(DONOR_GROUP_CODES)) {
+    for (const [groupName, syntheticCode] of Object.entries(groupCodes)) {
         if (map.has(groupName)) {
             map.set(groupName, syntheticCode);
         }

@@ -57,12 +57,46 @@ GENDER_INDICATORS: dict = {
 }
 
 DONOR_GROUPS: dict = {
-    "All bilateral donors": 10_000,
-    "DAC countries": 10_001,
-    "EU27 countries": 10_002,
-    "EU27 + EU Institutions": 10_003,
-    "G7 countries": 10_004,
-    "non-DAC countries": 10_005,
+    "All bilateral donors": 20_000,
+    "DAC countries": 20_001,
+    "EU27 countries": 20_002,
+    "EU27 + EU Institutions": 20_003,
+    "G7 countries": 20_004,
+    "non-DAC countries": 20_005,
+}
+
+RECIPIENT_GROUPS: dict = {
+    "Developing countries": 100_000,
+    "Africa": 100_001,
+    "America": 100_002,
+    "Asia": 100_003,
+    "Caribbean": 100_004,
+    "Central America": 100_006,
+    "Central America and the Caribbean": 10_005,
+    "Eastern Africa": 100_007,
+    "Europe": 100_008,
+    "Far East Asia": 100_009,
+    "Fragile and conflict-affected countries": 100_010,
+    "France priority countries": 100_011,
+    "Least developed countries": 100_012,
+    "Low income countries": 100_013,
+    "Lower-middle income countries": 100_014,
+    "Melanesia": 100_015,
+    "Micronesia": 100_016,
+    "Middle Africa": 100_017,
+    "Middle East": 100_018,
+    "North America": 100_019,
+    "Northern Africa": 100_02,
+    "Oceania": 100_021,
+    "Polynesia": 100_022,
+    "Sahel countries": 100_023,
+    "South America": 100_024,
+    "Southern Africa": 100_025,
+    "Southern and Central Asia": 100_026,
+    "Sub-Saharan Africa": 10_003,
+    "Upper-middle income countries": 100_028,
+    "Western Africa": 100_029,
+    "Middle income countries": 100_030,
 }
 
 
@@ -80,6 +114,7 @@ class PATHS:
     RECIPIENTS = TOOLS / "recipients.json"
 
     FINANCING_INDICATORS_CODES = TOOLS / "financing_indicators.json"
+    RECIPIENT_INDICATORS_CODES = TOOLS / "recipients_indicators.json"
 
     DATA = SRC / "data" / "cache"
     PYDEFLATE = DATA

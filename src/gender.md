@@ -20,7 +20,7 @@ const donorMapping = name2CodeMap(donorOptions, {removeEU27EUI:true})
 
 ```js
 const recipientOptions = await FileAttachment("./data/analysis_tools/recipients.json").json()
-const recipientMapping = name2CodeMap(recipientOptions)
+const recipientMapping = name2CodeMap(recipientOptions, { useRecipientGroups: true })
 ```
 
 ```js

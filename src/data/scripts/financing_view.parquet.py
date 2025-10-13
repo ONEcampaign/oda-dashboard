@@ -14,7 +14,7 @@ from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
     add_donor_groupings,
     add_donor_names,
-    add_indicator_codes,
+    add_financing_indicator_codes,
     add_share_of_gni,
     add_share_of_total_oda,
     widen_currency_price,
@@ -227,7 +227,7 @@ def get_financing_data():
     financing = add_donor_groupings(financing)
 
     # Add indicator code
-    financing = add_indicator_codes(financing)
+    financing = add_financing_indicator_codes(financing)
 
     # Add donor name
     financing = add_donor_names(financing)

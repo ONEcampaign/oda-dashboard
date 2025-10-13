@@ -11,7 +11,7 @@ from src.data.config import (
     CURRENCIES,
     DONOR_GROUPS,
     PATHS,
-    FINANCING_INDICATORS,
+    RECIPIENT_GROUPS,
 )
 
 set_pydeflate_path(PATHS.PYDEFLATE)
@@ -99,6 +99,21 @@ def donor_groups() -> dict:
     return {DONOR_GROUPS[group]: sorted(codes) for group, codes in group_map.items()}
 
 
+def recipient_groups() -> dict:
+    """Invert donor JSON structure to map group names to lists of numeric codes."""
+    group_map = defaultdict(list)
+    with open(PATHS.RECIPIENTS, "r") as f:
+        data = json.load(f)
+
+    for code, info in data.items():
+        for group in info.get("groups", []):
+            group_map[group].append(int(code))
+
+    return {
+        RECIPIENT_GROUPS[group]: sorted(codes) for group, codes in group_map.items()
+    }
+
+
 def add_donor_groupings(df: pd.DataFrame) -> pd.DataFrame:
     groups = []
 
@@ -118,7 +133,23 @@ def add_donor_groupings(df: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([df] + groups, ignore_index=True)
 
 
-def add_recipient_groupings(df: pd.DataFrame) -> pd.DataFrame: ...
+def add_recipient_groupings(df: pd.DataFrame) -> pd.DataFrame:
+    groups = []
+
+    for group, members in recipient_groups().items():
+        grouped = df.copy().loc[lambda d: d["recipient_code"].isin(set(members))]
+        if not grouped.empty:
+            grouped["recipient_code"] = group
+            grouped = (
+                grouped.groupby(
+                    [c for c in df.columns if c != "value"], dropna=False, observed=True
+                )["value"]
+                .sum()
+                .reset_index()
+            )
+            groups.append(grouped)
+
+    return pd.concat([df] + groups, ignore_index=True)
 
 
 def widen_currency_price(
@@ -176,6 +207,30 @@ def add_share_of_total_oda(df: pd.DataFrame) -> pd.DataFrame:
     return merged
 
 
+def add_share_of_recipients_total_oda(df: pd.DataFrame) -> pd.DataFrame:
+    """Add column for share of total ODA"""
+
+    total = (
+        df.loc[lambda d: d.recipient_code == 100_000]
+        .groupby(["year", "donor_code"], dropna=False, observed=True)[
+            "value_usd_current"
+        ]
+        .sum()
+        .reset_index()
+        .rename(columns={"value_usd_current": "total_oda"})
+    )
+
+    merged = df.merge(total, on=["year", "donor_code"], how="left")
+
+    merged["pct_of_total_oda"] = (
+        merged["value_usd_current"] / merged["total_oda"]
+    ).round(6)
+
+    merged = merged.drop(columns=["total_oda"])
+
+    return merged
+
+
 def add_share_of_gni(df: pd.DataFrame) -> pd.DataFrame:
     """Add column for share of GNI"""
 
@@ -185,17 +240,26 @@ def add_share_of_gni(df: pd.DataFrame) -> pd.DataFrame:
 
     merged = df.merge(gni, on=["year", "donor_code"], how="left")
 
-    merged["pct_of_gni"] = (merged["value_usd_current"] / merged["gni"]).round(4)
+    merged["pct_of_gni"] = (merged["value_usd_current"] / merged["gni"]).round(5)
 
     merged = merged.drop(columns=["gni"])
 
     return merged
 
 
-def add_indicator_codes(df: pd.DataFrame) -> pd.DataFrame:
+def add_financing_indicator_codes(df: pd.DataFrame) -> pd.DataFrame:
     """Add indicator codes to the dataframe"""
     df = df.rename(columns={"indicator": "indicator_name"})
     with open(PATHS.FINANCING_INDICATORS_CODES, "r") as f:
+        indicator_map = {v: int(k) for k, v in json.load(f).items()}
+    df = df.assign(indicator=lambda d: d["indicator_name"].map(indicator_map))
+    return df
+
+
+def add_recipient_indicator_codes(df: pd.DataFrame) -> pd.DataFrame:
+    """Add indicator codes to the dataframe"""
+    df = df.rename(columns={"indicator": "indicator_name"})
+    with open(PATHS.RECIPIENT_INDICATORS_CODES, "r") as f:
         indicator_map = {v: int(k) for k, v in json.load(f).items()}
     df = df.assign(indicator=lambda d: d["indicator_name"].map(indicator_map))
     return df
@@ -209,3 +273,13 @@ def add_donor_names(df: pd.DataFrame) -> pd.DataFrame:
     }
 
     return df.assign(donor_name=lambda d: d["donor_code"].map(providers))
+
+
+def add_recipient_names(df: pd.DataFrame) -> pd.DataFrame:
+    from oda_data import recipient_groupings
+
+    recipients = recipient_groupings()["all_recipients"] | {
+        v: k for k, v in RECIPIENT_GROUPS.items()
+    }
+
+    return df.assign(recipient_name=lambda d: d["recipient_code"].map(recipients))
