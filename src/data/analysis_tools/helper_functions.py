@@ -134,7 +134,7 @@ def export_parquet(df: pd.DataFrame, file_path: Path):
 
     sort_keys = [
         c
-        for c in ["indicator", "donor_code", "recipient_code", "year"]
+        for c in ["donor_code", "recipient_code", "indicator", "year"]
         if c in df.columns
     ]
     if sort_keys:
@@ -143,8 +143,6 @@ def export_parquet(df: pd.DataFrame, file_path: Path):
     table = pa.Table.from_pandas(df=df, preserve_index=False)
 
     bss_cols = {c: True for c in value_cols if c in df.columns}
-
-    row_group_size = max(len(df), 512_000)
 
     path = (
         file_path
@@ -161,7 +159,7 @@ def export_parquet(df: pd.DataFrame, file_path: Path):
         use_byte_stream_split=bss_cols,
         write_statistics=True,
         data_page_size=1_048_576,
-        row_group_size=row_group_size,
+        row_group_size=100_000,
     )
 
 
@@ -208,7 +206,7 @@ def parquet_to_stdout(df: pd.DataFrame):
 
     sort_keys = [
         c
-        for c in ["indicator", "donor_code", "recipient_code", "year"]
+        for c in ["donor_code", "recipient_code", "indicator", "year"]
         if c in df.columns
     ]
     if sort_keys:
@@ -217,8 +215,6 @@ def parquet_to_stdout(df: pd.DataFrame):
     table = pa.Table.from_pandas(df=df, preserve_index=False)
 
     bss_cols = {c: True for c in value_cols if c in df.columns}
-
-    row_group_size = max(len(df), 512_000)
 
     buf = pa.BufferOutputStream()
 
@@ -231,7 +227,7 @@ def parquet_to_stdout(df: pd.DataFrame):
         use_byte_stream_split=bss_cols,
         write_statistics=True,
         data_page_size=1_048_576,
-        row_group_size=row_group_size,
+        row_group_size=100_000,
     )
 
     # Write to stdout

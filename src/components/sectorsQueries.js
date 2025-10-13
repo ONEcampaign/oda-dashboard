@@ -1,4 +1,4 @@
-import {FileAttachment} from "observablehq:stdlib";
+import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {name2CodeMap, getNameByCode} from "./utils.js";
 import {
     donorOptions,
@@ -7,18 +7,27 @@ import {
     code2Subsector,
     subsector2Sector
 } from "./sharedMetadata.js";
-import {createDuckDBClient} from "./duckdbFactory.js";
+
+// Parquet file URL
+const PARQUET_URL = 'https://storage.googleapis.com/data-apps-one-data/sources/sectors_view.parquet';
 
 // Lazy initialization: DuckDB instance is created on first query
 let dbPromise = null;
 function getDB() {
-    if (!dbPromise) {
-        const cacheBuster = navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "";
-        dbPromise = createDuckDBClient({
-            sectors: FileAttachment("../data/scripts/sectors_view.parquet").href + cacheBuster
-        }, 'sectors');
-    }
-    return dbPromise;
+  if (!dbPromise) {
+    dbPromise = DuckDBClient.of().then(async (db) => {
+      // Ensure remote HTTP(S) parquet works with partial reads
+      await db.query(`
+        LOAD parquet;
+        LOAD httpfs;
+
+        SET enable_http_metadata_cache = true;
+
+      `);
+      return db;
+    });
+  }
+  return dbPromise;
 }
 
 const donorMapping = name2CodeMap(donorOptions);
@@ -155,7 +164,7 @@ async function executeSectorsSeries({
     const db = await getDB();
     const query = await db.query(
         `
-            WITH base AS (
+            WITH aggregated AS (
                 SELECT
                     year,
                     donor_name AS donor,
@@ -166,48 +175,28 @@ async function executeSectorsSeries({
                         ? "'Bilateral + Imputed multilateral ODA' AS indicator_label,"
                         : "indicator_name AS indicator_label,"
                     }
-                    ${valueColumn} AS converted_value,
-                    value_usd_current AS original_value
-                FROM sectors
+                    SUM(${valueColumn}) AS converted_value,
+                    SUM(value_usd_current) AS original_value
+                FROM read_parquet('${PARQUET_URL}')
                 WHERE
                     donor_code = ${donor}
                     AND recipient_code = ${recipient}
                     AND indicator IN (${indicatorSelection})
                     AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-            ),
-            aggregated AS (
-                SELECT
-                    year,
-                    donor,
-                    recipient,
-                    sector_name,
-                    sub_sector,
-                    ${combineIndicators ? "ANY_VALUE(indicator_label)" : "indicator_label"} AS indicator_label,
-                    SUM(converted_value) AS converted_value,
-                    SUM(original_value) AS original_value
-                FROM base
-                GROUP BY year, donor, recipient, sector_name, sub_sector${combineIndicators ? "" : ", indicator_label"}
-            ),
-            indicator_totals AS (
-                SELECT
-                    year,
-                    SUM(original_value) AS indicator_original_value
-                FROM base
-                GROUP BY year
+                GROUP BY year, donor_name, recipient_name, sector_name, sub_sector_name${combineIndicators ? "" : ", indicator_name"}
             )
             SELECT
-                a.year,
-                a.donor,
-                a.recipient,
-                a.sector_name,
-                a.sub_sector,
-                a.indicator_label,
-                a.converted_value,
-                a.original_value,
-                it.indicator_original_value
-            FROM aggregated a
-                LEFT JOIN indicator_totals it ON a.year = it.year
-            ORDER BY a.year, a.sub_sector
+                year,
+                donor,
+                recipient,
+                sector_name,
+                sub_sector,
+                indicator_label,
+                converted_value,
+                original_value,
+                SUM(original_value) OVER (PARTITION BY year) AS indicator_original_value
+            FROM aggregated
+            ORDER BY year, sub_sector
         `
     );
 

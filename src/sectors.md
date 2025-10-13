@@ -42,7 +42,7 @@ const donorInput = Inputs.select(
     donorMapping,
     {
         label: "Donor",
-        value: donorMapping.get("DAC countries"),
+        value: donorMapping.get("Australia"),
         sort: true
     })
 const donor = Generators.input(donorInput);

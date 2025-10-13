@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["https://one-campaign.observablehq.cloud", "https://data-apps.one.org", "http://127.0.0.1:*", "http://localhost:*"],
+    "method": ["GET", "HEAD"],
+    "responseHeader": ["Content-Type", "Content-Length", "Range", "Accept-Ranges"],
+    "maxAgeSeconds": 3600
+  }
+]
