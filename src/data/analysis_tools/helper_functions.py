@@ -179,7 +179,7 @@ def parquet_to_stdout(df: pd.DataFrame):
     ]
     for c in value_cols:
         # keep Float32 end-to-end
-        df[c] = df[c].astype("Float32")
+        df[c] = df[c].round(6).astype("Float32")
 
     for col in [
         "year",

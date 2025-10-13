@@ -12,6 +12,7 @@ from src.data.config import (
     DONOR_GROUPS,
     PATHS,
     RECIPIENT_GROUPS,
+    logger,
 )
 
 set_pydeflate_path(PATHS.PYDEFLATE)
@@ -59,6 +60,7 @@ def add_currencies_and_prices(df: pd.DataFrame) -> pd.DataFrame:
     df = df.assign(currency="USD", price="current")
 
     for currency in CURRENCIES:
+        logger.info(f"Converting to {currency}")
         if currency == "USD":
             current_dfs.append(df.assign(currency=currency, price="current"))
         else:
