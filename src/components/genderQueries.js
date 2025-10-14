@@ -1,11 +1,13 @@
 import {FileAttachment} from "observablehq:stdlib";
 import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
-import {
-    donorOptions,
-    recipientOptions,
-    genderIndicators
-} from "./sharedMetadata.js";
 import {createDuckDBClient} from "./duckdbFactory.js";
+
+// Load only metadata required for gender queries
+const [donorOptions, recipientOptions, genderIndicators] = await Promise.all([
+    FileAttachment("../data/analysis_tools/donors.json").json(),
+    FileAttachment("../data/analysis_tools/recipients.json").json(),
+    FileAttachment("../data/analysis_tools/gender_indicators.json").json()
+]);
 
 // Lazy initialization: DuckDB instance is created on first query
 let dbPromise = null;

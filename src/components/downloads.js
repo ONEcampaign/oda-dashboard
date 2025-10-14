@@ -1,13 +1,13 @@
-import {toPng} from 'npm:html-to-image';
-import {utils, writeFile} from "npm:xlsx";
-
-export function downloadPNG(elementId, filename) {
-
+// Lazy-load download libraries only when needed
+export async function downloadPNG(elementId, filename) {
     const element = document.getElementById(elementId);
     if (!element) {
         console.error(`Element with ID "${elementId}" not found.`);
         return;
     }
+
+    // Dynamic import - only loads when user clicks download button
+    const {toPng} = await import('npm:html-to-image');
 
     toPng(element, { pixelRatio: 2, backgroundColor: "white" })
         .then((dataUrl) => {
@@ -22,7 +22,9 @@ export function downloadPNG(elementId, filename) {
 }
 
 // https://observablehq.observablehq.cloud/pangea/party/xlsx-downloads
-export function downloadXLSX(data, filename) {
+export async function downloadXLSX(data, filename) {
+    // Dynamic import - only loads when user clicks download button
+    const {utils, writeFile} = await import('npm:xlsx');
 
     const worksheet = utils.json_to_sheet(data);
     const workbook = utils.book_new();

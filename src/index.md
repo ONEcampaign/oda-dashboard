@@ -2,7 +2,7 @@
 import {setCustomColors} from "@one-data/observable-themes/use-colors";
 import {customPalette} from "./components/colors.js";
 import {logo} from "@one-data/observable-themes/use-images";
-import {financingQueries} from "./components/financingQueries.js";
+import {financingQueries, transformTableData, donorOptions, financingIndicators} from "./components/financingQueries.js";
 import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap, decodeHTML} from "./components/utils.js";
 import {rangeInput} from "./components/rangeInput.js";
 import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
@@ -14,14 +14,13 @@ setCustomColors(customPalette);
 ```
 
 ```js
-const donorOptions = await FileAttachment("./data/analysis_tools/donors.json").json()
+// Use metadata exported from financingQueries.js to avoid duplicate loading
 const donorMapping = name2CodeMap(donorOptions, {})
 ```
 
 ```js
-const indicatorOptions = await FileAttachment('./data/analysis_tools/financing_indicators.json').json()
 const indicatorMapping = new Map(
-    Object.entries(indicatorOptions).map(([k, v]) => [v, Number(k)])
+    Object.entries(financingIndicators).map(([k, v]) => [v, Number(k)])
 );
 ```
 
@@ -129,19 +128,22 @@ const commitment = Generators.input(commitmentInput)
 ```
 
 ```js
-// DATA QUERY
+// DATA QUERY (optimized: unit changes don't trigger re-query)
 const data = financingQueries(
-    donor, 
+    donor,
     indicator,
     currency,
     prices,
-    timeRange, 
-    unit
+    timeRange
 )
 
 const absoluteData = data.absolute
 const relativeData = data.relative
-const tableData = data.table
+```
+
+```js
+// Table data calculated separately so unit changes are instant
+const tableData = transformTableData(data.rawData, unit, indicator, currency, prices)
 ```
 
 <div class="header card">

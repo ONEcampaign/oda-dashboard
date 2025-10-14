@@ -1,19 +1,18 @@
 import {FileAttachment} from "observablehq:stdlib";
 import {name2CodeMap} from "./utils.js";
-import {donorOptions, financingIndicators} from "./sharedMetadata.js";
-import {createDuckDBClient} from "./duckdbFactory.js";
 
-// Lazy initialization: DuckDB instance is created on first query
-let dbPromise = null;
-function getDB() {
-    if (!dbPromise) {
-        const cacheBuster = navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "";
-        dbPromise = createDuckDBClient({
-            financing: FileAttachment("../data/scripts/financing_view.parquet").href + cacheBuster
-        }, 'financing');
-    }
-    return dbPromise;
-}
+// Load metadata and parquet data in parallel
+const [donorOptions, financingIndicators, financingTable] = await Promise.all([
+    FileAttachment("../data/analysis_tools/donors.json").json(),
+    FileAttachment("../data/analysis_tools/financing_indicators.json").json(),
+    FileAttachment("../data/scripts/financing_view.parquet").parquet()
+]);
+
+// Convert Arrow table to JavaScript array for fast in-memory filtering
+const financingData = financingTable.toArray();
+
+// Export for use in index.md to avoid duplicate loading
+export {donorOptions, financingIndicators};
 
 const donorMapping = name2CodeMap(donorOptions, {})
 
@@ -29,11 +28,10 @@ export function financingQueries(
     indicator,
     currency,
     prices,
-    timeRange,
-    unit
+    timeRange
 ) {
 
-    const basePromise = fetchFinancingSeries(
+    const rows = fetchFinancingSeries(
         donor,
         indicator,
         currency,
@@ -41,50 +39,45 @@ export function financingQueries(
         timeRange
     );
 
-    const absolute = basePromise.then((rows) =>
-        rows.map((row) => ({
-            year: row.year,
-            donor: row.donor,
-            indicator: row.indicator,
-            type: row.type,
-            value: row.value,
-            unit: `${currency} ${prices} million`,
-            source: "OECD DAC1"
-        }))
-    );
+    const absolute = rows.map((row) => ({
+        year: row.year,
+        donor: row.donor,
+        indicator: row.indicator,
+        type: row.type,
+        value: row.value,
+        unit: `${currency} ${prices} million`,
+        source: "OECD DAC1"
+    }));
 
-    const relative = basePromise.then((rows) =>
-        rows.map((row) => ({
-            year: row.year,
-            donor: row.donor,
-            indicator: row.indicator,
-            type: row.type,
-            value: indicator === indicatorMapping.get("Total ODA")
-                ? row.pct_of_gni * 100
-                : row.pct_of_total_oda * 100,
-            unit: indicator === indicatorMapping.get("Total ODA")
-                ? "% of GNI"
-                : "% of total ODA",
-            source: "OECD DAC1"
-        }))
-    );
+    const relative = rows.map((row) => ({
+        year: row.year,
+        donor: row.donor,
+        indicator: row.indicator,
+        type: row.type,
+        value: indicator === indicatorMapping.get("Total ODA")
+            ? row.pct_of_gni * 100
+            : row.pct_of_total_oda * 100,
+        unit: indicator === indicatorMapping.get("Total ODA")
+            ? "% of GNI"
+            : "% of total ODA",
+        source: "OECD DAC1"
+    }));
 
-    const table = basePromise.then((rows) =>
-        rows.map((row) => {
-            return {
-                year: row.year,
-                donor: row.donor,
-                indicator: row.indicator,
-                type: row.type,
-                value: deriveTableValue(row, unit, indicator),
-                unit: deriveTableUnit(unit, currency, prices, indicator),
-                source: "OECD DAC1"
-            };
-        })
-    );
+    // Return raw rows for table transformation
+    return {absolute, relative, rawData: rows};
+}
 
-    return {absolute, relative, table};
-
+// Separate table transformation so unit changes don't trigger base query
+export function transformTableData(rows, unit, indicator, currency, prices) {
+    return rows.map((row) => ({
+        year: row.year,
+        donor: row.donor,
+        indicator: row.indicator,
+        type: row.type,
+        value: deriveTableValue(row, unit, indicator),
+        unit: deriveTableUnit(unit, currency, prices, indicator),
+        source: "OECD DAC1"
+    }));
 }
 
 function financingCacheKey({donor, indicator, currency, prices, timeRange}) {
@@ -128,7 +121,7 @@ function deriveTableUnit(unit, currency, prices, indicator) {
     return `${currency} ${prices} million`;
 }
 
-async function fetchFinancingSeries(
+function fetchFinancingSeries(
     donor,
     indicator,
     currency,
@@ -150,42 +143,31 @@ async function fetchFinancingSeries(
     return financingCache.get(cacheKey);
 }
 
-async function executeFinancingSeries(
+function executeFinancingSeries(
     donor,
     indicator,
     currency,
     prices,
     timeRange
 ) {
-    const db = await getDB();
+    // In-memory filtering - much faster than DuckDB for small datasets
     const valueColumn = `value_${currency}_${prices}`;
 
-    const query = await db.query(
-        `
-            SELECT
-                year,
-                donor_name AS donor,
-                indicator_name AS indicator,
-                type,
-                ${valueColumn} AS value,
-                pct_of_gni,
-                pct_of_total_oda
-            FROM financing
-            WHERE
-                donor_code = ${donor}
-                AND indicator = ${indicator}
-                AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-            ORDER BY year
-        `
-    );
-
-    return query.toArray().map((row) => ({
-        year: row.year,
-        donor: row.donor,
-        indicator: row.indicator,
-        type: row.type,
-        value: row.value ?? null,
-        pct_of_gni: row.pct_of_gni ?? null,
-        pct_of_total_oda: row.pct_of_total_oda ?? null
-    }));
+    return financingData
+        .filter(row =>
+            row.donor_code === donor &&
+            row.indicator === indicator &&
+            row.year >= timeRange[0] &&
+            row.year <= timeRange[1]
+        )
+        .map(row => ({
+            year: row.year,
+            donor: row.donor_name,
+            indicator: row.indicator_name,
+            type: row.type,
+            value: row[valueColumn] ?? null,
+            pct_of_gni: row.pct_of_gni ?? null,
+            pct_of_total_oda: row.pct_of_total_oda ?? null
+        }))
+        .sort((a, b) => a.year - b.year);
 }

@@ -1,12 +1,21 @@
 import {DuckDBClient} from "npm:@observablehq/duckdb";
+import {FileAttachment} from "observablehq:stdlib";
 import {name2CodeMap, getNameByCode} from "./utils.js";
-import {
+
+// Load only metadata required for sectors queries
+const [
     donorOptions,
     recipientOptions,
     sectorsIndicators,
     code2Subsector,
     subsector2Sector
-} from "./sharedMetadata.js";
+] = await Promise.all([
+    FileAttachment("../data/analysis_tools/donors.json").json(),
+    FileAttachment("../data/analysis_tools/recipients.json").json(),
+    FileAttachment("../data/analysis_tools/sectors_indicators.json").json(),
+    FileAttachment("../data/analysis_tools/sub_sectors.json").json(),
+    FileAttachment("../data/analysis_tools/sectors.json").json()
+]);
 
 // Parquet dataset URL (partitioned by donor_code and recipient_code)
 const PARQUET_DATASET_URL = "https://storage.googleapis.com/data-apps-one-data/sources/sectors_view";
