@@ -193,7 +193,7 @@ def widen_currency_price(
         Wide DataFrame where columns are like 'USD_current_value', 'USD_constant_value', etc.
     """
     # Pre-process values in long format (much faster than on wide data)
-    df["value"] = df["value"].round(6).astype("float32")
+    df["value"] = df["value"].round(4).astype("float32")
 
     # Check for duplicates before pivoting and aggregate if found
     pivot_cols = list(index_cols) + ["currency", "price"]

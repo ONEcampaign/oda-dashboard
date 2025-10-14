@@ -139,7 +139,7 @@ def optimize_dataframe_types(
         c for c in df.columns if c.startswith("value_") or c.startswith("pct")
     ]
     for col in value_cols:
-        df[col] = df[col].round(5).astype("Float32")
+        df[col] = df[col].astype("Float32")
 
     # Standard Int16 columns
     for col in ["year", "donor_code", "indicator"]:
