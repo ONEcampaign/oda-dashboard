@@ -1,5 +1,5 @@
-import {FileAttachment} from "observablehq:stdlib";
-import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
+import {DuckDBClient} from "npm:@observablehq/duckdb";
+import {name2CodeMap, getNameByCode} from "./utils.js";
 import {
     donorOptions,
     recipientOptions,
@@ -7,20 +7,28 @@ import {
     code2Subsector,
     subsector2Sector
 } from "./sharedMetadata.js";
-import {createDuckDBClient} from "./duckdbFactory.js";
+
+// Parquet file URL
+const PARQUET_URL = 'https://storage.googleapis.com/data-apps-one-data/sources/sectors_view.parquet';
 
 // Lazy initialization: DuckDB instance is created on first query
 let dbPromise = null;
 function getDB() {
-    if (!dbPromise) {
-        const cacheBuster = navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "";
-        dbPromise = createDuckDBClient({
-            sectors: FileAttachment("../data/scripts/sectors.parquet").href + cacheBuster,
-            current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
-            constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv").csv({typed: true})
-        }, 'sectors');
-    }
-    return dbPromise;
+  if (!dbPromise) {
+    dbPromise = DuckDBClient.of().then(async (db) => {
+      // Configure for optimal HTTP parquet reads
+      await db.query(`
+        LOAD parquet;
+        LOAD httpfs;
+
+        SET enable_http_metadata_cache = true;
+        SET http_timeout = 120000;
+        SET force_download = false;
+      `);
+      return db;
+    });
+  }
+  return dbPromise;
 }
 
 const donorMapping = name2CodeMap(donorOptions);
@@ -29,10 +37,6 @@ const recipientMapping = name2CodeMap(recipientOptions);
 const indicatorLabelMap = new Map(
     Object.entries(sectorsIndicators).map(([code, label]) => [Number(code), label])
 );
-
-const indicatorCase = Object.entries(sectorsIndicators)
-    .map(([code, label]) => `WHEN indicator = ${code} THEN '${escapeSQL(label)}'`)
-    .join("\n");
 
 const sectorsCache = new Map();
 
@@ -156,72 +160,44 @@ async function executeSectorsSeries({
 
     const indicatorSelection = indicators.join(", ");
     const combineIndicators = indicators.length > 1;
-    const donorLabel = escapeSQL(getNameByCode(donorMapping, donor) ?? "Unknown");
-    const recipientLabel = escapeSQL(getNameByCode(recipientMapping, recipient) ?? "Unknown");
+    const valueColumn = `value_${currency}_${prices}`;
 
     const db = await getDB();
     const query = await db.query(
         `
-            WITH filtered AS (
+            WITH aggregated AS (
                 SELECT
                     year,
-                    donor_code AS donor,
-                    recipient_code AS recipient,
-                    sub_sector,
-                    indicator,
-                    value
-                FROM sectors
+                    donor_name AS donor,
+                    recipient_name AS recipient,
+                    sector_name,
+                    sub_sector_name AS sub_sector,
+                    ${combineIndicators
+                        ? "'Bilateral + Imputed multilateral ODA' AS indicator_label,"
+                        : "indicator_name AS indicator_label,"
+                    }
+                    SUM(${valueColumn}) AS converted_value,
+                    SUM(value_usd_current) AS original_value
+                FROM read_parquet('${PARQUET_URL}')
                 WHERE
-                    donor_code IN (${donor})
-                    AND recipient_code IN (${recipient})
+                    donor_code = ${donor}
+                    AND recipient_code = ${recipient}
                     AND indicator IN (${indicatorSelection})
                     AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-            ),
-            conversion AS (
-                SELECT
-                    year,
-                    ${prices === "constant" ? "dac_code AS donor," : ""}
-                    ${currency}_${prices} AS factor
-                FROM ${prices}_conversion_table
-                    ${prices === "constant" ? `WHERE dac_code IN (${donor})` : ""}
-            ),
-            converted AS (
-                SELECT
-                    f.year,
-                    f.sub_sector,
-                    ${combineIndicators
-                        ? "'Bilateral + Imputed multilateral ODA'"
-                        : `CASE
-                                ${indicatorCase}
-                            END`
-                    } AS indicator_label,
-                    SUM(f.value) AS original_value,
-                    SUM(f.value * c.factor) AS converted_value
-                FROM filtered f
-                    JOIN conversion c
-                        ON f.year = c.year
-                        ${prices === "constant" ? "AND f.donor = c.donor" : ""}
-                GROUP BY f.year, f.sub_sector${combineIndicators ? "" : ", f.indicator"}
-            ),
-            indicator_totals AS (
-                SELECT
-                    year,
-                    SUM(value) AS indicator_original_value
-                FROM filtered
-                GROUP BY year
+                GROUP BY year, donor_name, recipient_name, sector_name, sub_sector_name${combineIndicators ? "" : ", indicator_name"}
             )
             SELECT
-                c.year,
-                '${donorLabel}' AS donor,
-                '${recipientLabel}' AS recipient,
-                c.sub_sector,
-                c.indicator_label,
-                c.converted_value,
-                c.original_value,
-                it.indicator_original_value
-            FROM converted c
-                LEFT JOIN indicator_totals it ON c.year = it.year
-            ORDER BY c.year, c.sub_sector
+                year,
+                donor,
+                recipient,
+                sector_name,
+                sub_sector,
+                indicator_label,
+                converted_value,
+                original_value,
+                SUM(original_value) OVER (PARTITION BY year) AS indicator_original_value
+            FROM aggregated
+            ORDER BY year, sub_sector
         `
     );
 
@@ -229,6 +205,7 @@ async function executeSectorsSeries({
         year: row.year,
         donor: row.donor,
         recipient: row.recipient,
+        sector_name: row.sector_name,
         sub_sector: row.sub_sector,
         indicator: row.indicator_label,
         converted_value: row.converted_value ?? null,
@@ -255,8 +232,7 @@ function buildTreemap(rows, {
 
     const aggregated = new Map();
     for (const row of rows) {
-        const subsectorName = code2Subsector[row.sub_sector] ?? "Other";
-        const sectorName = subsector2Sector[subsectorName] ?? "Other";
+        const sectorName = row.sector_name ?? "Other";
         const key = `${sectorName}|${row.indicator}`;
         const total = aggregated.get(key) ?? 0;
         aggregated.set(key, total + (row.converted_value ?? 0));
@@ -290,8 +266,7 @@ function buildSelected(rows, {
     subsector2Sector
 }) {
     const relevantRows = rows.filter((row) => {
-        const subsectorName = code2Subsector[row.sub_sector] ?? "Other";
-        const sectorName = subsector2Sector[subsectorName] ?? "Other";
+        const sectorName = row.sector_name ?? "Other";
         return sectorName === selectedSector;
     });
 
@@ -302,7 +277,7 @@ function buildSelected(rows, {
     if (breakdown) {
         const subsectorTotals = new Map();
         for (const row of relevantRows) {
-            const subsectorName = code2Subsector[row.sub_sector] ?? "Other";
+            const subsectorName = row.sub_sector ?? "Other";
             subsectorTotals.set(subsectorName, (subsectorTotals.get(subsectorName) ?? 0) + (row.converted_value ?? 0));
         }
 
@@ -313,7 +288,7 @@ function buildSelected(rows, {
 
         return relevantRows
             .map((row) => {
-                const subsectorName = code2Subsector[row.sub_sector] ?? "Other";
+                const subsectorName = row.sub_sector ?? "Other";
                 return {
                     year: row.year,
                     donor: donorName,
@@ -367,8 +342,7 @@ function buildTable(rows, {
     subsector2Sector
 }) {
     const relevantRows = rows.filter((row) => {
-        const subsectorName = code2Subsector[row.sub_sector] ?? "Other";
-        const sectorName = subsector2Sector[subsectorName] ?? "Other";
+        const sectorName = row.sector_name ?? "Other";
         return sectorName === selectedSector;
     });
 
@@ -387,7 +361,7 @@ function buildTable(rows, {
 
         const subsectorTotals = new Map();
         for (const row of relevantRows) {
-            const subsectorName = code2Subsector[row.sub_sector] ?? "Other";
+            const subsectorName = row.sub_sector ?? "Other";
             subsectorTotals.set(subsectorName, (subsectorTotals.get(subsectorName) ?? 0) + (row.converted_value ?? 0));
         }
         const orderedSubsectors = [...subsectorTotals.entries()]
@@ -397,7 +371,7 @@ function buildTable(rows, {
 
         return relevantRows
             .map((row) => {
-                const subsectorName = code2Subsector[row.sub_sector] ?? "Other";
+                const subsectorName = row.sub_sector ?? "Other";
                 return {
                     year: row.year,
                     donor: donorName,

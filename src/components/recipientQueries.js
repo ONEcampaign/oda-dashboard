@@ -1,5 +1,5 @@
 import {FileAttachment} from "observablehq:stdlib";
-import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
+import {name2CodeMap} from "./utils.js";
 import {
     donorOptions,
     recipientOptions,
@@ -13,9 +13,7 @@ function getDB() {
     if (!dbPromise) {
         const cacheBuster = navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "";
         dbPromise = createDuckDBClient({
-            recipients: FileAttachment("../data/scripts/recipients.parquet").href + cacheBuster,
-            current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
-            constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv").csv({typed: true})
+            recipients: FileAttachment("../data/scripts/recipients_view.parquet").href + cacheBuster
         }, 'recipients');
     }
     return dbPromise;
@@ -23,7 +21,7 @@ function getDB() {
 
 const donorMapping = name2CodeMap(donorOptions, {})
 
-const recipientMapping = name2CodeMap(recipientOptions)
+const recipientMapping = name2CodeMap(recipientOptions, { useRecipientGroups: true })
 
 
 const recipientsCache = new Map();
@@ -56,7 +54,7 @@ export function recipientsQueries(
             donor: row.donor,
             recipient: row.recipient,
             indicator: row.indicator,
-            value: row.converted_value,
+            value: row.value,
             unit: `${currency} ${prices} million`,
             source: "OECD DAC2A"
         }))
@@ -68,7 +66,7 @@ export function recipientsQueries(
             donor: row.donor,
             recipient: row.recipient,
             indicator: row.indicator,
-            value: ratioAsPct(row.original_value, row.total_value),
+            value: row.pct_of_total_oda * 100,
             unit: "% of total ODA",
             source: "OECD DAC2A"
         }))
@@ -81,8 +79,8 @@ export function recipientsQueries(
             recipient: row.recipient,
             indicator: row.indicator,
             value: unit === "value"
-                ? row.converted_value
-                : ratioAsPct(row.original_value, row.total_value),
+                ? row.value
+                : row.pct_of_total_oda * 100,
             unit: unit === "value"
                 ? `${currency} ${prices} million`
                 : "% of bilateral + imputed multilateral ODA",
@@ -108,14 +106,6 @@ function recipientsCacheKey({donor, recipient, indicator, currency, prices, time
         prices,
         timeRange: timeRangeKey
     });
-}
-
-function ratioAsPct(numerator, denominator) {
-    if (numerator == null || denominator == null || denominator === 0) {
-        return null;
-    }
-
-    return (numerator / denominator) * 100;
 }
 
 async function fetchRecipientsSeries(
@@ -154,74 +144,26 @@ async function executeRecipientsSeries(
         return [];
     }
 
-    const indicatorCase = Object.entries(recipientsIndicators)
-        .map(([code, label]) => `WHEN indicator = ${code} THEN '${escapeSQL(label)}'`)
-        .join("\n");
-
     const indicatorSelection = indicators.join(", ");
+    const valueColumn = `value_${currency}_${prices}`;
 
     const db = await getDB();
     const query = await db.query(
         `
-            WITH filtered AS (
-                SELECT
-                    year,
-                    donor_code AS donor,
-                    recipient_code AS recipient,
-                    indicator,
-                    value
-                FROM recipients
-                WHERE
-                    donor_code IN (${donor})
-                    AND recipient_code IN (${recipient})
-                    AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-                    AND indicator IN (${indicatorSelection})
-            ),
-            conversion AS (
-                SELECT
-                    year,
-                    ${prices === "constant" ? "dac_code AS donor," : ""}
-                    ${currency}_${prices} AS factor
-                FROM
-                    ${prices}_conversion_table
-                    ${prices === "constant" ? `WHERE dac_code IN (${donor})` : ""}
-            ),
-            converted AS (
-                SELECT
-                    f.year,
-                    CASE
-                        ${indicatorCase}
-                    END AS indicator_label,
-                    SUM(f.value) AS original_value,
-                    SUM(f.value * c.factor) AS converted_value
-                FROM filtered f
-                    JOIN conversion c
-                        ON f.year = c.year
-                        ${prices === "constant" ? "AND f.donor = c.donor" : ""}
-                GROUP BY f.year, f.indicator
-            ),
-            totals AS (
-                SELECT
-                    year,
-                    SUM(value) AS total_value
-                FROM recipients
-                WHERE
-                    donor_code IN (${donor})
-                    AND recipient_code IN (${recipient})
-                    AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-                GROUP BY year
-            )
             SELECT
-                c.year,
-                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
-                '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
-                c.indicator_label,
-                c.converted_value,
-                c.original_value,
-                t.total_value
-            FROM converted c
-                LEFT JOIN totals t ON c.year = t.year
-            ORDER BY c.year, c.indicator_label
+                year,
+                donor_name AS donor,
+                recipient_name AS recipient,
+                indicator_name AS indicator,
+                ${valueColumn} AS value,
+                pct_of_total_oda
+            FROM recipients
+            WHERE
+                donor_code = ${donor}
+                AND recipient_code = ${recipient}
+                AND indicator IN (${indicatorSelection})
+                AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
+            ORDER BY year, indicator_name
         `
     );
 
@@ -229,9 +171,8 @@ async function executeRecipientsSeries(
         year: row.year,
         donor: row.donor,
         recipient: row.recipient,
-        indicator: row.indicator_label,
-        converted_value: row.converted_value ?? null,
-        original_value: row.original_value ?? null,
-        total_value: row.total_value ?? null
+        indicator: row.indicator,
+        value: row.value ?? null,
+        pct_of_total_oda: row.pct_of_total_oda ?? null
     }));
 }

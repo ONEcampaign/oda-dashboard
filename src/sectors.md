@@ -17,7 +17,7 @@ const donorMapping = name2CodeMap(donorOptions, {removeEU27EUI:true})
 
 ```js
 const recipientOptions = await FileAttachment("./data/analysis_tools/recipients.json").json()
-const recipientMapping = name2CodeMap(recipientOptions)
+const recipientMapping = name2CodeMap(recipientOptions, { useRecipientGroups: true })
 ```
 
 ```js
@@ -42,7 +42,7 @@ const donorInput = Inputs.select(
     donorMapping,
     {
         label: "Donor",
-        value: donorMapping.get("DAC countries"),
+        value: donorMapping.get("Australia"),
         sort: true
     })
 const donor = Generators.input(donorInput);
