@@ -8,9 +8,8 @@ import {
     subsector2Sector
 } from "./sharedMetadata.js";
 
-// Parquet file URL
+// Parquet dataset URL (partitioned by donor_code and recipient_code)
 const PARQUET_DATASET_URL = "https://storage.googleapis.com/data-apps-one-data/sources/sectors_view";
-const PARQUET_LEGACY_URL = `${PARQUET_DATASET_URL}.parquet`;
 
 // Lazy initialization: DuckDB instance is created on first query
 let dbPromise = null;
@@ -41,7 +40,6 @@ const indicatorLabelMap = new Map(
 );
 
 const sectorsCache = new Map();
-let partitionedDatasetAvailable = true;
 
 function toArray(value) {
     return Array.isArray(value) ? value : [value];
@@ -76,19 +74,9 @@ function buildReadParquetClause(paths) {
     return `read_parquet([${quoted}], union_by_name=true)`;
 }
 
-function isNoMatchingFilesError(error) {
-    const message = error?.message ?? "";
-    return message.includes("No files matched");
-}
-
 function isNotFoundError(error) {
     const message = error?.message?.toLowerCase() ?? "";
-    return message.includes("404") || message.includes("not found");
-}
-
-function isDatasetUnavailableError(error) {
-    const message = error?.message ?? "";
-    return message.includes("403") || message.includes("Forbidden") || message.includes("Could not download file");
+    return message.includes("404") || message.includes("not found") || message.includes("no files matched");
 }
 
 export function sectorsQueries(
@@ -213,50 +201,34 @@ async function executeSectorsSeries({
     const combineIndicators = indicators.length > 1;
     const valueColumn = `value_${currency}_${prices}`;
 
-    const db = await getDB();
-    const queryOptions = {
-        donor,
-        recipient,
-        indicatorSelection,
-        combineIndicators,
-        valueColumn,
-        timeRange
-    };
+    const partitionPaths = buildPartitionPaths({donor, recipient});
+    const parquetClause = buildReadParquetClause(partitionPaths);
 
-    if (partitionedDatasetAvailable) {
-        const partitionPaths = buildPartitionPaths({donor, recipient});
-        const parquetClause = buildReadParquetClause(partitionPaths);
-
-        if (parquetClause) {
-            try {
-                return await runSectorsQuery(db, {
-                    ...queryOptions,
-                    parquetClause
-                });
-            } catch (error) {
-                if (isNoMatchingFilesError(error)) {
-                    return [];
-                }
-
-                if (isNotFoundError(error)) {
-                    return [];
-                }
-
-                if (isDatasetUnavailableError(error)) {
-                    partitionedDatasetAvailable = false;
-                } else {
-                    throw error;
-                }
-            }
-        } else {
-            return [];
-        }
+    // Return empty array if no paths to query
+    if (!parquetClause) {
+        return [];
     }
 
-    return runSectorsQuery(db, {
-        ...queryOptions,
-        parquetClause: buildReadParquetClause([PARQUET_LEGACY_URL])
-    });
+    const db = await getDB();
+
+    try {
+        return await runSectorsQuery(db, {
+            donor,
+            recipient,
+            indicatorSelection,
+            combineIndicators,
+            valueColumn,
+            timeRange,
+            parquetClause
+        });
+    } catch (error) {
+        // Return empty array for 404/not found errors (partition doesn't exist)
+        if (isNotFoundError(error)) {
+            return [];
+        }
+        // Re-throw other errors
+        throw error;
+    }
 }
 
 async function runSectorsQuery(db, {
