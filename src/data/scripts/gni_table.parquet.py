@@ -1,8 +1,6 @@
-
-
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
-    df_to_parquet,
+    parquet_to_stdout,
 )
 from src.data.analysis_tools.transformations import get_gni
 from src.data.config import FINANCING_TIME, logger
@@ -20,4 +18,4 @@ if __name__ == "__main__":
     set_cache_dir(oda_data=True)
     df = gni_to_parquet()
     logger.info("Writing parquet to stdout...")
-    df_to_parquet(df)
+    parquet_to_stdout(df)

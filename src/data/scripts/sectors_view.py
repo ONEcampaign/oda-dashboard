@@ -122,11 +122,21 @@ def combined_sectors():
     # Add currencies and prices
     sectors = add_currencies_and_prices(sectors)
 
+    # Filter zeros again after currency conversion (reduces data before widening)
+    logger.info(f"Rows before zero filter: {len(sectors):,}")
+    sectors = sectors[sectors["value"] != 0]
+    logger.info(f"Rows after zero filter: {len(sectors):,}")
+
     # Add donor groupings
     sectors = add_donor_groupings(sectors)
 
     # Add recipient groupings
     sectors = add_recipient_groupings(sectors)
+
+    # Filter zeros again after groupings (groupings multiply data)
+    logger.info(f"Rows before final zero filter: {len(sectors):,}")
+    sectors = sectors[sectors["value"] != 0]
+    logger.info(f"Rows after final zero filter: {len(sectors):,}")
 
     # Add indicator code
     sectors = add_recipient_indicator_codes(sectors)
@@ -146,6 +156,7 @@ def combined_sectors():
     sector_mapping = sector_lists.get_broad_sector_groups()
     sectors["sector_name"] = sectors["sub_sector_name"].map(sector_mapping)
 
+    logger.info(f"Starting pivot with {len(sectors):,} rows")
     # Pivot values to columns
     sectors = widen_currency_price(
         df=sectors,

@@ -167,23 +167,32 @@ def widen_currency_price(
     Returns:
         Wide DataFrame where columns are like 'USD_current_value', 'USD_constant_value', etc.
     """
-    wide = (
-        df.pivot_table(
-            index=list(index_cols),
-            columns=["currency", "price"],
-            values="value",
-            aggfunc="first",
-        )
-        .sort_index(axis=1)
-        .round(3)
+    # Pre-process values in long format (much faster than on wide data)
+    df["value"] = df["value"].round(6).astype("float32")
+
+    # Check for duplicates before pivoting
+    pivot_cols = list(index_cols) + ["currency", "price"]
+    duplicates = df[pivot_cols].duplicated()
+    if duplicates.any():
+        logger.warning(f"Found {duplicates.sum()} duplicate rows before pivoting")
+        dup_examples = df[duplicates][pivot_cols].head()
+        logger.warning(f"Examples:\n{dup_examples}")
+        # Keep first occurrence
+        df = df[~duplicates]
+
+    wide = df.pivot(
+        index=list(index_cols),
+        columns=["currency", "price"],
+        values="value",
     )
 
-    # Flatten MultiIndex columns -> "usd_current_value"
+    # Flatten MultiIndex columns -> "value_usd_current"
     wide.columns = [
         f"value_{cur.lower()}_{price}" for cur, price in wide.columns.to_list()
     ]
     wide = wide.reset_index()
 
+    # Reorder columns: index cols first, then sorted value cols
     value_cols = sorted([c for c in wide.columns if c not in index_cols])
     return wide[list(index_cols) + value_cols]
 
