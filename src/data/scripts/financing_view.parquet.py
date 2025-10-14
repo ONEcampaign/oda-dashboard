@@ -8,6 +8,7 @@ from src.data.analysis_tools.helper_functions import (
     get_dac_ids,
     set_cache_dir,
     parquet_to_stdout,
+    convert_values_to_units,
 )
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
@@ -252,6 +253,10 @@ def get_financing_data():
 
     # Add share of GNI column
     financing = add_share_of_gni(financing)
+
+    # Convert values to units (integers) for better compression
+    # NOTE: Frontend queries must divide value_* columns by 1e6 to get millions
+    financing = convert_values_to_units(financing)
 
     return financing
 

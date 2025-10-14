@@ -21,6 +21,7 @@ from src.data.analysis_tools.helper_functions import (
     get_dac_ids,
     eui_bi_code,
     parquet_to_stdout,
+    convert_values_to_units,
 )
 
 set_cache_dir(oda_data=True, pydeflate=True)
@@ -117,6 +118,10 @@ def combined_recipients():
 
     # Add share of total ODA
     recipients = add_share_of_recipients_total_oda(recipients)
+
+    # Convert values to units (integers) for better compression
+    # NOTE: Frontend queries must divide value_* columns by 1e6 to get millions
+    recipients = convert_values_to_units(recipients)
 
     return recipients
 

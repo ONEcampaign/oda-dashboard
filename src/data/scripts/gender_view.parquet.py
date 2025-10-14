@@ -17,6 +17,7 @@ from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
     get_dac_ids,
     parquet_to_stdout,
+    convert_values_to_units,
 )
 
 donor_ids = get_dac_ids(PATHS.DONORS)
@@ -96,6 +97,10 @@ def combined_gender():
 
     # Add share of total ODA
     gender = add_gender_share_of_total_oda(gender)
+
+    # Convert values to units (integers) for better compression
+    # NOTE: Frontend queries must divide value_* columns by 1e6 to get millions
+    gender = convert_values_to_units(gender)
 
     return gender
 

@@ -1,5 +1,11 @@
 import {FileAttachment} from "observablehq:stdlib";
-import {name2CodeMap} from "./utils.js";
+import {name2CodeMap, convertUnitsToMillions} from "./utils.js";
+
+/**
+ * IMPORTANT: Value columns in the parquet file are stored as integers in UNITS (not millions).
+ * All value_* columns must be divided by 1e6 to convert to millions for display.
+ * Use the convertUnitsToMillions() helper function for this conversion.
+ */
 
 // Load metadata and parquet data in parallel
 const [donorOptions, recipientOptions, recipientsIndicators, recipientsTable] = await Promise.all([
@@ -152,7 +158,7 @@ function executeRecipientsSeries(
             donor: row.donor_name,
             recipient: row.recipient_name,
             indicator: row.indicator_name,
-            value: row[valueColumn] ?? null,
+            value: convertUnitsToMillions(row[valueColumn]),
             pct_of_total_oda: row.pct_of_total_oda ?? null
         }))
         .sort((a, b) => {

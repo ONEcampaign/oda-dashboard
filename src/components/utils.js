@@ -34,6 +34,20 @@ export function formatValue(value) {
     return {value: roundedValue, label};
 }
 
+/**
+ * Convert integer units to millions.
+ * Value columns in parquet files are stored as integers in units (not millions).
+ * This function divides by 1e6 to convert back to millions for display.
+ *
+ * @param {number|bigint|null} value - Value in units (may be BigInt for Int64 columns)
+ * @returns {number|null} - Value in millions, or null if input is null
+ */
+export function convertUnitsToMillions(value) {
+    if (value == null) return null;
+    // Convert BigInt to Number before division (Int64 values become BigInt in JavaScript)
+    return Number(value) / 1e6;
+}
+
 
 export function getCurrencyLabel(tag, {
     currencyOnly = false,

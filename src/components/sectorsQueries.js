@@ -2,6 +2,12 @@ import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {FileAttachment} from "observablehq:stdlib";
 import {name2CodeMap, getNameByCode} from "./utils.js";
 
+/**
+ * IMPORTANT: Value columns in the parquet file are stored as integers in UNITS (not millions).
+ * All value_* columns must be divided by 1e6 to convert to millions for display.
+ * This conversion is done in the DuckDB SQL queries below.
+ */
+
 // Load only metadata required for sectors queries
 const [
     donorOptions,
@@ -266,8 +272,8 @@ async function runSectorsQuery(db, {
                         ? "'Bilateral + Imputed multilateral ODA' AS indicator_label,"
                         : "indicator_name AS indicator_label,"
                     }
-                    SUM(${valueColumn}) AS converted_value,
-                    SUM(value_usd_current) AS original_value
+                    SUM(${valueColumn}) / 1e6 AS converted_value,
+                    SUM(value_usd_current) / 1e6 AS original_value
                 FROM ${parquetClause}
                 WHERE
                     donor_code = ${donor}

@@ -21,6 +21,7 @@ from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
     get_dac_ids,
     write_partitioned_dataset,
+    convert_values_to_units,
 )
 
 donor_ids = get_dac_ids(PATHS.DONORS)
@@ -173,6 +174,10 @@ def combined_sectors():
 
     with open(PATHS.TOOLS / "sectors.json", "w") as f:
         json.dump(sector_mapping_filtered, f, indent=2)
+
+    # Convert values to units (integers) for better compression
+    # NOTE: Frontend queries must divide value_* columns by 1e6 to get millions
+    sectors = convert_values_to_units(sectors)
 
     return sectors
 

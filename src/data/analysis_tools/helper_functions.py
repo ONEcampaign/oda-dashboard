@@ -111,6 +111,50 @@ def get_eui(df: pd.DataFrame) -> pd.DataFrame:
     return eui_df
 
 
+def convert_values_to_units(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Convert value columns from millions to units for better compression.
+
+    Multiplies value_* columns by 1e6, rounds to integers, and converts to Int32/Int64.
+    Percentage columns (pct_*) are left as Float32.
+
+    Args:
+        df: DataFrame with value_* columns in millions
+
+    Returns:
+        DataFrame with value_* columns as integers in units
+
+    Note:
+        Frontend queries must divide value_* columns by 1e6 to convert back to millions.
+    """
+    df = df.copy()
+
+    # Get value columns (exclude percentage columns)
+    value_cols = [c for c in df.columns if c.startswith("value_")]
+
+    for col in value_cols:
+        # Convert to units (multiply by 1 million)
+        units = (df[col] * 1e6).round()
+
+        # Check if values fit in Int32 range (±2.1 billion)
+        max_abs_value = units.abs().max()
+
+        if pd.isna(max_abs_value):
+            # All values are NaN, use Int32 as default
+            df[col] = units.astype("Int32")
+            logger.info(f"Column {col}: All NaN, using Int32")
+        elif max_abs_value > 2_147_483_647:
+            # Need Int64
+            df[col] = units.astype("Int64")
+            logger.info(f"Column {col}: Max value {max_abs_value:,.0f} requires Int64")
+        else:
+            # Can use Int32 (more efficient)
+            df[col] = units.astype("Int32")
+            logger.info(f"Column {col}: Max value {max_abs_value:,.0f} fits in Int32")
+
+    return df
+
+
 # ============================================================================
 # Shared Parquet Utilities
 # ============================================================================
@@ -134,11 +178,14 @@ def optimize_dataframe_types(
     """
     df = df.copy()
 
-    # Value columns → Float32
+    # Value columns → Float32 (unless already Int32/Int64 from convert_values_to_units)
     value_cols = [
         c for c in df.columns if c.startswith("value_") or c.startswith("pct")
     ]
     for col in value_cols:
+        # Preserve integer types if already converted to units
+        if pd.api.types.is_integer_dtype(df[col]):
+            continue  # Keep Int32 or Int64
         df[col] = df[col].astype("Float32")
 
     # Standard Int16 columns
