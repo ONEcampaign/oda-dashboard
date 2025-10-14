@@ -9,7 +9,8 @@ import {
 } from "./sharedMetadata.js";
 
 // Parquet file URL
-const PARQUET_URL = 'https://storage.googleapis.com/data-apps-one-data/sources/sectors_view.parquet';
+const PARQUET_DATASET_URL = "https://storage.googleapis.com/data-apps-one-data/sources/sectors_view";
+const PARQUET_LEGACY_URL = `${PARQUET_DATASET_URL}.parquet`;
 
 // Lazy initialization: DuckDB instance is created on first query
 let dbPromise = null;
@@ -24,6 +25,7 @@ function getDB() {
         SET enable_http_metadata_cache = true;
         SET http_timeout = 120000;
         SET force_download = false;
+        SET enable_object_cache = true;
       `);
       return db;
     });
@@ -39,6 +41,55 @@ const indicatorLabelMap = new Map(
 );
 
 const sectorsCache = new Map();
+let partitionedDatasetAvailable = true;
+
+function toArray(value) {
+    return Array.isArray(value) ? value : [value];
+}
+
+function buildPartitionPaths({donor, recipient}) {
+    const donors = toArray(donor);
+    const recipients = toArray(recipient);
+
+    const paths = new Set();
+    for (const donorCode of donors) {
+        for (const recipientCode of recipients) {
+            paths.add(
+                `${PARQUET_DATASET_URL}/donor_code=${donorCode}/recipient_code=${recipientCode}/part-0.parquet`
+            );
+        }
+    }
+
+    return [...paths];
+}
+
+function buildReadParquetClause(paths) {
+    if (paths.length === 0) {
+        return null;
+    }
+
+    if (paths.length === 1) {
+        return `read_parquet('${paths[0]}', union_by_name=true)`;
+    }
+
+    const quoted = paths.map((path) => `'${path}'`).join(", ");
+    return `read_parquet([${quoted}], union_by_name=true)`;
+}
+
+function isNoMatchingFilesError(error) {
+    const message = error?.message ?? "";
+    return message.includes("No files matched");
+}
+
+function isNotFoundError(error) {
+    const message = error?.message?.toLowerCase() ?? "";
+    return message.includes("404") || message.includes("not found");
+}
+
+function isDatasetUnavailableError(error) {
+    const message = error?.message ?? "";
+    return message.includes("403") || message.includes("Forbidden") || message.includes("Could not download file");
+}
 
 export function sectorsQueries(
     donor,
@@ -163,6 +214,64 @@ async function executeSectorsSeries({
     const valueColumn = `value_${currency}_${prices}`;
 
     const db = await getDB();
+    const queryOptions = {
+        donor,
+        recipient,
+        indicatorSelection,
+        combineIndicators,
+        valueColumn,
+        timeRange
+    };
+
+    if (partitionedDatasetAvailable) {
+        const partitionPaths = buildPartitionPaths({donor, recipient});
+        const parquetClause = buildReadParquetClause(partitionPaths);
+
+        if (parquetClause) {
+            try {
+                return await runSectorsQuery(db, {
+                    ...queryOptions,
+                    parquetClause
+                });
+            } catch (error) {
+                if (isNoMatchingFilesError(error)) {
+                    return [];
+                }
+
+                if (isNotFoundError(error)) {
+                    return [];
+                }
+
+                if (isDatasetUnavailableError(error)) {
+                    partitionedDatasetAvailable = false;
+                } else {
+                    throw error;
+                }
+            }
+        } else {
+            return [];
+        }
+    }
+
+    return runSectorsQuery(db, {
+        ...queryOptions,
+        parquetClause: buildReadParquetClause([PARQUET_LEGACY_URL])
+    });
+}
+
+async function runSectorsQuery(db, {
+    parquetClause,
+    donor,
+    recipient,
+    indicatorSelection,
+    combineIndicators,
+    valueColumn,
+    timeRange
+}) {
+    if (!parquetClause) {
+        return [];
+    }
+
     const query = await db.query(
         `
             WITH aggregated AS (
@@ -178,7 +287,7 @@ async function executeSectorsSeries({
                     }
                     SUM(${valueColumn}) AS converted_value,
                     SUM(value_usd_current) AS original_value
-                FROM read_parquet('${PARQUET_URL}')
+                FROM ${parquetClause}
                 WHERE
                     donor_code = ${donor}
                     AND recipient_code = ${recipient}

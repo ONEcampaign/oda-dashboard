@@ -414,6 +414,32 @@ form:has(table) {
     font-weight: bold;
 }
 
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    font-size: var(--size-m);
+    color: var(--darkGrey);
+    box-sizing: border-box;
+}
+
+.loading-indicator .spinner {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    border: 0.2rem solid rgba(0, 0, 0, 0.1);
+    border-top-color: var(--darkGrey);
+    animation: sectors-spin 0.8s linear infinite;
+}
+
+@keyframes sectors-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* Responsive design */
 
 @media (max-width: 1000px) {
@@ -455,6 +481,5 @@ form:has(table) {
         gap: 20px !important;
     }
 }
-
 
 

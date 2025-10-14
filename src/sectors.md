@@ -11,6 +11,10 @@ import {downloadPNG, downloadXLSX} from './components/downloads.js';
 ```
 
 ```js
+const sectorsStateStore = globalThis.__odaSectorsState ??= {lastResult: null};
+```
+
+```js
 const donorOptions = await FileAttachment("./data/analysis_tools/donors.json").json()
 const donorMapping = name2CodeMap(donorOptions, {removeEU27EUI:true})
 ```
@@ -42,7 +46,7 @@ const donorInput = Inputs.select(
     donorMapping,
     {
         label: "Donor",
-        value: donorMapping.get("Australia"),
+        value: donorMapping.get("DAC countries"),
         sort: true
     })
 const donor = Generators.input(donorInput);
@@ -180,41 +184,145 @@ unitInput.addEventListener("input", disableBreakdown);
 ```
 
 ```js
-// DATA QUERY
-const data = sectorsQueries(
-    donor,
-    recipient,
-    indicator,
-    selectedSector,
-    currency,
-    prices,
-    timeRange,
-    breakdown,
-    unit
-)
+const dataState = Generators.observe((notify) => {
+    let cancelled = false;
+    let spinnerTimeout = null;
+    let lastResult = sectorsStateStore.lastResult;
 
-const treemapData = data.treemap
-const selectedData = data.selected
-const tableData = data.table
+    const emptyResult = {
+        treemapData: [],
+        selectedData: [],
+        tableData: []
+    };
+
+    function cleanup() {
+        if (spinnerTimeout != null) {
+            clearTimeout(spinnerTimeout);
+            spinnerTimeout = null;
+        }
+    }
+
+    function emit(state) {
+        notify(state);
+    }
+
+    if (indicator.length === 0) {
+        emit({
+            ...(lastResult ?? emptyResult),
+            loading: false,
+            showSpinner: false,
+            error: null,
+            hasData: lastResult !== null
+        });
+
+        return () => {
+            cancelled = true;
+            cleanup();
+        };
+    }
+
+    const pendingResult = lastResult ?? emptyResult;
+
+    emit({
+        ...pendingResult,
+        loading: true,
+        showSpinner: false,
+        error: null,
+        hasData: lastResult !== null
+    });
+
+    spinnerTimeout = setTimeout(() => {
+        if (cancelled) return;
+        emit({
+            ...pendingResult,
+            loading: true,
+            showSpinner: true,
+            error: null,
+            hasData: lastResult !== null
+        });
+    }, 600);
+
+    const result = sectorsQueries(
+        donor,
+        recipient,
+        indicator,
+        selectedSector,
+        currency,
+        prices,
+        timeRange,
+        breakdown,
+        unit
+    );
+
+    Promise.all([
+        result.treemap,
+        result.selected,
+        result.table
+    ]).then(([treemapData, selectedData, tableData]) => {
+        if (cancelled) return;
+        cleanup();
+
+        lastResult = {treemapData, selectedData, tableData};
+        sectorsStateStore.lastResult = lastResult;
+
+        emit({
+            ...lastResult,
+            loading: false,
+            showSpinner: false,
+            error: null,
+            hasData: true
+        });
+    }).catch((error) => {
+        if (cancelled) return;
+        cleanup();
+        console.error("Failed to load sectors data", error);
+
+        const fallbackResult = lastResult ?? emptyResult;
+
+        emit({
+            ...fallbackResult,
+            loading: false,
+            showSpinner: false,
+            error,
+            hasData: lastResult !== null
+        });
+    });
+
+    return () => {
+        cancelled = true;
+        cleanup();
+    };
+});
 ```
 
 ```js
-const uniqueSubsectors =  [
-    ...new Set(selectedData.map(row => row["sub_sector"])).values()
-]
+const {
+    loading: sectorsLoading,
+    showSpinner: sectorsShowSpinner,
+    treemapData = [],
+    selectedData = [],
+    tableData = [],
+    error: sectorsError,
+    hasData: sectorsHasData
+} = dataState;
+```
 
-function generateSubtitle() {
+```js
+function generateSubtitle(selectedData) {
+    const uniqueSubsectors = [
+        ...new Set(selectedData.map((row) => row["sub_sector"])).values()
+    ];
     const limit = 3;
     const shown = uniqueSubsectors.slice(0, limit);
     const subtitleSpans = shown.map((name, i) => {
-        return html`<span class="subtitle-label" style=color:${paletteSubsectors[i]}>${name}</span>${i < shown.length - 1 ? ', ' : ''}`;
+        return html`<span class="subtitle-label" style=color:${paletteSubsectors[i]}>${name}</span>${i < shown.length - 1 ? ", " : ""}`;
     });
 
     if (uniqueSubsectors.length > limit) {
         subtitleSpans.push(", and other");
     }
-    
-    subtitleSpans.push("; ")
+
+    subtitleSpans.push("; ");
 
     return subtitleSpans;
 }
@@ -241,9 +349,7 @@ function generateSubtitle() {
 
 <div>
     ${
-        !data 
-            ? html` `
-            : html`
+        html`
                 <div class="settings card">
                     <div class="settings-group">
                         ${donorInput}
@@ -258,178 +364,194 @@ function generateSubtitle() {
                         ${timeRangeInput}
                     </div>
                 </div>
-                <div>
-                    ${
-                        indicator.length === 0 
-                            ? html ` 
-                                <div class="grid grid-cols-2">
-                                    <div class="card"> 
-                                        <div class="warning">
-                                            Select at least one indicator
-                                        </div>
+                ${
+                    indicator.length === 0
+                        ? html`
+                            <div class="grid grid-cols-2">
+                                <div class="card">
+                                    <div class="warning">
+                                        Select at least one indicator
+                                    </div>
+                                </div>
+                            </div>
+                        `
+                        : sectorsError
+                            ? html`
+                                <div class="card">
+                                    <div class="warning">
+                                        Failed to load data. Please try again.
                                     </div>
                                 </div>
                             `
-                            : html`
-                                <div class="grid grid-cols-2">
-                                    ${
-                                        treemapData.every(row => row.value === null) | treemapData.length === 0 
-                                            ? html`
-                                                <div class="card"> 
-                                                    <h2 class="plot-title">
-                                                        ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)} by sector
-                                                    </h2>
-                                                    <div class="warning">
-                                                        No data available
-                                                    </div>
-                                                </div>
-                                            `
-                                            : html`
-                                                <div class="card">
-                                                    <div class="plot-container" id="treemap-sectors">
+                            : sectorsShowSpinner
+                                ? html`
+                                    <div class="card loading-indicator" aria-live="polite">
+                                        <div class="spinner" role="status" aria-label="Loading data"></div>
+                                        <span>Loading data…</span>
+                                    </div>
+                                `
+                                : sectorsHasData
+                                    ? html`
+                                            <div class="grid grid-cols-2">
+                                                ${
+                                                    treemapData.every((row) => row.value === null) || treemapData.length === 0
+                                                        ? html`
+                                                            <div class="card">
                                                         <h2 class="plot-title">
                                                             ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)} by sector
                                                         </h2>
-                                                        <div class="plot-subtitle-panel">
+                                                        <div class="warning">
+                                                            No data available
+                                                        </div>
+                                                    </div>
+                                                `
+                                                : html`
+                                                    <div class="card">
+                                                        <div class="plot-container" id="treemap-sectors">
+                                                            <h2 class="plot-title">
+                                                                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)} by sector
+                                                            </h2>
+                                                            <div class="plot-subtitle-panel">
+                                                                ${
+                                                                    indicator.length > 1
+                                                                        ? html`<h3 class="plot-subtitle">Bilateral + Imputed multilateral ODA; ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
+                                                                        : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} ODA; ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
+                                                                }
+                                                            </div>
                                                             ${
-                                                                indicator.length > 1
-                                                                ? html`<h3 class="plot-subtitle">Bilateral + Imputed multilateral ODA; ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
-                                                                : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} ODA; ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
+                                                                resize(
+                                                                    (width) => treemapPlot(treemapData, width, {currency: currency})
+                                                                )
+                                                            }
+                                                            <div class="bottom-panel">
+                                                                <div class="text-section">
+                                                                    <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
+                                                                    <p class="plot-note">ODA values in million ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
+                                                                </div>
+                                                                <div class="logo-section">
+                                                                    <a href="https://data.one.org/" target="_blank">
+                                                                        <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="download-panel">
+                                                            ${
+                                                                Inputs.button(
+                                                                    "Download plot", {
+                                                                        reduce: () => downloadPNG(
+                                                                            "treemap-sectors",
+                                                                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} by sector`, {fileMode: true})
+                                                                        )
+                                                                    }
+                                                                )
+                                                            }
+                                                            ${
+                                                                Inputs.button(
+                                                                    "Download data",
+                                                                    {
+                                                                        reduce: () => downloadXLSX(
+                                                                            treemapData,
+                                                                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} by sector`, {fileMode: true})
+                                                                        )
+                                                                    }
+                                                                )
                                                             }
                                                         </div>
-                                                        ${
-                                                            resize(
-                                                                (width) => treemapPlot(treemapData, width, {currency: currency})
-                                                            )
-                                                        }
-                                                        <div class="bottom-panel">
-                                                            <div class="text-section">
-                                                                <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
-                                                                <p class="plot-note">ODA values in million ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
-                                                            </div>
-                                                            <div class="logo-section">
-                                                                <a href="https://data.one.org/" target="_blank">
-                                                                    <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
-                                                                </a>
-                                                            </div>
-                                                        </div>
                                                     </div>
-                                                    <div class="download-panel">
-                                                        ${
-                                                            Inputs.button(
-                                                                "Download plot", {
-                                                                    reduce: () => downloadPNG(
-                                                                        "treemap-sectors",
-                                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} by sector`, {fileMode: true})
-                                                                    )
-                                                                }
-                                                            )
-                                                        }
-                                                        ${
-                                                            Inputs.button(
-                                                                "Download data", 
-                                                                {
-                                                                    reduce: () => downloadXLSX(
-                                                                        treemapData,
-                                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} by sector`, {fileMode: true})
-                                                                    )
-                                                                }
-                                                            )
-                                                        }
-                                                    </div>
-                                                </div>
-                                            `
-                                    }
-                                    ${
-                                        selectedData.every(row => row.value === null) | selectedData.length === 0 
-                                            ? html`
-                                                <div class="card"> 
-                                                    <h2 class="plot-title">
-                                                        ${selectedSector} ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
-                                                    </h2>
-                                                    <div class="warning">
-                                                        No data available
-                                                    </div>
-                                                </div>
-                                            `
-                                            : html`
-                                                <div class="card">
-                                                    <div class="plot-container" id="bars-sectors">
+                                                `
+                                        }
+                                        ${
+                                            selectedData.every((row) => row.value === null) || selectedData.length === 0
+                                                ? html`
+                                                    <div class="card">
                                                         <h2 class="plot-title">
                                                             ${selectedSector} ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
                                                         </h2>
-                                                        <div class="plot-subtitle-panel">
-                                                            <h3 class="plot-subtitle">
-                                                                ${breakdown && !breakdownIsDisabled ? generateSubtitle() : html` `}
-                                                                ${indicator.length > 1 ? "Bilateral + Imputed multilateral" : getNameByCode(indicatorMapping, indicator)} ODA
-                                                            </h3>
-                                                            ${breakdownIsDisabled ? breakdownPlaceholderInput : breakdownInput}
+                                                        <div class="warning">
+                                                            No data available
                                                         </div>
-                                                        ${
-                                                            resize(
-                                                                (width) => barPlot(
-                                                                    selectedData,   
-                                                                    currency,
-                                                                    "sectors",
-                                                                    width, {
-                                                                        breakdown: breakdownIsDisabled ? breakdownPlaceholder : breakdown
+                                                    </div>
+                                                `
+                                                : html`
+                                                    <div class="card">
+                                                        <div class="plot-container" id="bars-sectors">
+                                                            <h2 class="plot-title">
+                                                                ${selectedSector} ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
+                                                            </h2>
+                                                            <div class="plot-subtitle-panel">
+                                                                <h3 class="plot-subtitle">
+                                                                    ${breakdown && !breakdownIsDisabled ? generateSubtitle(selectedData) : html` `}
+                                                                    ${indicator.length > 1 ? "Bilateral + Imputed multilateral" : getNameByCode(indicatorMapping, indicator)} ODA
+                                                                </h3>
+                                                                ${breakdownIsDisabled ? breakdownPlaceholderInput : breakdownInput}
+                                                            </div>
+                                                            ${
+                                                                resize(
+                                                                    (width) => barPlot(
+                                                                        selectedData,
+                                                                        currency,
+                                                                        "sectors",
+                                                                        width,
+                                                                        {
+                                                                            breakdown: breakdownIsDisabled ? breakdownPlaceholder : breakdown
+                                                                        }
+                                                                    )
+                                                                )
+                                                            }
+                                                            <div class="bottom-panel">
+                                                                <div class="text-section">
+                                                                    <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
+                                                                    <p class="plot-note">ODA values in million ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
+                                                                </div>
+                                                                <div class="logo-section">
+                                                                    <a href="https://data.one.org/" target="_blank">
+                                                                        <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="download-panel">
+                                                            ${
+                                                                Inputs.button(
+                                                                    "Download plot", {
+                                                                        reduce: () => downloadPNG(
+                                                                            "bars-sectors",
+                                                                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} ${breakdown ? "breakdown" : "total"}`, {fileMode: true})
+                                                                        )
                                                                     }
                                                                 )
-                                                            )
-                                                        }
-                                                        <div class="bottom-panel">
-                                                            <div class="text-section">
-                                                                <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
-                                                                <p class="plot-note">ODA values in million ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
-                                                            </div>
-                                                            <div class="logo-section">
-                                                                <a href="https://data.one.org/" target="_blank">
-                                                                    <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
-                                                                </a>
-                                                            </div>
+                                                            }
+                                                            ${
+                                                                Inputs.button(
+                                                                    "Download data",
+                                                                    {
+                                                                        reduce: () => downloadXLSX(
+                                                                            selectedData,
+                                                                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} ${breakdown ? "breakdown" : "total"}`, {fileMode: true})
+                                                                        )
+                                                                    }
+                                                                )
+                                                            }
                                                         </div>
                                                     </div>
-                                                    <div class="download-panel">
-                                                        ${
-                                                            Inputs.button(
-                                                                "Download plot", {
-                                                                    reduce: () => downloadPNG(
-                                                                        "bars-sectors",
-                                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} ${breakdown ? "breakdown" : "total"}`, {fileMode: true})
-                                                                    )
-                                                                }
-                                                            )
-                                                        }
-                                                        ${
-                                                            Inputs.button(
-                                                                "Download data", 
-                                                                {
-                                                                    reduce: () => downloadXLSX(
-                                                                        selectedData,
-                                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} ${breakdown ? "breakdown" : "total"}`, {fileMode: true})
-                                                                    )
-                                                                }
-                                                            )
-                                                        }
-                                                    </div>
-                                                </div>
-                                            `
-                                    }
-                                </div>
-                                <div class="card">
-                                    <h2 class="table-title">
-                                        ${breakdown && !breakdownIsDisabled ? "Breakdown of" : ""} ${selectedSector} ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
-                                    </h2>
-                                    <div class="table-subtitle-panel">
-                                        ${
-                                            indicator.length > 1
-                                            ? html`<h3 class="plot-subtitle">Bilateral + Imputed multilateral ODA</h3>`
-                                            : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} ODA</h3>`
+                                                `
                                         }
-                                        ${unitInput}
                                     </div>
+                                    <div class="card">
+                                        <h2 class="table-title">
+                                            ${breakdown && !breakdownIsDisabled ? "Breakdown of" : ""} ${selectedSector} ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
+                                        </h2>
+                                        <div class="table-subtitle-panel">
+                                            ${
+                                                indicator.length > 1
+                                                    ? html`<h3 class="plot-subtitle">Bilateral + Imputed multilateral ODA</h3>`
+                                                    : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} ODA</h3>`
+                                            }
+                                            ${unitInput}
+                                        </div>
                                         ${
-                                            tableData.every(row => row.value === null) | tableData.length === 0 
+                                            tableData.every((row) => row.value === null) || tableData.length === 0
                                                 ? html`
                                                     <div class="warning">
                                                         No data available
@@ -438,21 +560,21 @@ function generateSubtitle() {
                                                 : html`
                                                     ${
                                                         sparkbarTable(
-                                                            tableData, 
+                                                            tableData,
                                                             "sectors",
                                                             {breakdown: breakdownIsDisabled ? breakdownPlaceholder : breakdown}
                                                         )
                                                     }
                                                     <div class="bottom-panel">
                                                         <div class="text-section">
-                                                                <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
+                                                            <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
                                                             ${
-                                                                unit === "value" 
+                                                                unit === "value"
                                                                     ? html`<p class="plot-note">ODA values in ${timeRangeOptions.base} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
                                                                     : unit === "indicator"
                                                                         ? html`<p class="plot-note">ODA values as a share of ${selectedSector} ODA received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
                                                                         : html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
-                                                            }                
+                                                            }
                                                         </div>
                                                         <div class="logo-section">
                                                             <a href="https://data.one.org/" target="_blank">
@@ -463,20 +585,22 @@ function generateSubtitle() {
                                                     <div class="download-panel table">
                                                         ${
                                                             Inputs.button(
-                                                                "Download data", {
+                                                                "Download data",
+                                                                {
                                                                     reduce: () => downloadXLSX(
                                                                         tableData,
-                                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} ${breakdown ? "breakdown" : ""} ${unit}`, {fileMode: true})                    )
+                                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} ${breakdown ? "breakdown" : ""} ${unit}`, {fileMode: true})
+                                                                    )
                                                                 }
                                                             )
                                                         }
                                                     </div>
                                                 `
-                                        }
-                                </div>
-                            `
-                    }
-                </div>
-            `
+                                                }
+                                            </div>
+                                        `
+                                    : null
+                }
+        `
     }
 </div>
