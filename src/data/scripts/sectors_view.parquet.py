@@ -268,6 +268,3 @@ if __name__ == "__main__":
     df = combined_sectors()
     logger.info("Writing partitioned dataset...")
     write_partitioned_dataset(df, "sectors_view")
-    logger.info("Writing parquet to stdout...")
-    export_parquet(df, PATHS.CDN_FILES / "sectors_view.parquet")
-    # parquet_to_stdout(df)
