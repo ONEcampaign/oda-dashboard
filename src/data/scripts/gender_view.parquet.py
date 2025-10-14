@@ -21,7 +21,7 @@ from src.data.analysis_tools.helper_functions import (
 
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
-set_cache_dir(oda_data=True)
+set_cache_dir(oda_data=True, pydeflate=True)
 
 
 def get_transform_gender():

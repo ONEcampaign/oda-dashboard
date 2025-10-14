@@ -111,38 +111,33 @@ def get_imputed_multi_by_sector():
 
 
 def combined_sectors():
+    logger.info("Fetching bilateral data...")
     sectors_bi = get_bilateral_by_sector()
+
+    logger.info("Fetching imputed multilateral data...")
     sectors_multi = get_imputed_multi_by_sector()
 
     sectors = pd.concat([sectors_bi, sectors_multi], ignore_index=True)
     sectors = sectors[sectors["value"] != 0]
 
-    # Add currencies and prices
+    logger.info("Adding currencies and prices...")
     sectors = add_currencies_and_prices(sectors)
 
-    # Filter zeros again after currency conversion (reduces data before widening)
-    logger.info(f"Rows before zero filter: {len(sectors):,}")
+    # Filter zeros after currency conversion
     sectors = sectors[sectors["value"] != 0]
-    logger.info(f"Rows after zero filter: {len(sectors):,}")
 
-    # Add donor groupings
+    logger.info("Adding donor groupings...")
     sectors = add_donor_groupings(sectors)
 
-    # Add recipient groupings
+    logger.info("Adding recipient groupings...")
     sectors = add_recipient_groupings(sectors)
 
-    # Filter zeros again after groupings (groupings multiply data)
-    logger.info(f"Rows before final zero filter: {len(sectors):,}")
+    # Filter zeros after groupings
     sectors = sectors[sectors["value"] != 0]
-    logger.info(f"Rows after final zero filter: {len(sectors):,}")
 
-    # Add indicator code
+    logger.info("Adding names and codes...")
     sectors = add_recipient_indicator_codes(sectors)
-
-    # Add donor name
     sectors = add_donor_names(sectors)
-
-    # Add recipient name
     sectors = add_recipient_names(sectors)
 
     # Add sector code
@@ -154,8 +149,7 @@ def combined_sectors():
     sector_mapping = sector_lists.get_broad_sector_groups()
     sectors["sector_name"] = sectors["sub_sector_name"].map(sector_mapping)
 
-    logger.info(f"Starting pivot with {len(sectors):,} rows")
-    # Pivot values to columns
+    logger.info("Pivoting to wide format...")
     sectors = widen_currency_price(
         df=sectors,
         index_cols=(
@@ -185,7 +179,9 @@ def combined_sectors():
 
 if __name__ == "__main__":
     logger.info("Generating sectors table...")
-    set_cache_dir(oda_data=True)
+    set_cache_dir(oda_data=True, pydeflate=True)
     df = combined_sectors()
+
     logger.info("Writing partitioned dataset...")
     write_partitioned_dataset(df, "sectors_view")
+    logger.info("Sectors view completed")

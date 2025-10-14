@@ -85,7 +85,8 @@ def add_currencies_and_prices(df: pd.DataFrame) -> pd.DataFrame:
         )
         constant_dfs.append(converted.assign(currency=currency, price="constant"))
 
-    return pd.concat([df] + current_dfs + constant_dfs, ignore_index=True)
+    # Don't include df in concat since USD/current is already in current_dfs[0]
+    return pd.concat(current_dfs + constant_dfs, ignore_index=True)
 
 
 def donor_groups() -> dict:
@@ -117,39 +118,63 @@ def recipient_groups() -> dict:
 
 
 def add_donor_groupings(df: pd.DataFrame) -> pd.DataFrame:
-    groups = []
+    """
+    Add donor groupings (DAC countries, G7, etc.) by aggregating member countries.
 
+    Optimized to minimize copies and use pre-computed column lists.
+    """
+    # Pre-compute groupby columns once (much faster than in loop)
+    groupby_cols = [c for c in df.columns if c != "value"]
+
+    groups = []
     for group, members in donor_groups().items():
-        grouped = df.copy().loc[lambda d: d["donor_code"].isin(members)]
-        if not grouped.empty:
-            grouped["donor_code"] = group
-            grouped = (
-                grouped.groupby(
-                    [c for c in df.columns if c != "value"], dropna=False, observed=True
-                )["value"]
+        # Create boolean mask without copying dataframe
+        mask = df["donor_code"].isin(members)
+
+        if mask.any():
+            # Only copy the filtered subset (not entire dataframe)
+            filtered = df.loc[mask].copy()
+            filtered["donor_code"] = group
+
+            # Aggregate using pre-computed column list
+            aggregated = (
+                filtered.groupby(groupby_cols, dropna=False, observed=True)["value"]
                 .sum()
                 .reset_index()
             )
-            groups.append(grouped)
+            groups.append(aggregated)
 
     return pd.concat([df] + groups, ignore_index=True)
 
 
 def add_recipient_groupings(df: pd.DataFrame) -> pd.DataFrame:
-    groups = []
+    """
+    Add recipient groupings (Africa, LDCs, etc.) by aggregating member countries.
 
+    Optimized to minimize copies and use pre-computed column lists.
+    """
+    # Pre-compute groupby columns once (much faster than in loop)
+    groupby_cols = [c for c in df.columns if c != "value"]
+
+    groups = []
     for group, members in recipient_groups().items():
-        grouped = df.copy().loc[lambda d: d["recipient_code"].isin(set(members))]
-        if not grouped.empty:
-            grouped["recipient_code"] = group
-            grouped = (
-                grouped.groupby(
-                    [c for c in df.columns if c != "value"], dropna=False, observed=True
-                )["value"]
+        # Create boolean mask without copying dataframe
+        # Convert to set once for faster lookup
+        members_set = set(members)
+        mask = df["recipient_code"].isin(members_set)
+
+        if mask.any():
+            # Only copy the filtered subset (not entire dataframe)
+            filtered = df.loc[mask].copy()
+            filtered["recipient_code"] = group
+
+            # Aggregate using pre-computed column list
+            aggregated = (
+                filtered.groupby(groupby_cols, dropna=False, observed=True)["value"]
                 .sum()
                 .reset_index()
             )
-            groups.append(grouped)
+            groups.append(aggregated)
 
     return pd.concat([df] + groups, ignore_index=True)
 
@@ -170,15 +195,19 @@ def widen_currency_price(
     # Pre-process values in long format (much faster than on wide data)
     df["value"] = df["value"].round(6).astype("float32")
 
-    # Check for duplicates before pivoting
+    # Check for duplicates before pivoting and aggregate if found
     pivot_cols = list(index_cols) + ["currency", "price"]
+    logger.info("Checking for duplicates before pivot...")
     duplicates = df[pivot_cols].duplicated()
+
     if duplicates.any():
-        logger.warning(f"Found {duplicates.sum()} duplicate rows before pivoting")
-        dup_examples = df[duplicates][pivot_cols].head()
-        logger.warning(f"Examples:\n{dup_examples}")
-        # Keep first occurrence
-        df = df[~duplicates]
+        logger.warning(f"Found {duplicates.sum():,} duplicate rows before pivoting")
+        logger.info("Aggregating duplicates by summing values...")
+        # Aggregate duplicates by grouping and summing
+        df = df.groupby(pivot_cols, dropna=False, observed=True)["value"].sum().reset_index()
+        logger.info(f"After aggregation: {len(df):,} rows")
+    else:
+        logger.info("No duplicates detected - proceeding with pivot")
 
     wide = df.pivot(
         index=list(index_cols),

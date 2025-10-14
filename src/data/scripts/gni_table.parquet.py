@@ -5,7 +5,7 @@ from src.data.analysis_tools.helper_functions import (
 from src.data.analysis_tools.transformations import get_gni
 from src.data.config import FINANCING_TIME, logger
 
-set_cache_dir(oda_data=True)
+set_cache_dir(oda_data=True, pydeflate=True)
 
 
 def gni_to_parquet():

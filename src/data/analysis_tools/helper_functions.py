@@ -139,7 +139,7 @@ def optimize_dataframe_types(
         c for c in df.columns if c.startswith("value_") or c.startswith("pct")
     ]
     for col in value_cols:
-        df[col] = df[col].astype("Float32")
+        df[col] = df[col].round(5).astype("Float32")
 
     # Standard Int16 columns
     for col in ["year", "donor_code", "indicator"]:
@@ -170,10 +170,16 @@ def optimize_dataframe_types(
         if col in df.columns:
             df[col] = df[col].astype("category")
 
-    # Sort by standard keys for better compression
+    # Sort by standard keys for better compression and groupby performance
     sort_keys = [
         c
-        for c in ["donor_code", "recipient_code", "indicator", "year"]
+        for c in [
+            "donor_code",
+            "recipient_code",
+            "indicator",
+            "year",
+            "sub_sector_code",
+        ]
         if c in df.columns
     ]
     if sort_keys:
@@ -225,7 +231,9 @@ def dataframe_to_arrow_table(
         )
 
     # Compute byte stream split columns (value columns benefit from this)
-    value_cols = [c for c in df.columns if c.startswith("value_") or c.startswith("pct")]
+    value_cols = [
+        c for c in df.columns if c.startswith("value_") or c.startswith("pct")
+    ]
 
     return pa.Table.from_pandas(df, preserve_index=False), value_cols
 

@@ -59,5 +59,5 @@ def get_conversion_table():
 
 if __name__ == "__main__":
     logger.info("Creating constant conversions table")
-    set_cache_dir(pydeflate=True)
+    set_cache_dir(oda_data=True, pydeflate=True)
     get_conversion_table()

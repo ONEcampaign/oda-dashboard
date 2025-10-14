@@ -23,11 +23,10 @@ from src.data.analysis_tools.helper_functions import (
     parquet_to_stdout,
 )
 
-set_cache_dir(oda_data=True)
+set_cache_dir(oda_data=True, pydeflate=True)
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
 eu_ids = provider_groupings()["eu27_total"]
-set_cache_dir(oda_data=True)
 
 
 def get_dac2a():
