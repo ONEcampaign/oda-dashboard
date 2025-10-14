@@ -1,25 +1,19 @@
 import {FileAttachment} from "observablehq:stdlib";
 import {name2CodeMap} from "./utils.js";
-import {createDuckDBClient} from "./duckdbFactory.js";
 
-// Load only metadata required for recipient queries
-const [donorOptions, recipientOptions, recipientsIndicators] = await Promise.all([
+// Load metadata and parquet data in parallel
+const [donorOptions, recipientOptions, recipientsIndicators, recipientsTable] = await Promise.all([
     FileAttachment("../data/analysis_tools/donors.json").json(),
     FileAttachment("../data/analysis_tools/recipients.json").json(),
-    FileAttachment("../data/analysis_tools/recipients_indicators.json").json()
+    FileAttachment("../data/analysis_tools/recipients_indicators.json").json(),
+    FileAttachment("../data/scripts/recipients_view.parquet").parquet()
 ]);
 
-// Lazy initialization: DuckDB instance is created on first query
-let dbPromise = null;
-function getDB() {
-    if (!dbPromise) {
-        const cacheBuster = navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "";
-        dbPromise = createDuckDBClient({
-            recipients: FileAttachment("../data/scripts/recipients_view.parquet").href + cacheBuster
-        }, 'recipients');
-    }
-    return dbPromise;
-}
+// Convert Arrow table to JavaScript array for fast in-memory filtering
+const recipientsData = recipientsTable.toArray();
+
+// Export for use in recipients.md to avoid duplicate loading
+export {donorOptions, recipientOptions, recipientsIndicators};
 
 const donorMapping = name2CodeMap(donorOptions, {})
 
@@ -35,13 +29,12 @@ export function recipientsQueries(
     indicator,
     currency,
     prices,
-    timeRange,
-    unit
+    timeRange
 ) {
 
     const indicators = indicator.length > 0 ? indicator : [-1];
 
-    const basePromise = fetchRecipientsSeries(
+    const rows = fetchRecipientsSeries(
         donor,
         recipient,
         indicators,
@@ -50,48 +43,45 @@ export function recipientsQueries(
         timeRange
     );
 
-    const absolute = basePromise.then((rows) =>
-        rows.map((row) => ({
-            year: row.year,
-            donor: row.donor,
-            recipient: row.recipient,
-            indicator: row.indicator,
-            value: row.value,
-            unit: `${currency} ${prices} million`,
-            source: "OECD DAC2A"
-        }))
-    );
+    const absolute = rows.map((row) => ({
+        year: row.year,
+        donor: row.donor,
+        recipient: row.recipient,
+        indicator: row.indicator,
+        value: row.value,
+        unit: `${currency} ${prices} million`,
+        source: "OECD DAC2A"
+    }));
 
-    const relative = basePromise.then((rows) =>
-        rows.map((row) => ({
-            year: row.year,
-            donor: row.donor,
-            recipient: row.recipient,
-            indicator: row.indicator,
-            value: row.pct_of_total_oda * 100,
-            unit: "% of total ODA",
-            source: "OECD DAC2A"
-        }))
-    );
+    const relative = rows.map((row) => ({
+        year: row.year,
+        donor: row.donor,
+        recipient: row.recipient,
+        indicator: row.indicator,
+        value: row.pct_of_total_oda * 100,
+        unit: "% of total ODA",
+        source: "OECD DAC2A"
+    }));
 
-    const table = basePromise.then((rows) =>
-        rows.map((row) => ({
-            year: row.year,
-            donor: row.donor,
-            recipient: row.recipient,
-            indicator: row.indicator,
-            value: unit === "value"
-                ? row.value
-                : row.pct_of_total_oda * 100,
-            unit: unit === "value"
-                ? `${currency} ${prices} million`
-                : "% of bilateral + imputed multilateral ODA",
-            source: "OECD DAC2A"
-        }))
-    );
+    // Return raw rows for table transformation
+    return {absolute, relative, rawData: rows};
+}
 
-    return {absolute, relative, table};
-
+// Separate table transformation so unit changes don't trigger base query
+export function transformTableData(rows, unit, currency, prices) {
+    return rows.map((row) => ({
+        year: row.year,
+        donor: row.donor,
+        recipient: row.recipient,
+        indicator: row.indicator,
+        value: unit === "value"
+            ? row.value
+            : row.pct_of_total_oda * 100,
+        unit: unit === "value"
+            ? `${currency} ${prices} million`
+            : "% of bilateral + imputed multilateral ODA",
+        source: "OECD DAC2A"
+    }));
 }
 
 function recipientsCacheKey({donor, recipient, indicator, currency, prices, timeRange}) {
@@ -110,7 +100,7 @@ function recipientsCacheKey({donor, recipient, indicator, currency, prices, time
     });
 }
 
-async function fetchRecipientsSeries(
+function fetchRecipientsSeries(
     donor,
     recipient,
     indicators,
@@ -134,7 +124,7 @@ async function fetchRecipientsSeries(
     return recipientsCache.get(cacheKey);
 }
 
-async function executeRecipientsSeries(
+function executeRecipientsSeries(
     donor,
     recipient,
     indicators,
@@ -146,35 +136,27 @@ async function executeRecipientsSeries(
         return [];
     }
 
-    const indicatorSelection = indicators.join(", ");
+    // In-memory filtering - much faster than DuckDB for simple queries on 11MB dataset
     const valueColumn = `value_${currency}_${prices}`;
 
-    const db = await getDB();
-    const query = await db.query(
-        `
-            SELECT
-                year,
-                donor_name AS donor,
-                recipient_name AS recipient,
-                indicator_name AS indicator,
-                ${valueColumn} AS value,
-                pct_of_total_oda
-            FROM recipients
-            WHERE
-                donor_code = ${donor}
-                AND recipient_code = ${recipient}
-                AND indicator IN (${indicatorSelection})
-                AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-            ORDER BY year, indicator_name
-        `
-    );
-
-    return query.toArray().map((row) => ({
-        year: row.year,
-        donor: row.donor,
-        recipient: row.recipient,
-        indicator: row.indicator,
-        value: row.value ?? null,
-        pct_of_total_oda: row.pct_of_total_oda ?? null
-    }));
+    return recipientsData
+        .filter(row =>
+            row.donor_code === donor &&
+            row.recipient_code === recipient &&
+            indicators.includes(row.indicator) &&
+            row.year >= timeRange[0] &&
+            row.year <= timeRange[1]
+        )
+        .map(row => ({
+            year: row.year,
+            donor: row.donor_name,
+            recipient: row.recipient_name,
+            indicator: row.indicator_name,
+            value: row[valueColumn] ?? null,
+            pct_of_total_oda: row.pct_of_total_oda ?? null
+        }))
+        .sort((a, b) => {
+            if (a.year !== b.year) return a.year - b.year;
+            return a.indicator.localeCompare(b.indicator);
+        });
 }

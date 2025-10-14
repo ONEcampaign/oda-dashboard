@@ -1,8 +1,8 @@
-```js 
+```js
 import {setCustomColors} from "@one-data/observable-themes/use-colors";
 import {customPalette} from "./components/colors.js";
 import {logo} from "@one-data/observable-themes/use-images";
-import {recipientsQueries} from './components/recipientQueries.js';
+import {recipientsQueries, transformTableData, donorOptions, recipientOptions, recipientsIndicators} from './components/recipientQueries.js';
 import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap, decodeHTML} from "./components/utils.js";
 import {rangeInput} from "./components/rangeInput.js";
 import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
@@ -14,19 +14,17 @@ setCustomColors(customPalette);
 ```
 
 ```js
-const donorOptions = await FileAttachment("./data/analysis_tools/donors.json").json()
+// Use metadata exported from recipientQueries.js to avoid duplicate loading
 const donorMapping = name2CodeMap(donorOptions, {})
 ```
 
 ```js
-const recipientOptions = await FileAttachment("./data/analysis_tools/recipients.json").json()
 const recipientMapping = name2CodeMap(recipientOptions, { useRecipientGroups: true })
 ```
 
 ```js
-const indicatorOptions = await FileAttachment("./data/analysis_tools/recipients_indicators.json").json()
 const indicatorMapping = new Map(
-    Object.entries(indicatorOptions).map(([k, v]) => [v, Number(k)])
+    Object.entries(recipientsIndicators).map(([k, v]) => [v, Number(k)])
 );
 ```
 
@@ -141,20 +139,23 @@ donorInput.addEventListener("input", updateUnitOptions);
 ```
 
 ```js
-// DATA QUERY
+// DATA QUERY (optimized: unit changes don't trigger re-query)
 const data = recipientsQueries(
-    donor, 
-    recipient, 
+    donor,
+    recipient,
     indicator,
     currency,
     prices,
-    timeRange,
-    unit
+    timeRange
 )
 
 const absoluteData = data.absolute
 const relativeData = data.relative
-const tableData = data.table
+```
+
+```js
+// Table data calculated separately so unit changes are instant
+const tableData = transformTableData(data.rawData, unit, currency, prices)
 ```
 
 
