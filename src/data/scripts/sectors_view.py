@@ -1,4 +1,5 @@
 import json
+import shutil
 import pandas as pd
 
 from oda_data import CRSData
@@ -20,11 +21,9 @@ from src.data.config import PATHS, SECTORS_TIME, logger
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
     get_dac_ids,
-    add_index_column,
-    df_to_parquet,
-    parquet_to_stdout,
-    export_parquet,
 )
+import pyarrow as pa
+import pyarrow.dataset as ds
 
 donor_ids = get_dac_ids(PATHS.DONORS)
 recipient_ids = get_dac_ids(PATHS.RECIPIENTS)
@@ -175,10 +174,93 @@ def combined_sectors():
     return sectors
 
 
+def _optimise_for_parquet(df: pd.DataFrame) -> pd.DataFrame:
+    optimised = df.copy()
+
+    value_cols = [
+        c for c in optimised.columns if c.startswith("value_") or c.startswith("pct")
+    ]
+    for col in value_cols:
+        optimised[col] = optimised[col].astype("Float32")
+
+    for col in ["year"]:
+        if col in optimised.columns:
+            optimised[col] = optimised[col].astype("Int16")
+
+    for col in ["donor_code", "recipient_code", "indicator", "sub_sector_code"]:
+        if col in optimised.columns:
+            optimised[col] = optimised[col].astype("Int32")
+
+    categorical_cols = [
+        "donor_name",
+        "recipient_name",
+        "indicator_name",
+        "sector_name",
+        "sub_sector_name",
+    ]
+    for col in categorical_cols:
+        if col in optimised.columns:
+            optimised[col] = optimised[col].astype("category")
+
+    sort_keys = [
+        c
+        for c in [
+            "donor_code",
+            "recipient_code",
+            "indicator",
+            "year",
+            "sub_sector_code",
+        ]
+        if c in optimised.columns
+    ]
+    if sort_keys:
+        optimised = optimised.sort_values(sort_keys, kind="stable")
+
+    return optimised
+
+
+def write_partitioned_dataset(df: pd.DataFrame, base_dir) -> None:
+    optimised = _optimise_for_parquet(df)
+    table = pa.Table.from_pandas(optimised, preserve_index=False)
+
+    output_dir = PATHS.CDN_FILES / base_dir
+    if output_dir.exists():
+        logger.info("Clearing existing partitioned dataset at %s", output_dir)
+        shutil.rmtree(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    partition_schema = pa.schema(
+        [
+            pa.field("donor_code", pa.int32()),
+            pa.field("recipient_code", pa.int32()),
+        ]
+    )
+
+    parquet_format = ds.ParquetFileFormat()
+    file_options = parquet_format.make_write_options(
+        compression="zstd",
+        compression_level=15,
+        use_dictionary=True,
+        write_statistics=True,
+    )
+
+    ds.write_dataset(
+        data=table,
+        base_dir=str(output_dir),
+        format="parquet",
+        partitioning=ds.partitioning(partition_schema, flavor="hive"),
+        basename_template="part-{i}.parquet",
+        file_options=file_options,
+        existing_data_behavior="delete_matching",
+        max_rows_per_file=1_000_000,
+        max_rows_per_group=100_000,
+        min_rows_per_group=100_000,
+    )
+
+
 if __name__ == "__main__":
     logger.info("Generating sectors table...")
     set_cache_dir(oda_data=True)
     df = combined_sectors()
-    logger.info("Writing parquet to stdout...")
-    export_parquet(df, PATHS.CDN_FILES / "sectors_view.parquet")
-    parquet_to_stdout(df)
+    logger.info("Writing partitioned dataset...")
+    write_partitioned_dataset(df, "sectors_view")

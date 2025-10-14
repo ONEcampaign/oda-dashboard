@@ -27,14 +27,11 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
 
       - name: Install Python dependencies
         run: uv sync
@@ -57,7 +54,7 @@ jobs:
         run: |
           uv run python src/data/scripts/financing.parquet.py
           uv run python src/data/scripts/recipients.parquet.py
-          uv run python src/data/scripts/sectors.parquet.py
+          uv run python src/data/scripts/sectors_view.py
           uv run python src/data/scripts/gender.parquet.py
           uv run python src/data/scripts/gni_table.parquet.py
 
@@ -72,6 +69,18 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+
+      - name: Upload sectors partitioned dataset
+        run: |
+          if [ -d "cdn_files/sectors_view" ]; then
+            echo "Clearing existing sectors dataset in GCS..."
+            gsutil -m rm -r gs://${{ env.BUCKET }}/sources/sectors_view/** || true
+            echo "Uploading sectors partitioned dataset to GCS..."
+            gsutil -m rsync -r -d cdn_files/sectors_view gs://${{ env.BUCKET }}/sources/sectors_view
+          else
+            echo "Warning: cdn_files/sectors_view directory not found"
+            exit 1
+          fi
 
       - name: Deploy to GCS
         run: |

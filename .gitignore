@@ -181,3 +181,5 @@ src/data/cache/*.csv
 /src/data/cache
 /src/data/__pycache__
 *.pyc
+/cdn_files/sectors_view/
+/cdn_files
