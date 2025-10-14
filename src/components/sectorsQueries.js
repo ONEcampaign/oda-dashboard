@@ -16,13 +16,14 @@ let dbPromise = null;
 function getDB() {
   if (!dbPromise) {
     dbPromise = DuckDBClient.of().then(async (db) => {
-      // Ensure remote HTTP(S) parquet works with partial reads
+      // Configure for optimal HTTP parquet reads
       await db.query(`
         LOAD parquet;
         LOAD httpfs;
 
         SET enable_http_metadata_cache = true;
-
+        SET http_timeout = 120000;
+        SET force_download = false;
       `);
       return db;
     });
