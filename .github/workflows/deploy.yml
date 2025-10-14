@@ -52,8 +52,6 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          uv run python src/data/scripts/financing.parquet.py
-          uv run python src/data/scripts/recipients.parquet.py
           uv run python src/data/scripts/sectors_view.py
           uv run python src/data/scripts/gender.parquet.py
           uv run python src/data/scripts/gni_table.parquet.py
