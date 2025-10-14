@@ -17,6 +17,9 @@ const [
     FileAttachment("../data/analysis_tools/sectors.json").json()
 ]);
 
+// Export metadata to avoid duplicate loading in sectors.md
+export {donorOptions, recipientOptions, sectorsIndicators, code2Subsector, subsector2Sector};
+
 // Parquet dataset URL (partitioned by donor_code and recipient_code)
 const PARQUET_DATASET_URL = "https://storage.googleapis.com/data-apps-one-data/sources/sectors_view";
 
@@ -95,9 +98,7 @@ export function sectorsQueries(
     selectedSector,
     currency,
     prices,
-    timeRange,
-    breakdown,
-    unit
+    timeRange
 ) {
 
     const indicators = indicator.length > 0 ? indicator : [-1];
@@ -127,23 +128,22 @@ export function sectorsQueries(
         subsector2Sector
     }));
 
-    const selected = basePromise.then((rows) => buildSelected(rows, {
+    // Return base data for selected sector (granular: year + subsector)
+    const selectedBase = basePromise.then((rows) => buildSelectedBase(rows, {
         donorName,
         recipientName,
         selectedSector,
-        breakdown,
         currency,
         prices,
         code2Subsector,
         subsector2Sector
     }));
 
-    const table = basePromise.then((rows) => buildTable(rows, {
+    // Return base data for table (granular: year + subsector with all raw values)
+    const tableBase = basePromise.then((rows) => buildTableBase(rows, {
         donorName,
         recipientName,
         selectedSector,
-        breakdown,
-        unit,
         currency,
         prices,
         indicatorUnitLabel,
@@ -151,7 +151,7 @@ export function sectorsQueries(
         subsector2Sector
     }));
 
-    return {treemap, selected, table};
+    return {treemap, selectedBase, tableBase, indicatorUnitLabel};
 }
 
 function sectorsCacheKey({donor, recipient, indicators, currency, prices, timeRange}) {
@@ -345,11 +345,11 @@ function buildTreemap(rows, {
         .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
 }
 
-function buildSelected(rows, {
+// Build base data for selected sector (always granular: year + subsector)
+function buildSelectedBase(rows, {
     donorName,
     recipientName,
     selectedSector,
-    breakdown,
     currency,
     prices,
     code2Subsector,
@@ -364,67 +364,44 @@ function buildSelected(rows, {
 
     const unit = `${currency} ${prices} million`;
 
-    if (breakdown) {
-        const subsectorTotals = new Map();
-        for (const row of relevantRows) {
-            const subsectorName = row.sub_sector ?? "Other";
-            subsectorTotals.set(subsectorName, (subsectorTotals.get(subsectorName) ?? 0) + (row.converted_value ?? 0));
-        }
-
-        const orderedSubsectors = [...subsectorTotals.entries()]
-            .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
-            .map(([name]) => name);
-        const orderIndex = new Map(orderedSubsectors.map((name, index) => [name, index]));
-
-        return relevantRows
-            .map((row) => {
-                const subsectorName = row.sub_sector ?? "Other";
-                return {
-                    year: row.year,
-                    donor: donorName,
-                    recipient: recipientName,
-                    sector: selectedSector,
-                    sub_sector: subsectorName,
-                    indicator: row.indicator,
-                    value: row.converted_value ?? null,
-                    unit,
-                    source: "OECD CRS, MultiSystem",
-                    __order: orderIndex.get(subsectorName) ?? orderedSubsectors.length
-                };
-            })
-            .sort((a, b) => (a.year - b.year) || (a.__order - b.__order))
-            .map(({__order, ...rest}) => rest);
-    }
-
-    const aggregatedByYear = new Map();
+    // Calculate subsector totals for ordering
+    const subsectorTotals = new Map();
     for (const row of relevantRows) {
-        const entry = aggregatedByYear.get(row.year) ?? {
-            year: row.year,
-            donor: donorName,
-            recipient: recipientName,
-            sector: selectedSector,
-            indicator: row.indicator,
-            value: 0
-        };
-        entry.value += row.converted_value ?? 0;
-        aggregatedByYear.set(row.year, entry);
+        const subsectorName = row.sub_sector ?? "Other";
+        subsectorTotals.set(subsectorName, (subsectorTotals.get(subsectorName) ?? 0) + (row.converted_value ?? 0));
     }
 
-    return [...aggregatedByYear.values()]
-        .sort((a, b) => a.year - b.year)
-        .map((entry) => ({
-            ...entry,
-            unit,
-            source: "OECD CRS, MultiSystem"
-        }));
+    const orderedSubsectors = [...subsectorTotals.entries()]
+        .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+        .map(([name]) => name);
+    const orderIndex = new Map(orderedSubsectors.map((name, index) => [name, index]));
+
+    // Return granular data (year + subsector)
+    return relevantRows
+        .map((row) => {
+            const subsectorName = row.sub_sector ?? "Other";
+            return {
+                year: row.year,
+                donor: donorName,
+                recipient: recipientName,
+                sector: selectedSector,
+                sub_sector: subsectorName,
+                indicator: row.indicator,
+                value: row.converted_value ?? null,
+                unit,
+                source: "OECD CRS, MultiSystem",
+                __order: orderIndex.get(subsectorName) ?? orderedSubsectors.length
+            };
+        })
+        .sort((a, b) => (a.year - b.year) || (a.__order - b.__order))
+        .map(({__order, ...rest}) => rest);
 }
 
-function buildTable(rows, {
+// Build base data for table (always granular: year + subsector with raw values)
+function buildTableBase(rows, {
     donorName,
     recipientName,
     selectedSector,
-    breakdown,
-    unit,
     currency,
     prices,
     indicatorUnitLabel,
@@ -438,89 +415,50 @@ function buildTable(rows, {
 
     if (!relevantRows.length) return [];
 
-    const unitLabel = tableUnitLabel(unit, currency, prices, selectedSector, indicatorUnitLabel);
-
-    if (breakdown) {
-        const sectorTotalsByYear = new Map();
-        for (const row of relevantRows) {
-            sectorTotalsByYear.set(
-                row.year,
-                (sectorTotalsByYear.get(row.year) ?? 0) + (row.original_value ?? 0)
-            );
-        }
-
-        const subsectorTotals = new Map();
-        for (const row of relevantRows) {
-            const subsectorName = row.sub_sector ?? "Other";
-            subsectorTotals.set(subsectorName, (subsectorTotals.get(subsectorName) ?? 0) + (row.converted_value ?? 0));
-        }
-        const orderedSubsectors = [...subsectorTotals.entries()]
-            .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
-            .map(([name]) => name);
-        const orderIndex = new Map(orderedSubsectors.map((name, index) => [name, index]));
-
-        return relevantRows
-            .map((row) => {
-                const subsectorName = row.sub_sector ?? "Other";
-                return {
-                    year: row.year,
-                    donor: donorName,
-                    recipient: recipientName,
-                    sector: selectedSector,
-                    sub_sector: subsectorName,
-                    indicator: row.indicator,
-                    value: valueForUnit({
-                        unit,
-                        convertedValue: row.converted_value,
-                        originalValue: row.original_value,
-                        sectorTotal: sectorTotalsByYear.get(row.year),
-                        indicatorTotal: row.indicator_total_original
-                    }),
-                    unit: unitLabel,
-                    source: "OECD CRS, MultiSystem",
-                    __order: orderIndex.get(subsectorName) ?? orderedSubsectors.length
-                };
-            })
-            .sort((a, b) => (a.year - b.year) || (a.__order - b.__order))
-            .map(({__order, ...rest}) => rest);
-    }
-
-    const aggregatedByYear = new Map();
+    // Calculate sector totals by year for pct_sector calculations
+    const sectorTotalsByYear = new Map();
     for (const row of relevantRows) {
-        const entry = aggregatedByYear.get(row.year) ?? {
-            year: row.year,
-            donor: donorName,
-            recipient: recipientName,
-            sector: selectedSector,
-            indicator: row.indicator,
-            convertedValue: 0,
-            originalValue: 0,
-            indicatorTotal: row.indicator_total_original
-        };
-        entry.convertedValue += row.converted_value ?? 0;
-        entry.originalValue += row.original_value ?? 0;
-        entry.indicatorTotal = row.indicator_total_original ?? entry.indicatorTotal;
-        aggregatedByYear.set(row.year, entry);
+        sectorTotalsByYear.set(
+            row.year,
+            (sectorTotalsByYear.get(row.year) ?? 0) + (row.original_value ?? 0)
+        );
     }
 
-    return [...aggregatedByYear.values()]
-        .sort((a, b) => a.year - b.year)
-        .map((entry) => ({
-            year: entry.year,
-            donor: donorName,
-            recipient: recipientName,
-            sector: selectedSector,
-            indicator: entry.indicator,
-            value: valueForUnit({
-                unit,
-                convertedValue: entry.convertedValue,
-                originalValue: entry.originalValue,
-                sectorTotal: entry.originalValue,
-                indicatorTotal: entry.indicatorTotal
-            }),
-            unit: unitLabel,
-            source: "OECD CRS, MultiSystem"
-        }));
+    // Calculate subsector totals for ordering
+    const subsectorTotals = new Map();
+    for (const row of relevantRows) {
+        const subsectorName = row.sub_sector ?? "Other";
+        subsectorTotals.set(subsectorName, (subsectorTotals.get(subsectorName) ?? 0) + (row.converted_value ?? 0));
+    }
+    const orderedSubsectors = [...subsectorTotals.entries()]
+        .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+        .map(([name]) => name);
+    const orderIndex = new Map(orderedSubsectors.map((name, index) => [name, index]));
+
+    // Return granular data with all raw values for unit conversions
+    return relevantRows
+        .map((row) => {
+            const subsectorName = row.sub_sector ?? "Other";
+            return {
+                year: row.year,
+                donor: donorName,
+                recipient: recipientName,
+                sector: selectedSector,
+                sub_sector: subsectorName,
+                indicator: row.indicator,
+                converted_value: row.converted_value ?? null,
+                original_value: row.original_value ?? null,
+                sector_total: sectorTotalsByYear.get(row.year) ?? null,
+                indicator_total: row.indicator_total_original ?? null,
+                currency,
+                prices,
+                indicatorUnitLabel,
+                source: "OECD CRS, MultiSystem",
+                __order: orderIndex.get(subsectorName) ?? orderedSubsectors.length
+            };
+        })
+        .sort((a, b) => (a.year - b.year) || (a.__order - b.__order))
+        .map(({__order, ...rest}) => rest);
 }
 
 function valueForUnit({unit, convertedValue, originalValue, sectorTotal, indicatorTotal}) {
@@ -558,4 +496,103 @@ function ratioAsPct(numerator, denominator) {
     }
 
     return (numerator / denominator) * 100;
+}
+
+// Export transformation functions for reactive UI updates
+
+// Transform selected data based on breakdown flag
+export function transformSelectedData(baseData, breakdown) {
+    if (!baseData || baseData.length === 0) return [];
+
+    // If breakdown is enabled, return granular data as-is
+    if (breakdown) {
+        return baseData;
+    }
+
+    // Otherwise, aggregate by year only
+    const aggregatedByYear = new Map();
+    for (const row of baseData) {
+        const entry = aggregatedByYear.get(row.year) ?? {
+            year: row.year,
+            donor: row.donor,
+            recipient: row.recipient,
+            sector: row.sector,
+            indicator: row.indicator,
+            value: 0,
+            unit: row.unit,
+            source: row.source
+        };
+        entry.value += row.value ?? 0;
+        aggregatedByYear.set(row.year, entry);
+    }
+
+    return [...aggregatedByYear.values()].sort((a, b) => a.year - b.year);
+}
+
+// Transform table data based on unit and breakdown flags
+export function transformTableData(baseData, unit, breakdown) {
+    if (!baseData || baseData.length === 0) return [];
+
+    // First row has metadata we need
+    const {currency, prices, sector, indicatorUnitLabel} = baseData[0];
+    const unitLabel = tableUnitLabel(unit, currency, prices, sector, indicatorUnitLabel);
+
+    if (breakdown) {
+        // Return granular data with unit applied
+        return baseData.map((row) => ({
+            year: row.year,
+            donor: row.donor,
+            recipient: row.recipient,
+            sector: row.sector,
+            sub_sector: row.sub_sector,
+            indicator: row.indicator,
+            value: valueForUnit({
+                unit,
+                convertedValue: row.converted_value,
+                originalValue: row.original_value,
+                sectorTotal: row.sector_total,
+                indicatorTotal: row.indicator_total
+            }),
+            unit: unitLabel,
+            source: row.source
+        }));
+    }
+
+    // Aggregate by year only
+    const aggregatedByYear = new Map();
+    for (const row of baseData) {
+        const entry = aggregatedByYear.get(row.year) ?? {
+            year: row.year,
+            donor: row.donor,
+            recipient: row.recipient,
+            sector: row.sector,
+            indicator: row.indicator,
+            convertedValue: 0,
+            originalValue: 0,
+            indicatorTotal: row.indicator_total
+        };
+        entry.convertedValue += row.converted_value ?? 0;
+        entry.originalValue += row.original_value ?? 0;
+        entry.indicatorTotal = row.indicator_total ?? entry.indicatorTotal;
+        aggregatedByYear.set(row.year, entry);
+    }
+
+    return [...aggregatedByYear.values()]
+        .sort((a, b) => a.year - b.year)
+        .map((entry) => ({
+            year: entry.year,
+            donor: entry.donor,
+            recipient: entry.recipient,
+            sector: entry.sector,
+            indicator: entry.indicator,
+            value: valueForUnit({
+                unit,
+                convertedValue: entry.convertedValue,
+                originalValue: entry.originalValue,
+                sectorTotal: entry.originalValue,
+                indicatorTotal: entry.indicatorTotal
+            }),
+            unit: unitLabel,
+            source: baseData[0].source
+        }));
 }

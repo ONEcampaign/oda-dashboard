@@ -1,8 +1,8 @@
-```js 
+```js
 import {setCustomColors} from "@one-data/observable-themes/use-colors";
 import {logo} from "@one-data/observable-themes/use-images";
 import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap, decodeHTML} from "./components/utils.js";
-import {sectorsQueries} from "./components/sectorsQueries.js";
+import {sectorsQueries, transformSelectedData, transformTableData, donorOptions, recipientOptions, sectorsIndicators, code2Subsector, subsector2Sector} from "./components/sectorsQueries.js";
 import {rangeInput} from "./components/rangeInput.js";
 import {barPlot, sparkbarTable} from "./components/visuals.js";
 import {treemapPlot, selectedSector} from "./components/Treemap.js";
@@ -15,24 +15,18 @@ const sectorsStateStore = globalThis.__odaSectorsState ??= {lastResult: null};
 ```
 
 ```js
-const donorOptions = await FileAttachment("./data/analysis_tools/donors.json").json()
+// Use metadata exported from sectorsQueries.js to avoid duplicate loading
 const donorMapping = name2CodeMap(donorOptions, {removeEU27EUI:true})
 ```
 
 ```js
-const recipientOptions = await FileAttachment("./data/analysis_tools/recipients.json").json()
 const recipientMapping = name2CodeMap(recipientOptions, { useRecipientGroups: true })
 ```
 
 ```js
-const indicatorOptions = await FileAttachment("./data/analysis_tools/sectors_indicators.json").json()
 const indicatorMapping = new Map(
-    Object.entries(indicatorOptions).map(([k, v]) => [v, Number(k)])
+    Object.entries(sectorsIndicators).map(([k, v]) => [v, Number(k)])
 );
-```
-
-```js
-const subsector2Sector = await FileAttachment("./data/analysis_tools/sectors.json").json()
 ```
 
 ```js
@@ -191,8 +185,9 @@ const dataState = Generators.observe((notify) => {
 
     const emptyResult = {
         treemapData: [],
-        selectedData: [],
-        tableData: []
+        selectedBaseData: [],
+        tableBaseData: [],
+        indicatorUnitLabel: ""
     };
 
     function cleanup() {
@@ -249,24 +244,25 @@ const dataState = Generators.observe((notify) => {
         selectedSector,
         currency,
         prices,
-        timeRange,
-        breakdown,
-        unit
+        timeRange
     );
 
     Promise.all([
         result.treemap,
-        result.selected,
-        result.table
-    ]).then(([treemapData, selectedData, tableData]) => {
+        result.selectedBase,
+        result.tableBase
+    ]).then(([treemapData, selectedBaseData, tableBaseData]) => {
         if (cancelled) return;
         cleanup();
 
-        lastResult = {treemapData, selectedData, tableData};
+        lastResult = {treemapData, selectedBaseData, tableBaseData, indicatorUnitLabel: result.indicatorUnitLabel};
         sectorsStateStore.lastResult = lastResult;
 
         emit({
-            ...lastResult,
+            treemapData,
+            selectedBaseData,
+            tableBaseData,
+            indicatorUnitLabel: result.indicatorUnitLabel,
             loading: false,
             showSpinner: false,
             error: null,
@@ -300,11 +296,21 @@ const {
     loading: sectorsLoading,
     showSpinner: sectorsShowSpinner,
     treemapData = [],
-    selectedData = [],
-    tableData = [],
+    selectedBaseData = [],
+    tableBaseData = [],
+    indicatorUnitLabel = "",
     error: sectorsError,
     hasData: sectorsHasData
 } = dataState;
+```
+
+```js
+// Reactive transformations: instant updates when breakdown/unit change
+const selectedData = transformSelectedData(selectedBaseData, breakdown)
+```
+
+```js
+const tableData = transformTableData(tableBaseData, unit, breakdown)
 ```
 
 ```js
