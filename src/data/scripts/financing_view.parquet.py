@@ -5,7 +5,6 @@ from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_ind
 from oda_data.tools.groupings import provider_groupings
 
 from src.data.analysis_tools.helper_functions import (
-    export_parquet,
     get_dac_ids,
     set_cache_dir,
     parquet_to_stdout,

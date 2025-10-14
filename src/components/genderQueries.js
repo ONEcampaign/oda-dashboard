@@ -1,32 +1,22 @@
 import {FileAttachment} from "observablehq:stdlib";
-import {name2CodeMap, getNameByCode, escapeSQL} from "./utils.js";
-import {createDuckDBClient} from "./duckdbFactory.js";
+import {name2CodeMap} from "./utils.js";
 
-// Load only metadata required for gender queries
-const [donorOptions, recipientOptions, genderIndicators] = await Promise.all([
+// Load metadata and parquet data in parallel
+const [donorOptions, recipientOptions, genderIndicators, genderTable] = await Promise.all([
     FileAttachment("../data/analysis_tools/donors.json").json(),
     FileAttachment("../data/analysis_tools/recipients.json").json(),
-    FileAttachment("../data/analysis_tools/gender_indicators.json").json()
+    FileAttachment("../data/analysis_tools/gender_indicators.json").json(),
+    FileAttachment("../data/scripts/gender_view.parquet").parquet()
 ]);
 
-// Lazy initialization: DuckDB instance is created on first query
-let dbPromise = null;
-function getDB() {
-    if (!dbPromise) {
-        const cacheBuster = navigator.userAgent.includes("Windows") ? `?t=${Date.now()}` : "";
-        dbPromise = createDuckDBClient({
-            gender: FileAttachment("../data/scripts/gender.parquet").href + cacheBuster,
-            current_conversion_table: FileAttachment("../data/scripts/current_conversion_table.csv").csv({typed: true}),
-            constant_conversion_table: FileAttachment("../data/scripts/constant_conversion_table_2023.csv").csv({typed: true})
-        }, 'gender');
-    }
-    return dbPromise;
-}
+// Convert Arrow table to JavaScript array for fast in-memory filtering
+const genderData = genderTable.toArray();
 
-const donorMapping = name2CodeMap(donorOptions, {})
+// Export for use in gender.md to avoid duplicate loading
+export {donorOptions, recipientOptions, genderIndicators};
 
-const recipientMapping = name2CodeMap(recipientOptions)
-
+const donorMapping = name2CodeMap(donorOptions, {});
+const recipientMapping = name2CodeMap(recipientOptions);
 
 const genderCache = new Map();
 
@@ -37,13 +27,12 @@ export function genderQueries(
     indicator,
     currency,
     prices,
-    timeRange,
-    unit
+    timeRange
 ) {
 
     const indicators = indicator.length > 0 ? indicator : [-1];
 
-    const basePromise = fetchGenderSeries(
+    const rows = fetchGenderSeries(
         donor,
         recipient,
         indicators,
@@ -52,48 +41,45 @@ export function genderQueries(
         timeRange
     );
 
-    const absolute = basePromise.then((rows) =>
-        rows.map((row) => ({
-            year: row.year,
-            donor: row.donor,
-            recipient: row.recipient,
-            indicator: row.indicator,
-            value: row.converted_value,
-            unit: `${currency} ${prices} million`,
-            source: "OECD CRS"
-        }))
-    );
+    const absolute = rows.map((row) => ({
+        year: row.year,
+        donor: row.donor,
+        recipient: row.recipient,
+        indicator: row.indicator,
+        value: row.value,
+        unit: `${currency} ${prices} million`,
+        source: "OECD CRS"
+    }));
 
-    const relative = basePromise.then((rows) =>
-        rows.map((row) => ({
-            year: row.year,
-            donor: row.donor,
-            recipient: row.recipient,
-            indicator: row.indicator,
-            value: ratioAsPct(row.original_value, row.total_value),
-            unit: "% of total ODA",
-            source: "OECD CRS"
-        }))
-    );
+    const relative = rows.map((row) => ({
+        year: row.year,
+        donor: row.donor,
+        recipient: row.recipient,
+        indicator: row.indicator,
+        value: row.pct_of_total * 100,
+        unit: "% of total ODA",
+        source: "OECD CRS"
+    }));
 
-    const table = basePromise.then((rows) =>
-        rows.map((row) => ({
-            year: row.year,
-            donor: row.donor,
-            recipient: row.recipient,
-            indicator: row.indicator,
-            value: unit === "value"
-                ? row.converted_value
-                : ratioAsPct(row.original_value, row.total_value),
-            unit: unit === "value"
-                ? `${currency} ${prices} million`
-                : "% of total ODA",
-            source: "OECD CRS"
-        }))
-    );
+    // Return raw rows for table transformation
+    return {absolute, relative, rawData: rows};
+}
 
-    return {absolute, relative, table};
-
+// Separate table transformation so unit changes don't trigger re-query
+export function transformTableData(rows, unit, currency, prices) {
+    return rows.map((row) => ({
+        year: row.year,
+        donor: row.donor,
+        recipient: row.recipient,
+        indicator: row.indicator,
+        value: unit === "value"
+            ? row.value
+            : row.pct_of_total * 100,
+        unit: unit === "value"
+            ? `${currency} ${prices} million`
+            : "% of total ODA",
+        source: "OECD CRS"
+    }));
 }
 
 function genderCacheKey({donor, recipient, indicator, currency, prices, timeRange}) {
@@ -120,7 +106,7 @@ function ratioAsPct(numerator, denominator) {
     return (numerator / denominator) * 100;
 }
 
-async function fetchGenderSeries(
+function fetchGenderSeries(
     donor,
     recipient,
     indicators,
@@ -144,7 +130,7 @@ async function fetchGenderSeries(
     return genderCache.get(cacheKey);
 }
 
-async function executeGenderSeries(
+function executeGenderSeries(
     donor,
     recipient,
     indicators,
@@ -156,84 +142,27 @@ async function executeGenderSeries(
         return [];
     }
 
-    const indicatorSelection = indicators.join(", ");
+    // In-memory filtering - much faster than DuckDB for simple queries on small dataset
+    const valueColumn = `value_${currency}_${prices}`;
 
-    const indicatorCase = Object.entries(genderIndicators)
-        .map(([code, label]) => `WHEN indicator = ${code} THEN '${escapeSQL(label)}'`)
-        .join("\n");
-
-    const db = await getDB();
-    const query = await db.query(
-        `
-            WITH filtered AS (
-                SELECT
-                    year,
-                    donor_code AS donor,
-                    recipient_code AS recipient,
-                    indicator,
-                    value
-                FROM gender
-                WHERE
-                    donor_code IN (${donor})
-                    AND recipient_code IN (${recipient})
-                    AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-                    AND indicator IN (${indicatorSelection})
-            ),
-            conversion AS (
-                SELECT
-                    year,
-                    ${prices === "constant" ? "dac_code AS donor," : ""}
-                    ${currency}_${prices} AS factor
-                FROM
-                    ${prices}_conversion_table
-                    ${prices === "constant" ? `WHERE dac_code IN (${donor})` : ""}
-            ),
-            converted AS (
-                SELECT
-                    f.year,
-                    CASE
-                        ${indicatorCase}
-                    END AS indicator_label,
-                    SUM(f.value) AS original_value,
-                    SUM(f.value * c.factor) AS converted_value
-                FROM filtered f
-                    JOIN conversion c
-                        ON f.year = c.year
-                        ${prices === "constant" ? "AND f.donor = c.donor" : ""}
-                GROUP BY f.year, f.indicator
-            ),
-            totals AS (
-                SELECT
-                    year,
-                    SUM(value) AS total_value
-                FROM gender
-                WHERE
-                    donor_code IN (${donor})
-                    AND recipient_code IN (${recipient})
-                    AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
-                GROUP BY year
-            )
-            SELECT
-                c.year,
-                '${escapeSQL(getNameByCode(donorMapping, donor))}' AS donor,
-                '${escapeSQL(getNameByCode(recipientMapping, recipient))}' AS recipient,
-                c.indicator_label,
-                c.converted_value,
-                c.original_value,
-                t.total_value
-            FROM converted c
-                LEFT JOIN totals t ON c.year = t.year
-            ORDER BY c.year, c.indicator_label
-        `
-    );
-
-    return query.toArray().map((row) => ({
-        year: row.year,
-        donor: row.donor,
-        recipient: row.recipient,
-        indicator: row.indicator_label,
-        converted_value: row.converted_value ?? null,
-        original_value: row.original_value ?? null,
-        total_value: row.total_value ?? null
-    }));
+    return genderData
+        .filter(row =>
+            row.donor_code === donor &&
+            row.recipient_code === recipient &&
+            indicators.includes(row.indicator) &&
+            row.year >= timeRange[0] &&
+            row.year <= timeRange[1]
+        )
+        .map(row => ({
+            year: row.year,
+            donor: row.donor_name,
+            recipient: row.recipient_name,
+            indicator: row.indicator_name,
+            value: row[valueColumn] ?? null,
+            pct_of_total: row.pct_of_total_oda ?? null
+        }))
+        .sort((a, b) => {
+            if (a.year !== b.year) return a.year - b.year;
+            return a.indicator.localeCompare(b.indicator);
+        });
 }

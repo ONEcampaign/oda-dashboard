@@ -233,6 +233,29 @@ def add_share_of_recipients_total_oda(df: pd.DataFrame) -> pd.DataFrame:
     return merged
 
 
+def add_gender_share_of_total_oda(df: pd.DataFrame) -> pd.DataFrame:
+    """Add column for share of total ODA"""
+
+    total = (
+        df.groupby(
+            ["year", "donor_code", "recipient_code"], dropna=False, observed=True
+        )["value_usd_current"]
+        .sum()
+        .reset_index()
+        .rename(columns={"value_usd_current": "total_oda"})
+    )
+
+    merged = df.merge(total, on=["year", "donor_code", "recipient_code"], how="left")
+
+    merged["pct_of_total_oda"] = (
+        merged["value_usd_current"] / merged["total_oda"]
+    ).round(6)
+
+    merged = merged.drop(columns=["total_oda"])
+
+    return merged
+
+
 def add_share_of_gni(df: pd.DataFrame) -> pd.DataFrame:
     """Add column for share of GNI"""
 
@@ -265,6 +288,16 @@ def add_recipient_indicator_codes(df: pd.DataFrame) -> pd.DataFrame:
         indicator_map = {v: int(k) for k, v in json.load(f).items()}
     df = df.assign(indicator=lambda d: d["indicator_name"].map(indicator_map))
     return df
+
+
+def add_gender_indicator_codes(df: pd.DataFrame) -> pd.DataFrame:
+    with open(PATHS.TOOLS / "gender_indicators.json", "r") as f:
+        indicator_mapping = {v: int(k) for k, v in json.load(f).items()}
+
+    df["indicator_code"] = df["indicator"].map(indicator_mapping)
+    return df.rename(
+        columns={"indicator": "indicator_name", "indicator_code": "indicator"}
+    )
 
 
 def add_donor_names(df: pd.DataFrame) -> pd.DataFrame:

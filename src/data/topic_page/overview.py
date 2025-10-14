@@ -1,4 +1,3 @@
-import pandas as pd
 from bblocks import format_number
 
 from src.data.analysis_tools.helper_functions import set_cache_dir
@@ -59,7 +58,7 @@ def total_aid_key_number() -> None:
     }
 
     update_key_number(f"{PATHS.TOPIC_PAGE}/oda_key_numbers.json", kn)
-    logger.debug(f"Updated dynamic text ODA topic page oda_key_numbers.json")
+    logger.debug("Updated dynamic text ODA topic page oda_key_numbers.json")
 
 
 def aid_gni_key_number() -> None:
@@ -95,7 +94,7 @@ def aid_gni_key_number() -> None:
     }
 
     update_key_number(f"{PATHS.TOPIC_PAGE}/oda_key_numbers.json", kn)
-    logger.info(f"Updated dynamic text ODA topic page oda_key_numbers.json")
+    logger.info("Updated dynamic text ODA topic page oda_key_numbers.json")
 
 
 def aid_to_africa_ts() -> None:
@@ -139,7 +138,7 @@ def aid_to_africa_ts() -> None:
         "aid_to_africa_share": f"{data['Share of total ODA'].values[-1]}",
     }
     update_key_number(f"{PATHS.TOPIC_PAGE}/oda_key_numbers.json", kn)
-    logger.info(f"Updated dynamic text ODA topic page oda_key_numbers.json")
+    logger.info("Updated dynamic text ODA topic page oda_key_numbers.json")
 
 
 def aid_to_incomes_latest():
@@ -196,7 +195,7 @@ def aid_to_incomes_latest():
     )
 
     update_key_number(f"{PATHS.TOPIC_PAGE}/oda_key_numbers.json", income_dict)
-    logger.debug(f"Updated dynamic text ODA topic page oda_key_numbers.json")
+    logger.debug("Updated dynamic text ODA topic page oda_key_numbers.json")
 
 
 def aid_to_sectors_ts() -> None:
@@ -239,7 +238,7 @@ def aid_to_sectors_ts() -> None:
         "aid_to_health_share": f"{data_health['Share of total ODA'].values[-1]}",
     }
     update_key_number(f"{PATHS.TOPIC_PAGE}/oda_key_numbers.json", kn)
-    logger.debug(f"Updated dynamic text ODA topic page oda_key_numbers.json")
+    logger.debug("Updated dynamic text ODA topic page oda_key_numbers.json")
 
     # Humanitarian
     data_humanitarian = data.loc[lambda d: d.sub_sector.isin(["Humanitarian"])].rename(
@@ -257,7 +256,7 @@ def aid_to_sectors_ts() -> None:
         "aid_to_humanitarian_share": f"{data_humanitarian['Share of total ODA'].values[-1]}",
     }
     update_key_number(f"{PATHS.TOPIC_PAGE}/oda_key_numbers.json", kn)
-    logger.debug(f"Updated dynamic text ODA topic page oda_key_numbers.json")
+    logger.debug("Updated dynamic text ODA topic page oda_key_numbers.json")
 
 
 if __name__ == "__main__":
