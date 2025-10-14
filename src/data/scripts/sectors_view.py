@@ -21,10 +21,6 @@ from src.data.config import PATHS, SECTORS_TIME, logger
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
     get_dac_ids,
-    add_index_column,
-    df_to_parquet,
-    parquet_to_stdout,
-    export_parquet,
 )
 import pyarrow as pa
 import pyarrow.dataset as ds

@@ -15,13 +15,10 @@ if [ ! -d "${LOCAL_DIR}" ]; then
     exit 1
 fi
 
+echo "Clearing existing data in '${GCS_PATH}'..."
+gsutil -m rm -r "${GCS_PATH}/**" 2>/dev/null || true
+
 echo "Uploading '${LOCAL_DIR}' → '${GCS_PATH}'"
 gsutil -m rsync -r -d "${LOCAL_DIR}" "${GCS_PATH}"
-
-LEGACY_FILE="cdn_files/sectors_view.parquet"
-if [ -f "${LEGACY_FILE}" ]; then
-    echo "Uploading legacy single-file parquet '${LEGACY_FILE}'"
-    gsutil cp "${LEGACY_FILE}" "${GCS_PATH}.parquet"
-fi
 
 echo "Upload complete."
