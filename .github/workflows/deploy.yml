@@ -39,12 +39,6 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: individual-loaders
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: |
-          uv run python src/data/scripts/sectors_view.py
-
       - name: Build Observable Framework app
         run: uv run npm run build
 
@@ -53,6 +47,12 @@ jobs:
         with:
           workload_identity_provider: 'projects/650536812276/locations/global/workloadIdentityPools/github/providers/github'
           service_account: 'github-deployer@one-data-commons.iam.gserviceaccount.com'
+
+      - name: individual-loaders
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          uv run python src/data/scripts/sectors_view.py
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
