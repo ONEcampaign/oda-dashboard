@@ -8,7 +8,7 @@ on:
 env:
   APP_PATH: oda-dashboard  # Change for each app
   BUCKET: data-apps-one-data
-  CACHE_VERSION: v2  # Increment to force cache refresh
+  CACHE_VERSION: v3  # Increment to force cache refresh
 
 jobs:
   deploy:
@@ -53,21 +53,16 @@ jobs:
 
       - name: Verify cache integrity
         run: |
-          # Ensure cache directories exist
           mkdir -p src/.observablehq/cache src/data/cache
 
-          # Test for corrupted parquet files in oda-data cache
-          # If any are found, remove them to force re-download
+          # Find and test all parquet files recursively
           if [ -d "src/data/cache" ]; then
-            shopt -s nullglob
-            for file in src/data/cache/*.parquet; do
-              if [ -f "$file" ]; then
-                if ! python -c "import pandas as pd; pd.read_parquet('$file')" 2>/dev/null; then
-                  echo "Removing corrupted cache file: $file"
-                  rm "$file"
-                fi
+            while IFS= read -r -d '' file; do
+              if ! python -c "import pandas as pd; pd.read_parquet('$file')" 2>/dev/null; then
+                echo "Removing corrupted cache file: $file"
+                rm "$file"
               fi
-            done
+            done < <(find src/data/cache -type f -name "*.parquet" -print0)
           fi
 
       - name: individual-loaders
