@@ -24,20 +24,36 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.13'  # Adjust to your required version
+          cache: 'pip'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
 
       - name: Install Python dependencies
         run: uv sync
 
       - name: Install Node dependencies
         run: npm ci
+
+      - id: date
+        run: echo "date=$(TZ=America/Los_Angeles date +'%Y-%U')" >> $GITHUB_OUTPUT
+
+      - id: cache-data
+        uses: actions/cache@v4
+        with:
+          path: |
+            src/.observablehq/cache
+            src/data/cache
+          key: data-${{ hashFiles('src/data/*') }}-${{ steps.date.outputs.date }}
 
       - name: Build Observable Framework app
         run: uv run npm run build
@@ -53,6 +69,16 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           uv run python src/data/scripts/sectors_view.py
+
+      - name: Cache gcloud SDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.config/gcloud
+            ~/.cache/google-cloud-sdk
+          key: ${{ runner.os }}-gcloud-${{ hashFiles('**/*.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-gcloud-
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2

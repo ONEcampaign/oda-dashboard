@@ -2,11 +2,11 @@
 name = "oda-dashboard"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "bblocks>=1.4, <2.0",
-    "oda-data>=2.2.2post1",
+    "oda-data @ git+https://github.com/ONEcampaign/oda_data_package.git@main",
     "pandas>=2.3.2",
-    "pyarrow>=18.0.0",
+    "pyarrow>=17.0.0",
     "pydeflate>=2.1.3",
 ]
