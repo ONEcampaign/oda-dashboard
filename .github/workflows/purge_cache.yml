@@ -1,4 +1,4 @@
-name: Deploy to GCP
+name: Purge Cloudflare Cache
 
 on:
   workflow_dispatch:

@@ -8,7 +8,6 @@ on:
 env:
   APP_PATH: oda-dashboard  # Change for each app
   BUCKET: data-apps-one-data
-  CACHE_VERSION: v3  # Increment to force cache refresh
 
 jobs:
   deploy:
@@ -39,31 +38,6 @@ jobs:
 
       - name: Install Node dependencies
         run: npm ci
-
-      - id: date
-        run: echo "date=$(TZ=America/Los_Angeles date +'%Y-%U')" >> $GITHUB_OUTPUT
-
-      - id: cache-data
-        uses: actions/cache@v4
-        with:
-          path: |
-            src/.observablehq/cache
-            src/data/cache
-          key: ${{ env.CACHE_VERSION }}-data-${{ hashFiles('src/data/*') }}-${{ steps.date.outputs.date }}
-
-      - name: Verify cache integrity
-        run: |
-          mkdir -p src/.observablehq/cache src/data/cache
-
-          # Find and test all parquet files recursively
-          if [ -d "src/data/cache" ]; then
-            while IFS= read -r -d '' file; do
-              if ! python -c "import pandas as pd; pd.read_parquet('$file')" 2>/dev/null; then
-                echo "Removing corrupted cache file: $file"
-                rm "$file"
-              fi
-            done < <(find src/data/cache -type f -name "*.parquet" -print0)
-          fi
 
       - name: individual-loaders
         env:
