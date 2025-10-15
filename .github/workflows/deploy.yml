@@ -59,7 +59,8 @@ jobs:
           # Test for corrupted parquet files in oda-data cache
           # If any are found, remove them to force re-download
           if [ -d "src/data/cache" ]; then
-            for file in src/data/cache/*.parquet 2>/dev/null; do
+            shopt -s nullglob
+            for file in src/data/cache/*.parquet; do
               if [ -f "$file" ]; then
                 if ! python -c "import pandas as pd; pd.read_parquet('$file')" 2>/dev/null; then
                   echo "Removing corrupted cache file: $file"
