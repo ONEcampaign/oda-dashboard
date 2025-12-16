@@ -29,7 +29,11 @@ def detect_yoy_anomalies(
 
     for donor in df["donor_code"].unique():
         donor_data = df[df["donor_code"] == donor].copy()
-        donor_name = donor_data["donor_name"].iloc[0] if "donor_name" in donor_data.columns else str(donor)
+        donor_name = (
+            donor_data["donor_name"].iloc[0]
+            if "donor_name" in donor_data.columns
+            else str(donor)
+        )
 
         # Get yearly totals
         yearly = donor_data.groupby("year")[value_column].sum().sort_index()
@@ -69,14 +73,16 @@ def detect_yoy_anomalies(
 
         if abs(z_score) > ANOMALY_Z_SCORE_THRESHOLD:
             level = "high" if abs(z_score) > ANOMALY_Z_SCORE_HIGH else "medium"
-            warnings.append(Warning(
-                level=level,
-                dataset="",  # Will be set by caller
-                message=(
-                    f"{donor_name}: {current_year} change is {current_change:+.1%} "
-                    f"(typical: {mean_change:+.1%} ± {std_change:.1%}, z={z_score:.1f})"
-                ),
-            ))
+            warnings.append(
+                Warning(
+                    level=level,
+                    dataset="",  # Will be set by caller
+                    message=(
+                        f"{donor_name}: {current_year} change is {current_change:+.1%} "
+                        f"(typical: {mean_change:+.1%} ± {std_change:.1%}, z={z_score:.1f})"
+                    ),
+                )
+            )
 
     return warnings
 
@@ -127,11 +133,13 @@ def detect_release_drift(
         if abs(pct_change) > 0.20:
             level = "high" if abs(pct_change) > 0.40 else "medium"
             donor_name = donor_names.get(donor, str(donor))
-            warnings.append(Warning(
-                level=level,
-                dataset="",
-                message=f"{donor_name}: {pct_change:+.1%} vs {release_name}",
-            ))
+            warnings.append(
+                Warning(
+                    level=level,
+                    dataset="",
+                    message=f"{donor_name}: {pct_change:+.1%} vs {release_name}",
+                )
+            )
 
     return warnings
 
@@ -162,34 +170,36 @@ def detect_missing_expected_data(
     for donor_code, donor_name in major_donors.items():
         # Check if donor exists in latest year
         donor_latest = df[
-            (df["donor_code"] == donor_code) &
-            (df["year"] == latest_year)
+            (df["donor_code"] == donor_code) & (df["year"] == latest_year)
         ]
 
         # Check if had data in previous year
         donor_prev = df[
-            (df["donor_code"] == donor_code) &
-            (df["year"] == latest_year - 1)
+            (df["donor_code"] == donor_code) & (df["year"] == latest_year - 1)
         ]
 
         # Had data last year but not this year
         if len(donor_prev) > 0 and len(donor_latest) == 0:
-            warnings.append(Warning(
-                level="high",
-                dataset="",
-                message=f"{donor_name}: No data for {latest_year} (had data in {latest_year - 1})",
-            ))
+            warnings.append(
+                Warning(
+                    level="high",
+                    dataset="",
+                    message=f"{donor_name}: No data for {latest_year} (had data in {latest_year - 1})",
+                )
+            )
             continue
 
         # Has rows but all zeros
         if len(donor_latest) > 0:
             total = donor_latest[value_column].sum()
             if total == 0:
-                warnings.append(Warning(
-                    level="high",
-                    dataset="",
-                    message=f"{donor_name}: All zeros for {latest_year}",
-                ))
+                warnings.append(
+                    Warning(
+                        level="high",
+                        dataset="",
+                        message=f"{donor_name}: All zeros for {latest_year}",
+                    )
+                )
 
     return warnings
 
@@ -222,18 +232,22 @@ def detect_new_or_removed_codes(
         removed_donors = previous_donors - current_donors
 
         if new_donors:
-            warnings.append(Warning(
-                level="info",
-                dataset="",
-                message=f"New donor codes: {sorted(new_donors)}",
-            ))
+            warnings.append(
+                Warning(
+                    level="info",
+                    dataset="",
+                    message=f"New donor codes: {sorted(new_donors)}",
+                )
+            )
 
         if removed_donors:
-            warnings.append(Warning(
-                level="medium",
-                dataset="",
-                message=f"Removed donor codes: {sorted(removed_donors)}",
-            ))
+            warnings.append(
+                Warning(
+                    level="medium",
+                    dataset="",
+                    message=f"Removed donor codes: {sorted(removed_donors)}",
+                )
+            )
 
     # Check indicators
     if "indicator" in df.columns:
@@ -244,18 +258,22 @@ def detect_new_or_removed_codes(
         removed_indicators = previous_indicators - current_indicators
 
         if new_indicators:
-            warnings.append(Warning(
-                level="info",
-                dataset="",
-                message=f"New indicators: {sorted(new_indicators)}",
-            ))
+            warnings.append(
+                Warning(
+                    level="info",
+                    dataset="",
+                    message=f"New indicators: {sorted(new_indicators)}",
+                )
+            )
 
         if removed_indicators:
-            warnings.append(Warning(
-                level="medium",
-                dataset="",
-                message=f"Removed indicators: {sorted(removed_indicators)}",
-            ))
+            warnings.append(
+                Warning(
+                    level="medium",
+                    dataset="",
+                    message=f"Removed indicators: {sorted(removed_indicators)}",
+                )
+            )
 
     # Check purpose codes (for sectors)
     if "purpose_code" in df.columns:
@@ -267,19 +285,23 @@ def detect_new_or_removed_codes(
 
         if new_codes:
             sample = sorted(new_codes)[:20]
-            warnings.append(Warning(
-                level="info",
-                dataset="",
-                message=f"New purpose codes: {sample}{'...' if len(new_codes) > 20 else ''}",
-            ))
+            warnings.append(
+                Warning(
+                    level="info",
+                    dataset="",
+                    message=f"New purpose codes: {sample}{'...' if len(new_codes) > 20 else ''}",
+                )
+            )
 
         if removed_codes:
             sample = sorted(removed_codes)[:20]
-            warnings.append(Warning(
-                level="medium",
-                dataset="",
-                message=f"Removed purpose codes: {sample}{'...' if len(removed_codes) > 20 else ''}",
-            ))
+            warnings.append(
+                Warning(
+                    level="medium",
+                    dataset="",
+                    message=f"Removed purpose codes: {sample}{'...' if len(removed_codes) > 20 else ''}",
+                )
+            )
 
     # Check sub-sector codes (for sectors_view)
     if "sub_sector_code" in df.columns:
@@ -290,18 +312,22 @@ def detect_new_or_removed_codes(
         removed_codes = previous_codes - current_codes
 
         if new_codes:
-            warnings.append(Warning(
-                level="info",
-                dataset="",
-                message=f"New sub-sector codes: {sorted(new_codes)}",
-            ))
+            warnings.append(
+                Warning(
+                    level="info",
+                    dataset="",
+                    message=f"New sub-sector codes: {sorted(new_codes)}",
+                )
+            )
 
         if removed_codes:
-            warnings.append(Warning(
-                level="medium",
-                dataset="",
-                message=f"Removed sub-sector codes: {sorted(removed_codes)}",
-            ))
+            warnings.append(
+                Warning(
+                    level="medium",
+                    dataset="",
+                    message=f"Removed sub-sector codes: {sorted(removed_codes)}",
+                )
+            )
 
     # Check sector names (for sectors_view)
     if "sector_name" in df.columns:
@@ -312,18 +338,22 @@ def detect_new_or_removed_codes(
         removed_sectors = previous_sectors - current_sectors
 
         if new_sectors:
-            warnings.append(Warning(
-                level="info",
-                dataset="",
-                message=f"New sectors: {sorted(new_sectors)}",
-            ))
+            warnings.append(
+                Warning(
+                    level="info",
+                    dataset="",
+                    message=f"New sectors: {sorted(new_sectors)}",
+                )
+            )
 
         if removed_sectors:
-            warnings.append(Warning(
-                level="high",
-                dataset="",
-                message=f"Removed sectors: {sorted(removed_sectors)}",
-            ))
+            warnings.append(
+                Warning(
+                    level="high",
+                    dataset="",
+                    message=f"Removed sectors: {sorted(removed_sectors)}",
+                )
+            )
 
     return warnings
 
@@ -355,11 +385,13 @@ def detect_row_count_change(
 
     if abs(pct_change) > threshold:
         level = "high" if abs(pct_change) > 0.30 else "medium"
-        warnings.append(Warning(
-            level=level,
-            dataset=dataset,
-            message=f"Row count: {previous_count:,} -> {current_count:,} ({pct_change:+.1%})",
-        ))
+        warnings.append(
+            Warning(
+                level=level,
+                dataset=dataset,
+                message=f"Row count: {previous_count:,} -> {current_count:,} ({pct_change:+.1%})",
+            )
+        )
 
     return warnings
 
@@ -391,17 +423,21 @@ def detect_indicator_coverage_gaps(
         indicator_data = df[df["indicator"] == indicator]
 
         if len(indicator_data) == 0:
-            warnings.append(Warning(
-                level="high",
-                dataset="",
-                message=f"Indicator '{indicator}' has no data (was present in previous release)",
-            ))
+            warnings.append(
+                Warning(
+                    level="high",
+                    dataset="",
+                    message=f"Indicator '{indicator}' has no data (was present in previous release)",
+                )
+            )
         elif indicator_data[value_column].sum() == 0:
-            warnings.append(Warning(
-                level="medium",
-                dataset="",
-                message=f"Indicator '{indicator}' is all zeros",
-            ))
+            warnings.append(
+                Warning(
+                    level="medium",
+                    dataset="",
+                    message=f"Indicator '{indicator}' is all zeros",
+                )
+            )
 
     return warnings
 
@@ -441,11 +477,13 @@ def detect_agency_drift(
 
         if abs(pct_change) > 0.20:
             level = "high" if abs(pct_change) > 0.40 else "medium"
-            warnings.append(Warning(
-                level=level,
-                dataset="",
-                message=f"Agency {agency}: {pct_change:+.1%} vs previous release",
-            ))
+            warnings.append(
+                Warning(
+                    level=level,
+                    dataset="",
+                    message=f"Agency {agency}: {pct_change:+.1%} vs previous release",
+                )
+            )
 
     return warnings
 
@@ -487,19 +525,25 @@ def detect_sector_drift(
 
         if abs(pct_change) > 0.20:
             level = "high" if abs(pct_change) > 0.40 else "medium"
-            warnings.append(Warning(
-                level=level,
-                dataset="",
-                message=f"Sector '{sector}': {pct_change:+.1%} vs previous release",
-            ))
+            warnings.append(
+                Warning(
+                    level=level,
+                    dataset="",
+                    message=f"Sector '{sector}': {pct_change:+.1%} vs previous release",
+                )
+            )
 
     # Donor-sector drift (catches individual donor problems masked by totals)
     if "donor_code" not in df.columns:
         return warnings
 
     donor_names = donor_names or {}
-    current_by_donor_sector = df.groupby(["donor_code", "sector_name"], observed=True)[value_column].sum()
-    previous_by_donor_sector = previous_release.get("aggregates", {}).get("by_donor_sector", {})
+    current_by_donor_sector = df.groupby(["donor_code", "sector_name"], observed=True)[
+        value_column
+    ].sum()
+    previous_by_donor_sector = previous_release.get("aggregates", {}).get(
+        "by_donor_sector", {}
+    )
 
     for key, prev_total in previous_by_donor_sector.items():
         if "|" not in key:
@@ -518,10 +562,12 @@ def detect_sector_drift(
         if abs(pct_change) > 0.40:
             level = "high" if abs(pct_change) > 0.60 else "medium"
             donor_label = donor_names.get(donor, f"Donor {donor}")
-            warnings.append(Warning(
-                level=level,
-                dataset="",
-                message=f"{donor_label} - {sector}: {pct_change:+.1%} vs previous release",
-            ))
+            warnings.append(
+                Warning(
+                    level=level,
+                    dataset="",
+                    message=f"{donor_label} - {sector}: {pct_change:+.1%} vs previous release",
+                )
+            )
 
     return warnings

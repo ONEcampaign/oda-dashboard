@@ -35,7 +35,7 @@ class TestWarning:
         w = Warning(
             level="high",
             dataset="financing_view",
-            message="Germany: 2024 change is +28%"
+            message="Germany: 2024 change is +28%",
         )
         assert w.level == "high"
         assert w.dataset == "financing_view"
@@ -56,10 +56,8 @@ class TestValidationReport:
 
     def test_report_with_warnings(self):
         report = ValidationReport(release="dec_2024")
-        report.add_warning(Warning(
-            level="high",
-            dataset="financing_view",
-            message="Test warning"
-        ))
+        report.add_warning(
+            Warning(level="high", dataset="financing_view", message="Test warning")
+        )
         assert len(report.warnings) == 1
         assert report.has_blocking_errors is False

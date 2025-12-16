@@ -51,7 +51,9 @@ class ValidationReport:
                     return True
         return False
 
-    def add_check_result(self, dataset: str, check_name: str, result: CheckResult) -> None:
+    def add_check_result(
+        self, dataset: str, check_name: str, result: CheckResult
+    ) -> None:
         """Add a check result to the report."""
         if dataset not in self.check_results:
             self.check_results[dataset] = {}

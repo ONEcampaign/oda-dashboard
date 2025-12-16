@@ -128,11 +128,15 @@ def compute_aggregates(df: pd.DataFrame, value_column: str) -> dict:
     # By sub-sector (if present, for sectors_view)
     if "sub_sector_code" in df.columns:
         by_sub_sector = df.groupby("sub_sector_code", observed=True)[value_column].sum()
-        aggregates["by_sub_sector"] = {str(k): float(v) for k, v in by_sub_sector.items()}
+        aggregates["by_sub_sector"] = {
+            str(k): float(v) for k, v in by_sub_sector.items()
+        }
 
     # By donor-sector combination (if both present, for sectors_view)
     if "donor_code" in df.columns and "sector_name" in df.columns:
-        by_donor_sector = df.groupby(["donor_code", "sector_name"], observed=True)[value_column].sum()
+        by_donor_sector = df.groupby(["donor_code", "sector_name"], observed=True)[
+            value_column
+        ].sum()
         aggregates["by_donor_sector"] = {
             f"{donor}|{sector}": float(v)
             for (donor, sector), v in by_donor_sector.items()
@@ -210,7 +214,9 @@ def compute_historical_variation(df: pd.DataFrame, value_column: str) -> dict:
     valid_yoy = [x for x in yoy_changes if np.isfinite(x)]
     if valid_yoy:
         overall_mean = sum(valid_yoy) / len(valid_yoy)
-        overall_std = (sum((x - overall_mean) ** 2 for x in valid_yoy) / len(valid_yoy)) ** 0.5
+        overall_std = (
+            sum((x - overall_mean) ** 2 for x in valid_yoy) / len(valid_yoy)
+        ) ** 0.5
     else:
         overall_mean = 0
         overall_std = 0
@@ -256,10 +262,20 @@ def update_manifest(
     # Compute release data
     release_data = {
         "row_count": len(df),
-        "year_range": [int(df["year"].min()), int(df["year"].max())] if "year" in df.columns else None,
-        "donors_present": sorted([int(x) for x in df["donor_code"].unique()]) if "donor_code" in df.columns else [],
-        "recipients_present": sorted([int(x) for x in df["recipient_code"].unique()])[:100] if "recipient_code" in df.columns else [],
-        "indicators_present": list(df["indicator"].unique()) if "indicator" in df.columns else [],
+        "year_range": [int(df["year"].min()), int(df["year"].max())]
+        if "year" in df.columns
+        else None,
+        "donors_present": sorted([int(x) for x in df["donor_code"].unique()])
+        if "donor_code" in df.columns
+        else [],
+        "recipients_present": sorted([int(x) for x in df["recipient_code"].unique()])[
+            :100
+        ]
+        if "recipient_code" in df.columns
+        else [],
+        "indicators_present": list(df["indicator"].unique())
+        if "indicator" in df.columns
+        else [],
         "aggregates": compute_aggregates(df, value_column),
         "distribution": compute_distribution(df, value_column),
         "historical_variation": compute_historical_variation(df, value_column),
@@ -267,15 +283,21 @@ def update_manifest(
 
     # Add purpose codes if present
     if "purpose_code" in df.columns:
-        release_data["purpose_codes_present"] = sorted([int(x) for x in df["purpose_code"].unique()])
+        release_data["purpose_codes_present"] = sorted(
+            [int(x) for x in df["purpose_code"].unique()]
+        )
 
     # Add sub-sector codes if present (for sectors_view)
     if "sub_sector_code" in df.columns:
-        release_data["sub_sector_codes_present"] = sorted([int(x) for x in df["sub_sector_code"].dropna().unique()])
+        release_data["sub_sector_codes_present"] = sorted(
+            [int(x) for x in df["sub_sector_code"].dropna().unique()]
+        )
 
     # Add sector names if present
     if "sector_name" in df.columns:
-        release_data["sectors_present"] = sorted(df["sector_name"].dropna().unique().tolist())
+        release_data["sectors_present"] = sorted(
+            df["sector_name"].dropna().unique().tolist()
+        )
 
     manifest["releases"][release] = release_data
 

@@ -32,7 +32,9 @@ def check_schema(df: pd.DataFrame, expected: dict) -> CheckResult:
             continue  # Already reported as missing
         actual_dtype = str(df[col].dtype)
         if not _types_compatible(actual_dtype, expected_dtype):
-            errors.append(f"Column '{col}': expected {expected_dtype}, got {actual_dtype}")
+            errors.append(
+                f"Column '{col}': expected {expected_dtype}, got {actual_dtype}"
+            )
 
     return CheckResult(passed=len(errors) == 0, errors=errors)
 
@@ -208,7 +210,9 @@ def check_critical_dimensions(
     if "year" in df.columns:
         years = df["year"].unique()
         if expected_latest_year not in years:
-            errors.append(f"Missing latest year: {expected_latest_year}. Years present: {sorted(years)[-5:]}")
+            errors.append(
+                f"Missing latest year: {expected_latest_year}. Years present: {sorted(years)[-5:]}"
+            )
 
     # Check critical donors exist
     if "donor_code" in df.columns:

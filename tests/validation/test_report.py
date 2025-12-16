@@ -29,7 +29,7 @@ class TestGenerateReportMarkdown:
         report.add_check_result(
             "financing_view",
             "schema",
-            CheckResult(passed=False, errors=["Missing column: year"])
+            CheckResult(passed=False, errors=["Missing column: year"]),
         )
         md = generate_report_markdown(report)
         assert "FAILED" in md or "BLOCKED" in md
@@ -37,9 +37,21 @@ class TestGenerateReportMarkdown:
 
     def test_shows_warnings_by_level(self):
         report = ValidationReport(release="dec_2024")
-        report.add_warning(Warning(level="high", dataset="financing_view", message="High priority issue"))
-        report.add_warning(Warning(level="medium", dataset="financing_view", message="Medium priority issue"))
-        report.add_warning(Warning(level="info", dataset="financing_view", message="Info message"))
+        report.add_warning(
+            Warning(
+                level="high", dataset="financing_view", message="High priority issue"
+            )
+        )
+        report.add_warning(
+            Warning(
+                level="medium",
+                dataset="financing_view",
+                message="Medium priority issue",
+            )
+        )
+        report.add_warning(
+            Warning(level="info", dataset="financing_view", message="Info message")
+        )
 
         md = generate_report_markdown(report)
         assert "High Priority" in md

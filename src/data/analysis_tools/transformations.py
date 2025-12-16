@@ -207,7 +207,11 @@ def widen_currency_price(
         logger.warning(f"Found {duplicates.sum():,} duplicate rows before pivoting")
         logger.info("Aggregating duplicates by summing values...")
         # Aggregate duplicates by grouping and summing
-        df = df.groupby(pivot_cols, dropna=False, observed=True)["value"].sum().reset_index()
+        df = (
+            df.groupby(pivot_cols, dropna=False, observed=True)["value"]
+            .sum()
+            .reset_index()
+        )
         logger.info(f"After aggregation: {len(df):,} rows")
     else:
         logger.info("No duplicates detected - proceeding with pivot")

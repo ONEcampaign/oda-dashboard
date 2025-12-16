@@ -15,22 +15,27 @@ from validation.models import ValidationReport
 @pytest.fixture
 def sample_parquet(tmp_path):
     """Create a sample parquet file for testing."""
-    df = pd.DataFrame({
-        "year": [2022, 2023, 2024] * 4,
-        "donor_code": [4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7],
-        "donor_name": ["France"] * 3 + ["Germany"] * 3 + ["Italy"] * 3 + ["Japan"] * 3,
-        "indicator": ["total_oda"] * 12,
-        "indicator_name": ["Total ODA"] * 12,
-        "type": ["Grant equivalents"] * 12,
-        "value_usd_current": [1000, 1100, 1150] * 4,
-        "value_usd_constant": [1000, 1050, 1100] * 4,
-        "value_eur_current": [900, 990, 1035] * 4,
-        "value_eur_constant": [900, 945, 990] * 4,
-        "value_gbp_current": [800, 880, 920] * 4,
-        "value_gbp_constant": [800, 840, 880] * 4,
-        "value_cad_current": [1300, 1430, 1495] * 4,
-        "value_cad_constant": [1300, 1365, 1430] * 4,
-    })
+    df = pd.DataFrame(
+        {
+            "year": [2022, 2023, 2024] * 4,
+            "donor_code": [4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7],
+            "donor_name": ["France"] * 3
+            + ["Germany"] * 3
+            + ["Italy"] * 3
+            + ["Japan"] * 3,
+            "indicator": ["total_oda"] * 12,
+            "indicator_name": ["Total ODA"] * 12,
+            "type": ["Grant equivalents"] * 12,
+            "value_usd_current": [1000, 1100, 1150] * 4,
+            "value_usd_constant": [1000, 1050, 1100] * 4,
+            "value_eur_current": [900, 990, 1035] * 4,
+            "value_eur_constant": [900, 945, 990] * 4,
+            "value_gbp_current": [800, 880, 920] * 4,
+            "value_gbp_constant": [800, 840, 880] * 4,
+            "value_cad_current": [1300, 1430, 1495] * 4,
+            "value_cad_constant": [1300, 1365, 1430] * 4,
+        }
+    )
 
     path = tmp_path / "test_view.parquet"
     table = pa.Table.from_pandas(df)

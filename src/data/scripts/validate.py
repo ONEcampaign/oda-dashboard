@@ -71,7 +71,9 @@ def run_validation(
             f"VALIDATION PASSED with warnings: {high_count} high, {medium_count} medium, {info_count} info"
         )
     else:
-        logger.info(f"VALIDATION PASSED: {medium_count} medium, {info_count} info warnings")
+        logger.info(
+            f"VALIDATION PASSED: {medium_count} medium, {info_count} info warnings"
+        )
 
     return {
         "passed": not report.has_blocking_errors,

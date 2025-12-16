@@ -32,7 +32,9 @@ def generate_report_markdown(report: ValidationReport) -> str:
     if report.has_blocking_errors:
         status = "BLOCKED"
     elif high_count > 0:
-        status = f"WARNINGS ({high_count} high, {medium_count} medium, {info_count} info)"
+        status = (
+            f"WARNINGS ({high_count} high, {medium_count} medium, {info_count} info)"
+        )
     elif medium_count > 0:
         status = f"WARNINGS ({medium_count} medium, {info_count} info)"
     elif info_count > 0:
@@ -147,7 +149,9 @@ def save_report(report: ValidationReport, output_dir: Path = None) -> Path:
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    filename = f"validation_{report.release}_{report.timestamp.strftime('%Y%m%d_%H%M%S')}.md"
+    filename = (
+        f"validation_{report.release}_{report.timestamp.strftime('%Y%m%d_%H%M%S')}.md"
+    )
     path = output_dir / filename
 
     content = generate_report_markdown(report)

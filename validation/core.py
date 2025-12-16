@@ -80,7 +80,12 @@ def validate_dataset(
         report.add_check_result(
             dataset_name,
             "file_exists",
-            CheckResult(passed=False, errors=[f"{'Directory' if is_partitioned else 'File'} not found: {parquet_path}"]),
+            CheckResult(
+                passed=False,
+                errors=[
+                    f"{'Directory' if is_partitioned else 'File'} not found: {parquet_path}"
+                ],
+            ),
         )
         return report
 
@@ -270,17 +275,24 @@ def _run_anomaly_detection(
         donor_names_map = {}
         if "donor_name" in df.columns:
             donor_names_map = df.groupby("donor_code")["donor_name"].first().to_dict()
-        warnings = detect_sector_drift(df, previous_release, value_column, donor_names_map)
+        warnings = detect_sector_drift(
+            df, previous_release, value_column, donor_names_map
+        )
         for w in warnings:
             w.dataset = dataset_name
             report.add_warning(w)
 
     # Missing expected data
-    major_donors = {code: f"Donor {code}" for code in config.get("critical_donors", MAJOR_DONORS)}
+    major_donors = {
+        code: f"Donor {code}" for code in config.get("critical_donors", MAJOR_DONORS)
+    }
     if "donor_name" in df.columns:
         # Get actual names from data
         donor_names = df.groupby("donor_code")["donor_name"].first().to_dict()
-        major_donors = {code: donor_names.get(code, f"Donor {code}") for code in config.get("critical_donors", MAJOR_DONORS)}
+        major_donors = {
+            code: donor_names.get(code, f"Donor {code}")
+            for code in config.get("critical_donors", MAJOR_DONORS)
+        }
 
     warnings = detect_missing_expected_data(df, major_donors, value_column)
     for w in warnings:
