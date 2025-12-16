@@ -183,3 +183,8 @@ src/data/cache/*.csv
 *.pyc
 /cdn_files/sectors_view/
 /cdn_files
+
+# Validation reports (generated, saved as CI artifacts)
+src/data/validation_data/reports/*.md
+/.raw_data
+/docs
