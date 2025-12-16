@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from oda_data import OECDClient
+from oda_data import OECDClient, DAC1Data
 from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_indicator
 from oda_data.tools.groupings import provider_groupings
 
@@ -32,7 +32,6 @@ from src.data.config import (
 donor_ids = get_dac_ids(PATHS.DONORS)
 eu_ids = provider_groupings()["eu27_total"]
 set_cache_dir(oda_data=True, pydeflate=True)
-
 
 def get_dac1():
     # in-donor indicators in net flows

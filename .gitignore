@@ -188,3 +188,4 @@ src/data/cache/*.csv
 src/data/validation_data/reports/*.md
 /.raw_data
 /docs
+/validation_data/reports

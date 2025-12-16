@@ -33,6 +33,9 @@ def get_gni(start_year: int, end_year: int) -> pd.DataFrame:
         columns=["donor_code", "year", "value"],
     )
 
+    # Deduplicate - raw data may have duplicate rows with identical GNI values
+    bilateral_df = bilateral_df.drop_duplicates(subset=["donor_code", "year"])
+
     if all(code in bilateral_df.donor_code.unique() for code in EU_IDS):
         eu_df = (
             bilateral_df.loc[lambda d: d["donor_code"].isin(EU_IDS)]
