@@ -34,7 +34,13 @@ from validation.anomalies import (
     detect_sector_drift,
 )
 from validation import manifest as manifest_module
-from validation.report import save_report
+from validation.seek_data import fetch_seek_sectors_data, get_donor_names
+from validation.seek_manifest import (
+    get_seek_manifest_path,
+    update_seek_manifest,
+    get_previous_seek_release,
+)
+from validation.seek_anomalies import run_seek_validation
 
 
 def validate_dataset(
@@ -300,12 +306,101 @@ def _run_anomaly_detection(
         report.add_warning(w)
 
 
+def validate_seek_sectors(
+    release: str,
+    manifests_dir: Path = None,
+    update_manifest: bool = True,
+) -> ValidationReport:
+    """
+    Validate SEEK-style sector data at purpose-code level.
+
+    This validation:
+    1. Fetches purpose-code level data via seek/sectors.py
+    2. Compares totals, health, and agriculture by donor vs previous release
+    3. Flags anomalies using Z-score thresholds
+
+    Args:
+        release: Release name (e.g., "april_2025" - represents OECD data release)
+        manifests_dir: Directory for manifests (default: MANIFESTS_DIR)
+        update_manifest: Whether to update the manifest after validation
+
+    Returns:
+        ValidationReport with SEEK validation results
+    """
+    manifests_dir = manifests_dir or MANIFESTS_DIR
+    report = ValidationReport(release=release)
+
+    # Fetch purpose-code level data
+    try:
+        df = fetch_seek_sectors_data()
+    except Exception as e:
+        report.add_check_result(
+            "seek_sectors",
+            "data_fetch",
+            CheckResult(passed=False, errors=[f"Failed to fetch SEEK data: {e}"]),
+        )
+        return report
+
+    report.add_check_result("seek_sectors", "data_fetch", CheckResult(passed=True))
+
+    # Check data is not empty
+    if len(df) == 0:
+        report.add_check_result(
+            "seek_sectors",
+            "not_empty",
+            CheckResult(passed=False, errors=["SEEK data is empty"]),
+        )
+        return report
+
+    report.add_check_result("seek_sectors", "not_empty", CheckResult(passed=True))
+
+    # Load manifest and get most recent previous release (automatic comparison)
+    manifest_path = get_seek_manifest_path()
+    manifest = manifest_module.load_manifest(manifest_path)
+    previous_release = get_previous_seek_release(manifest)
+
+    # Build donor names map
+    donor_names = get_donor_names(df)
+
+    # Run SEEK anomaly detection
+    if previous_release:
+        warnings = run_seek_validation(
+            df=df,
+            previous_release=previous_release,
+            donor_names=donor_names,
+        )
+        for w in warnings:
+            report.add_warning(w)
+    else:
+        # First run - just log info
+        report.add_warning(
+            Warning(
+                level="info",
+                dataset="seek_sectors",
+                message="SEEK validation baseline established (no previous release to compare)",
+            )
+        )
+
+    # Update manifest
+    if update_manifest:
+        manifest = update_seek_manifest(
+            manifest=manifest,
+            release=release,
+            df=df,
+        )
+        manifests_dir.mkdir(parents=True, exist_ok=True)
+        manifest_module.save_manifest(manifest, manifest_path)
+
+    return report
+
+
 def validate_all(
     release: str,
     cache_dir: Path = None,
     cdn_files_dir: Path = None,
     manifests_dir: Path = None,
     update_manifests: bool = True,
+    include_seek: bool = True,
 ) -> ValidationReport:
     """
     Validate all datasets.
@@ -316,6 +411,7 @@ def validate_all(
         cdn_files_dir: Directory containing partitioned datasets
         manifests_dir: Directory for manifests
         update_manifests: Whether to update manifests after validation
+        include_seek: Whether to include SEEK sector validation (default: True)
 
     Returns:
         Combined ValidationReport for all datasets
@@ -333,11 +429,27 @@ def validate_all(
         )
 
         # Merge results
-        for ds, checks in dataset_report.check_results.items():
+        for dataset, checks in dataset_report.check_results.items():
             for check_name, result in checks.items():
-                combined_report.add_check_result(ds, check_name, result)
+                combined_report.add_check_result(dataset, check_name, result)
 
         for warning in dataset_report.warnings:
+            combined_report.add_warning(warning)
+
+    # Add SEEK validation if requested
+    if include_seek:
+        seek_report = validate_seek_sectors(
+            release=release,
+            manifests_dir=manifests_dir,
+            update_manifest=update_manifests,
+        )
+
+        # Merge SEEK results
+        for dataset, checks in seek_report.check_results.items():
+            for check_name, result in checks.items():
+                combined_report.add_check_result(dataset, check_name, result)
+
+        for warning in seek_report.warnings:
             combined_report.add_warning(warning)
 
     return combined_report

@@ -240,3 +240,85 @@ ANOMALY_Z_SCORE_HIGH = 3.0  # High priority if >3 standard deviations
 
 # Value bounds (in units, i.e., actual currency units not millions)
 MAX_SANE_VALUE = 1e18  # 1 trillion in units (frontend divides by 1e6)
+
+# SEEK validation settings
+# Purpose code filters from SEEK R code for sector-specific validation
+SEEK_HEALTH_PURPOSE_CODES = [
+    120,
+    121,
+    12110,
+    12181,
+    12182,
+    12191,
+    122,
+    12220,
+    12230,
+    12240,
+    12250,
+    12261,
+    12262,
+    12263,
+    12264,
+    12281,
+    123,
+    12310,
+    12320,
+    12330,
+    12340,
+    12350,
+    12382,
+    130,
+    13010,
+    13020,
+    13030,
+    13040,
+    13081,
+]
+
+SEEK_AGRICULTURE_PURPOSE_CODES = [
+    31110,
+    31120,
+    31130,
+    31140,
+    31150,
+    31161,
+    31162,
+    31163,
+    31164,
+    31165,
+    31166,
+    31181,
+    31182,
+    31191,
+    31192,
+    31193,
+    31194,
+    31195,
+    31210,
+    31220,
+    31261,
+    31281,
+    31282,
+    31291,
+    31310,
+    31320,
+    31381,
+    31382,
+    31391,
+    43040,
+    43041,
+    43042,
+    43050,
+    43060,
+    43071,
+    43072,
+    43073,
+    43081,
+    43082,
+]
+
+# SEEK validation thresholds (Z-score based, matching existing anomaly detection pattern)
+SEEK_Z_SCORE_THRESHOLD = 2.0  # Medium warning if >2 standard deviations
+SEEK_Z_SCORE_HIGH = 3.0  # High priority if >3 standard deviations
+SEEK_PCT_CHANGE_THRESHOLD = 0.20  # Fallback: medium warning if >20% change
+SEEK_PCT_CHANGE_HIGH = 0.40  # Fallback: high priority if >40% change

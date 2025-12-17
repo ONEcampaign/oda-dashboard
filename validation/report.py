@@ -1,9 +1,8 @@
 """Report generation for validation results."""
 
-from datetime import datetime
 from pathlib import Path
 
-from validation.models import ValidationReport, CheckResult
+from validation.models import ValidationReport
 from validation.config import REPORTS_DIR
 
 

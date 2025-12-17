@@ -7,6 +7,7 @@ Usage:
     report = run_validation(release="dec_2024")
     report = run_validation(release="dec_2024", update_manifests=False)
     report = run_validation(release="dec_2024", save_report=False)
+    report = run_validation(release="dec_2024", include_seek=False)  # Skip SEEK validation
 """
 
 from validation import validate_all, save_report
@@ -17,6 +18,7 @@ def run_validation(
     release: str,
     update_manifests: bool = True,
     save_report_file: bool = True,
+    include_seek: bool = True,
 ) -> dict:
     """
     Run data validation for a release.
@@ -25,6 +27,7 @@ def run_validation(
         release: Release name (e.g., "dec_2024")
         update_manifests: Whether to update manifests after validation
         save_report_file: Whether to save report to file
+        include_seek: Whether to include SEEK sector validation (default: True)
 
     Returns:
         Dict with validation results:
@@ -39,6 +42,7 @@ def run_validation(
     report = validate_all(
         release=release,
         update_manifests=update_manifests,
+        include_seek=include_seek,
     )
 
     # Save report if requested
