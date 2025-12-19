@@ -1,7 +1,6 @@
 from bblocks import format_number
 
 from src.data.analysis_tools.helper_functions import set_cache_dir
-from oda_reader import disable_cache
 
 from oda_data import OECDClient
 
@@ -16,7 +15,6 @@ from src.data.topic_page.common import (
     df_to_key_number,
 )
 from src.data.topic_page.sectors import total_sectors
-
 
 
 def total_aid_key_number() -> None:
@@ -108,17 +106,23 @@ def aid_to_africa_ts() -> None:
 
     data = (
         client.get_indicators(indicators=["DAC2A.10.106", "DAC2A.10.206"])
+        .rename(columns={"donor": "donor_name", "recipient": "recipient_name"})
         .groupby(["year", "donor_name", "recipient_name"], dropna=False)[["value"]]
         .sum()
         .reset_index(drop=False)
         .pivot(index=["year", "donor_name"], columns="recipient_name", values="value")
         .reset_index(drop=False)
-        .assign(
+    )
+
+    data = (
+        data.assign(
             share=lambda d: format_number(
-                d.Africa / d["Developing countries"], as_percentage=True, decimals=1
+                d["Africa, Total"] / d["Developing Countries, Total"],
+                as_percentage=True,
+                decimals=1,
             )
         )
-        .rename(columns={"Africa": "value"})
+        .rename(columns={"Africa, Total": "value"})
         .filter(["year", "donor_name", "value", "share"])
         .pipe(add_change, as_formatted_str=True, grouper="donor_name")
         .assign(
@@ -163,6 +167,7 @@ def aid_to_incomes_latest():
     data = (
         client.get_indicators(indicators=["DAC2A.10.106", "DAC2A.10.206"])
         .assign(recipient=lambda d: d.recipient_code.map(recipients))
+        .rename(columns={"donor": "donor_name", "recipient_name": "recipient"})
         .groupby(["year", "donor_name", "recipient"], dropna=False)[["value"]]
         .sum()
         .reset_index(drop=False)
