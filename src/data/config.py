@@ -17,11 +17,8 @@ logger.setLevel(logging.INFO)
 eui_bi_code: int = 919
 
 BASE_TIME: dict = {"start": 1990, "end": 2024, "base": 2024}  # for currency conversions
-CURRENCIES: list = ["USD", "EUR", "GBP", "CAD"]
-
-FINANCING_TIME: dict = {"start": 1990, "end": 2024, "base": 2024}
-
 SECTORS_TIME: dict = {"start": 2013, "end": 2024, "base": 2024}
+CURRENCIES: list = ["USD", "EUR", "GBP", "CAD"]
 
 IN_DONOR_FINANCING_INDICATORS: dict = {
     "DAC1.10.1820": "Refugees in donor countries",
