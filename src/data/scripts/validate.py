@@ -90,6 +90,6 @@ def run_validation(
 if __name__ == "__main__":
     # Default execution for CI - validates current release
     # CI should call this with appropriate release name
-    result = run_validation(release="april_2025")
+    result = run_validation(release="december_2025")
     if not result["passed"]:
         raise SystemExit(1)
