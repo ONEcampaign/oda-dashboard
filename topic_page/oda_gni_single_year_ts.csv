@@ -14,22 +14,22 @@ Finland,2024,1.41 billion,690.6 million,0.46967
 Japan,2024,16.77 billion,13.21 billion,0.39162
 Austria,2024,1.82 billion,1.95 billion,0.33768
 Canada,2024,7.42 billion,8.02 billion,0.33631
-DAC countries,2024,212.09 billion,231.17 billion,0.33493
+DAC countries,2024,212.09 billion,231.32 billion,0.33482
 Iceland,2024,111.7 million,121.9 million,0.33474
 New Zealand,2024,780.8 million,922.2 million,0.32093
 Italy,2024,6.67 billion,9.83 billion,0.283
 Latvia,2024,111.6 million,187.6 million,0.26111
 Spain,2024,4.35 billion,7.65 billion,0.25378
 Lithuania,2024,193.4 million,374.4 million,0.23846
-Portugal,2024,669.1 million,1.31 billion,0.23722
 Poland,2024,2.06 billion,4.08 billion,0.23514
 Slovenia,2024,164.4 million,338.1 million,0.22899
 United States,2024,63.30 billion,140.96 billion,0.21693
+Portugal,2024,654.2 million,1.47 billion,0.21606
 Korea,2024,3.94 billion,9.33 billion,0.20794
 Estonia,2024,83.4 million,209.2 million,0.19956
 Australia,2024,3.32 billion,8.73 billion,0.19275
 Czechia,2024,572.2 million,1.80 billion,0.16902
-Greece,2024,357.6 million,1.39 billion,0.14366
+Greece,2024,372.1 million,1.37 billion,0.14947
 Slovak Republic,2024,191.4 million,766.9 million,0.13981
 Hungary,2024,190.6 million,1.25 billion,0.09237
 Norway,2023,5.38 billion,0.0 million,1.09193
@@ -60,13 +60,13 @@ Spain,2023,3.99 billion,7.62 billion,0.24063
 Czechia,2023,807.1 million,1.55 billion,0.23949
 United States,2023,66.12 billion,127.51 billion,0.23902
 Australia,2023,3.31 billion,8.65 billion,0.1937
-Portugal,2023,551.6 million,1.50 billion,0.1878
+Portugal,2023,551.6 million,1.50 billion,0.18779
 Korea,2023,3.16 billion,9.93 billion,0.16892
 Greece,2023,346.2 million,1.35 billion,0.14285
 Slovak Republic,2023,184.2 million,765.6 million,0.13576
 Hungary,2023,278.2 million,1.22 billion,0.12974
 Luxembourg,2022,582.0 million,0.0 million,0.99566
-Sweden,2022,5.68 billion,0.0 million,0.89122
+Sweden,2022,5.69 billion,0.0 million,0.89216
 Norway,2022,4.05 billion,0.0 million,0.86346
 Germany,2022,40.19 billion,0.0 million,0.8471
 Denmark,2022,2.78 billion,123.4 million,0.67021
@@ -82,7 +82,7 @@ Belgium,2022,2.91 billion,1.59 billion,0.45329
 Austria,2022,2.08 billion,1.61 billion,0.39395
 Japan,2022,16.21 billion,13.08 billion,0.38738
 Czechia,2022,1.19 billion,1.01 billion,0.37952
-DAC countries,2022,225.69 billion,198.89 billion,0.37209
+DAC countries,2022,225.69 billion,198.88 billion,0.3721
 Canada,2022,7.78 billion,6.93 billion,0.37024
 Lithuania,2022,283.6 million,270.7 million,0.35813
 Latvia,2022,160.7 million,153.8 million,0.3576
@@ -93,14 +93,14 @@ Slovenia,2022,195.2 million,281.3 million,0.28679
 Hungary,2022,466.5 million,793.9 million,0.25908
 United States,2022,64.20 billion,127.39 billion,0.23456
 New Zealand,2022,534.6 million,1.19 billion,0.21753
-Portugal,2022,598.7 million,1.39 billion,0.21061
+Portugal,2022,598.6 million,1.39 billion,0.21059
 Australia,2022,3.07 billion,8.41 billion,0.18739
 Korea,2022,2.83 billion,9.15 billion,0.16541
 Greece,2022,406.4 million,1.31 billion,0.16527
 Slovak Republic,2022,204.4 million,725.4 million,0.15388
 Luxembourg,2021,558.9 million,0.0 million,0.98785
 Norway,2021,4.21 billion,0.0 million,0.9262
-Sweden,2021,5.54 billion,0.0 million,0.90676
+Sweden,2021,5.54 billion,0.0 million,0.90728
 Germany,2021,35.40 billion,0.0 million,0.76499
 Denmark,2021,2.84 billion,0.0 million,0.71078
 Netherlands,2021,5.79 billion,1.95 billion,0.52366
@@ -110,7 +110,7 @@ Switzerland,2021,4.29 billion,1.72 billion,0.49995
 Finland,2021,1.47 billion,703.0 million,0.4738
 Belgium,2021,2.73 billion,1.69 billion,0.4325
 Japan,2021,13.70 billion,14.84 billion,0.33605
-DAC countries,2021,193.15 billion,212.18 billion,0.33356
+DAC countries,2021,193.15 billion,212.18 billion,0.33357
 Canada,2021,6.48 billion,7.74 billion,0.31916
 Austria,2021,1.54 billion,1.95 billion,0.30827
 Ireland,2021,1.20 billion,1.58 billion,0.3019
@@ -122,7 +122,7 @@ Spain,2021,3.81 billion,6.57 billion,0.25698
 Australia,2021,3.58 billion,7.73 billion,0.22145
 United States,2021,54.32 billion,134.88 billion,0.20098
 Slovenia,2021,127.3 million,339.6 million,0.19088
-Portugal,2021,492.2 million,1.39 billion,0.18303
+Portugal,2021,492.2 million,1.39 billion,0.18301
 Estonia,2021,71.5 million,232.1 million,0.16482
 Greece,2021,363.9 million,1.26 billion,0.15722
 Korea,2021,2.61 billion,9.03 billion,0.15694
@@ -131,7 +131,7 @@ Lithuania,2021,103.9 million,427.1 million,0.13702
 Slovak Republic,2021,176.5 million,725.2 million,0.13701
 Czechia,2021,418.7 million,1.75 billion,0.13491
 Latvia,2021,51.8 million,245.3 million,0.12195
-Sweden,2020,6.54 billion,0.0 million,1.13891
+Sweden,2020,6.54 billion,0.0 million,1.13908
 Norway,2020,4.98 billion,0.0 million,1.10909
 Luxembourg,2020,508.3 million,0.0 million,1.03045
 Germany,2020,32.58 billion,0.0 million,0.73419
@@ -142,7 +142,7 @@ France,2020,15.13 billion,4.86 billion,0.52986
 Switzerland,2020,4.06 billion,1.73 billion,0.49132
 Belgium,2020,2.60 billion,1.21 billion,0.47831
 Finland,2020,1.39 billion,689.8 million,0.46764
-DAC countries,2020,178.34 billion,205.50 billion,0.32524
+DAC countries,2020,178.35 billion,205.50 billion,0.32524
 Japan,2020,12.26 billion,15.31 billion,0.31129
 Canada,2020,5.99 billion,7.51 billion,0.31061
 Ireland,2020,1.07 billion,1.39 billion,0.30549
@@ -153,7 +153,7 @@ New Zealand,2020,584.6 million,989.0 million,0.26005
 Spain,2020,3.33 billion,6.68 billion,0.23261
 Italy,2020,4.57 billion,9.75 billion,0.22341
 Australia,2020,3.34 billion,7.58 billion,0.21404
-Portugal,2020,469.0 million,1.32 billion,0.1839
+Portugal,2020,468.9 million,1.32 billion,0.18388
 Slovenia,2020,106.0 million,319.5 million,0.17432
 Greece,2020,365.9 million,1.11 billion,0.17314
 United States,2020,42.27 billion,134.78 billion,0.16713
@@ -166,7 +166,7 @@ Czechia,2020,381.0 million,1.73 billion,0.12634
 Latvia,2020,47.3 million,223.0 million,0.12253
 Luxembourg,2019,564.4 million,0.0 million,1.03401
 Norway,2019,4.65 billion,0.0 million,1.0261
-Sweden,2019,5.61 billion,0.0 million,0.9562
+Sweden,2019,5.61 billion,0.0 million,0.95646
 Denmark,2019,2.78 billion,0.0 million,0.71687
 United Kingdom,2019,23.69 billion,0.0 million,0.7033
 Germany,2019,28.45 billion,4.12 billion,0.61151
@@ -230,7 +230,7 @@ Czechia,2018,395.2 million,1.70 billion,0.13181
 Slovak Republic,2018,168.2 million,727.8 million,0.1314
 Lithuania,2018,86.7 million,413.0 million,0.12143
 Latvia,2018,41.4 million,243.1 million,0.1018
-Sweden,2017,5.69 billion,0.0 million,1.01888
+Sweden,2017,5.68 billion,0.0 million,1.01723
 Luxembourg,2017,516.4 million,0.0 million,0.99574
 Norway,2017,4.45 billion,0.0 million,0.99272
 Denmark,2017,2.68 billion,0.0 million,0.73745
@@ -242,7 +242,7 @@ Belgium,2017,2.60 billion,1.48 billion,0.44532
 France,2017,12.93 billion,8.22 billion,0.428
 Finland,2017,1.25 billion,812.5 million,0.4245
 Ireland,2017,951.3 million,1.15 billion,0.3174
-DAC countries,2017,171.51 billion,214.73 billion,0.31083
+DAC countries,2017,171.50 billion,214.74 billion,0.31081
 Italy,2017,6.61 billion,8.76 billion,0.30102
 Austria,2017,1.49 billion,1.98 billion,0.30004
 Iceland,2017,75.5 million,110.8 million,0.28377
@@ -255,7 +255,7 @@ Portugal,2017,462.8 million,1.35 billion,0.17898
 United States,2017,43.48 billion,128.68 billion,0.1768
 Estonia,2017,61.7 million,200.2 million,0.16482
 Slovenia,2017,94.7 million,322.4 million,0.15892
-Greece,2017,354.9 million,1.23 billion,0.15625
+Greece,2017,354.9 million,1.24 billion,0.15625
 Czechia,2017,435.5 million,1.59 billion,0.15019
 Korea,2017,2.07 billion,8.01 billion,0.14383
 Poland,2017,927.8 million,3.89 billion,0.13469
@@ -265,7 +265,7 @@ Hungary,2017,195.2 million,1.04 billion,0.11081
 Latvia,2017,41.7 million,234.8 million,0.10548
 Norway,2016,5.00 billion,0.0 million,1.12161
 Luxembourg,2016,497.1 million,0.0 million,1.00077
-Sweden,2016,5.12 billion,0.0 million,0.94068
+Sweden,2016,5.13 billion,0.0 million,0.94308
 Denmark,2016,2.67 billion,0.0 million,0.75203
 United Kingdom,2016,22.14 billion,0.0 million,0.70011
 Germany,2016,31.04 billion,31.2 million,0.6993
@@ -276,7 +276,7 @@ Finland,2016,1.26 billion,743.6 million,0.43996
 Austria,2016,2.00 billion,1.30 billion,0.42371
 France,2016,11.25 billion,9.25 billion,0.38426
 Spain,2016,5.09 billion,5.31 billion,0.34268
-DAC countries,2016,172.45 billion,202.73 billion,0.32176
+DAC countries,2016,172.47 billion,202.71 billion,0.32179
 Ireland,2016,935.5 million,1.12 billion,0.31869
 Iceland,2016,74.1 million,108.3 million,0.28439
 Italy,2016,5.89 billion,9.12 billion,0.27468
@@ -548,7 +548,7 @@ New Zealand,2008,454.2 million,591.8 million,0.30394
 DAC countries,2008,133.70 billion,182.53 billion,0.29597
 Portugal,2008,648.4 million,1.03 billion,0.2703
 Italy,2008,4.76 billion,10.54 billion,0.21767
-Greece,2008,620.4 million,1.44 billion,0.21078
+Greece,2008,620.5 million,1.44 billion,0.21078
 Japan,2008,7.05 billion,18.87 billion,0.19041
 United States,2008,37.61 billion,105.88 billion,0.18346
 Slovenia,2008,72.2 million,319.2 million,0.12911
