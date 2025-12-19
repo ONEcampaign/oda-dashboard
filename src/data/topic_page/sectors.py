@@ -118,4 +118,4 @@ def total_sectors(
 
 if __name__ == "__main__":
     set_cache_dir(oda_data=True, pydeflate=True)
-    sectors_data = total_sectors(years=range(2013, 2024), as_total=True, broad=True)
+    sectors_data = total_sectors(years=range(2013, 2025), as_total=True, broad=True)

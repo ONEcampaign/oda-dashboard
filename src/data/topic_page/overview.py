@@ -17,7 +17,6 @@ from src.data.topic_page.common import (
 )
 from src.data.topic_page.sectors import total_sectors
 
-disable_cache()
 
 
 def total_aid_key_number() -> None:
