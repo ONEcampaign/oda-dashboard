@@ -21,7 +21,7 @@ from src.data.analysis_tools.transformations import (
 )
 from src.data.config import (
     FINANCING_INDICATORS,
-    FINANCING_TIME,
+    BASE_TIME,
     IN_DONOR_FINANCING_INDICATORS,
     OTHER_FINANCING_INDICATORS,
     PATHS,
@@ -37,7 +37,7 @@ set_cache_dir(oda_data=True, pydeflate=True)
 def get_dac1():
     # in-donor indicators in net flows
     in_donor_raw = OECDClient(
-        years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1),
+        years=range(BASE_TIME["start"], BASE_TIME["end"] + 1),
         providers=donor_ids,
         measure="net_disbursement",
         use_bulk_download=True,
@@ -45,7 +45,7 @@ def get_dac1():
 
     # other indicators in net flows up to 2017
     other_flow_raw = OECDClient(
-        years=range(FINANCING_TIME["start"], 2018),
+        years=range(BASE_TIME["start"], 2018),
         providers=donor_ids,
         measure="net_disbursement",
         use_bulk_download=True,
@@ -53,7 +53,7 @@ def get_dac1():
 
     # other indicators in grant equivalents after 2017
     other_ge_raw = OECDClient(
-        years=range(2018, FINANCING_TIME["end"] + 1),
+        years=range(2018, BASE_TIME["end"] + 1),
         providers=donor_ids,
         measure="grant_equivalent",
         use_bulk_download=True,
@@ -82,14 +82,14 @@ def get_grants():
     }
 
     grants_flow_raw = OECDClient(
-        years=range(FINANCING_TIME["start"], 2018),
+        years=range(BASE_TIME["start"], 2018),
         providers=donor_ids,
         measure=["net_disbursement_grant", "net_disbursement"],
         use_bulk_download=True,
     ).get_indicators(["DAC1.10.1010"])
 
     grants_ge_raw = OECDClient(
-        years=range(2018, FINANCING_TIME["end"]),
+        years=range(2018, BASE_TIME["end"]),
         providers=donor_ids,
         measure=["net_disbursement_grant", "grant_equivalent"],
         use_bulk_download=True,
@@ -116,7 +116,7 @@ def get_grants():
 def get_eui_eu27_dac1():
     # in-donor indicators in net flows
     in_donor_client = OECDClient(
-        years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1),
+        years=range(BASE_TIME["start"], BASE_TIME["end"] + 1),
         providers=list(eu_ids),
         measure="net_disbursement",
         use_bulk_download=True,
@@ -128,7 +128,7 @@ def get_eui_eu27_dac1():
 
     # other indicators in net flows up to 2017
     other_flow_client = OECDClient(
-        years=range(FINANCING_TIME["start"], 2018),
+        years=range(BASE_TIME["start"], 2018),
         providers=list(eu_ids),
         measure="net_disbursement",
         use_bulk_download=True,
@@ -140,7 +140,7 @@ def get_eui_eu27_dac1():
 
     # other indicators in grant equivalents after 2017
     other_ge_client = OECDClient(
-        years=range(2018, FINANCING_TIME["end"] + 1),
+        years=range(2018, BASE_TIME["end"] + 1),
         providers=list(eu_ids),
         measure="grant_equivalent",
         use_bulk_download=True,
@@ -171,7 +171,7 @@ def get_eui_eu27_grants():
     }
 
     grants_flow_client = OECDClient(
-        years=range(FINANCING_TIME["start"], 2018),
+        years=range(BASE_TIME["start"], 2018),
         providers=list(eu_ids),
         measure=["net_disbursement_grant", "net_disbursement"],
         use_bulk_download=True,
@@ -182,7 +182,7 @@ def get_eui_eu27_grants():
     )
 
     grants_ge_client = OECDClient(
-        years=range(2018, FINANCING_TIME["end"]),
+        years=range(2018, BASE_TIME["end"]),
         providers=list(eu_ids),
         measure=["net_disbursement_grant", "grant_equivalent"],
         use_bulk_download=True,

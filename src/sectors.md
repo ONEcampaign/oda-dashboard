@@ -332,7 +332,20 @@ function generateSubtitle(selectedData) {
 
     return subtitleSpans;
 }
+```
 
+```js
+const includes_germany = [
+    5,     // Germany
+    918,   // EU institutions
+    20000, // All bilateral donors
+    20001, // DAC countries
+    20002, // EU 27 countries
+    20003, // EU27 + EU Institutions
+    20004, // G7 countries, 
+]
+
+const germany_is_donor = includes_germany.includes(donor);
 ```
 
 <div class="header card">
@@ -398,6 +411,19 @@ function generateSubtitle(selectedData) {
                                 `
                                 : sectorsHasData
                                     ? html`
+                                            ${
+                                              germany_is_donor
+                                                ? html`
+                                                    <div class="grid grid-cols-2">
+                                                      <div class="card" style="margin: 0 auto;">
+                                                        <div class="note">
+                                                          Germany has reported only semi-aggregated data for part of the Federal Ministry for Economic Cooperation and Development (BMZ) data (approx. EUR 4 billion) for 2024, due to an internal transition of their IT systems. Granular data on recipients, sectors, and policy markers (for example) were not available for submission to the OECD at time of publication. The OECD will re-publish an update in early 2026 once these data have been obtained and processed. <a href="https://www.oecd.org/en/data/insights/data-explainers/2025/12/final-oecd-statistics-on-oda-and-other-development-finance-flows-in-2024-key-figures-and-trends.html">More information.</a>
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                  `
+                                                : null
+                                            }
                                             <div class="grid grid-cols-2">
                                                 ${
                                                     treemapData.every((row) => row.value === null) || treemapData.length === 0
