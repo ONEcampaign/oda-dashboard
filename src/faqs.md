@@ -1,4 +1,5 @@
 ```js
+import "./components/embed.js";
 import {generateList} from "./components/utils.js"
 
 const donorMapping = await FileAttachment("./data/analysis_tools/donors.json").json()

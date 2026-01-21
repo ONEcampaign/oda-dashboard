@@ -10,6 +10,7 @@ from oda_data import (
 from oda_data.clean_data.channels import add_channel_names
 
 from src.data import config
+from src.data.config import PATHS
 
 set_data_path(config.PATHS.DATA)
 
@@ -228,24 +229,51 @@ def pipeline(
     currency: str = "USD",
     by_recipient: bool = False,
     base_year: int | None = None,
+    include_bilateral: bool = False,
 ) -> pd.DataFrame:
-    bilateral = get_bilateral_disbursements_by_sector(
-        start_year=start_year,
-        end_year=end_year,
-        currency=currency,
-        by_recipient=by_recipient,
-        base_year=base_year,
-    ).assign(indicator="Bilateral")
-    multilateral = get_imputed_multilateral_disbursements_by_sector(
-        start_year=start_year,
-        end_year=end_year,
-        currency=currency,
-        by_recipient=by_recipient,
-        base_year=base_year,
-    ).assign(indicator="Multilateral")
+    if include_bilateral:
+        bilateral = get_bilateral_disbursements_by_sector(
+            start_year=start_year,
+            end_year=end_year,
+            currency=currency,
+            by_recipient=by_recipient,
+            base_year=base_year,
+        ).assign(indicator="bilateral_flow_disbursement_gross")
+    else:
+        bilateral = pd.DataFrame()
 
-    return pd.concat([bilateral, multilateral], ignore_index=True)
+    data = (
+        get_imputed_multilateral_disbursements_by_sector(
+            start_year=start_year,
+            end_year=end_year,
+            currency=currency,
+            by_recipient=by_recipient,
+            base_year=base_year,
+        )
+        .assign(indicator="imputed_multi_flow_disbursement_gross")
+        .pipe(add_names_columns, ["purpose_code"])
+    )
+
+    if include_bilateral:
+        data = pd.concat([bilateral, data], ignore_index=True)
+
+    return data.filter(
+        [
+            "year",
+            "indicator",
+            "donor_code",
+            "donor_name",
+            "purpose_code",
+            "purpose_name",
+            "channel_code",
+            "mapped_name",
+            "currency",
+            "prices",
+            "value",
+        ]
+    )
 
 
 if __name__ == "__main__":
-    df = pipeline()
+    df = pipeline(base_year=2024)
+    df.to_csv(PATHS.TOPIC_PAGE / "seek_imputed_2024_constant.csv", index=False)

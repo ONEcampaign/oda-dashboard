@@ -1,15 +1,16 @@
 year,donor_name,Aid to Africa,Share of total ODA,pct_change,name
-2010,DAC countries,52.2,36.7%,,DAC countries
-2011,DAC countries,52.2,37.0%,0.1%,DAC countries
-2012,DAC countries,51.2,38.2%,-2.0%,DAC countries
-2013,DAC countries,50.7,36.1%,-0.9%,DAC countries
-2014,DAC countries,51.0,35.2%,0.6%,DAC countries
-2015,DAC countries,50.3,33.1%,-1.4%,DAC countries
-2016,DAC countries,54.2,31.9%,7.8%,DAC countries
-2017,DAC countries,56.7,33.5%,4.5%,DAC countries
-2018,DAC countries,56.3,34.1%,-0.6%,DAC countries
-2019,DAC countries,55.5,34.4%,-1.5%,DAC countries
-2020,DAC countries,61.2,35.2%,10.3%,DAC countries
-2021,DAC countries,66.5,35.5%,8.7%,DAC countries
-2022,DAC countries,57.3,25.6%,-13.8%,DAC countries
-2023,DAC countries,61.0,26.8%,6.5%,DAC countries
+2010,"DAC Countries, Total",52.2,36.7%,,"DAC Countries, Total"
+2011,"DAC Countries, Total",52.2,37.0%,0.1%,"DAC Countries, Total"
+2012,"DAC Countries, Total",51.2,38.2%,-1.9%,"DAC Countries, Total"
+2013,"DAC Countries, Total",50.7,36.1%,-0.9%,"DAC Countries, Total"
+2014,"DAC Countries, Total",51.0,35.2%,0.6%,"DAC Countries, Total"
+2015,"DAC Countries, Total",50.3,33.1%,-1.4%,"DAC Countries, Total"
+2016,"DAC Countries, Total",54.2,31.9%,7.8%,"DAC Countries, Total"
+2017,"DAC Countries, Total",56.7,33.5%,4.5%,"DAC Countries, Total"
+2018,"DAC Countries, Total",56.3,34.1%,-0.6%,"DAC Countries, Total"
+2019,"DAC Countries, Total",55.5,34.4%,-1.5%,"DAC Countries, Total"
+2020,"DAC Countries, Total",61.2,35.2%,10.3%,"DAC Countries, Total"
+2021,"DAC Countries, Total",66.5,35.5%,8.6%,"DAC Countries, Total"
+2022,"DAC Countries, Total",57.3,25.6%,-13.8%,"DAC Countries, Total"
+2023,"DAC Countries, Total",61.1,26.8%,6.5%,"DAC Countries, Total"
+2024,"DAC Countries, Total",55.1,26.4%,-9.7%,"DAC Countries, Total"

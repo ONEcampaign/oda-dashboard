@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 
-from oda_data import CRSData
+from oda_data import CRSData, add_sectors
 from oda_data.tools import sector_lists
 from oda_data.indicators.research.sector_imputations import (
     imputed_multilateral_by_purpose,
@@ -148,7 +148,11 @@ def combined_sectors():
     sectors["sub_sector_code"] = sectors["sub_sector"].map(subsector_mapping)
     sectors = sectors.rename(columns={"sub_sector": "sub_sector_name"})
     sector_mapping = sector_lists.get_broad_sector_groups()
-    sectors["sector_name"] = sectors["sub_sector_name"].map(sector_mapping)
+    sectors["sector_name"] = (
+        sectors["sub_sector_name"]
+        .map(sector_mapping)
+        .fillna("Unallocated/ Unspecified")
+    )
 
     logger.info("Pivoting to wide format...")
     sectors = widen_currency_price(

@@ -1,4 +1,5 @@
 ```js
+import "./components/embed.js";
 import {setCustomColors} from "@one-data/observable-themes/use-colors";
 import {customPalette} from "./components/colors.js";
 import {logo} from "@one-data/observable-themes/use-images";

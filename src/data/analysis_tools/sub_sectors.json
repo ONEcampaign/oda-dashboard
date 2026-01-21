@@ -6,7 +6,7 @@
   "4": "Health, General",
   "5": "Post-Secondary Education",
   "6": "Secondary Education",
-  "7": "Unallocated/ Unspecificed",
+  "7": "Unallocated/ Unspecified",
   "8": "Business & Other Services",
   "9": "Democratic participation and civil society",
   "10": "Emergency Response",
@@ -63,5 +63,8 @@
   "61": "Public procurement",
   "62": "Hybrid Energy Plants",
   "63": "Non-communicable diseases (NCDs)",
-  "64": "Unallocated/unspecificed"
+  "64": "Unallocated/unspecified",
+  "65": "General Environment Protection",
+  "66": "Energy",
+  "67": "Unallocated/unspecificed"
 }

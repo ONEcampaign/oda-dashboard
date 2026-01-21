@@ -482,4 +482,28 @@ form:has(table) {
     }
 }
 
+/* === Embed Mode Styles === */
+.embedded #observablehq-header,
+.embedded #observablehq-footer,
+.embedded header,
+.embedded footer,
+.embedded nav {
+  display: none !important;
+}
 
+.embedded #observablehq-main,
+.embedded main,
+.embedded #observablehq-center {
+  padding: 0 !important;
+  margin: 0 !important;
+  max-width: none !important;
+}
+
+.embedded body {
+  overflow: hidden; /* Parent controls scrolling */
+  background: white !important;
+}
+
+.embedded {
+  background: white !important;
+}
