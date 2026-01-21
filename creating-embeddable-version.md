@@ -60,6 +60,11 @@ Append the following to your `src/style.css` (or create a dedicated `src/embed.c
   margin: 0 !important;
   max-width: none !important;
 }
+
+.embedded,
+.embedded body {
+  background: white !important;
+}
 ```
 
 **Optional: Disable scrolling in embedded mode**
