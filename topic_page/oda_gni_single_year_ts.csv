@@ -1,37 +1,37 @@
 Donor,Year,Total ODA,ODA short of 0.7% commitment,ODA/GNI
-Norway,2024,5.18 billion,0.0 million,1.02343
-Luxembourg,2024,596.6 million,0.0 million,0.99907
-Sweden,2024,5.01 billion,0.0 million,0.78619
-Denmark,2024,3.17 billion,0.0 million,0.71499
-Germany,2024,32.42 billion,1.26 billion,0.67373
-Netherlands,2024,7.52 billion,966.1 million,0.62034
-Ireland,2024,2.47 billion,587.7 million,0.56543
-Switzerland,2024,4.60 billion,1.72 billion,0.50986
-United Kingdom,2024,17.97 billion,7.30 billion,0.49777
-Belgium,2024,3.22 billion,1.46 billion,0.48178
-France,2024,15.43 billion,7.19 billion,0.47743
-Finland,2024,1.41 billion,690.6 million,0.46967
-Japan,2024,16.77 billion,13.21 billion,0.39162
-Austria,2024,1.82 billion,1.95 billion,0.33768
-Canada,2024,7.42 billion,8.02 billion,0.33631
-DAC countries,2024,212.09 billion,231.32 billion,0.33482
-Iceland,2024,111.7 million,121.9 million,0.33474
-New Zealand,2024,780.8 million,922.2 million,0.32093
-Italy,2024,6.67 billion,9.83 billion,0.283
-Latvia,2024,111.6 million,187.6 million,0.26111
-Spain,2024,4.35 billion,7.65 billion,0.25378
-Lithuania,2024,193.4 million,374.4 million,0.23846
-Poland,2024,2.06 billion,4.08 billion,0.23514
-Slovenia,2024,164.4 million,338.1 million,0.22899
-United States,2024,63.30 billion,140.96 billion,0.21693
+Norway,2024,5.18 billion,0.0 million,1.02311
+Luxembourg,2024,596.5 million,0.0 million,0.99883
+Sweden,2024,5.00 billion,0.0 million,0.79201
+Denmark,2024,3.16 billion,0.0 million,0.72162
+Germany,2024,32.83 billion,955.4 million,0.68021
+Netherlands,2024,7.52 billion,966.4 million,0.62031
+Ireland,2024,2.54 billion,659.5 million,0.55578
+United Kingdom,2024,17.99 billion,7.28 billion,0.49833
+Switzerland,2024,4.61 billion,1.97 billion,0.49087
+Belgium,2024,3.24 billion,1.49 billion,0.47935
+France,2024,15.45 billion,7.18 billion,0.47786
+Finland,2024,1.41 billion,686.7 million,0.47052
+Japan,2024,16.49 billion,13.48 billion,0.38513
+Austria,2024,1.82 billion,1.84 billion,0.3488
+DAC countries,2024,214.55 billion,228.56 billion,0.33893
+Canada,2024,7.39 billion,8.08 billion,0.33429
+Iceland,2024,110.2 million,123.5 million,0.33005
+New Zealand,2024,782.9 million,920.0 million,0.32182
+Italy,2024,6.84 billion,9.65 billion,0.29039
+Spain,2024,4.35 billion,7.64 billion,0.25374
+Lithuania,2024,196.9 million,381.6 million,0.23825
+Slovenia,2024,164.8 million,337.6 million,0.22967
+United States,2024,65.48 billion,137.88 billion,0.22538
+Latvia,2024,88.2 million,188.5 million,0.2232
 Portugal,2024,654.2 million,1.47 billion,0.21606
-Korea,2024,3.94 billion,9.33 billion,0.20794
-Estonia,2024,83.4 million,209.2 million,0.19956
-Australia,2024,3.32 billion,8.73 billion,0.19275
-Czechia,2024,572.2 million,1.80 billion,0.16902
+Korea,2024,4.03 billion,9.28 billion,0.2119
+Poland,2024,1.84 billion,4.31 billion,0.20957
+Estonia,2024,83.7 million,211.9 million,0.19827
+Australia,2024,3.38 billion,8.79 billion,0.1946
+Czechia,2024,552.8 million,1.82 billion,0.16327
 Greece,2024,372.1 million,1.37 billion,0.14947
-Slovak Republic,2024,191.4 million,766.9 million,0.13981
-Hungary,2024,190.6 million,1.25 billion,0.09237
+Slovak Republic,2024,197.6 million,760.7 million,0.14432
+Hungary,2024,189.6 million,1.33 billion,0.08723
 Norway,2023,5.38 billion,0.0 million,1.09193
 Luxembourg,2023,598.2 million,0.0 million,0.98616
 Sweden,2023,5.78 billion,0.0 million,0.92616
@@ -42,12 +42,12 @@ Netherlands,2023,7.74 billion,422.4 million,0.66376
 Switzerland,2023,5.41 billion,881.3 million,0.60192
 United Kingdom,2023,20.16 billion,4.23 billion,0.57851
 Finland,2023,1.62 billion,497.7 million,0.53529
-France,2023,15.44 billion,6.89 billion,0.48406
+France,2023,15.47 billion,6.85 billion,0.48509
 Japan,2023,18.70 billion,11.03 billion,0.44034
 Belgium,2023,2.87 billion,1.74 billion,0.43615
 Austria,2023,2.01 billion,1.69 billion,0.37994
 Canada,2023,8.07 billion,6.92 billion,0.37685
-DAC countries,2023,228.17 billion,200.49 billion,0.3726
+DAC countries,2023,228.20 billion,200.46 billion,0.37265
 Iceland,2023,115.9 million,116.3 million,0.34938
 Latvia,2023,143.3 million,150.3 million,0.34167
 Poland,2023,2.82 billion,3.10 billion,0.33347
@@ -74,7 +74,7 @@ Netherlands,2022,7.50 billion,358.6 million,0.66807
 Ireland,2022,2.63 billion,290.2 million,0.63036
 Finland,2022,1.76 billion,388.1 million,0.57356
 Switzerland,2022,5.00 billion,1.24 billion,0.56074
-France,2022,17.79 billion,4.46 billion,0.55955
+France,2022,17.79 billion,4.46 billion,0.55959
 Estonia,2022,231.3 million,69.2 million,0.53882
 Poland,2022,4.45 billion,1.43 billion,0.5302
 United Kingdom,2022,18.02 billion,6.70 billion,0.5103
