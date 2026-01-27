@@ -76,7 +76,7 @@ const sectorMapping = await FileAttachment("./data/analysis_tools/sectors.json")
     </h2>
     <p class="base-text">
         ODA data is retrieved from the OECD Data Explorer API via the 
-        <a href="https://github.com/ONEcampaign/oda_data_package">oda-data</a> python package.
+        <a href="https://docs.one.org/tools/oda-data/">oda-data</a> python package.
     </p>
     <h2 class="section-header">
         How is the data transformed?
