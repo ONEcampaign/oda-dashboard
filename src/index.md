@@ -147,7 +147,7 @@ const relativeData = data.relative
 const tableData = transformTableData(data.rawData, unit, indicator, currency, prices)
 ```
 
-<div class="header card">
+<div class="menu card">
     <a class="view-button active" href="./">
         Financing
     </a>

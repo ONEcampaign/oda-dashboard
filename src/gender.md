@@ -176,7 +176,7 @@ const includes_germany = [
 const germany_is_donor = includes_germany.includes(donor);
 ```
 
-<div class="header card">
+<div class="menu card">
     <a class="view-button" href="./">
         Financing
     </a>

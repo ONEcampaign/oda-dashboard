@@ -7,7 +7,7 @@ const recipientMapping = await FileAttachment("./data/analysis_tools/recipients.
 const sectorMapping = await FileAttachment("./data/analysis_tools/sectors.json").json()
 ```
 
-<div class="header card">
+<div class="menu card">
     <a class="view-button" href="./">
         Financing
     </a>

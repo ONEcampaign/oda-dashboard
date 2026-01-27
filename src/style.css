@@ -14,8 +14,8 @@
     --size-xxl: calc(var(--base-size) * 3);
 }
 
-/* Header */
-.card.header {
+/* Menu */
+.card.menu {
     display: flex;
     flex-flow: row wrap;
     justify-content: space-around;
@@ -465,7 +465,7 @@ form:has(table) {
     .title-text {
         font-size: calc(var(--size-xl) * 1.2);
     }
-    .card.header {
+    .card.menu {
         flex-direction: column;
         justify-content: center;
         align-items: center;
