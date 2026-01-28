@@ -1,6 +1,6 @@
 # ODA Dashboard
 
-An [interactive tool](https://one-campaign.observablehq.cloud/oda-dashboard/) to explore Official Development Assistance (ODA) Data.
+An [interactive tool](https://data.one.org/tools/dashboards/oda) to explore Official Development Assistance (ODA) Data.
 
 `src` contains the [Observable Framework](https://observablehq.com/framework/) project files.
 
