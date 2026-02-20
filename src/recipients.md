@@ -1,447 +1,227 @@
 ```js
-import "./components/embed.js";
-import {setCustomColors} from "@one-data/observable-themes/use-colors";
-import {customPalette} from "./components/colors.js";
-import {logo} from "@one-data/observable-themes/use-images";
-import {recipientsQueries, transformTableData, donorOptions, recipientOptions, recipientsIndicators} from './components/recipientQueries.js';
-import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap, decodeHTML} from "./components/utils.js";
-import {rangeInput} from "./components/rangeInput.js";
-import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
-import {downloadPNG, downloadXLSX} from './components/downloads.js';
-```
+import * as React from "npm:react"
+import {NavMenu} from "./components/NavMenu.js"
+import {DropdownMenu} from "./components/DropdownMenu.js"
+import {ToggleSwitch} from "./components/ToggleSwitch.js"
+import {MultiSelect} from "./components/MultiSelect.js"
+import {RangeInput} from "./components/RangeInput.js"
+import {ONEVisual} from "./components/ONEVisual.js"
+import {setCustomColors} from "@one-data/observable-themes/use-colors"
+import {
+    recipientsQueries,
+    transformTableData,
+    donorOptions,
+    recipientOptions,
+    recipientsIndicators
+} from "./js/recipientQueries.js"
+import {name2CodeMap, getNameByCode, getCurrencyLabel, formatString} from "./js/utils.js"
+import {customPalette} from "./js/colors.js"
+import {downloadXLSX} from "./js/downloads.js"
+import {barPlot, linePlot, sparkbarTable} from "./js/visuals.js"
+import {AutoPlot} from "./components/AutoPlot.js"
+import {AutoTable} from "./components/AutoTable.js"
+import {CURRENCY_OPTIONS, PRICES_OPTIONS} from "./js/config.js"
+import "./js/embed.js"
 
-```js
-setCustomColors(customPalette);
-```
+setCustomColors(customPalette)
 
-```js
-// Use metadata exported from recipientQueries.js to avoid duplicate loading
+const timeRangeOptions = await FileAttachment("./data/analysis_tools/base_time.json").json()
+
 const donorMapping = name2CodeMap(donorOptions, {})
-```
-
-```js
-const recipientMapping = name2CodeMap(recipientOptions, { useRecipientGroups: true })
-```
-
-```js
+const recipientMapping = name2CodeMap(recipientOptions, {useRecipientGroups: true})
 const indicatorMapping = new Map(
     Object.entries(recipientsIndicators).map(([k, v]) => [v, Number(k)])
-);
-```
-
-```js
-const timeRangeOptions = await FileAttachment("./data/analysis_tools/base_time.json").json()
-```
-
-```js
-// USER INPUTS
-const donorInput = Inputs.select(
-    donorMapping,
-    {
-        label: "Donor",
-        value: donorMapping.get("DAC countries"),
-        sort: true
-    })
-const donor = Generators.input(donorInput);
-
-// Recipient
-const recipientInput = Inputs.select(
-    recipientMapping,
-    {
-        label: "Recipient",
-        value: recipientMapping.get("Developing countries"),
-        sort: true
-    })
-const recipient = Generators.input(recipientInput);
-
-// Indicator
-const indicatorInput = Inputs.checkbox(
-    indicatorMapping,
-    {
-        label: "Indicator",
-        value: [
-            indicatorMapping.get("Bilateral"), 
-            indicatorMapping.get("Imputed multilateral")
-        ],
-    })
-const indicator = Generators.input(indicatorInput);
-
-// Currency
-const currencyInput = Inputs.select(
-    new Map([
-        ["US Dollars", "usd"],
-        ["Canada Dollars", "cad"],
-        ["Euros", "eur"],
-        ["British pounds", "gbp"]
-    ]),
-    {
-        label: "Currency",
-        value: "usd",
-        sort: true
-    })
-const currency = Generators.input(currencyInput);
-
-// Prices
-const pricesInput = Inputs.radio(
-    new Map([
-        ["Constant", "constant"],
-        ["Current", "current"]
-    ]),
-    {
-        label: "Prices",
-        value: "constant",
-    }
 )
-const prices = Generators.input(pricesInput)
 
-// Year
-const timeRangeInput = rangeInput(
-    {
-        min: timeRangeOptions.start,
-        max: timeRangeOptions.end,
-        step: 1,
-        value: [timeRangeOptions.end - 20, timeRangeOptions.end],
-        label: "Time range",
-        enableTextInput: true
-    })
-const timeRange = Generators.input(timeRangeInput)
+const DONOR_OPTIONS = Array.from(donorMapping.entries())
+    .map(([label, value]) => ({label, value}))
+    .sort((a, b) => a.label.localeCompare(b.label))
+
+const RECIPIENT_OPTIONS = Array.from(recipientMapping.entries())
+    .map(([label, value]) => ({label, value}))
+    .sort((a, b) => a.label.localeCompare(b.label))
+
+const INDICATOR_OPTIONS = Array.from(indicatorMapping.entries())
+    .map(([label, value]) => ({label, value}))
 
 ```
 
-```js
-// Unit
-const unitInput = Inputs.select(
-    new Map(
-        [
-            [`Million ${getCurrencyLabel(currency, {currencyOnly: true,})}`, "value"],
-            ["% of Bilateral + Imputed multilateral ODA", "pct_total"],
-        ]
-    ),
-    {
-        label: "Unit",
-        value: "value"
-    }
-)
-const unit = Generators.input(unitInput)
+```jsx
+const BILATERAL_CODE = indicatorMapping.get("Bilateral")
+const MULTILATERAL_CODE = indicatorMapping.get("Imputed multilateral")
 
-function updateUnitOptions() {
-    for (const o of unitInput.querySelectorAll("option")) {
-        if (
-            indicatorInput.value.length === 2 && decodeHTML(o.innerHTML) === "% of Bilateral + Imputed multilateral ODA" 
-        ) {
-            o.setAttribute("disabled", "disabled")
-        } else o.removeAttribute("disabled");
+function App() {
+  const [donor, setDonor] = React.useState(donorMapping.get("DAC countries"))
+  const [recipient, setRecipient] = React.useState(recipientMapping.get("Developing countries"))
+  const [indicator, setIndicator] = React.useState([BILATERAL_CODE, MULTILATERAL_CODE])
+  const [currency, setCurrency] = React.useState("usd")
+  const [prices, setPrices] = React.useState("constant")
+  const [timeRange, setTimeRange] = React.useState([timeRangeOptions.end - 20, timeRangeOptions.end])
+  const [unit, setUnit] = React.useState("value")
+
+  const isMulti = indicator.length === 2
+
+  React.useEffect(() => {
+    if (isMulti && unit === "pct_total") setUnit("value")
+  }, [isMulti])
+
+  const unitOptions = React.useMemo(() => {
+    const opts = [
+      {label: `Million ${getCurrencyLabel(currency, {currencyOnly: true})}`, value: "value"},
+    ]
+    if (!isMulti) opts.push({label: "% of Bilateral + Imputed multilateral ODA", value: "pct_total"})
+    return opts
+  }, [currency, isMulti])
+
+  const data = React.useMemo(
+    () => indicator.length > 0
+      ? recipientsQueries(donor, recipient, indicator, currency, prices, timeRange)
+      : {absolute: [], relative: [], rawData: []},
+    [donor, recipient, indicator, currency, prices, timeRange]
+  )
+
+  const absoluteData = data?.absolute ?? []
+  const relativeData = data?.relative ?? []
+
+  const tableData = React.useMemo(
+    () => transformTableData(data?.rawData ?? [], unit, currency, prices),
+    [data?.rawData, unit, currency, prices]
+  )
+
+  const donorName = formatString(getNameByCode(donorMapping, donor) ?? "")
+  const recipientName = getNameByCode(recipientMapping, recipient) ?? ""
+  const currencyLabel = getCurrencyLabel(currency, {currencyLong: true, inSentence: true})
+  const pricesNote = `${prices}${prices === "constant" ? ` ${timeRangeOptions.base}` : ""}`
+
+  const indicatorSubtitle = React.useMemo(() => {
+    if (indicator.length > 1) {
+      return `<span style="color:${customPalette.bilateral}; font-weight:600">Bilateral</span> and <span style="color:${customPalette.multilateral}; font-weight:600">imputed multilateral</span> ODA`
     }
+    const name = getNameByCode(indicatorMapping, indicator) ?? ""
+    return `${name} ODA`
+  }, [indicator])
+
+  const relativeIndicatorSubtitle = React.useMemo(() => {
+    if (indicator.length > 1) {
+      return `<span style="color:${customPalette.bilateral}; font-weight:600">Bilateral</span> and <span style="color:${customPalette.multilateral}; font-weight:600">imputed multilateral</span> as a share of the total`
+    }
+    const name = getNameByCode(indicatorMapping, indicator) ?? ""
+    return `${name} as a share of the total`
+  }, [indicator])
+
+  const barPlotFn = React.useCallback(
+    (width) => barPlot(absoluteData, currency, "recipients", width, {}),
+    [absoluteData, currency]
+  )
+
+  const linePlotFn = React.useCallback(
+    (width) => linePlot(relativeData, "recipients", width),
+    [relativeData]
+  )
+
+  const tableFn = React.useCallback(
+    () => sparkbarTable(tableData, "recipients", {}),
+    [tableData]
+  )
+
+  const barFilename = formatString(`${donorName} ${recipientName}`, {fileMode: true})
+  const lineFilename = formatString(`${donorName} ${recipientName} share`, {fileMode: true})
+  const tableFilename = formatString(`${donorName} ${recipientName} ${unit}`, {fileMode: true})
+
+  const tableNote = unit === "value"
+    ? `ODA values in ${pricesNote} ${currencyLabel}.`
+    : `ODA values as a share of total aid received by ${recipientName} from ${donorName}.`
+
+  return (
+    <div className="mx-auto w-full max-w-6xl space-y-10 px-0 py-14 sm:px-6 sm:py-10">
+      <NavMenu currentPage="recipients" />
+      <section className="p-4 sm:p-6 mb-6">
+          <div className="grid gap-6 md:grid-cols-2">
+              <div className="flex flex-col items-stretch gap-6">
+                  <DropdownMenu label="Donor" options={DONOR_OPTIONS} value={donor} onChange={setDonor} />
+                  <DropdownMenu label="Recipient" options={RECIPIENT_OPTIONS} value={recipient} onChange={setRecipient} />
+                  <MultiSelect
+                      label="Indicator"
+                      options={INDICATOR_OPTIONS}
+                      value={indicator}
+                      onChange={setIndicator}
+                      placeholder={null}
+                      maxSelected={2}
+                  />
+              </div>
+              <div className="flex flex-col items-stretch gap-6">
+                  <DropdownMenu label="Currency" options={CURRENCY_OPTIONS} value={currency} onChange={setCurrency} />
+                  <ToggleSwitch label="Prices" value={prices} options={PRICES_OPTIONS} onChange={setPrices} />
+                  <RangeInput
+                      min={timeRangeOptions.start}
+                      max={timeRangeOptions.end}
+                      step={1}
+                      label="Time range"
+                      value={timeRange}
+                      onChange={setTimeRange}
+                  />
+              </div>
+          </div>
+      </section>
+
+      {indicator.length === 0 ? (
+        <p className="px-4 sm:px-6 text-sm text-slate-500">Select at least one indicator.</p>
+      ) : (
+        <>
+
+      <div className="grid gap-10 lg:grid-cols-2">
+          <div className="border-2 border-black bg-white p-4 sm:p-6">
+            <ONEVisual
+              title={`ODA to ${recipientName} from ${donorName}`}
+              subtitle={indicatorSubtitle}
+              subtitleIsHTML={true}
+              source="OECD DAC2A table."
+              note={`ODA values in ${pricesNote} ${currencyLabel}.`}
+              empty={absoluteData.length === 0}
+              emptyMessage="No data available"
+              onDownload={() => downloadXLSX(absoluteData, barFilename)}
+              plotFileName={barFilename}
+            >
+                <AutoPlot data={absoluteData} plotFn={barPlotFn} />
+            </ONEVisual>
+          </div>
+
+          <div className="border-2 border-black bg-white p-4 sm:p-6">
+            <ONEVisual
+              title={`ODA to ${recipientName} from ${donorName}`}
+              subtitle={relativeIndicatorSubtitle}
+              subtitleIsHTML={true}
+              source="OECD DAC2A table."
+              note={`ODA values as a share of all aid received by ${recipientName}.`}
+              empty={relativeData.length === 0}
+              emptyMessage="No data available"
+              onDownload={() => downloadXLSX(relativeData, lineFilename)}
+              plotFileName={lineFilename}
+            >
+              <AutoPlot data={relativeData} plotFn={linePlotFn} />
+            </ONEVisual>
+          </div>
+      </div>
+      <div className="p-4 sm:p-6">
+          <DropdownMenu label="Unit" options={unitOptions} value={unit} onChange={setUnit} />
+      </div>
+      <div className="border-2 border-black bg-white p-4 sm:p-6">
+        <ONEVisual
+          title={`ODA to ${recipientName} from ${donorName}`}
+          source="OECD DAC2A table."
+          note={tableNote}
+          empty={tableData.length === 0}
+          emptyMessage="No data available"
+          onDownload={() => downloadXLSX(tableData, tableFilename)}
+        >
+          <AutoTable data={tableData} tableFn={tableFn} />
+        </ONEVisual>
+      </div>
+        </>
+      )}
+    </div>
+  )
 }
 
-updateUnitOptions();
-indicatorInput.addEventListener("input", updateUnitOptions);
-donorInput.addEventListener("input", updateUnitOptions);
+display(<App />)
 ```
-
-```js
-// DATA QUERY (optimized: unit changes don't trigger re-query)
-const data = recipientsQueries(
-    donor,
-    recipient,
-    indicator,
-    currency,
-    prices,
-    timeRange
-)
-
-const absoluteData = data.absolute
-const relativeData = data.relative
-```
-
-```js
-// Table data calculated separately so unit changes are instant
-const tableData = transformTableData(data.rawData, unit, currency, prices)
-```
-
-```js
-const includes_germany = [
-    5,     // Germany
-    918,   // EU institutions
-    20000, // All bilateral donors
-    20001, // DAC countries
-    20002, // EU 27 countries
-    20003, // EU27 + EU Institutions
-    20004, // G7 countries, 
-]
-
-const germany_is_donor = includes_germany.includes(donor);
-```
-
-
-
-<div class="menu card">
-    <a class="view-button" href="./">
-        Financing
-    </a>
-    <a class="view-button active" href="./recipients">
-        Recipients
-    </a>
-    <a class="view-button" href="./sectors">
-        Sectors
-    </a>
-    <a class="view-button" href="./gender">
-        Gender
-    </a>
-    <a class="view-button" href="./faqs">
-        FAQs
-    </a>
-</div>
-
-<div>
-    ${
-        !data 
-            ? html` `
-            : html`
-                <div class="settings card">
-                    <div class="settings-group">
-                        ${donorInput}
-                        ${recipientInput}
-                    </div>
-                    <div class="settings-group">
-                        ${currencyInput}
-                        ${indicatorInput}
-                    </div>
-                    <div class="settings-group hidden">
-                        ${pricesInput}
-                        ${timeRangeInput}
-                    </div>
-                </div>
-                <div>
-                    ${
-                        indicator.length === 0 
-                            ? html ` 
-                                <div class="grid grid-cols-2">
-                                    <div class="card"> 
-                                        <div class="warning">
-                                            Select at least one indicator
-                                        </div>
-                                    </div>
-                                </div>
-                            `
-                            : html`
-                                ${
-                                  germany_is_donor
-                                    ? html`
-                                        <div class="grid grid-cols-2">
-                                          <div class="card" style="margin: 0 auto;">
-                                            <div class="note">
-                                                Germany has reported only semi-aggregated data for 2024 for part of the Federal Ministry for Economic Cooperation and Development (BMZ) data (approx. EUR 4 billion) for 2024, due to an internal transition of their IT systems. Granular data on recipients, sectors, and policy markers (for example) were not available for submission to the OECD at time of publication. The OECD will re-publish an update in early 2026 once these data have been obtained and processed. <a target="_blank" href="https://www.oecd.org/en/data/insights/data-explainers/2025/12/final-oecd-statistics-on-oda-and-other-development-finance-flows-in-2024-key-figures-and-trends.html">More information.</a>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      `
-                                    : null
-                                }
-                                <div class="grid grid-cols-2">
-                                    ${
-                                        absoluteData.every(row => row.value === null) | absoluteData.length === 0 
-                                            ? html`
-                                                <div class="card">
-                                                    <h2 class="plot-title">
-                                                            ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
-                                                    </h2>
-                                                    <div class="warning">
-                                                        No data available
-                                                    </div>
-                                                </div>
-                                            `
-                                            : html`
-                                                <div class="card">
-                                                    <div class="plot-container" id="bars-recipients">
-                                                        <h2 class="plot-title">
-                                                            ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
-                                                        </h2>
-                                                        <div class="plot-subtitle-panel">
-                                                            ${
-                                                                indicator.length > 1
-                                                                ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span> ODA</h3>`
-                                                                : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)}  ODA</h3>`
-                                                            }
-                                                        </div>
-                                                        ${
-                                                            resize(
-                                                                (width) => barPlot(
-                                                                    absoluteData, 
-                                                                    currency, 
-                                                                    "recipients", 
-                                                                    width, 
-                                                                    {}
-                                                                )
-                                                            )
-                                                        }
-                                                        <div class="bottom-panel">
-                                                            <div class="text-section">
-                                                                <p class="plot-source">Source: OECD DAC2A table.</p>
-                                                                <p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
-                                                            </div>
-                                                            <div class="logo-section">
-                                                                <a href="https://data.one.org/" target="_blank">
-                                                                    <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
-                                                                </a>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="download-panel">
-                                                        ${
-                                                            Inputs.button(
-                                                                "Download plot", {
-                                                                     reduce: () => downloadPNG(
-                                                                         "bars-recipients",
-                                                                         formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)}`, {fileMode: true})                        
-                                                                    )
-                                                                }
-                                                            )
-                                                        }
-                                                        ${
-                                                            Inputs.button(
-                                                                "Download data", 
-                                                                {
-                                                                    reduce: () => downloadXLSX(
-                                                                        absoluteData,
-                                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)}`, {fileMode: true})
-                                                                    )
-                                                                }
-                                                            )
-                                                        }
-                                                    </div>
-                                                </div>
-                                            `
-                                    }
-                                    ${
-                                        relativeData.every(row => row.value === null) | relativeData.length === 0 
-                                            ? html`
-                                                <div class="card">
-                                                    <h2 class="plot-title">
-                                                            ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)} as a share of total ODA
-                                                    </h2>
-                                                    <div class="warning">
-                                                        No data available
-                                                    </div>
-                                                </div>
-                                            `
-                                            : html`
-                                                <div class="card">
-                                                    <div class="plot-container" id="lines-recipients">
-                                                        <h2 class="plot-title">
-                                                            ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
-                                                        </h2>
-                                                        <div class="plot-subtitle-panel">
-                                                            ${
-                                                                indicator.length > 1
-                                                                ? html`<h3 class="plot-subtitle"><span class="bilateral-label subtitle-label">Bilateral</span> and <span class="multilateral-label subtitle-label">imputed multilateral</span> as a share of the total</h3>`
-                                                                : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} as a share of the total</h3>`
-                                                            }
-                                                        </div>
-                                                        ${
-                                                            resize(
-                                                                (width) => linePlot(
-                                                                    relativeData,
-                                                                    "recipients",
-                                                                    width
-                                                                )
-                                                            )
-                                                        }
-                                                        <div class="bottom-panel">
-                                                            <div class="text-section">
-                                                                <p class="plot-source">Source: OECD DAC2A table.</p>
-                                                                <p class="plot-note">ODA values as a share of all aid received by ${getNameByCode(recipientMapping, recipient)}.</p>
-                                                            </div>
-                                                            <div class="logo-section">
-                                                                <a href="https://data.one.org/" target="_blank">
-                                                                    <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
-                                                                </a>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="download-panel">
-                                                        ${
-                                                            Inputs.button(
-                                                                "Download plot", {
-                                                                     reduce: () => downloadPNG(
-                                                                         "lines-recipients",
-                                                                         formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} share`, {fileMode: true})                        )
-                                                                }
-                                                            )
-                                                        }
-                                                        ${
-                                                            Inputs.button(
-                                                                "Download data", 
-                                                                {
-                                                                    reduce: () => downloadXLSX(
-                                                                        relativeData,
-                                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} share`, {fileMode: true})
-                                                                    )
-                                                                }
-                                                            )
-                                                        }
-                                                    </div>
-                                                </div>
-                                            `
-                                    }
-                                </div>
-                                <div class="card">
-                                    <h2 class="table-title">
-                                        ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
-                                    </h2>
-                                    <div class="table-subtitle-panel">
-                                        ${unitInput}
-                                    </div>
-                                    ${
-                                        tableData.every(row => row.value === null) | tableData.length === 0 
-                                            ? html `
-                                                <div class="warning">
-                                                    No data available
-                                                </div>
-                                            `
-                                            : html`
-                                                ${
-                                                    sparkbarTable(  
-                                                        tableData, 
-                                                        "recipients",
-                                                        {}
-                                                    )
-                                                }
-                                                <div class="bottom-panel">
-                                                    <div class="text-section">
-                                                        <p class="plot-source">Source: OECD DAC2A table.</p>
-                                                        ${
-                                                            unit === "value" 
-                                                                ? html`<p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
-                                                                : html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
-                                                        }
-                                                    </div>
-                                                    <div class="logo-section">
-                                                        <a href="https://data.one.org/" target="_blank">
-                                                            <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                                <div class="download-panel table">
-                                                    ${
-                                                        Inputs.button(
-                                                            "Download data", 
-                                                            {
-                                                                reduce: () => downloadXLSX(
-                                                                    tableData,
-                                                                    formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} share ${unit}`, {fileMode: true})
-                                                                )
-                                                            }
-                                                        )
-                                                    }
-                                                </div>
-                                            `
-                                    }
-                                </div>    
-                            `
-                    }
-                </div> 
-            `
-    }
-</div>
-
