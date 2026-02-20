@@ -1,0 +1,27 @@
+/* === Embed Mode Styles === */
+.embedded #observablehq-header,
+.embedded #observablehq-footer,
+.embedded header,
+.embedded footer,
+.embedded nav {
+    display: none !important;
+}
+
+.embedded #observablehq-main,
+.embedded main,
+.embedded #observablehq-center {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+}
+
+.embedded #observablehq-center {
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.embedded,
+.embedded body {
+    background: white !important;
+    overflow: hidden !important;
+}

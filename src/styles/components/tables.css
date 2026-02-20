@@ -1,0 +1,30 @@
+[class^="inputs-"][class$="-table"] thead th {
+    z-index: 1 !important;
+    background: white !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    text-align: center !important;
+}
+
+table thead th:first-of-type,
+table tbody td:first-of-type {
+    display: none;
+}
+
+table tr > *:nth-child(2) {
+    width: 200px !important;
+}
+
+table tr > *:nth-child(n+3) {
+    width: 100px !important;
+}
+
+table > thead > tr > th > span {
+    margin-left: 10px !important;
+    margin-right: 10px !important;
+}
+
+table > thead > tr > th,
+table > tbody > tr > td {
+    font-family: 'Italian Plate', Helvetica, sans-serif;
+}

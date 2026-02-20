@@ -1,0 +1,13 @@
+body {
+    margin: 0;
+}
+
+main {
+    margin: 0 4rem
+}
+
+@media (max-width: 800px) {
+    main {
+        margin: 0 1rem
+    }
+}
