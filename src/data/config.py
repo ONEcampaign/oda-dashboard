@@ -34,8 +34,11 @@ OTHER_FINANCING_INDICATORS: dict = {
     "DAC1.10.2000": "Multilateral ODA",
     "DAC1.10.1600": "Debt relief",
     "DAC1.60.11030": "Private sector instruments",
+    "DAC1.60.11040": "Private sector instruments",
     "DAC1.60.11023": "Private sector instruments - institutional approach",
+    "DAC1.60.11041": "Private sector instruments - institutional approach",
     "DAC1.60.11024": "Private sector instruments - instrument approach",
+    "DAC1.60.11042": "Private sector instruments - instrument approach",
 }
 
 FINANCING_INDICATORS: dict = OTHER_FINANCING_INDICATORS | IN_DONOR_FINANCING_INDICATORS

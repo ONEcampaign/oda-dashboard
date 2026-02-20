@@ -89,7 +89,7 @@ def get_grants():
     ).get_indicators(["DAC1.10.1010"])
 
     grants_ge_raw = OECDClient(
-        years=range(2018, BASE_TIME["end"]),
+        years=range(2018, BASE_TIME["end"] + 1),
         providers=donor_ids,
         measure=["net_disbursement_grant", "grant_equivalent"],
         use_bulk_download=True,
@@ -182,7 +182,7 @@ def get_eui_eu27_grants():
     )
 
     grants_ge_client = OECDClient(
-        years=range(2018, BASE_TIME["end"]),
+        years=range(2018, BASE_TIME["end"] + 1),
         providers=list(eu_ids),
         measure=["net_disbursement_grant", "grant_equivalent"],
         use_bulk_download=True,

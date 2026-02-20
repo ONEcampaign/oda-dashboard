@@ -279,7 +279,7 @@ export function DropdownMenu({
                 onChange={e => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
                 placeholder="Search..."
-                className="w-full rounded border border-slate-200 px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-slate-400"
+                className="w-full rounded border border-slate-200 px-3 py-1.5 text-sm text-slate-700 uppercase outline-none focus:border-slate-400"
                 style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
               />
             </div>
