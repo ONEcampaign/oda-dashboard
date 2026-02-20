@@ -23,14 +23,23 @@ export function DropdownMenu({
 }) {
   const normalized = React.useMemo(() => normalizeOptions(options), [options])
   const [open, setOpen] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState("")
   const [highlightedIndex, setHighlightedIndex] = React.useState(-1)
   const containerRef = React.useRef(null)
   const buttonRef = React.useRef(null)
   const listRef = React.useRef(null)
+  const searchInputRef = React.useRef(null)
   const searchRef = React.useRef({ term: "", timeout: null })
 
   const selectedIndex = normalized.findIndex((option) => option.value === value)
   const selected = selectedIndex >= 0 ? normalized[selectedIndex] : undefined
+
+  const filteredOptions = React.useMemo(
+    () => searchQuery
+      ? normalized.filter(o => o.label.toLowerCase().includes(searchQuery.toLowerCase()))
+      : normalized,
+    [normalized, searchQuery]
+  )
 
   const toggleOpen = () => {
     if (disabled) return
@@ -40,6 +49,7 @@ export function DropdownMenu({
   const close = () => {
     setOpen(false)
     setHighlightedIndex(-1)
+    setSearchQuery("")
     if (searchRef.current.timeout) {
       clearTimeout(searchRef.current.timeout)
     }
@@ -72,17 +82,25 @@ export function DropdownMenu({
     }
   }, [])
 
+  // When the dropdown opens, focus the search input and set the initial highlighted index
   React.useEffect(() => {
     if (!open) return
-    if (normalized.length === 0) {
+    searchInputRef.current?.focus()
+    if (filteredOptions.length === 0) {
       setHighlightedIndex(-1)
       return
     }
-    setHighlightedIndex((prev) => {
-      if (prev >= 0 && prev < normalized.length) return prev
-      return selectedIndex >= 0 ? selectedIndex : 0
+    setHighlightedIndex(() => {
+      const filteredSelectedIndex = filteredOptions.findIndex(o => o.value === value)
+      return filteredSelectedIndex >= 0 ? filteredSelectedIndex : 0
     })
-  }, [open, selectedIndex, normalized.length])
+  }, [open])
+
+  // When the search query changes, reset highlight to the first result
+  React.useEffect(() => {
+    if (!open) return
+    setHighlightedIndex(filteredOptions.length > 0 ? 0 : -1)
+  }, [searchQuery])
 
   React.useEffect(() => {
     if (!open || highlightedIndex < 0) return
@@ -103,7 +121,7 @@ export function DropdownMenu({
       setOpen(true)
       return
     }
-    const total = normalized.length
+    const total = filteredOptions.length
     if (total === 0) return
     setHighlightedIndex((prev) => {
       const next = prev < 0 ? 0 : (prev + direction + total) % total
@@ -122,7 +140,7 @@ export function DropdownMenu({
       searchRef.current.term = ""
     }, 600)
 
-    const matchIndex = normalized.findIndex((option) =>
+    const matchIndex = filteredOptions.findIndex((option) =>
       option.label.toLowerCase().startsWith(nextTerm)
     )
     if (matchIndex >= 0) {
@@ -131,6 +149,7 @@ export function DropdownMenu({
     }
   }
 
+  // Keyboard handler for the trigger button
   const handleKeyDown = (event) => {
     switch (event.key) {
       case "ArrowDown":
@@ -143,8 +162,8 @@ export function DropdownMenu({
         break
       case "Enter":
         event.preventDefault()
-        if (open && highlightedIndex >= 0 && normalized[highlightedIndex]) {
-          handleSelect(normalized[highlightedIndex])
+        if (open && highlightedIndex >= 0 && filteredOptions[highlightedIndex]) {
+          handleSelect(filteredOptions[highlightedIndex])
         } else {
           setOpen(true)
         }
@@ -154,20 +173,45 @@ export function DropdownMenu({
         break
       case "Home":
         event.preventDefault()
-        if (normalized.length) {
+        if (filteredOptions.length) {
           if (!open) setOpen(true)
           setHighlightedIndex(0)
         }
         break
       case "End":
         event.preventDefault()
-        if (normalized.length) {
+        if (filteredOptions.length) {
           if (!open) setOpen(true)
-          setHighlightedIndex(normalized.length - 1)
+          setHighlightedIndex(filteredOptions.length - 1)
         }
         break
       default:
         handleTypeAhead(event.key)
+    }
+  }
+
+  // Keyboard handler for the search input — arrow keys and Enter navigate/select,
+  // all other keys are handled natively by the input (typing to filter)
+  const handleSearchKeyDown = (event) => {
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault()
+        handleArrowNavigation(1)
+        break
+      case "ArrowUp":
+        event.preventDefault()
+        handleArrowNavigation(-1)
+        break
+      case "Enter":
+        event.preventDefault()
+        if (highlightedIndex >= 0 && filteredOptions[highlightedIndex]) {
+          handleSelect(filteredOptions[highlightedIndex])
+        }
+        break
+      case "Escape":
+        close()
+        buttonRef.current?.focus()
+        break
     }
   }
 
@@ -226,47 +270,55 @@ export function DropdownMenu({
           </svg>
         </button>
         {open && (
-          <ul
-            ref={listRef}
-            className="absolute z-10 mt-2 max-h-64 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg"
-            role="listbox"
-            tabIndex={-1}
-            onKeyDown={handleKeyDown}
-          >
-            {normalized.map((option, index) => {
-              const isSelected = option.value === value
-              const isHighlighted = index === highlightedIndex
-              return (
-                <li key={option.value}>
-                  <button
-                    type="button"
-                    data-index={index}
-                    style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
-                    className={`flex w-full justify-start px-4 py-2 text-md uppercase transition-colors hover:cursor-pointer
-                    ${
-                      isSelected
-                          ? "font-bold"
-                          : ""
-                    }
-                    ${
-                      isHighlighted
+          <div className="absolute z-10 mt-2 w-full rounded-md border border-slate-200 bg-white shadow-lg">
+            <div className="border-b border-slate-100 p-2">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Search..."
+                className="w-full rounded border border-slate-200 px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-slate-400"
+                style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
+              />
+            </div>
+            <ul
+              ref={listRef}
+              className="max-h-56 overflow-y-auto"
+              role="listbox"
+              tabIndex={-1}
+            >
+              {filteredOptions.map((option, index) => {
+                const isSelected = option.value === value
+                const isHighlighted = index === highlightedIndex
+                return (
+                  <li key={option.value}>
+                    <button
+                      type="button"
+                      data-index={index}
+                      style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
+                      className={`flex w-full justify-start px-4 py-2 text-md uppercase transition-colors hover:cursor-pointer
+                      ${isSelected ? "font-bold" : ""}
+                      ${isHighlighted
                           ? "bg-slate-100 text-slate-900"
                           : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                    }`}
-                    onClick={() => handleSelect(option)}
-                    onMouseEnter={() => setHighlightedIndex(index)}
-                    role="option"
-                    aria-selected={isSelected}
-                    >
-                    <span className="flex-1 text-left" style={labelStyle}>{option.label}</span>
-                  </button>
-                </li>
-              )
-            })}
-            {normalized.length === 0 && (
-              <li className="px-4 py-2 text-sm text-slate-500">No options</li>
-            )}
-          </ul>
+                      }`}
+                      onClick={() => handleSelect(option)}
+                      onMouseEnter={() => setHighlightedIndex(index)}
+                      role="option"
+                      aria-selected={isSelected}
+                      >
+                      <span className="flex-1 text-left" style={labelStyle}>{option.label}</span>
+                    </button>
+                  </li>
+                )
+              })}
+              {filteredOptions.length === 0 && (
+                <li className="px-4 py-2 text-sm text-slate-500">No results</li>
+              )}
+            </ul>
+          </div>
         )}
       </div>
     </div>
