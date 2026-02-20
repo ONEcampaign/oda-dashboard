@@ -11,9 +11,8 @@
     "install": "uv sync"
   },
   "dependencies": {
-    "@observablehq/framework": "latest",
-    "@one-data/observable-themes": "^0.6.5",
-    "observable": "^2.1.4"
+    "@observablehq/framework": "^1.13.3",
+    "@one-data/observable-themes": "^0.6.7"
   },
   "devDependencies": {
     "rimraf": "^5.0.5"

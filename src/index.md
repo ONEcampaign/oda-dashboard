@@ -1,406 +1,230 @@
 ```js
-import "./components/embed.js";
-import {setCustomColors} from "@one-data/observable-themes/use-colors";
-import {customPalette} from "./components/colors.js";
-import {logo} from "@one-data/observable-themes/use-images";
-import {financingQueries, transformTableData, donorOptions, financingIndicators} from "./components/financingQueries.js";
-import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap, decodeHTML} from "./components/utils.js";
-import {rangeInput} from "./components/rangeInput.js";
-import {barPlot, linePlot, sparkbarTable} from "./components/visuals.js";
-import {downloadPNG, downloadXLSX} from './components/downloads.js';
-```
+import * as React from "npm:react"
+import {NavMenu} from "./components/NavMenu.js"
+import {DropdownMenu} from "./components/DropdownMenu.js"
+import {ToggleSwitch} from "./components/ToggleSwitch.js"
+import {RangeInput} from "./components/RangeInput.js"
+import {ONEVisual} from "./components/ONEVisual.js"
+import {setCustomColors} from "@one-data/observable-themes/use-colors"
+import {financingQueries, transformTableData, donorOptions, financingIndicators} from "./js/financingQueries.js"
+import {name2CodeMap, getNameByCode, getCurrencyLabel, formatString} from "./js/utils.js"
+import {customPalette} from "./js/colors.js"
+import {downloadXLSX} from "./js/downloads.js"
+import {barPlot, linePlot, sparkbarTable} from "./js/visuals.js"
+import {AutoPlot} from "./components/AutoPlot.js"
+import {AutoTable} from "./components/AutoTable.js"
+import {CURRENCY_OPTIONS, PRICES_OPTIONS} from "./js/config.js"
+import "./js/embed.js"
 
-```js
-setCustomColors(customPalette);
-```
+setCustomColors(customPalette)
 
-```js
-// Use metadata exported from financingQueries.js to avoid duplicate loading
+const timeRangeOptions = await FileAttachment("./data/analysis_tools/financing_time.json").json()
+
 const donorMapping = name2CodeMap(donorOptions, {})
-```
-
-```js
 const indicatorMapping = new Map(
     Object.entries(financingIndicators).map(([k, v]) => [v, Number(k)])
-);
-```
-
-```js
-const timeRangeOptions = await FileAttachment("./data/analysis_tools/financing_time.json").json()
-```
-
-```js
-// USER INPUTS
-// Donor
-const donorInput = Inputs.select(
-    donorMapping,
-    {
-        label: "Donor",
-        value: donorMapping.get("DAC countries"),
-        sort: true
-    })
-const donor = Generators.input(donorInput);
-
-// Indicator
-const indicatorInput = Inputs.select(
-    indicatorMapping,
-    {
-        label: "Indicator",
-        value: indicatorMapping.get("Total ODA")
-    })
-const indicator = Generators.input(indicatorInput);
-
-// Currency
-const currencyInput = Inputs.select(
-    new Map([
-        ["US Dollars", "usd"],
-        ["Canada Dollars", "cad"],
-        ["Euros", "eur"],
-        ["British pounds", "gbp"]
-    ]),
-    {
-        label: "Currency",
-        value: "usd",
-        sort: true
-    })
-const currency = Generators.input(currencyInput);
-
-// Prices
-const pricesInput = Inputs.radio(
-    new Map([
-        ["Constant", "constant"],
-        ["Current", "current"]
-    ]),
-    {
-        label: "Prices",
-        value: "constant",
-    }
 )
-const prices = Generators.input(pricesInput)
 
-// Year
-const timeRangeInput = rangeInput(
-    {
-        min: timeRangeOptions.start,
-        max: timeRangeOptions.end,
-        step: 1,
-        value: [timeRangeOptions.end - 20, timeRangeOptions.end],
-        label: "Time range",
-        enableTextInput: true
-    })
-const timeRange = Generators.input(timeRangeInput)
+const DONOR_OPTIONS = Array.from(donorMapping.entries())
+    .map(([label, value]) => ({label, value}))
+    .sort((a, b) => a.label.localeCompare(b.label))
+
+const INDICATOR_OPTIONS = Array.from(indicatorMapping.entries())
+    .map(([label, value]) => ({label, value}))
+
+const TOTAL_ODA_CODE = indicatorMapping.get("Total ODA")
+const CORE_ODA_CODE = indicatorMapping.get("Core ODA (ONE Definition)")
+const EU27_EUI_CODE = donorMapping.get("EU27 + EU Institutions")
 ```
 
-```js
-// Unit
-const unitInput = Inputs.select(
-    new Map(
-        [
-            [`Million ${getCurrencyLabel(currency, {currencyOnly: true,})}`, "value"],
-            ["% of GNI", "gni_pct"],
-            ["% of total ODA", "total_pct"]
-        ]
-    ),
-    {
-        label: "Unit",
-        value: "value"
-    }
-)
-const unit = Generators.input(unitInput)
+```jsx
+function App() {
+  const [donor, setDonor] = React.useState(donorMapping.get("DAC countries"))
+  const [indicator, setIndicator] = React.useState(TOTAL_ODA_CODE)
+  const [currency, setCurrency] = React.useState("usd")
+  const [prices, setPrices] = React.useState("constant")
+  const [timeRange, setTimeRange] = React.useState([timeRangeOptions.end - 20, timeRangeOptions.end])
+  const [unit, setUnit] = React.useState("value")
+  const [commitment, setCommitment] = React.useState(false)
 
-function updateUnitOptions() {
-    for (const o of unitInput.querySelectorAll("option")) {
-        if (decodeHTML(o.innerHTML) === "% of total ODA" & indicatorInput.value === indicatorMapping.get("Total ODA")) {
-            o.setAttribute("disabled", "disabled");
-        }
-        else o.removeAttribute("disabled");
+  const isTotalODA = indicator === TOTAL_ODA_CODE
+
+  React.useEffect(() => {
+    if (isTotalODA && unit === "total_pct") setUnit("value")
+  }, [isTotalODA])
+
+  const unitOptions = React.useMemo(() => {
+    const opts = [
+      {label: `Million ${getCurrencyLabel(currency, {currencyOnly: true})}`, value: "value"},
+      {label: "% of GNI", value: "gni_pct"},
+    ]
+    if (!isTotalODA) opts.push({label: "% of total ODA", value: "total_pct"})
+    return opts
+  }, [currency, isTotalODA])
+
+  const data = React.useMemo(
+    () => financingQueries(donor, indicator, currency, prices, timeRange),
+    [donor, indicator, currency, prices, timeRange]
+  )
+
+  const absoluteData = data?.absolute ?? []
+  const relativeData = data?.relative ?? []
+
+  const tableData = React.useMemo(
+    () => transformTableData(data?.rawData ?? [], unit, indicator, currency, prices),
+    [data?.rawData, unit, indicator, currency, prices]
+  )
+
+  const donorName = formatString(getNameByCode(donorMapping, donor) ?? "")
+  const indicatorName = getNameByCode(indicatorMapping, indicator) ?? ""
+  const currencyLabel = getCurrencyLabel(currency, {currencyLong: true, inSentence: true})
+  const pricesNote = `${prices}${prices === "constant" ? ` ${timeRangeOptions.base}` : ""}`
+  const coreOdaNote = indicator === CORE_ODA_CODE
+    ? "Core ODA (ONE definition): Total ODA excluding in-donor spending."
+    : ""
+  const eu27Note = donor === EU27_EUI_CODE && timeRange[1] === 2024
+    ? "2024 values do not include contributions by EU Institutions."
+    : ""
+
+  const absoluteSubtitle = React.useMemo(() => {
+    const types = [...new Set(absoluteData.map(d => d.type))]
+    if (types.length > 1) {
+      return `in <span style="color:${customPalette.flow}; font-weight:600">Flows</span> and <span style="color:${customPalette.ge}; font-weight:600">grant equivalents</span>`
     }
+    return types.length ? `in ${types[0]}` : ""
+  }, [absoluteData])
+
+  const relativeSubtitle = React.useMemo(() => {
+    const types = [...new Set(relativeData.map(d => d.type))]
+    const sharePart = isTotalODA ? " as a share of GNI" : " as a share of total ODA"
+    if (types.length > 1) {
+      return `in <span style="color:${customPalette.flow}; font-weight:600">Flows</span> and <span style="color:${customPalette.ge}; font-weight:600">grant equivalents</span>${sharePart}`
+    }
+    return types.length ? `in ${types[0]}${sharePart}` : sharePart
+  }, [relativeData, isTotalODA])
+
+  const barPlotFn = React.useCallback(
+    (width) => barPlot(absoluteData, currency, "financing", width, {}),
+    [absoluteData, currency]
+  )
+
+  const linePlotFn = React.useCallback(
+    (width) => linePlot(relativeData, "financing", width, {showIntlCommitment: commitment, GNIShare: isTotalODA}),
+    [relativeData, commitment, isTotalODA]
+  )
+
+  const tableFn = React.useCallback(
+    () => sparkbarTable(tableData, "financing", {}),
+    [tableData]
+  )
+
+  const barFilename = formatString(`${donorName} ${indicatorName}`, {fileMode: true})
+  const lineFilename = formatString(`${donorName} ${indicatorName} share`, {fileMode: true})
+  const tableFilename = formatString(`${donorName} ${indicatorName} ${unit}`, {fileMode: true})
+
+  const plotNote = [
+    `ODA values in ${pricesNote} ${currencyLabel}.`,
+    coreOdaNote,
+    eu27Note
+  ].filter(Boolean).join(" ")
+
+  const tableNote = React.useMemo(() => {
+    const base = unit === "value"
+      ? `ODA values in ${pricesNote} ${currencyLabel}.`
+      : unit === "gni_pct"
+        ? `ODA values as a share of the GNI of ${donorName}.`
+        : `ODA values as a share of total contributions from ${donorName}.`
+    return [base, coreOdaNote, unit !== "total_pct" ? eu27Note : ""].filter(Boolean).join(" ")
+  }, [unit, pricesNote, currencyLabel, donorName, coreOdaNote, eu27Note])
+
+  return (
+    <div className="mx-auto w-full space-y-10 px-6 py-10">
+      <NavMenu currentPage="financing" />
+
+      <section className="p-4 sm:p-6 mb-6">
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="flex flex-col items-stretch gap-6">
+            <DropdownMenu label="Donor" options={DONOR_OPTIONS} value={donor} onChange={setDonor} />
+            <DropdownMenu label="Indicator" options={INDICATOR_OPTIONS} value={indicator} onChange={setIndicator} />
+          </div>
+          <div className="flex flex-col items-stretch gap-6">
+            <DropdownMenu label="Currency" options={CURRENCY_OPTIONS} value={currency} onChange={setCurrency} />
+            <ToggleSwitch label="Prices" value={prices} options={PRICES_OPTIONS} onChange={setPrices} />
+          </div>
+          <div className="flex flex-col items-stretch gap-6">
+              <RangeInput
+                  min={timeRangeOptions.start}
+                  max={timeRangeOptions.end}
+                  step={1}
+                  label="Time range"
+                  value={timeRange}
+                  onChange={setTimeRange}
+              />
+              {isTotalODA && (
+                <ToggleSwitch
+                    label="Show international commitment"
+                    value={commitment}
+                    options={[{label: "Off", value: false}, {label: "On", value: true}]}
+                    onChange={setCommitment}
+                />
+              )}
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-10 lg:grid-cols-2">
+        <div className="border border-blackbg-white p-4 sm:p-6">
+          <ONEVisual
+            title={`${indicatorName} from ${donorName}`}
+            subtitle={absoluteSubtitle}
+            subtitleIsHTML={Boolean(absoluteSubtitle)}
+            source="OECD DAC1 table."
+            note={plotNote}
+            empty={absoluteData.length === 0}
+            emptyMessage="No data available"
+            onDownload={() => downloadXLSX(absoluteData, barFilename)}
+            plotFileName={barFilename}
+          >
+            <AutoPlot data={absoluteData} plotFn={barPlotFn} />
+          </ONEVisual>
+        </div>
+
+        <div className="border border-blackbg-white p-4 sm:p-6">
+          <ONEVisual
+            title={`${indicatorName} from ${donorName}`}
+            subtitle={relativeSubtitle}
+            subtitleIsHTML={Boolean(relativeSubtitle)}
+            source="OECD DAC1 table."
+            note={[`ODA values as a share of GNI of ${donorName}.`, coreOdaNote, eu27Note].filter(Boolean).join(" ")}
+            empty={relativeData.length === 0}
+            emptyMessage="No data available"
+            onDownload={() => downloadXLSX(relativeData, lineFilename)}
+            plotFileName={lineFilename}
+          >
+            <AutoPlot data={relativeData} plotFn={linePlotFn} />
+          </ONEVisual>
+        </div>
+      </div>
+
+      <div className="p-4 sm:p-6">
+        <DropdownMenu label="Unit" options={unitOptions} value={unit} onChange={setUnit} />
+      </div>
+
+      <div className="border border-blackbg-white p-4 sm:p-6">
+        <ONEVisual
+          title={`${indicatorName} from ${donorName}`}
+          source="OECD DAC1 table."
+          note={tableNote}
+          empty={tableData.length === 0}
+          emptyMessage="No data available"
+          onDownload={() => downloadXLSX(tableData, tableFilename)}
+        >
+          <AutoTable data={tableData} tableFn={tableFn} />
+        </ONEVisual>
+      </div>
+    </div>
+  )
 }
 
-updateUnitOptions();
-indicatorInput.addEventListener("input", updateUnitOptions);
-
-// Intenational commitments
-const commitmentInput = Inputs.toggle(
-    {label: html`Int'l commitment`, value: false}
-)
-
-const commitment = Generators.input(commitmentInput)
+display(<App />)
 ```
-
-```js
-// DATA QUERY (optimized: unit changes don't trigger re-query)
-const data = financingQueries(
-    donor,
-    indicator,
-    currency,
-    prices,
-    timeRange
-)
-
-const absoluteData = data.absolute
-const relativeData = data.relative
-```
-
-```js
-// Table data calculated separately so unit changes are instant
-const tableData = transformTableData(data.rawData, unit, indicator, currency, prices)
-```
-
-<div class="menu card">
-    <a class="view-button active" href="./">
-        Financing
-    </a>
-    <a class="view-button" href="./recipients">
-        Recipients
-    </a>
-    <a class="view-button" href="./sectors">
-        Sectors
-    </a>
-    <a class="view-button" href="./gender">
-        Gender
-    </a>
-    <a class="view-button" href="./faqs">
-        FAQs
-    </a>
-</div>
-
-<div>
-    ${  
-        !data 
-            ? html` `
-            : html`
-                <div class="settings card">
-                    <div class="settings-group">
-                        ${donorInput}
-                    </div>
-                    <div class="settings-group">
-                        ${currencyInput}
-                        ${indicatorInput}
-                    </div>
-                    <div class="settings-group">
-                        ${pricesInput}
-                        ${timeRangeInput}
-                    </div>
-                </div>
-                <div class="grid grid-cols-2">
-                    ${
-                        absoluteData.every(row => row.value === null) | absoluteData.length === 0
-                            ? html`
-                                <div class="card">
-                                    <h2 class="plot-title">
-                                        ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)}
-                                    </h2>
-                                    <div class="warning">
-                                        No data available
-                                    </div>
-                                </div>
-                            `
-                            : html`
-                                <div class="card">
-                                    <div  class="plot-container" id="bars-financing">
-                                        <h2 class="plot-title">
-                                            ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)}
-                                        </h2>
-                                        <div class="plot-subtitle-panel">
-                                            <h3 class="plot-subtitle">
-                                                ${
-                                                    new Set(absoluteData.map(d => d.type)).size > 1 
-                                                        ? html`in <span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span>`
-                                                        : html`in ${[...new Set(absoluteData.map(d => d.type))][0]}`
-                                                }
-                                            </h3>
-                                        </div>
-                                        ${
-                                            resize(
-                                                (width) => barPlot(
-                                                    absoluteData, 
-                                                    currency, 
-                                                    "financing", 
-                                                    width, 
-                                                    {}
-                                                )
-                                            )
-                                        }
-                                        <div class="bottom-panel">
-                                            <div class="text-section">
-                                                <p class="plot-source">Source: OECD DAC1 table.</p>
-                                                <p class="plot-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}. ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""}</p>                
-                                            </div>
-                                            <div class="logo-section">
-                                                <a href="https://data.one.org/" target="_blank">
-                                                    <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="download-panel">
-                                        ${  
-                                            Inputs.button(
-                                                "Download plot", 
-                                                {
-                                                    reduce: () => downloadPNG(
-                                                        "bars-financing",
-                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)}`, {fileMode: true})
-                                                    )
-                                                }   
-                                            )
-                                        }
-                                        ${
-                                            Inputs.button(
-                                                "Download data", 
-                                                {
-                                                    reduce: () => downloadXLSX(
-                                                        absoluteData,
-                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)}`, {fileMode: true})
-                                                    )
-                                                }
-                                            )
-                                        }
-                                    </div>
-                                </div>
-                            `
-                    }
-                    ${
-                        relativeData.every(row => row.value === null) | relativeData.length === 0
-                            ? html`
-                                <div class="card">
-                                    <h2 class="plot-title">
-                                        ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)} ${indicator === indicatorMapping.get("Total ODA") ? "as a share of GNI" : "as a share of total ODA"}
-                                    </h2>
-                                    <div class="warning">
-                                        No data available
-                                    </div>
-                                </div>
-                            `
-                            : html`
-                                <div class="card">
-                                    <div class="plot-container" id="lines-financing">
-                                        <h2 class="plot-title">
-                                            ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)}
-                                        </h2>
-                                        <div class="plot-subtitle-panel">
-                                            <h3 class="plot-subtitle">
-                                                ${
-                                                    new Set(relativeData.map(d => d.type)).size > 1 
-                                                        ? html`in <span class="flow-label subtitle-label">Flows</span> and <span class="ge-label  subtitle-label">grant equivalents</span>`
-                                                        : html`in ${[...new Set(relativeData.map(d => d.type))][0]}`
-                                                }
-                                                ${indicator === indicatorMapping.get("Total ODA") ? html`as a share of GNI` : html`as a share of total ODA`}
-                                            </h3>
-                                            ${
-                                                indicator === indicatorMapping.get("Total ODA") 
-                                                    ? commitmentInput
-                                                    : html` `
-                                            }
-                                        </div>
-                                        ${
-                                        resize(
-                                            (width) => linePlot(
-                                                relativeData, 
-                                                "financing", 
-                                                width,
-                                                {
-                                                    showIntlCommitment: commitment,
-                                                    GNIShare: indicator === indicatorMapping.get("Total ODA")
-                                                }
-                                            ))
-                                        }
-                                        <div class="bottom-panel">
-                                            <div class="text-section">
-                                                <p class="plot-source">Source: OECD DAC1 table.</p>
-                                                <p class="plot-note">ODA values as a share of GNI of ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""}</p>
-                                            </div>
-                                            <div class="logo-section">
-                                                <a href="https://data.one.org/" target="_blank">
-                                                    <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="download-panel">
-                                        ${
-                                            Inputs.button(
-                                                "Download plot", 
-                                                {
-                                                    reduce: () => downloadPNG(
-                                                        "lines-financing",
-                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)} share`, {fileMode: true})
-                                                    )
-                                                }
-                                            )
-                                        }
-                                        ${
-                                            Inputs.button(
-                                                "Download data", 
-                                                {
-                                                    reduce: () => downloadXLSX(
-                                                        relativeData,
-                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)} share`, {fileMode: true})
-                                                    )
-                                                }
-                                            )
-                                        }
-                                    </div>
-                                </div>
-                            `
-                    }
-                </div>
-                <div class="card">
-                    <h2 class="table-title">
-                        ${formatString(`${getNameByCode(indicatorMapping, indicator)} from ${getNameByCode(donorMapping, donor)}`)}
-                    </h2>
-                    <div class="table-subtitle-panel">
-                        ${unitInput}
-                    </div>
-                    ${
-                        tableData.every(row => row.value === null) | tableData.length === 0 
-                            ? html`
-                                <div class="warning">
-                                    No data available
-                                </div>
-                            `
-                            : html`
-                                ${
-                                    sparkbarTable(
-                                        tableData, 
-                                        "financing", 
-                                        {}
-                                    )
-                                }
-                                <div class="bottom-panel">
-                                    <div class="text-section">
-                                        <p class="table-source">Source: OECD DAC1 table.</p>
-                                        ${
-                                            unit === "value" 
-                                                ? html`<p class="table-note">ODA values in ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.  ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""}</p>`
-                                                : unit === "gni_pct"
-                                                    ? html`<p class="table-note">ODA values as a share of the GNI of ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""} ${donor === donorMapping.get("EU27 + EU Institutions") & timeRange[1] === 2024 ?"• 2024 values do not include contributions by EU Institutions." : ""}</p>`
-                                                    : html`<p class="table-note">ODA values as a share of total contributions from ${formatString(getNameByCode(donorMapping, donor))}. ${indicator === indicatorMapping.get("Core ODA (ONE Definition)") ?"• Core ODA (ONE definition): Total ODA excluding in-donor spending." : ""}</p>`
-                                        }
-                                    </div>
-                                    <div class="logo-section">
-                                        <a href="https://data.one.org/" target="_blank">
-                                            <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
-                                        </a>
-                                    </div>
-                                </div>
-                                <div class="download-panel table">
-                                    ${
-                                        Inputs.button(
-                                            "Download data", 
-                                            {
-                                                reduce: () => downloadXLSX(
-                                                    tableData,
-                                                    formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(indicatorMapping, indicator)} ${unit}`, {fileMode: true})
-                                                )
-                                            }
-                                        )
-                                    }
-                                </div>
-                            `
-                    }
-                </div>
-            `
-    }
-</div>

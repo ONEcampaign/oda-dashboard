@@ -199,6 +199,40 @@ export function generateIndicatorMap(data, page) {
     return nameToId;
 }
 
+/**
+ * For stacked area/bar charts, missing year-indicator rows cause visual distortion.
+ * This fills any gap in (year × indicator) with value: 0, leaving all other fields
+ * copied from the first row (donor, recipient, unit, source, etc.).
+ * Only indicators that already appear in the data are considered — it never invents
+ * a series that has no data at all.
+ *
+ * @param {Array} rows - Already-mapped plot rows with at least {year, indicator, value}
+ * @param {[number, number]} timeRange - [startYear, endYear] inclusive
+ * @returns {Array} rows with zero-filled gaps, sorted by year then indicator
+ */
+export function fillMissingYearIndicators(rows, timeRange) {
+    if (rows.length === 0) return rows;
+
+    const indicators = [...new Set(rows.map(r => r.indicator))];
+    const existing = new Set(rows.map(r => `${r.year}|${r.indicator}`));
+    const template = rows[0];
+    const extras = [];
+
+    for (let year = timeRange[0]; year <= timeRange[1]; year++) {
+        for (const indicator of indicators) {
+            if (!existing.has(`${year}|${indicator}`)) {
+                extras.push({...template, year, indicator, value: 0});
+            }
+        }
+    }
+
+    if (extras.length === 0) return rows;
+
+    return [...rows, ...extras].sort((a, b) =>
+        a.year !== b.year ? a.year - b.year : a.indicator.localeCompare(b.indicator)
+    );
+}
+
 export function escapeSQL(str) {
     return str.replace(/'/g, "''");
 }

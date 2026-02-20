@@ -1,639 +1,358 @@
 ```js
-import "./components/embed.js";
-import {setCustomColors} from "@one-data/observable-themes/use-colors";
-import {logo} from "@one-data/observable-themes/use-images";
-import {formatString, getCurrencyLabel, name2CodeMap, getNameByCode, generateIndicatorMap, decodeHTML} from "./components/utils.js";
-import {sectorsQueries, transformSelectedData, transformTableData, donorOptions, recipientOptions, sectorsIndicators, code2Subsector, subsector2Sector} from "./components/sectorsQueries.js";
-import {rangeInput} from "./components/rangeInput.js";
-import {barPlot, sparkbarTable} from "./components/visuals.js";
-import {treemapPlot, selectedSector} from "./components/Treemap.js";
-import {paletteSubsectors} from './components/colors.js';
-import {downloadPNG, downloadXLSX} from './components/downloads.js';
-```
+import * as React from "npm:react"
+import {NavMenu} from "./components/NavMenu.js"
+import {DropdownMenu} from "./components/DropdownMenu.js"
+import {ToggleSwitch} from "./components/ToggleSwitch.js"
+import {MultiSelect} from "./components/MultiSelect.js"
+import {RangeInput} from "./components/RangeInput.js"
+import {ONEVisual} from "./components/ONEVisual.js"
+import {setCustomColors} from "@one-data/observable-themes/use-colors"
+import {
+    sectorsQueries,
+    transformSelectedData,
+    transformTableData,
+    donorOptions,
+    recipientOptions,
+    sectorsIndicators,
+    subsector2Sector
+} from "./js/sectorsQueries.js"
+import {treemapPlot} from "./js/Treemap.js"
+import {name2CodeMap, getNameByCode, getCurrencyLabel, formatString} from "./js/utils.js"
+import {customPalette, paletteSubsectors} from "./js/colors.js"
+import {downloadXLSX} from "./js/downloads.js"
+import {barPlot, sparkbarTable} from "./js/visuals.js"
+import {AutoPlot} from "./components/AutoPlot.js"
+import {AutoTable} from "./components/AutoTable.js"
+import {CURRENCY_OPTIONS, PRICES_OPTIONS} from "./js/config.js"
+import "./js/embed.js"
 
-```js
-const sectorsStateStore = globalThis.__odaSectorsState ??= {lastResult: null};
-```
+setCustomColors(customPalette)
 
-```js
-// Use metadata exported from sectorsQueries.js to avoid duplicate loading
-const donorMapping = name2CodeMap(donorOptions, {removeEU27EUI:true})
-```
+const timeRangeOptions = await FileAttachment("./data/analysis_tools/base_time.json").json()
 
-```js
-const recipientMapping = name2CodeMap(recipientOptions, { useRecipientGroups: true })
-```
-
-```js
+const donorMapping = name2CodeMap(donorOptions, {removeEU27EUI: true})
+const recipientMapping = name2CodeMap(recipientOptions, {useRecipientGroups: true})
 const indicatorMapping = new Map(
     Object.entries(sectorsIndicators).map(([k, v]) => [v, Number(k)])
-);
+)
+
+const DONOR_OPTIONS = Array.from(donorMapping.entries())
+    .map(([label, value]) => ({label, value}))
+    .sort((a, b) => a.label.localeCompare(b.label))
+
+const RECIPIENT_OPTIONS = Array.from(recipientMapping.entries())
+    .map(([label, value]) => ({label, value}))
+    .sort((a, b) => a.label.localeCompare(b.label))
+
+const INDICATOR_OPTIONS = Array.from(indicatorMapping.entries())
+    .map(([label, value]) => ({label, value}))
+
+const BILATERAL_CODE = indicatorMapping.get("Bilateral")
+const MULTILATERAL_CODE = indicatorMapping.get("Imputed multilateral")
+const SECTORS_MIN = 2013
 ```
 
-```js
-const timeRangeOptions = await FileAttachment("./data/analysis_tools/base_time.json").json()
-```
+```jsx
+// Treemap wrapper: passes onSectorChange directly into treemapPlot
+function TreemapContainer({data, currency, onSectorChange}) {
+  const ref = React.useRef(null)
+  const [width, setWidth] = React.useState(0)
+  const onSectorChangeRef = React.useRef(onSectorChange)
+  onSectorChangeRef.current = onSectorChange
 
-```js
-// USER INPUTS
-// Donor
-const donorInput = Inputs.select(
-    donorMapping,
-    {
-        label: "Donor",
-        value: donorMapping.get("DAC countries"),
-        sort: true
-    })
-const donor = Generators.input(donorInput);
+  React.useEffect(() => {
+    if (!ref.current) return
+    const observer = new ResizeObserver(entries => setWidth(entries[0].contentRect.width))
+    observer.observe(ref.current)
+    setWidth(ref.current.clientWidth)
+    return () => observer.disconnect()
+  }, [])
 
-// Recipient
-const recipientInput = Inputs.select(
-    recipientMapping,
-    {
-        label: "Recipient",
-        value: recipientMapping.get("Developing countries"),
-        sort: true
-    })
-const recipient = Generators.input(recipientInput);
-
-// Indicator
-const indicatorInput = Inputs.checkbox(
-    indicatorMapping,
-    {
-        label: "Indicator",
-        value: [
-            indicatorMapping.get("Bilateral"), 
-            indicatorMapping.get("Imputed multilateral")
-        ],
-    })
-const indicator = Generators.input(indicatorInput);
-
-// Currency
-const currencyInput = Inputs.select(
-    new Map([
-        ["US Dollars", "usd"],
-        ["Canada Dollars", "cad"],
-        ["Euros", "eur"],
-        ["British pounds", "gbp"]
-    ]),
-    {
-        label: "Currency",
-        value: "usd",
-        sort: true
-    })
-const currency = Generators.input(currencyInput);
-
-// Prices
-const pricesInput = Inputs.radio(
-    new Map([
-        ["Constant", "constant"],
-        ["Current", "current"]
-    ]),
-    {
-        label: "Prices",
-        value: "constant",
+  React.useEffect(() => {
+    const node = ref.current
+    if (!node || !width || !data?.length) {
+      if (node) node.innerHTML = ""
+      return
     }
-)
-const prices = Generators.input(pricesInput)
-
-// Year
-const timeRangeInput = rangeInput(
-    {
-        min: 2013,
-        max: timeRangeOptions.end,
-        step: 1,
-        value: [2013, timeRangeOptions.end],
-        label: "Time range",
-        enableTextInput: true
+    const plotEl = treemapPlot(data, width, {
+      currency,
+      onSectorChange: (sector) => onSectorChangeRef.current(sector)
     })
-const timeRange = Generators.input(timeRangeInput)
+    node.innerHTML = ""
+    node.appendChild(plotEl)
+    return () => { if (plotEl?.remove) plotEl.remove() }
+  }, [data, width, currency])
 
-// Breakdown
-const breakdownInput = Inputs.toggle(
-    {
-        label: "Sector breakdown",
-        value: true
-    }
-)
-const breakdown = Generators.input(breakdownInput)
-
-// Breakdown Placeholder
-const breakdownPlaceholderInput = Inputs.toggle(
-    {
-        label: "Sector breakdown",
-        value: false,
-        disabled: true
-    }
-)
-const breakdownPlaceholder = Generators.input(breakdownPlaceholderInput)
-```
-
-```js
-// Unit
-const unitInput = Inputs.select(
-    new Map(
-        [
-            [`Million ${getCurrencyLabel(currency, {currencyOnly: true,})}`, "value"],
-            [`% of ${selectedSector} ODA`, "pct_sector"],
-            [
-                `% of ${indicator.length > 1 
-                    ? "Bilateral + Imputed multilateral ODA" 
-                    : getNameByCode(indicatorMapping, indicator)}`, 
-                "pct_total"
-            ]
-        ]
-    ),
-    {
-        label: "Unit",
-        value: "Value"
-    }
-)
-const unit = Generators.input(unitInput)
-```
-
-```js
-const subsectorCount = Object.values(subsector2Sector).filter(
-    (sector) => sector === selectedSector
-).length;
-
-const breakdownIsDisabled = subsectorCount === 1;
-
-const checkbox = breakdownPlaceholderInput.querySelector("input");
-const parentDiv = checkbox.closest("form");
-
-parentDiv.classList.add("disabled");
-
-
-function disableBreakdown() {
-    
-    for (const o of unitInput.querySelectorAll("option")) {
-        if (decodeHTML(o.innerHTML) === `% of ${selectedSector} ODA` && (breakdownIsDisabled || !breakdown)) {
-            o.setAttribute("disabled", "disabled");
-        }
-        else o.removeAttribute("disabled");
-    }
+  return <div ref={ref} className="h-full w-full" />
 }
 
-disableBreakdown();
-unitInput.addEventListener("input", disableBreakdown);
-```
+function buildSectorBarSubtitle(selectedData, effectiveBreakdown, breakdownIsDisabled, indicator) {
+  const indicatorLabel = indicator.length > 1
+    ? "Bilateral + Imputed multilateral"
+    : (getNameByCode(indicatorMapping, indicator) ?? "")
 
-```js
-const dataState = Generators.observe((notify) => {
-    let cancelled = false;
-    let spinnerTimeout = null;
-    let lastResult = sectorsStateStore.lastResult;
-
-    const emptyResult = {
-        treemapData: [],
-        selectedBaseData: [],
-        tableBaseData: [],
-        indicatorUnitLabel: ""
-    };
-
-    function cleanup() {
-        if (spinnerTimeout != null) {
-            clearTimeout(spinnerTimeout);
-            spinnerTimeout = null;
-        }
-    }
-
-    function emit(state) {
-        notify(state);
-    }
-
-    if (indicator.length === 0) {
-        emit({
-            ...(lastResult ?? emptyResult),
-            loading: false,
-            showSpinner: false,
-            error: null,
-            hasData: lastResult !== null
-        });
-
-        return () => {
-            cancelled = true;
-            cleanup();
-        };
-    }
-
-    const pendingResult = lastResult ?? emptyResult;
-
-    emit({
-        ...pendingResult,
-        loading: true,
-        showSpinner: false,
-        error: null,
-        hasData: lastResult !== null
-    });
-
-    spinnerTimeout = setTimeout(() => {
-        if (cancelled) return;
-        emit({
-            ...pendingResult,
-            loading: true,
-            showSpinner: true,
-            error: null,
-            hasData: lastResult !== null
-        });
-    }, 600);
-
-    const result = sectorsQueries(
-        donor,
-        recipient,
-        indicator,
-        selectedSector,
-        currency,
-        prices,
-        timeRange
-    );
-
-    Promise.all([
-        result.treemap,
-        result.selectedBase,
-        result.tableBase
-    ]).then(([treemapData, selectedBaseData, tableBaseData]) => {
-        if (cancelled) return;
-        cleanup();
-
-        lastResult = {treemapData, selectedBaseData, tableBaseData, indicatorUnitLabel: result.indicatorUnitLabel};
-        sectorsStateStore.lastResult = lastResult;
-
-        emit({
-            treemapData,
-            selectedBaseData,
-            tableBaseData,
-            indicatorUnitLabel: result.indicatorUnitLabel,
-            loading: false,
-            showSpinner: false,
-            error: null,
-            hasData: true
-        });
-    }).catch((error) => {
-        if (cancelled) return;
-        cleanup();
-        console.error("Failed to load sectors data", error);
-
-        const fallbackResult = lastResult ?? emptyResult;
-
-        emit({
-            ...fallbackResult,
-            loading: false,
-            showSpinner: false,
-            error,
-            hasData: lastResult !== null
-        });
-    });
-
-    return () => {
-        cancelled = true;
-        cleanup();
-    };
-});
-```
-
-```js
-const {
-    loading: sectorsLoading,
-    showSpinner: sectorsShowSpinner,
-    treemapData = [],
-    selectedBaseData = [],
-    tableBaseData = [],
-    indicatorUnitLabel = "",
-    error: sectorsError,
-    hasData: sectorsHasData
-} = dataState;
-```
-
-```js
-// Reactive transformations: instant updates when breakdown/unit change
-const selectedData = transformSelectedData(selectedBaseData, breakdown)
-```
-
-```js
-const tableData = transformTableData(tableBaseData, unit, breakdown)
-```
-
-```js
-function generateSubtitle(selectedData) {
-    const uniqueSubsectors = [
-        ...new Set(selectedData.map((row) => row["sub_sector"])).values()
-    ];
-    const limit = 3;
-    const shown = uniqueSubsectors.slice(0, limit);
-    const subtitleSpans = shown.map((name, i) => {
-        return html`<span class="subtitle-label" style=color:${paletteSubsectors[i]}>${name}</span>${i < shown.length - 1 ? ", " : ""}`;
-    });
-
-    if (uniqueSubsectors.length > limit) {
-        subtitleSpans.push(", and other");
-    }
-
-    subtitleSpans.push("; ");
-
-    return subtitleSpans;
+  if (effectiveBreakdown && !breakdownIsDisabled && selectedData.length > 0) {
+    const uniqueSubsectors = [...new Set(selectedData.map(row => row["sub_sector"]))]
+    const limit = 3
+    const shown = uniqueSubsectors.slice(0, limit)
+    const parts = shown.map((name, i) => {
+      const sep = i < shown.length - 1 ? ", " : ""
+      return `<span style="color:${paletteSubsectors[i]}; font-weight:600">${name}</span>${sep}`
+    })
+    if (uniqueSubsectors.length > limit) parts.push(", and other")
+    parts.push("; ")
+    return parts.join("") + `${indicatorLabel} ODA`
+  }
+  return `${indicatorLabel} ODA`
 }
-```
 
-```js
-const includes_germany = [
-    5,     // Germany
-    918,   // EU institutions
-    20000, // All bilateral donors
-    20001, // DAC countries
-    20002, // EU 27 countries
-    20003, // EU27 + EU Institutions
-    20004, // G7 countries, 
-]
+function App() {
+  // All state at the top
+  const [donor, setDonor] = React.useState(donorMapping.get("DAC countries"))
+  const [recipient, setRecipient] = React.useState(recipientMapping.get("Developing countries"))
+  const [indicator, setIndicator] = React.useState([BILATERAL_CODE, MULTILATERAL_CODE])
+  const [currency, setCurrency] = React.useState("usd")
+  const [prices, setPrices] = React.useState("constant")
+  const [breakdown, setBreakdown] = React.useState(true)
+  const [currentSector, setCurrentSector] = React.useState("Health")
+  const [timeRange, setTimeRange] = React.useState([timeRangeOptions.end - 10, timeRangeOptions.end])
+  const [unit, setUnit] = React.useState("value")
 
-const germany_is_donor = includes_germany.includes(donor);
-```
+  const [treemapData, setTreemapData] = React.useState([])
+  const [selectedBaseData, setSelectedBaseData] = React.useState([])
+  const [tableBaseData, setTableBaseData] = React.useState([])
+  const [loading, setLoading] = React.useState(false)
+  const [error, setError] = React.useState(null)
 
-<div class="menu card">
-    <a class="view-button" href="./">
-        Financing
-    </a>
-    <a class="view-button" href="./recipients">
-        Recipients
-    </a>
-    <a class="view-button active" href="./sectors">
-        Sectors
-    </a>
-    <a class="view-button" href="./gender">
-        Gender
-    </a>
-    <a class="view-button" href="./faqs">
-        FAQs
-    </a>
-</div>
+  const breakdownIsDisabled = React.useMemo(
+    () => Object.values(subsector2Sector).filter(s => s === currentSector).length === 1,
+    [currentSector]
+  )
 
-<div>
-    ${
-        html`
-                <div class="settings card">
-                    <div class="settings-group">
-                        ${donorInput}
-                        ${recipientInput}
-                    </div>
-                    <div class="settings-group">
-                        ${currencyInput}
-                        ${indicatorInput}
-                    </div>
-                    <div class="settings-group hidden">
-                        ${pricesInput}
-                        ${timeRangeInput}
-                    </div>
-                </div>
-                ${
-                    indicator.length === 0
-                        ? html`
-                            <div class="grid grid-cols-2">
-                                <div class="card">
-                                    <div class="warning">
-                                        Select at least one indicator
-                                    </div>
-                                </div>
-                            </div>
-                        `
-                        : sectorsError
-                            ? html`
-                                <div class="card">
-                                    <div class="warning">
-                                        Failed to load data. Please try again.
-                                    </div>
-                                </div>
-                            `
-                            : sectorsShowSpinner
-                                ? html`
-                                    <div class="card loading-indicator" aria-live="polite">
-                                        <div class="spinner" role="status" aria-label="Loading data"></div>
-                                        <span>Loading data…</span>
-                                    </div>
-                                `
-                                : sectorsHasData
-                                    ? html`
-                                            ${
-                                              germany_is_donor
-                                                ? html`
-                                                    <div class="grid grid-cols-2">
-                                                      <div class="card" style="margin: 0 auto;">
-                                                        <div class="note">
-                                                          Germany has reported only semi-aggregated data for part of the Federal Ministry for Economic Cooperation and Development (BMZ) data (approx. EUR 4 billion) for 2024, due to an internal transition of their IT systems. Granular data on recipients, sectors, and policy markers (for example) were not available for submission to the OECD at time of publication. The OECD will re-publish an update in early 2026 once these data have been obtained and processed. <a target="_blank" href="https://www.oecd.org/en/data/insights/data-explainers/2025/12/final-oecd-statistics-on-oda-and-other-development-finance-flows-in-2024-key-figures-and-trends.html">More information.</a>
-                                                        </div>
-                                                      </div>
-                                                    </div>
-                                                  `
-                                                : null
-                                            }
-                                            <div class="grid grid-cols-2">
-                                                ${
-                                                    treemapData.every((row) => row.value === null) || treemapData.length === 0
-                                                        ? html`
-                                                            <div class="card">
-                                                        <h2 class="plot-title">
-                                                            ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)} by sector
-                                                        </h2>
-                                                        <div class="warning">
-                                                            No data available
-                                                        </div>
-                                                    </div>
-                                                `
-                                                : html`
-                                                    <div class="card">
-                                                        <div class="plot-container" id="treemap-sectors">
-                                                            <h2 class="plot-title">
-                                                                ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)} by sector
-                                                            </h2>
-                                                            <div class="plot-subtitle-panel">
-                                                                ${
-                                                                    indicator.length > 1
-                                                                        ? html`<h3 class="plot-subtitle">Bilateral + Imputed multilateral ODA; ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
-                                                                        : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} ODA; ${timeRange[0] === timeRange[1] ? timeRange[0] : `${timeRange[0]}-${timeRange[1]}`}</h3>`
-                                                                }
-                                                            </div>
-                                                            ${
-                                                                resize(
-                                                                    (width) => treemapPlot(treemapData, width, {currency: currency})
-                                                                )
-                                                            }
-                                                            <div class="bottom-panel">
-                                                                <div class="text-section">
-                                                                    <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
-                                                                    <p class="plot-note">ODA values in million ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
-                                                                </div>
-                                                                <div class="logo-section">
-                                                                    <a href="https://data.one.org/" target="_blank">
-                                                                        <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
-                                                                    </a>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="download-panel">
-                                                            ${
-                                                                Inputs.button(
-                                                                    "Download plot", {
-                                                                        reduce: () => downloadPNG(
-                                                                            "treemap-sectors",
-                                                                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} by sector`, {fileMode: true})
-                                                                        )
-                                                                    }
-                                                                )
-                                                            }
-                                                            ${
-                                                                Inputs.button(
-                                                                    "Download data",
-                                                                    {
-                                                                        reduce: () => downloadXLSX(
-                                                                            treemapData,
-                                                                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} by sector`, {fileMode: true})
-                                                                        )
-                                                                    }
-                                                                )
-                                                            }
-                                                        </div>
-                                                    </div>
-                                                `
-                                        }
-                                        ${
-                                            selectedData.every((row) => row.value === null) || selectedData.length === 0
-                                                ? html`
-                                                    <div class="card">
-                                                        <h2 class="plot-title">
-                                                            ${selectedSector} ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
-                                                        </h2>
-                                                        <div class="warning">
-                                                            No data available
-                                                        </div>
-                                                    </div>
-                                                `
-                                                : html`
-                                                    <div class="card">
-                                                        <div class="plot-container" id="bars-sectors">
-                                                            <h2 class="plot-title">
-                                                                ${selectedSector} ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
-                                                            </h2>
-                                                            <div class="plot-subtitle-panel">
-                                                                <h3 class="plot-subtitle">
-                                                                    ${breakdown && !breakdownIsDisabled ? generateSubtitle(selectedData) : html` `}
-                                                                    ${indicator.length > 1 ? "Bilateral + Imputed multilateral" : getNameByCode(indicatorMapping, indicator)} ODA
-                                                                </h3>
-                                                                ${breakdownIsDisabled ? breakdownPlaceholderInput : breakdownInput}
-                                                            </div>
-                                                            ${
-                                                                resize(
-                                                                    (width) => barPlot(
-                                                                        selectedData,
-                                                                        currency,
-                                                                        "sectors",
-                                                                        width,
-                                                                        {
-                                                                            breakdown: breakdownIsDisabled ? breakdownPlaceholder : breakdown
-                                                                        }
-                                                                    )
-                                                                )
-                                                            }
-                                                            <div class="bottom-panel">
-                                                                <div class="text-section">
-                                                                    <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
-                                                                    <p class="plot-note">ODA values in million ${prices} ${prices === "constant" ? timeRangeOptions.base: ""} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>
-                                                                </div>
-                                                                <div class="logo-section">
-                                                                    <a href="https://data.one.org/" target="_blank">
-                                                                        <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
-                                                                    </a>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="download-panel">
-                                                            ${
-                                                                Inputs.button(
-                                                                    "Download plot", {
-                                                                        reduce: () => downloadPNG(
-                                                                            "bars-sectors",
-                                                                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} ${breakdown ? "breakdown" : "total"}`, {fileMode: true})
-                                                                        )
-                                                                    }
-                                                                )
-                                                            }
-                                                            ${
-                                                                Inputs.button(
-                                                                    "Download data",
-                                                                    {
-                                                                        reduce: () => downloadXLSX(
-                                                                            selectedData,
-                                                                            formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} ${breakdown ? "breakdown" : "total"}`, {fileMode: true})
-                                                                        )
-                                                                    }
-                                                                )
-                                                            }
-                                                        </div>
-                                                    </div>
-                                                `
-                                        }
-                                    </div>
-                                    <div class="card">
-                                        <h2 class="table-title">
-                                            ${breakdown && !breakdownIsDisabled ? "Breakdown of" : ""} ${selectedSector} ODA to ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}
-                                        </h2>
-                                        <div class="table-subtitle-panel">
-                                            ${
-                                                indicator.length > 1
-                                                    ? html`<h3 class="plot-subtitle">Bilateral + Imputed multilateral ODA</h3>`
-                                                    : html`<h3 class="plot-subtitle">${getNameByCode(indicatorMapping, indicator)} ODA</h3>`
-                                            }
-                                            ${unitInput}
-                                        </div>
-                                        ${
-                                            tableData.every((row) => row.value === null) || tableData.length === 0
-                                                ? html`
-                                                    <div class="warning">
-                                                        No data available
-                                                    </div>
-                                                `
-                                                : html`
-                                                    ${
-                                                        sparkbarTable(
-                                                            tableData,
-                                                            "sectors",
-                                                            {breakdown: breakdownIsDisabled ? breakdownPlaceholder : breakdown}
-                                                        )
-                                                    }
-                                                    <div class="bottom-panel">
-                                                        <div class="text-section">
-                                                            <p class="plot-source">Source: OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases.</p>
-                                                            ${
-                                                                unit === "value"
-                                                                    ? html`<p class="plot-note">ODA values in ${timeRangeOptions.base} ${getCurrencyLabel(currency, {currencyLong: true, inSentence: true})}.</p>`
-                                                                    : unit === "indicator"
-                                                                        ? html`<p class="plot-note">ODA values as a share of ${selectedSector} ODA received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
-                                                                        : html`<p class="plot-note">ODA values as a share of total aid received by ${getNameByCode(recipientMapping, recipient)} from ${getNameByCode(donorMapping, donor)}.</p>`
-                                                            }
-                                                        </div>
-                                                        <div class="logo-section">
-                                                            <a href="https://data.one.org/" target="_blank">
-                                                                <img src=${logo} alt=“The ONE Campaign logo:a solid black circle with the word ‘ONE’ in bold white capital letters.”>
-                                                            </a>
-                                                        </div>
-                                                    </div>
-                                                    <div class="download-panel table">
-                                                        ${
-                                                            Inputs.button(
-                                                                "Download data",
-                                                                {
-                                                                    reduce: () => downloadXLSX(
-                                                                        tableData,
-                                                                        formatString(`${getNameByCode(donorMapping, donor)} ${getNameByCode(recipientMapping, recipient)} ${selectedSector} ${breakdown ? "breakdown" : ""} ${unit}`, {fileMode: true})
-                                                                    )
-                                                                }
-                                                            )
-                                                        }
-                                                    </div>
-                                                `
-                                                }
-                                            </div>
-                                        `
-                                    : null
-                }
-        `
+  const effectiveBreakdown = breakdownIsDisabled ? false : breakdown
+
+  // Reset unit when pct_sector becomes unavailable
+  React.useEffect(() => {
+    if (unit === "pct_sector" && (breakdownIsDisabled || !effectiveBreakdown)) {
+      setUnit("value")
     }
-</div>
+  }, [breakdownIsDisabled, effectiveBreakdown, unit])
+
+  // Track base params separately from sector to avoid loading/treemap redraw on sector-only changes
+  const prevBaseKeyRef = React.useRef(null)
+
+  React.useEffect(() => {
+    if (indicator.length === 0) return
+    let cancelled = false
+
+    const donor_ = Array.isArray(donor) ? donor.join(",") : String(donor)
+    const recipient_ = Array.isArray(recipient) ? recipient.join(",") : String(recipient)
+    const baseKey = `${donor_}|${recipient_}|${[...indicator].sort().join(",")}|${currency}|${prices}|${timeRange[0]}-${timeRange[1]}`
+    const baseChanged = prevBaseKeyRef.current !== baseKey
+    prevBaseKeyRef.current = baseKey
+
+    if (baseChanged) {
+      setLoading(true)
+      setError(null)
+    }
+
+    const result = sectorsQueries(donor, recipient, indicator, currentSector, currency, prices, timeRange)
+
+    Promise.all([result.treemap, result.selectedBase, result.tableBase])
+      .then(([treemap, selectedBase, tableBase]) => {
+        if (cancelled) return
+        if (baseChanged) setTreemapData(treemap ?? [])
+        setSelectedBaseData(selectedBase ?? [])
+        setTableBaseData(tableBase ?? [])
+        if (baseChanged) setLoading(false)
+      })
+      .catch(err => {
+        if (cancelled) return
+        console.error("Sectors query failed:", err)
+        if (baseChanged) { setError(err); setLoading(false) }
+      })
+
+    return () => { cancelled = true }
+  }, [donor, recipient, indicator, currentSector, currency, prices, timeRange])
+
+  const selectedData = React.useMemo(
+    () => transformSelectedData(selectedBaseData, effectiveBreakdown),
+    [selectedBaseData, effectiveBreakdown]
+  )
+
+  const tableData = React.useMemo(
+    () => transformTableData(tableBaseData, unit, effectiveBreakdown),
+    [tableBaseData, unit, effectiveBreakdown]
+  )
+
+  const unitOptions = React.useMemo(() => {
+    const indicatorLabel = indicator.length > 1
+      ? "Bilateral + Imputed multilateral ODA"
+      : (getNameByCode(indicatorMapping, indicator) ?? "")
+    const opts = [
+      {label: `Million ${getCurrencyLabel(currency, {currencyOnly: true})}`, value: "value"},
+      {label: `% of ${indicatorLabel}`, value: "pct_total"},
+    ]
+    if (!breakdownIsDisabled && effectiveBreakdown) {
+      opts.splice(1, 0, {label: `% of ${currentSector} ODA`, value: "pct_sector"})
+    }
+    return opts
+  }, [currency, indicator, currentSector, breakdownIsDisabled, effectiveBreakdown])
+
+  const donorName = formatString(getNameByCode(donorMapping, donor) ?? "")
+  const recipientName = getNameByCode(recipientMapping, recipient) ?? ""
+  const currencyLabel = getCurrencyLabel(currency, {currencyLong: true, inSentence: true})
+  const indicatorLabel = indicator.length > 1
+    ? "Bilateral + Imputed multilateral"
+    : (getNameByCode(indicatorMapping, indicator) ?? "")
+
+  const sectorsPeriod = timeRange[0] === timeRange[1] ? `${timeRange[0]}` : `${timeRange[0]}–${timeRange[1]}`
+  const treemapSubtitle = `${indicatorLabel} ODA; ${sectorsPeriod}`
+
+  const sectorBarSubtitle = React.useMemo(
+    () => buildSectorBarSubtitle(selectedData, effectiveBreakdown, breakdownIsDisabled, indicator),
+    [selectedData, effectiveBreakdown, breakdownIsDisabled, indicator]
+  )
+
+  const barPlotFn = React.useCallback(
+    (width) => barPlot(selectedData, currency, "sectors", width, {breakdown: effectiveBreakdown}),
+    [selectedData, currency, effectiveBreakdown]
+  )
+
+  const tableFn = React.useCallback(
+    () => sparkbarTable(tableData, "sectors", {breakdown: effectiveBreakdown}),
+    [tableData, effectiveBreakdown]
+  )
+
+  const pricesNote = `${prices}${prices === "constant" ? ` ${timeRangeOptions.base}` : ""}`
+  const sourceText = "OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases."
+  const plotNote = `ODA values in million ${pricesNote} ${currencyLabel}.`
+
+  const treemapFilename = formatString(`${donorName} ${recipientName} by sector`, {fileMode: true})
+  const barFilename = formatString(`${donorName} ${recipientName} ${currentSector} ${effectiveBreakdown ? "breakdown" : "total"}`, {fileMode: true})
+  const tableFilename = formatString(`${donorName} ${recipientName} ${currentSector} ${effectiveBreakdown ? "breakdown" : ""} ${unit}`, {fileMode: true})
+
+  const tableNote = React.useMemo(() => {
+    if (unit === "value") return `ODA values in ${pricesNote} ${currencyLabel}.`
+    if (unit === "pct_sector") return `ODA values as a share of ${currentSector} ODA received by ${recipientName} from ${donorName}.`
+    return `ODA values as a share of total aid received by ${recipientName} from ${donorName}.`
+  }, [unit, currencyLabel, currentSector, recipientName, donorName])
+
+  return (
+    <div className="mx-auto w-full space-y-10 px-6 py-10">
+      <NavMenu currentPage="sectors" />
+
+      <section className="p-4 sm:p-6 mb-6">
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="flex flex-col items-stretch gap-6">
+            <DropdownMenu label="Donor" options={DONOR_OPTIONS} value={donor} onChange={setDonor} />
+            <DropdownMenu label="Recipient" options={RECIPIENT_OPTIONS} value={recipient} onChange={setRecipient} />
+          </div>
+          <div className="flex flex-col items-stretch gap-6">
+            <DropdownMenu label="Currency" options={CURRENCY_OPTIONS} value={currency} onChange={setCurrency} />
+            <ToggleSwitch label="Prices" value={prices} options={PRICES_OPTIONS} onChange={setPrices} />
+          </div>
+          <div className="flex flex-col items-stretch gap-6">
+              <RangeInput
+                  min={SECTORS_MIN}
+                  max={timeRangeOptions.end}
+                  step={1}
+                  label="Time range"
+                  value={timeRange}
+                  onChange={setTimeRange}
+              />
+              <MultiSelect
+                  label="Indicator"
+                  options={INDICATOR_OPTIONS}
+                  value={indicator}
+                  onChange={setIndicator}
+                  placeholder={null}
+                  maxSelected={2}
+              />
+          </div>
+        </div>
+      </section>
+
+      {indicator.length === 0 ? (
+        <p className="px-4 sm:px-6 text-sm text-slate-500">Select at least one indicator.</p>
+      ) : (
+        <>
+
+      <div className="grid gap-10 lg:grid-cols-2">
+        <div className="border border-blackbg-white p-4 sm:p-6">
+          <ONEVisual
+            title={`ODA to ${recipientName} from ${donorName} by sector`}
+            subtitle={treemapSubtitle}
+            source={sourceText}
+            note={plotNote}
+            loading={loading}
+            error={error}
+            empty={!loading && !error && treemapData.length === 0}
+            emptyMessage="No data available"
+            onDownload={() => downloadXLSX(treemapData, treemapFilename)}
+            plotFileName={treemapFilename}
+          >
+            <TreemapContainer
+              data={treemapData}
+              currency={currency}
+              onSectorChange={setCurrentSector}
+            />
+          </ONEVisual>
+        </div>
+
+        <div className="border border-blackbg-white p-4 sm:p-6">
+          <ONEVisual
+            title={`${currentSector} ODA to ${recipientName} from ${donorName}`}
+            subtitle={sectorBarSubtitle}
+            subtitleIsHTML={true}
+            source={sourceText}
+            note={plotNote}
+            loading={loading}
+            error={error}
+            empty={!loading && !error && selectedData.length === 0}
+            emptyMessage="No data available"
+            onDownload={() => downloadXLSX(selectedData, barFilename)}
+            plotFileName={barFilename}
+          >
+            <AutoPlot data={selectedData} plotFn={barPlotFn} />
+          </ONEVisual>
+          {!breakdownIsDisabled && (
+              <div className="mb-3">
+                  <ToggleSwitch
+                      label="Sector breakdown"
+                      value={breakdown}
+                      options={[{label: "Off", value: false}, {label: "On", value: true}]}
+                      onChange={setBreakdown}
+                  />
+              </div>
+          )}
+        </div>
+      </div>
+
+      <div className="p-4 sm:p-6">
+        <DropdownMenu label="Unit" options={unitOptions} value={unit} onChange={setUnit} />
+      </div>
+
+      <div className="border border-blackbg-white p-4 sm:p-6">
+        <ONEVisual
+          title={`${effectiveBreakdown && !breakdownIsDisabled ? "Breakdown of " : ""}${currentSector} ODA to ${recipientName} from ${donorName}`}
+          subtitle={`${indicatorLabel} ODA`}
+          source={sourceText}
+          note={tableNote}
+          loading={loading}
+          error={error}
+          empty={!loading && !error && tableData.length === 0}
+          emptyMessage="No data available"
+          onDownload={() => downloadXLSX(tableData, tableFilename)}
+        >
+          <AutoTable data={tableData} tableFn={tableFn} />
+        </ONEVisual>
+      </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+display(<App />)
+```
