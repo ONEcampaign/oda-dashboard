@@ -23,10 +23,10 @@ function GeneratedList({data, mode}) {
 
 function App() {
   return (
-      <div className="mx-auto w-full max-w-6xl space-y-6 px-0 py-14 sm:space-y-12 sm:px-6 sm:py-10">
+      <div className="mx-auto w-full space-y-10 px-6 py-10">
         <NavMenu currentPage="faqs" />
           <div
-              className="space-y-4 px-4 py-2 text-md sm:px-6 lg:px-25 lg:py-10 [&_a]:text-indigo-500 [&_a]:underline [&_a:hover]:underline [&_a:focus]:underline [&_a:visited]:text-indigo-500"
+              className="max-w-4xl mx-auto space-y-4 text-md [&_a]:text-indigo-500 [&_a]:underline [&_a:hover]:underline [&_a:focus]:underline [&_a:visited]:text-indigo-500"
               style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
           >
               <h2 className="font-bold text-xl mt-8 mb-2">What is the ODA Dashboard?</h2>

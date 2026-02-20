@@ -137,6 +137,47 @@ function inlineAxisStyles(svg) {
 }
 
 /**
+ * Wrap an array of rich-text segments into multiple lines, each line being its
+ * own array of {text, color, fontWeight} segments, constrained to maxCharsPerLine.
+ */
+function wrapRichTextSegments(segments, maxCharsPerLine) {
+  const tokens = []
+  for (const seg of segments) {
+    const parts = seg.text.split(/(\s+)/)
+    for (const part of parts) {
+      if (part) tokens.push({ text: part, color: seg.color, fontWeight: seg.fontWeight })
+    }
+  }
+
+  const lines = []
+  let currentLine = []
+  let lineLen = 0
+
+  for (const token of tokens) {
+    const isSpace = /^\s+$/.test(token.text)
+    if (isSpace) {
+      if (currentLine.length) { currentLine.push(token); lineLen += token.text.length }
+      continue
+    }
+    if (lineLen > 0 && lineLen + token.text.length > maxCharsPerLine) {
+      while (currentLine.length && /^\s+$/.test(currentLine.at(-1).text)) currentLine.pop()
+      lines.push(currentLine)
+      currentLine = []
+      lineLen = 0
+    }
+    currentLine.push(token)
+    lineLen += token.text.length
+  }
+
+  if (currentLine.length) {
+    while (currentLine.length && /^\s+$/.test(currentLine.at(-1).text)) currentLine.pop()
+    lines.push(currentLine)
+  }
+
+  return lines.filter(l => l.length)
+}
+
+/**
  * Wrap text into multiple lines given a max width (approximate character-based).
  * Returns an array of strings.
  */
@@ -253,12 +294,14 @@ export async function downloadPlotAsPng(plotContainer, { title, subtitle, source
   const sourceText = resolveSourceText(source)
   const contentWidth = plotW + PADDING * 2
   const maxChars = Math.floor(contentWidth / (footerFontSize * 0.5))
+  const subtitleMaxChars = Math.floor(contentWidth / (subtitleFontSize * 0.52))
 
-  const titleLines = wrapText(title || "", Math.floor(contentWidth / (titleFontSize * 0.7)))
+  const titleLines = wrapText(title || "", Math.floor(contentWidth / (titleFontSize * 0.4)))
   const subtitleHasHTML = subtitle && /<[a-z]/i.test(subtitle)
   const subtitleSegments = subtitleHasHTML ? parseHTMLSegments(subtitle) : []
-  const subtitleLines = subtitleHasHTML ? [] : wrapText(subtitle ? stripHTML(subtitle) : "", maxChars)
-  const hasSubtitle = subtitleHasHTML ? subtitleSegments.length > 0 : subtitleLines.length > 0
+  const subtitleRichLines = subtitleHasHTML ? wrapRichTextSegments(subtitleSegments, subtitleMaxChars) : []
+  const subtitleLines = subtitleHasHTML ? [] : wrapText(subtitle ? stripHTML(subtitle) : "", subtitleMaxChars)
+  const hasSubtitle = subtitleHasHTML ? subtitleRichLines.length > 0 : subtitleLines.length > 0
   const sourceLines = wrapText(sourceText ? `Source: ${sourceText}` : "", maxChars)
   const noteLines = wrapText(note || "", maxChars)
 
@@ -280,8 +323,9 @@ export async function downloadPlotAsPng(plotContainer, { title, subtitle, source
   if (hasSubtitle) {
     cursorY += 4 // gap
   }
+  const subtitleLineCount = subtitleHasHTML ? subtitleRichLines.length : subtitleLines.length
   const subtitleBlockH = hasSubtitle
-    ? subtitleFontSize * lineHeightPx * (subtitleHasHTML ? 1 : subtitleLines.length)
+    ? subtitleFontSize * lineHeightPx * subtitleLineCount
     : 0
   cursorY += subtitleBlockH
 
@@ -365,14 +409,16 @@ export async function downloadPlotAsPng(plotContainer, { title, subtitle, source
   // Subtitle
   if (hasSubtitle) {
     textY += 4
-    if (subtitleHasHTML && subtitleSegments.length) {
-      const el = svgRichTextLine(subtitleSegments, {
-        x: PADDING,
-        y: textY,
-        fontSize: subtitleFontSize,
-        defaultFill: COLORS.subtitle
+    if (subtitleHasHTML && subtitleRichLines.length) {
+      subtitleRichLines.forEach((lineSegments, i) => {
+        const el = svgRichTextLine(lineSegments, {
+          x: PADDING,
+          y: textY + i * subtitleFontSize * lineHeightPx,
+          fontSize: subtitleFontSize,
+          defaultFill: COLORS.subtitle
+        })
+        wrapper.appendChild(el)
       })
-      wrapper.appendChild(el)
     } else if (subtitleLines.length) {
       const { el } = svgTextBlock(subtitleLines, {
         x: PADDING,

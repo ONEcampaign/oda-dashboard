@@ -3,11 +3,13 @@ body {
 }
 
 main {
-    margin: 0 4rem
+    margin: 0;
 }
 
-@media (max-width: 800px) {
+@media (min-width: 1280px) {
     main {
-        margin: 0 1rem
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 0 2rem;
     }
 }

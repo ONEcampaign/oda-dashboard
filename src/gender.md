@@ -125,26 +125,20 @@ function App() {
     : `ODA values as a share of total aid received by ${recipientName}.`
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-10 px-0 py-14 sm:px-6 sm:py-10">
+    <div className="mx-auto w-full space-y-10 px-6 py-10">
       <NavMenu currentPage="gender" />
 
       <section className="p-4 sm:p-6 mb-6">
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-3">
           <div className="flex flex-col items-stretch gap-6">
             <DropdownMenu label="Donor" options={DONOR_OPTIONS} value={donor} onChange={setDonor} />
             <DropdownMenu label="Recipient" options={RECIPIENT_OPTIONS} value={recipient} onChange={setRecipient} />
-            <MultiSelect
-              label="Gender is"
-              options={INDICATOR_OPTIONS}
-              value={indicator}
-              onChange={setIndicator}
-              placeholder={null}
-              maxSelected={4}
-            />
           </div>
           <div className="flex flex-col items-stretch gap-6">
             <DropdownMenu label="Currency" options={CURRENCY_OPTIONS} value={currency} onChange={setCurrency} />
             <ToggleSwitch label="Prices" value={prices} options={PRICES_OPTIONS} onChange={setPrices} />
+          </div>
+          <div className="flex flex-col items-stretch gap-6">
             <RangeInput
                 min={timeRangeOptions.start}
                 max={timeRangeOptions.end}
@@ -152,6 +146,14 @@ function App() {
                 label="Time range"
                 value={timeRange}
                 onChange={setTimeRange}
+            />
+            <MultiSelect
+                label="Gender is"
+                options={INDICATOR_OPTIONS}
+                value={indicator}
+                onChange={setIndicator}
+                placeholder={null}
+                maxSelected={4}
             />
           </div>
         </div>
@@ -163,7 +165,7 @@ function App() {
         <>
 
       <div className="grid gap-10 lg:grid-cols-2">
-        <div className="border-2 border-black bg-white p-4 sm:p-6">
+        <div className="border border-blackbg-white p-4 sm:p-6">
           <ONEVisual
             title={`Gender ODA to ${recipientName} from ${donorName}`}
             subtitle={barSubtitle}
@@ -179,7 +181,7 @@ function App() {
           </ONEVisual>
         </div>
 
-        <div className="border-2 border-black bg-white p-4 sm:p-6">
+        <div className="border border-blackbg-white p-4 sm:p-6">
           <ONEVisual
             title={`Gender ODA to ${recipientName} from ${donorName}`}
             subtitle={lineSubtitle}
@@ -199,7 +201,7 @@ function App() {
         <DropdownMenu label="Unit" options={unitOptions} value={unit} onChange={setUnit} />
       </div>
 
-      <div className="border-2 border-black bg-white p-4 sm:p-6">
+      <div className="border border-blackbg-white p-4 sm:p-6">
         <ONEVisual
           title={`Gender ODA to ${recipientName} from ${donorName}`}
           source="OECD DAC Table Creditor Reporting System."

@@ -89,7 +89,7 @@ export function MultiSelect({
   }
 
   return (
-    <div className="max-w-75">
+    <div className>
       {label && (
         <label
           className="mb-1 block text-sm tracking-wide text-slate-black"

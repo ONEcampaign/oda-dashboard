@@ -79,7 +79,7 @@ export function linePlot(data, mode, width,
         } else if (mode === "gender") {
             colorScale = paletteGender
             stacked = true
-            stackOrder = [...new Set(arrayData.map(d => d[groupVar]))].slice().reverse()
+            stackOrder = paletteGender.domain.slice().reverse()
         }
     }
 
@@ -94,7 +94,7 @@ export function linePlot(data, mode, width,
         marginBottom: 25,
         marginLeft: 50,
         x: {
-            inset: 10,
+            inset: 5,
             label: null,
             tickSize: 0,
             ticks: 5,
@@ -241,7 +241,7 @@ export function barPlot(data, currency, mode, width, {breakdown = false}) {
             colorScale = paletteRecipients
         } else if (mode === "gender") {
             colorScale = paletteGender
-            stackOrder = [...new Set(arrayData.map(d => d[fillVar]))].slice().reverse()
+            stackOrder = paletteGender.domain.slice().reverse()
         }
     }
 
@@ -252,9 +252,9 @@ export function barPlot(data, currency, mode, width, {breakdown = false}) {
         marginTop: 25,
         marginRight: 25,
         marginBottom: 25,
-        marginLeft: 75,
+        marginLeft: 60,
         x: {
-            inset: 10,
+            inset: 5,
             label: null,
             tickSize: 0,
             ticks: 5,
@@ -368,7 +368,10 @@ export function sparkbarTable(data, mode, {breakdown}) {
             colorPalette = paletteGender.range;
         }
 
-        const uniqueGroups = [...new Set(arrayData.map(row => row[groupVar])).values()];
+        const uniqueGroupsRaw = [...new Set(arrayData.map(row => row[groupVar])).values()];
+        const uniqueGroups = mode === "gender"
+            ? uniqueGroupsRaw.sort((a, b) => paletteGender.domain.indexOf(a) - paletteGender.domain.indexOf(b))
+            : uniqueGroupsRaw;
 
         const unitKey = "Value";
 

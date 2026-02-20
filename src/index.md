@@ -138,11 +138,11 @@ function App() {
   }, [unit, pricesNote, currencyLabel, donorName, coreOdaNote, eu27Note])
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-10 px-0 py-14 sm:px-6 sm:py-10">
+    <div className="mx-auto w-full space-y-10 px-6 py-10">
       <NavMenu currentPage="financing" />
 
       <section className="p-4 sm:p-6 mb-6">
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-3">
           <div className="flex flex-col items-stretch gap-6">
             <DropdownMenu label="Donor" options={DONOR_OPTIONS} value={donor} onChange={setDonor} />
             <DropdownMenu label="Indicator" options={INDICATOR_OPTIONS} value={indicator} onChange={setIndicator} />
@@ -151,21 +151,29 @@ function App() {
             <DropdownMenu label="Currency" options={CURRENCY_OPTIONS} value={currency} onChange={setCurrency} />
             <ToggleSwitch label="Prices" value={prices} options={PRICES_OPTIONS} onChange={setPrices} />
           </div>
-          <div className="md:col-span-2">
-            <RangeInput
-              min={timeRangeOptions.start}
-              max={timeRangeOptions.end}
-              step={1}
-              label="Time range"
-              value={timeRange}
-              onChange={setTimeRange}
-            />
+          <div className="flex flex-col items-stretch gap-6">
+              <RangeInput
+                  min={timeRangeOptions.start}
+                  max={timeRangeOptions.end}
+                  step={1}
+                  label="Time range"
+                  value={timeRange}
+                  onChange={setTimeRange}
+              />
+              {isTotalODA && (
+                <ToggleSwitch
+                    label="Show international commitment"
+                    value={commitment}
+                    options={[{label: "Off", value: false}, {label: "On", value: true}]}
+                    onChange={setCommitment}
+                />
+              )}
           </div>
         </div>
       </section>
 
       <div className="grid gap-10 lg:grid-cols-2">
-        <div className="border-2 border-black bg-white p-4 sm:p-6">
+        <div className="border border-blackbg-white p-4 sm:p-6">
           <ONEVisual
             title={`${indicatorName} from ${donorName}`}
             subtitle={absoluteSubtitle}
@@ -181,7 +189,7 @@ function App() {
           </ONEVisual>
         </div>
 
-        <div className="border-2 border-black bg-white p-4 sm:p-6">
+        <div className="border border-blackbg-white p-4 sm:p-6">
           <ONEVisual
             title={`${indicatorName} from ${donorName}`}
             subtitle={relativeSubtitle}
@@ -195,16 +203,6 @@ function App() {
           >
             <AutoPlot data={relativeData} plotFn={linePlotFn} />
           </ONEVisual>
-          {isTotalODA && (
-              <div className="mt-3">
-                  <ToggleSwitch
-                      label="Int'l commitment"
-                      value={commitment}
-                      options={[{label: "Off", value: false}, {label: "On", value: true}]}
-                      onChange={setCommitment}
-                  />
-              </div>
-          )}
         </div>
       </div>
 
@@ -212,7 +210,7 @@ function App() {
         <DropdownMenu label="Unit" options={unitOptions} value={unit} onChange={setUnit} />
       </div>
 
-      <div className="border-2 border-black bg-white p-4 sm:p-6">
+      <div className="border border-blackbg-white p-4 sm:p-6">
         <ONEVisual
           title={`${indicatorName} from ${donorName}`}
           source="OECD DAC1 table."

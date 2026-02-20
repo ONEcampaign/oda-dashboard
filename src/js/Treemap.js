@@ -141,10 +141,24 @@ export function treemapPlot(data, width, { currency = null, onSectorChange = nul
         .attr("font-size", d => {
             const w = d.x1 - d.x0 - strokeWidth;
             const h = d.y1 - d.y0 - strokeWidth;
-            const area = w * h;
-            if (h < 25 || w < 55) return "0px";
-            const size = Math.sqrt(area) / 10;
-            return `${Math.max(14, Math.min(size, 20))}px`;
+            if (w <= 0 || h <= 0) return "0px";
+
+            const label = formatValue(d.value).label;
+
+            // Primary: area-based size
+            const areaSize = Math.sqrt(w * h) / 8;
+
+            // Width is a hard constraint: label characters must fit across the cell
+            // ~0.58× font-size per character for number glyphs in this font
+            const widthMax = w / (label.length * 0.58);
+
+            // Height is a softer constraint: label shouldn't dominate the cell vertically
+            const heightMax = h / 1.8;
+
+            const size = Math.min(areaSize, widthMax, heightMax);
+
+            if (size < 9) return "0px";
+            return `${Math.min(size, 15)}px`;
         })
         .attr("font-weight", "500")
         .style("fill", d => d.id === _activeSector ? "white" : "black");
