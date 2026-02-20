@@ -1,5 +1,5 @@
 import {FileAttachment} from "observablehq:stdlib";
-import {name2CodeMap, convertUnitsToMillions} from "./utils.js";
+import {name2CodeMap, convertUnitsToMillions, fillMissingYearIndicators} from "./utils.js";
 
 /**
  * IMPORTANT: Value columns in the parquet file are stored as integers in UNITS (not millions).
@@ -8,26 +8,28 @@ import {name2CodeMap, convertUnitsToMillions} from "./utils.js";
  */
 
 // Load metadata and parquet data in parallel
-const [donorOptions, recipientOptions, genderIndicators, genderTable] = await Promise.all([
+const [donorOptions, recipientOptions, recipientsIndicators, recipientsTable] = await Promise.all([
     FileAttachment("../data/analysis_tools/donors.json").json(),
     FileAttachment("../data/analysis_tools/recipients.json").json(),
-    FileAttachment("../data/analysis_tools/gender_indicators.json").json(),
-    FileAttachment("../data/scripts/gender_view.parquet").parquet()
+    FileAttachment("../data/analysis_tools/recipients_indicators.json").json(),
+    FileAttachment("../data/scripts/recipients_view.parquet").parquet()
 ]);
 
 // Convert Arrow table to JavaScript array for fast in-memory filtering
-const genderData = genderTable.toArray();
+const recipientsData = recipientsTable.toArray();
 
-// Export for use in gender.md to avoid duplicate loading
-export {donorOptions, recipientOptions, genderIndicators};
+// Export for use in recipients.md to avoid duplicate loading
+export {donorOptions, recipientOptions, recipientsIndicators};
 
-const donorMapping = name2CodeMap(donorOptions, {});
-const recipientMapping = name2CodeMap(recipientOptions);
+const donorMapping = name2CodeMap(donorOptions, {})
 
-const genderCache = new Map();
+const recipientMapping = name2CodeMap(recipientOptions, { useRecipientGroups: true })
 
-// GENDER VIEW
-export function genderQueries(
+
+const recipientsCache = new Map();
+
+// RECIPIENTS VIEW
+export function recipientsQueries(
     donor,
     recipient,
     indicator,
@@ -38,7 +40,7 @@ export function genderQueries(
 
     const indicators = indicator.length > 0 ? indicator : [-1];
 
-    const rows = fetchGenderSeries(
+    const rows = fetchRecipientsSeries(
         donor,
         recipient,
         indicators,
@@ -47,31 +49,31 @@ export function genderQueries(
         timeRange
     );
 
-    const absolute = rows.map((row) => ({
+    const absolute = fillMissingYearIndicators(rows.map((row) => ({
         year: row.year,
         donor: row.donor,
         recipient: row.recipient,
         indicator: row.indicator,
         value: row.value,
         unit: `${currency} ${prices} million`,
-        source: "OECD CRS"
-    }));
+        source: "OECD DAC2A"
+    })), timeRange);
 
-    const relative = rows.map((row) => ({
+    const relative = fillMissingYearIndicators(rows.map((row) => ({
         year: row.year,
         donor: row.donor,
         recipient: row.recipient,
         indicator: row.indicator,
-        value: row.pct_of_total * 100,
+        value: row.pct_of_total_oda * 100,
         unit: "% of total ODA",
-        source: "OECD CRS"
-    }));
+        source: "OECD DAC2A"
+    })), timeRange);
 
     // Return raw rows for table transformation
     return {absolute, relative, rawData: rows};
 }
 
-// Separate table transformation so unit changes don't trigger re-query
+// Separate table transformation so unit changes don't trigger base query
 export function transformTableData(rows, unit, currency, prices) {
     return rows.map((row) => ({
         year: row.year,
@@ -80,15 +82,15 @@ export function transformTableData(rows, unit, currency, prices) {
         indicator: row.indicator,
         value: unit === "value"
             ? row.value
-            : row.pct_of_total * 100,
+            : row.pct_of_total_oda * 100,
         unit: unit === "value"
             ? `${currency} ${prices} million`
-            : "% of total ODA",
-        source: "OECD CRS"
+            : "% of bilateral + imputed multilateral ODA",
+        source: "OECD DAC2A"
     }));
 }
 
-function genderCacheKey({donor, recipient, indicator, currency, prices, timeRange}) {
+function recipientsCacheKey({donor, recipient, indicator, currency, prices, timeRange}) {
     const donorKey = Array.isArray(donor) ? [...donor].sort().join(",") : String(donor);
     const recipientKey = Array.isArray(recipient) ? [...recipient].sort().join(",") : String(recipient);
     const indicatorKey = Array.isArray(indicator) ? [...indicator].sort().join(",") : String(indicator);
@@ -104,15 +106,7 @@ function genderCacheKey({donor, recipient, indicator, currency, prices, timeRang
     });
 }
 
-function ratioAsPct(numerator, denominator) {
-    if (numerator == null || denominator == null || denominator === 0) {
-        return null;
-    }
-
-    return (numerator / denominator) * 100;
-}
-
-function fetchGenderSeries(
+function fetchRecipientsSeries(
     donor,
     recipient,
     indicators,
@@ -120,10 +114,10 @@ function fetchGenderSeries(
     prices,
     timeRange
 ) {
-    const cacheKey = genderCacheKey({donor, recipient, indicator: indicators, currency, prices, timeRange});
+    const cacheKey = recipientsCacheKey({donor, recipient, indicator: indicators, currency, prices, timeRange});
 
-    if (!genderCache.has(cacheKey)) {
-        genderCache.set(cacheKey, executeGenderSeries(
+    if (!recipientsCache.has(cacheKey)) {
+        recipientsCache.set(cacheKey, executeRecipientsSeries(
             donor,
             recipient,
             indicators,
@@ -133,10 +127,10 @@ function fetchGenderSeries(
         ));
     }
 
-    return genderCache.get(cacheKey);
+    return recipientsCache.get(cacheKey);
 }
 
-function executeGenderSeries(
+function executeRecipientsSeries(
     donor,
     recipient,
     indicators,
@@ -148,10 +142,10 @@ function executeGenderSeries(
         return [];
     }
 
-    // In-memory filtering - much faster than DuckDB for simple queries on small dataset
+    // In-memory filtering - much faster than DuckDB for simple queries on 11MB dataset
     const valueColumn = `value_${currency}_${prices}`;
 
-    return genderData
+    return recipientsData
         .filter(row =>
             row.donor_code === donor &&
             row.recipient_code === recipient &&
@@ -165,7 +159,7 @@ function executeGenderSeries(
             recipient: row.recipient_name,
             indicator: row.indicator_name,
             value: convertUnitsToMillions(row[valueColumn]),
-            pct_of_total: row.pct_of_total_oda ?? null
+            pct_of_total_oda: row.pct_of_total_oda ?? null
         }))
         .sort((a, b) => {
             if (a.year !== b.year) return a.year - b.year;

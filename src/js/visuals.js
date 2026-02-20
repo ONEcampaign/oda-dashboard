@@ -135,10 +135,12 @@ export function linePlot(data, mode, width,
                     {
                         x: "Year",
                         y: 0.7,
-                        text: ["International commitment - 0.7%"],
+                        text: ["International commitment (0.7%)"],
                         fill: customPalette.intlCommitment,
                         textAnchor: "start",
-                        dy: -10
+                        dy: -10,
+                        fontSize: 12,
+                        fontFamily: "'Italian Plate', Helvetica, sans-serif",
                     }
                 )
                 :
@@ -165,7 +167,8 @@ export function linePlot(data, mode, width,
                                     format: customFormat,
                                     order: stackOrder,
                                     lineHeight: 1.25,
-                                    fontSize: 12
+                                    fontSize: 12,
+                                    fontFamily: "'Italian Plate', Helvetica, sans-serif",
                                 })
                             )
                         )
@@ -190,7 +193,8 @@ export function linePlot(data, mode, width,
                                 channels: customChannels,
                                 format: customFormat,
                                 lineHeight: 1.25,
-                                fontSize: 12
+                                fontSize: 12,
+                                fontFamily: "'Italian Plate', Helvetica, sans-serif",
                             })
                         )
                     ]
@@ -286,7 +290,8 @@ export function barPlot(data, currency, mode, width, {breakdown = false}) {
                         fill: fillVar,
                         order: stackOrder,
                         lineHeight: 1.25,
-                        fontSize: 12
+                        fontSize: 12,
+                        fontFamily: "'Italian Plate', Helvetica, sans-serif",
                     })
                 )
             ),
