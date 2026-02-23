@@ -107,7 +107,7 @@ def combined_gender():
 
 if __name__ == "__main__":
     logger.info("Generating gender view table...")
-    set_cache_dir(oda_data=True)
+    set_cache_dir(oda_data=True, pydeflate=True)
     df = combined_gender()
     logger.info("Writing parquet to stdout...")
     parquet_to_stdout(df)
