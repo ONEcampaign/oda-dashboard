@@ -12,6 +12,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
 
     permissions:
       contents: 'read'
@@ -45,18 +46,43 @@ jobs:
         run: npm ci
 
       - id: date
-        run: echo "date=$(TZ=America/Los_Angeles date +'%Y-%U')" >> $GITHUB_OUTPUT
+        run: |
+          echo "week=$(TZ=America/Los_Angeles date +'%Y-%U')" >> $GITHUB_OUTPUT
+          echo "month=$(TZ=America/Los_Angeles date +'%Y-%m')" >> $GITHUB_OUTPUT
 
-      - id: cache-data
+      # Bulk ODA data (CRS ~1.1 GB, DAC1/DAC2A) — refresh monthly.
+      # restore-keys allows reusing last month's cache when a new month starts,
+      # avoiding a full re-download on the very first build of the month.
+      - name: Cache ODA bulk data
         uses: actions/cache@v4
         with:
-          path: |
-            src/.observablehq/cache
-            src/data/cache
-          key: data-${{ hashFiles('src/data/*') }}-${{ steps.date.outputs.date }}
+          path: src/data/cache
+          key: oda-bulk-${{ steps.date.outputs.month }}
+          restore-keys: |
+            oda-bulk-
+
+      # Observable compiled output — keyed on script/config content so a code
+      # change forces recompilation without also discarding the bulk data above.
+      - name: Cache Observable output
+        uses: actions/cache@v4
+        with:
+          path: src/.observablehq/cache
+          key: observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py') }}-${{ steps.date.outputs.week }}
+          restore-keys: |
+            observable-
+
+      # Download pydeflate exchange-rate + deflator data before the build so
+      # every data loader finds it already cached.  Retries handle transient
+      # OECD API failures (the root cause of the previous build timeout).
+      - name: Pre-warm exchange rate cache
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: uv run python src/data/scripts/prewarm_cache.py
+        timeout-minutes: 15
 
       - name: Build Observable Framework app
         run: uv run npm run build
+        timeout-minutes: 240
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -69,6 +95,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           uv run python src/data/scripts/sectors_view.py
+        timeout-minutes: 60
 
       - name: Cache gcloud SDK
         uses: actions/cache@v4
