@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "bblocks>=1.4, <2.0",
     "oda-data>=2.5.0",
-    "oda-reader>=1.4.2",
+    "oda-reader>=1.4.3",
     "pandas>=2.3.2",
     "pyarrow>=17.0.0",
     "pydeflate>=2.4.0",
