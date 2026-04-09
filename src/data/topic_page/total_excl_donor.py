@@ -104,8 +104,8 @@ def total_oda_excluding_covid_ukraine_idrc() -> None:
         ]
     )
 
-    # full_data["Preliminary"] = full_data.loc[lambda d: d.Year == 2024, "Other ODA"]
-    # full_data.loc[lambda d: d.Year == 2024, "Other ODA"] = None
+    full_data["Preliminary"] = full_data.loc[lambda d: d.Year == 2025, "Other ODA"]
+    full_data.loc[lambda d: d.Year == 2025, "Other ODA"] = None
 
     dac = full_data.loc[lambda d: d.Donor == "DAC countries"]
     full_data = full_data.loc[lambda d: d.Donor != "DAC countries"]

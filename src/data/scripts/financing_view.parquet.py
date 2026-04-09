@@ -221,7 +221,7 @@ def get_financing_data():
     financing = financing.loc[lambda d: d["value"] != 0]
 
     # Add currencies and prices
-    financing = add_currencies_and_prices(financing)
+    financing = add_currencies_and_prices(financing, base_year=FINANCING_TIME["base"])
 
     # Add donor groupings
     financing = add_donor_groupings(financing)

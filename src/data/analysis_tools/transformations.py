@@ -53,7 +53,9 @@ def get_gni(start_year: int, end_year: int) -> pd.DataFrame:
     return df
 
 
-def add_currencies_and_prices(df: pd.DataFrame) -> pd.DataFrame:
+def add_currencies_and_prices(
+    df: pd.DataFrame, base_year: int = BASE_TIME["base"]
+) -> pd.DataFrame:
     """
     Adds copies of the data in different currencies and prices
     """
@@ -80,7 +82,7 @@ def add_currencies_and_prices(df: pd.DataFrame) -> pd.DataFrame:
     for currency in CURRENCIES:
         converted = oecd_dac_deflate(
             data=df.copy(),
-            base_year=BASE_TIME["base"],
+            base_year=base_year,
             source_currency="USA",
             target_currency=currency,
             id_column="donor_code",
