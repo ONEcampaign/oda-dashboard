@@ -72,17 +72,17 @@ def total_oda_excluding_covid_ukraine_idrc() -> None:
         }
     )
 
-    dac_idrc_24 = (
-        full_data.loc[lambda d: d.Year == 2024]
+    dac_idrc_25 = (
+        full_data.loc[lambda d: d.Year == LATEST_YEAR_AGG]
         .loc[lambda d: d.Donor != "DAC countries"]
         .assign(Donor="DAC countries")
         .groupby(["Year", "Donor"], as_index=False)[["IDRC"]]
         .sum()
     )
 
-    full_data.loc[lambda d: (d.Year == 2024) & (d.Donor == "DAC countries"), "IDRC"] = (
-        dac_idrc_24.IDRC.item()
-    )
+    full_data.loc[
+        lambda d: (d.Year == LATEST_YEAR_AGG) & (d.Donor == "DAC countries"), "IDRC"
+    ] = dac_idrc_25.IDRC.item()
 
     full_data["Other ODA"] = round(
         full_data["Total ODA"].fillna(0)
