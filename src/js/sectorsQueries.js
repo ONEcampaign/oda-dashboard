@@ -51,7 +51,7 @@ function getDB() {
 }
 
 const donorMapping = name2CodeMap(donorOptions);
-const recipientMapping = name2CodeMap(recipientOptions);
+const recipientMapping = name2CodeMap(recipientOptions, {useRecipientGroups: true});
 
 const indicatorLabelMap = new Map(
     Object.entries(sectorsIndicators).map(([code, label]) => [Number(code), label])

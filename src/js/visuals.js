@@ -9,7 +9,7 @@ import {
     customPalette,
     paletteFinancing,
     paletteRecipients,
-    colorSector,
+    paletteTreemap,
     paletteSubsectors,
     paletteGender
 } from "./colors.js";
@@ -233,7 +233,7 @@ export function barPlot(data, currency, mode, width, {breakdown = false}) {
         ]
         colorScale = {
             domain: uniqueGroups,
-            range: breakdown ? paletteSubsectors : [colorSector]
+            range: breakdown ? paletteSubsectors : [paletteTreemap.active]
         }
     } else {
         fillVar = "Indicator"
@@ -327,24 +327,17 @@ export function sparkbarTable(data, mode, {breakdown}) {
         columnsToShow,
         valueColumns,
         maxValues,
-        getColorForType = () => customPalette.lightGrey, // default fallback
-        colorPalette = []; // default fallback
+        colorColumn = null,
+        getColorForType = () => customPalette.lightGrey,
+        colorPalette = [];
 
 
-    if (mode === "financing" || mode === "recipients") {
+    if (mode === "financing") {
 
         tableData = arrayData;
 
-        let colorColumn,
-            colorMapping;
-
-        if (mode === "financing") {
-            colorColumn = "Type";
-            colorMapping = paletteFinancing;
-        } else {
-            colorColumn = "Indicator";
-            colorMapping = paletteRecipients;
-        }
+        colorColumn = "Type";
+        const colorMapping = paletteFinancing;
 
         getColorForType = (type) => {
             const index = colorMapping.domain.indexOf(type);
@@ -352,25 +345,35 @@ export function sparkbarTable(data, mode, {breakdown}) {
         };
 
         valueColumns = ["Value"];
-        columnsToShow = ["Year", colorColumn, valueColumns[0]];
+        columnsToShow = ["Year", "Donor", "Indicator", "Type", "Unit", "Value"];
 
-        maxValues = max(tableData, d => d[valueColumns]);
+        maxValues = max(tableData, d => d["Value"]);
 
     } else {
 
-        let groupVar
+        let groupVar, contextColumns, sortPalette;
 
-        if (mode === "sectors") {
+        if (mode === "recipients") {
+            groupVar = "Indicator";
+            colorPalette = paletteRecipients.range;
+            contextColumns = ["Donor", "Recipient", "Unit"];
+            sortPalette = paletteRecipients;
+        } else if (mode === "sectors") {
             groupVar = breakdown ? "Sub-sector" : "Sector";
-            colorPalette = breakdown ? paletteSubsectors : [colorSector];
+            colorPalette = breakdown ? paletteSubsectors : [paletteTreemap.active];
+            contextColumns = breakdown
+                ? ["Donor", "Recipient", "Sector", "Indicator", "Unit"]
+                : ["Donor", "Recipient", "Indicator", "Unit"];
         } else if (mode === "gender") {
             groupVar = "Indicator";
             colorPalette = paletteGender.range;
+            contextColumns = ["Donor", "Recipient", "Unit"];
+            sortPalette = paletteGender;
         }
 
         const uniqueGroupsRaw = [...new Set(arrayData.map(row => row[groupVar])).values()];
-        const uniqueGroups = mode === "gender"
-            ? uniqueGroupsRaw.sort((a, b) => paletteGender.domain.indexOf(a) - paletteGender.domain.indexOf(b))
+        const uniqueGroups = sortPalette
+            ? uniqueGroupsRaw.sort((a, b) => sortPalette.domain.indexOf(a) - sortPalette.domain.indexOf(b))
             : uniqueGroupsRaw;
 
         const unitKey = "Value";
@@ -383,9 +386,8 @@ export function sparkbarTable(data, mode, {breakdown}) {
 
                 if (!acc[yearKey]) {
                     acc[yearKey] = {Year: yearKey};
-                    uniqueGroups.forEach(s => {
-                        acc[yearKey][s] = null;
-                    });
+                    contextColumns.forEach(col => { acc[yearKey][col] = row[col] ?? null; });
+                    uniqueGroups.forEach(s => { acc[yearKey][s] = null; });
                 }
 
                 acc[yearKey][group] =
@@ -395,8 +397,8 @@ export function sparkbarTable(data, mode, {breakdown}) {
             }, {})
         );
 
-        columnsToShow = Object.keys(tableData[0]);
-        valueColumns = columnsToShow.filter(item => item !== "Year");
+        columnsToShow = ["Year", ...contextColumns, ...uniqueGroups];
+        valueColumns = uniqueGroups;
 
         maxValues = Math.max(...valueColumns
             .flatMap(column => tableData.map(d => d[column]))
@@ -404,7 +406,7 @@ export function sparkbarTable(data, mode, {breakdown}) {
     }
 
     return table(tableData, {
-        columns: Object.keys(tableData[0]).filter(column => columnsToShow.includes(column)),
+        columns: columnsToShow.filter(col => Object.prototype.hasOwnProperty.call(tableData[0], col)),
         sort: "Year",
         reverse: true,
         format: {
@@ -413,9 +415,9 @@ export function sparkbarTable(data, mode, {breakdown}) {
                 valueColumns.map((column, index) => [
                     column,
                     (rowValue, row) => {
-                        if (mode === "financing" || mode === "recipients") {
+                        if (mode === "financing") {
                             return sparkbar(
-                                getColorForType(tableData[row][columnsToShow[1]]),
+                                getColorForType(tableData[row][colorColumn]),
                                 "left",
                                 maxValues
                             )(rowValue);

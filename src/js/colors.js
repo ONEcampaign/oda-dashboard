@@ -1,4 +1,4 @@
-import { ONEColors } from "@one-data/observable-themes/use-colors";
+import {ONEColors, ONEPalette} from "@one-data/observable-themes/use-colors";
 
 export const customPalette = {
     ge: ONEColors.teal0,
@@ -41,7 +41,10 @@ export const paletteRecipients = {
     ],
 }
 
-export const colorSector = ONEColors.teal1
+export const paletteTreemap = {
+    active: ONEColors.teal1,
+    inactive: ONEColors.teal6,
+}
 
 export const paletteSubsectors = [
     ONEColors.navy1,
@@ -55,11 +58,6 @@ export const paletteSubsectors = [
     ONEColors.blue3,
     ONEColors.yellow4
 
-]
-
-export const paletteTreemap = [
-    colorSector,
-    customPalette.neutralGrey
 ]
 
 export const paletteGender = {

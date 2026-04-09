@@ -68,7 +68,7 @@ function App() {
 
   const unitOptions = React.useMemo(() => [
     {label: `Million ${getCurrencyLabel(currency, {currencyOnly: true})}`, value: "value"},
-    {label: "% of total", value: "total"}
+    {label: "% of all bilateral ODA", value: "total"}
   ], [currency])
 
   const data = React.useMemo(
@@ -97,7 +97,7 @@ function App() {
   )
 
   const lineSubtitle = React.useMemo(
-    () => buildGenderSubtitle(indicator, " as a share of the total"),
+    () => buildGenderSubtitle(indicator, " as a share of all bilateral ODA"),
     [indicator]
   )
 
@@ -122,7 +122,7 @@ function App() {
 
   const tableNote = unit === "value"
     ? `ODA values in ${pricesNote} ${currencyLabel}.`
-    : `ODA values as a share of total aid received by ${recipientName}.`
+    : `ODA values as a share of all bilateral ODA received by ${recipientName}.`
 
   return (
     <div className="mx-auto w-full space-y-10 px-6 py-10">
