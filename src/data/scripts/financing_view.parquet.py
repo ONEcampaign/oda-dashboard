@@ -17,6 +17,7 @@ from src.data.analysis_tools.transformations import (
     add_financing_indicator_codes,
     add_share_of_gni,
     add_share_of_total_oda,
+    donor_groups,
     widen_currency_price,
 )
 from src.data.config import (
@@ -209,6 +210,57 @@ def get_eui_eu27_grants():
     return eui_eu27_grants
 
 
+def _remove_incomplete_aggregates(
+    df: pd.DataFrame, reference_indicator: str = "Total ODA"
+) -> pd.DataFrame:
+    """Remove group aggregates where not all members that report Total ODA
+    also report the indicator for that year."""
+    groups = donor_groups()
+    group_codes = set(groups.keys())
+
+    coverage = df.loc[
+        ~df["donor_code"].isin(group_codes), ["year", "donor_code", "indicator"]
+    ].drop_duplicates()
+
+    to_drop = []
+
+    for group_code, members in groups.items():
+        mc = coverage.loc[coverage["donor_code"].isin(members)]
+
+        ref_counts = (
+            mc.loc[mc["indicator"] == reference_indicator]
+            .groupby("year")["donor_code"]
+            .nunique()
+        )
+
+        ind_counts = mc.groupby(["year", "indicator"])["donor_code"].nunique()
+
+        for (year, indicator), count in ind_counts.items():
+            if indicator != reference_indicator and count < ref_counts.get(year, 0):
+                to_drop.append((group_code, year, indicator))
+                logger.info(
+                    f"Incomplete coverage for '{indicator}' in {year} "
+                    f"(group {group_code}): {count}/{ref_counts.get(year, 0)} members"
+                )
+
+    if not to_drop:
+        return df
+
+    drop_keys = pd.DataFrame(to_drop, columns=["donor_code", "year", "indicator"])
+
+    before = len(df)
+    df = df.merge(
+        drop_keys.assign(_drop=True),
+        on=["donor_code", "year", "indicator"],
+        how="left",
+    )
+    df = df.loc[df["_drop"].isna()].drop(columns=["_drop"])
+
+    logger.info(f"Removed {before - len(df)} incomplete group aggregate rows")
+
+    return df
+
+
 def get_financing_data():
     dac1 = get_dac1()
     grants = get_grants()
@@ -225,6 +277,9 @@ def get_financing_data():
 
     # Add donor groupings
     financing = add_donor_groupings(financing)
+
+    # Remove group aggregates where member coverage is incomplete
+    financing = _remove_incomplete_aggregates(financing)
 
     # Add indicator code
     financing = add_financing_indicator_codes(financing)
