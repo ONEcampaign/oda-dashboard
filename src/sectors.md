@@ -114,8 +114,8 @@ function App() {
   const [currency, setCurrency] = React.useState("usd")
   const [prices, setPrices] = React.useState("constant")
   const [breakdown, setBreakdown] = React.useState(true)
-  const [currentSector, setCurrentSector] = React.useState("Health")
-  const [timeRange, setTimeRange] = React.useState([timeRangeOptions.end - 10, timeRangeOptions.end])
+  const [currentSector, setCurrentSector] = React.useState(null)
+  const [year, setYear] = React.useState(timeRangeOptions.end)
   const [unit, setUnit] = React.useState("value")
 
   const [treemapData, setTreemapData] = React.useState([])
@@ -138,42 +138,43 @@ function App() {
     }
   }, [breakdownIsDisabled, effectiveBreakdown, unit])
 
-  // Track base params separately from sector to avoid loading/treemap redraw on sector-only changes
-  const prevBaseKeyRef = React.useRef(null)
-
+  // Effect 1: treemap data — uses selected year only
   React.useEffect(() => {
     if (indicator.length === 0) return
     let cancelled = false
+    setLoading(true)
+    setError(null)
 
-    const donor_ = Array.isArray(donor) ? donor.join(",") : String(donor)
-    const recipient_ = Array.isArray(recipient) ? recipient.join(",") : String(recipient)
-    const baseKey = `${donor_}|${recipient_}|${[...indicator].sort().join(",")}|${currency}|${prices}|${timeRange[0]}-${timeRange[1]}`
-    const baseChanged = prevBaseKeyRef.current !== baseKey
-    prevBaseKeyRef.current = baseKey
-
-    if (baseChanged) {
-      setLoading(true)
-      setError(null)
-    }
-
-    const result = sectorsQueries(donor, recipient, indicator, currentSector, currency, prices, timeRange)
-
-    Promise.all([result.treemap, result.selectedBase, result.tableBase])
-      .then(([treemap, selectedBase, tableBase]) => {
-        if (cancelled) return
-        if (baseChanged) setTreemapData(treemap ?? [])
-        setSelectedBaseData(selectedBase ?? [])
-        setTableBaseData(tableBase ?? [])
-        if (baseChanged) setLoading(false)
+    const result = sectorsQueries(donor, recipient, indicator, null, currency, prices, [year, year])
+    result.treemap
+      .then(treemap => {
+        if (!cancelled) { setTreemapData(treemap ?? []); setLoading(false) }
       })
       .catch(err => {
-        if (cancelled) return
-        console.error("Sectors query failed:", err)
-        if (baseChanged) { setError(err); setLoading(false) }
+        if (!cancelled) { console.error("Treemap query failed:", err); setError(err); setLoading(false) }
       })
 
     return () => { cancelled = true }
-  }, [donor, recipient, indicator, currentSector, currency, prices, timeRange])
+  }, [donor, recipient, indicator, currency, prices, year])
+
+  // Effect 2: bar/table data — always uses the full available time range
+  React.useEffect(() => {
+    if (indicator.length === 0 || currentSector === null) {
+      setSelectedBaseData([])
+      setTableBaseData([])
+      return
+    }
+    let cancelled = false
+
+    const result = sectorsQueries(donor, recipient, indicator, currentSector, currency, prices, [SECTORS_MIN, timeRangeOptions.end])
+    Promise.all([result.selectedBase, result.tableBase])
+      .then(([selectedBase, tableBase]) => {
+        if (!cancelled) { setSelectedBaseData(selectedBase ?? []); setTableBaseData(tableBase ?? []) }
+      })
+      .catch(err => { if (!cancelled) console.error("Bar/table query failed:", err) })
+
+    return () => { cancelled = true }
+  }, [donor, recipient, indicator, currentSector, currency, prices])
 
   const selectedData = React.useMemo(
     () => transformSelectedData(selectedBaseData, effectiveBreakdown),
@@ -206,8 +207,7 @@ function App() {
     ? "Bilateral + Imputed multilateral"
     : (getNameByCode(indicatorMapping, indicator) ?? "")
 
-  const sectorsPeriod = timeRange[0] === timeRange[1] ? `${timeRange[0]}` : `${timeRange[0]}–${timeRange[1]}`
-  const treemapSubtitle = `${indicatorLabel} ODA; ${sectorsPeriod}`
+  const treemapSubtitle = `${indicatorLabel} ODA; ${year}`
 
   const sectorBarSubtitle = React.useMemo(
     () => buildSectorBarSubtitle(selectedData, effectiveBreakdown, breakdownIsDisabled, indicator),
@@ -257,9 +257,10 @@ function App() {
                   min={SECTORS_MIN}
                   max={timeRangeOptions.end}
                   step={1}
-                  label="Time range"
-                  value={timeRange}
-                  onChange={setTimeRange}
+                  label="Year"
+                  value={year}
+                  onChange={setYear}
+                  single={true}
               />
               <MultiSelect
                   label="Indicator"
@@ -301,53 +302,80 @@ function App() {
         </div>
 
         <div className="border border-blackbg-white p-4 sm:p-6">
-          <ONEVisual
-            title={`${currentSector} ODA to ${recipientName} from ${donorName}`}
-            subtitle={sectorBarSubtitle}
-            subtitleIsHTML={true}
-            source={sourceText}
-            note={plotNote}
-            loading={loading}
-            error={error}
-            empty={!loading && !error && selectedData.length === 0}
-            emptyMessage="No data available"
-            onDownload={() => downloadXLSX(selectedData, barFilename)}
-            plotFileName={barFilename}
-          >
-            <AutoPlot data={selectedData} plotFn={barPlotFn} />
-          </ONEVisual>
-          {!breakdownIsDisabled && (
-              <div className="mb-3">
+          {currentSector === null ? (
+            <div 
+                className="flex px-6 py-30 items-center justify-center text-center text-lg text-slate-500"
+                style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
+            >
+                Select a sector from the treemap to view its change over time
+            </div>
+          ) : (
+            <>
+              <ONEVisual
+                title={`${currentSector} ODA to ${recipientName} from ${donorName}`}
+                subtitle={sectorBarSubtitle}
+                subtitleIsHTML={true}
+                source={sourceText}
+                note={plotNote}
+                loading={loading}
+                error={error}
+                empty={!loading && !error && selectedData.length === 0}
+                emptyMessage="No data available"
+                onDownload={() => downloadXLSX(selectedData, barFilename)}
+                plotFileName={barFilename}
+              >
+                <AutoPlot data={selectedData} plotFn={barPlotFn} />
+              </ONEVisual>
+              {!breakdownIsDisabled && (
+                <div className="mb-3">
                   <ToggleSwitch
-                      label="Sector breakdown"
-                      value={breakdown}
-                      options={[{label: "Off", value: false}, {label: "On", value: true}]}
-                      onChange={setBreakdown}
+                    label="Sector breakdown"
+                    value={breakdown}
+                    options={[{label: "Off", value: false}, {label: "On", value: true}]}
+                    onChange={setBreakdown}
                   />
-              </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
 
-      <div className="p-4 sm:p-6">
-        <DropdownMenu label="Unit" options={unitOptions} value={unit} onChange={setUnit} />
-      </div>
-
-      <div className="border border-blackbg-white p-4 sm:p-6">
-        <ONEVisual
-          title={`${effectiveBreakdown && !breakdownIsDisabled ? "Breakdown of " : ""}${currentSector} ODA to ${recipientName} from ${donorName}`}
-          subtitle={`${indicatorLabel} ODA`}
-          source={sourceText}
-          note={tableNote}
-          loading={loading}
-          error={error}
-          empty={!loading && !error && tableData.length === 0}
-          emptyMessage="No data available"
-          onDownload={() => downloadXLSX(tableData, tableFilename)}
-        >
-          <AutoTable data={tableData} tableFn={tableFn} />
-        </ONEVisual>
-      </div>
+      {currentSector === null ? (
+          <>
+              <div className="p-4 sm:p-6">
+                  <DropdownMenu label="Unit" options={unitOptions} value={unit} onChange={setUnit} disabled={true} />
+              </div>
+              <div 
+                  className="flex px-6 py-10 items-center justify-center text-center text-lg text-slate-500"
+                  style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
+              >
+                  Select a sector from the treemap to view its change over time
+              </div>
+          </>
+        ) : (
+          <>
+            <div className="p-4 sm:p-6">
+              <DropdownMenu label="Unit" options={unitOptions} value={unit} onChange={setUnit} />
+            </div>
+    
+            <div className="border border-blackbg-white p-4 sm:p-6">
+              <ONEVisual
+                title={`${effectiveBreakdown && !breakdownIsDisabled ? "Breakdown of " : ""}${currentSector} ODA to ${recipientName} from ${donorName}`}
+                subtitle={`${indicatorLabel} ODA`}
+                source={sourceText}
+                note={tableNote}
+                loading={loading}
+                error={error}
+                empty={!loading && !error && tableData.length === 0}
+                emptyMessage="No data available"
+                onDownload={() => downloadXLSX(tableData, tableFilename)}
+              >
+                <AutoTable data={tableData} tableFn={tableFn} />
+              </ONEVisual>
+            </div>
+          </>
+      )}
         </>
       )}
     </div>

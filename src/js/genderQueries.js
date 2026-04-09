@@ -63,7 +63,7 @@ export function genderQueries(
         recipient: row.recipient,
         indicator: row.indicator,
         value: row.pct_of_total * 100,
-        unit: "% of total ODA",
+        unit: "% of all bilateral ODA",
         source: "OECD CRS"
     })), timeRange);
 
@@ -83,7 +83,7 @@ export function transformTableData(rows, unit, currency, prices) {
             : row.pct_of_total * 100,
         unit: unit === "value"
             ? `${currency} ${prices} million`
-            : "% of total ODA",
+            : "% of all bilateral ODA",
         source: "OECD CRS"
     }));
 }

@@ -6,19 +6,19 @@ import { paletteTreemap } from "./colors.js";
 const tooltip = d3.select("body")
     .append("div")
     .attr("class", "treemap-tooltip")
-    // .style("visibility", "hidden");
+    .style("visibility", "hidden");
 
 // Module-level tracking of the active sector for coloring across redraws
-let _activeSector = "Health";
+let _activeSector = null;
 
 export function treemapPlot(data, width, { currency = null, onSectorChange = null } = {}) {
 
     const uniqueSectors = [...new Set(data.map(d => d.sector))];
 
-    // If active sector is not in data, reset to first available and notify
-    if (!uniqueSectors.includes(_activeSector)) {
-        _activeSector = uniqueSectors[0];
-        if (onSectorChange) setTimeout(() => onSectorChange(_activeSector), 0);
+    // If active sector is set but no longer in data, reset to null
+    if (_activeSector !== null && !uniqueSectors.includes(_activeSector)) {
+        _activeSector = null;
+        if (onSectorChange) setTimeout(() => onSectorChange(null), 0);
     }
 
     // Layout config
@@ -89,12 +89,13 @@ export function treemapPlot(data, width, { currency = null, onSectorChange = nul
     // Draw rects with color and stroke
     node.append("rect")
         .attr("id", d => `rect-${d.id.replace(/\s+/g, '-').replace(/[&/,]/g, '')}`)
-        .attr("fill", d => d.id === _activeSector ? paletteTreemap[0] : paletteTreemap[1])
-        .attr("fill-opacity", d => d.id === _activeSector ? 0.6 : 0.8)
+        .attr("fill", d => (_activeSector === null || d.id === _activeSector) ? paletteTreemap.active : paletteTreemap.inactive)
+        .attr("fill-opacity", d => (_activeSector === null || d.id === _activeSector) ? 0.6 : 0.8)
         .attr("stroke", d => {
             const w = d.x1 - d.x0;
             const h = d.y1 - d.y0;
-            return (w < strokeWidth || h < strokeWidth) ? "none" : (d.id === _activeSector ? paletteTreemap[0] : paletteTreemap[1]);
+            const isActive = _activeSector === null || d.id === _activeSector;
+            return (w < strokeWidth || h < strokeWidth) ? "none" : (isActive ? paletteTreemap.active : paletteTreemap.inactive);
         })
         .attr("stroke-width", d => {
             const w = d.x1 - d.x0;
@@ -112,8 +113,8 @@ export function treemapPlot(data, width, { currency = null, onSectorChange = nul
         .attr("y", strokeWidth / 1.5)
         .attr("vertical-align", "middle")
         .attr("font-size", ".75rem")
-        .attr("font-weight", d => d.id === _activeSector ? "700" : "500")
-        .style("fill", d => d.id === _activeSector ? "white" : "black")
+        .attr("font-weight", d => (_activeSector === null || d.id === _activeSector) ? "700" : "500")
+        .style("fill", d => (_activeSector === null || d.id === _activeSector) ? "white" : "black")
         .text(d => {
             const w = d.x1 - d.x0;
             if (w < 10) return "";
@@ -161,7 +162,7 @@ export function treemapPlot(data, width, { currency = null, onSectorChange = nul
             return `${Math.min(size, 15)}px`;
         })
         .attr("font-weight", "500")
-        .style("fill", d => d.id === _activeSector ? "white" : "black");
+        .style("fill", d => (_activeSector === null || d.id === _activeSector) ? "white" : "black");
 
     // Interactive overlay for hover/click
     node.append("rect")
@@ -179,8 +180,8 @@ export function treemapPlot(data, width, { currency = null, onSectorChange = nul
                     return d3.select(this).attr("id")?.startsWith("rect-");
                 })
                 .transition()
-                .attr("fill", rectD => rectD.id === d.id ? paletteTreemap[0] : paletteTreemap[1])
-                .attr("stroke", rectD => rectD.id === d.id ? paletteTreemap[0] : paletteTreemap[1]);
+                .attr("fill", rectD => rectD.id === d.id ? paletteTreemap.active : paletteTreemap.inactive)
+                .attr("stroke", rectD => rectD.id === d.id ? paletteTreemap.active : paletteTreemap.inactive);
 
             // Update text fill and font-weight for all tiles
             node.each(function(nodeData) {

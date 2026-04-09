@@ -8,9 +8,13 @@ export function RangeInput({
   step = 1,
   value,
   label = "",
-  onChange
+  onChange,
+  single = false
 }) {
-  const initial = React.useMemo(() => value ?? [min, max], [value, min, max])
+  const initial = React.useMemo(
+    () => single ? (value ?? min) : (value ?? [min, max]),
+    [value, min, max, single]
+  )
   const [range, setRange] = React.useState(initial)
 
   React.useEffect(() => {
@@ -35,6 +39,10 @@ export function RangeInput({
     emit([range[0], Math.max(maxValue, range[0])])
   }
 
+  const updateSingle = (next) => {
+    emit(clamp(Number(next), min, max))
+  }
+
   const percent = (val) => ((val - min) / (max - min || 1)) * 100
 
   return (
@@ -49,53 +57,84 @@ export function RangeInput({
           </span>
         </div>
       )}
-      <div className="flex items-center gap-3">
-        <input
-          type="number"
-          value={range[0]}
-          min={min}
-          max={range[1]}
-          step={step}
-          onChange={(event) => updateMin(event.target.value)}
-          className="w-20 rounded-md border border-slate-200 px-2 py-1 text-md uppercase font-bold"
-          style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
-        />
-        <div className="relative flex-1 h-6">
-          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 rounded-full bg-slate-200" style={{ height: 4 }} />
-          <div
-            className="absolute top-1/2 -translate-y-1/2 rounded-full bg-slate-900"
-            style={{ left: `${percent(range[0])}%`, right: `${100 - percent(range[1])}%`, height: 4 }}
-          />
+      {single ? (
+        <div className="flex items-center gap-3">
           <input
-            type="range"
-            min={min}
-            max={max}
-            step={step}
+              type="number"
+              value={range}
+              min={min}
+              max={max}
+              step={step}
+              onChange={(event) => updateSingle(event.target.value)}
+              className="w-20 rounded-md border border-slate-200 px-2 py-1 text-md uppercase font-bold"
+              style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
+          />
+          <div className="relative flex-1 h-6">
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 rounded-full bg-slate-200" style={{ height: 4 }} />
+            <div
+              className="absolute top-1/2 -translate-y-1/2 rounded-full bg-slate-900"
+              style={{ left: 0, right: `${100 - percent(range)}%`, height: 4 }}
+            />
+            <input
+              type="range"
+              min={min}
+              max={max}
+              step={step}
+              value={range}
+              aria-label={label || "Value"}
+              onChange={(event) => updateSingle(event.target.value)}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
             value={range[0]}
-            aria-label="Minimum value"
-            onChange={(event) => updateMin(event.target.value)}
-          />
-          <input
-            type="range"
             min={min}
+            max={range[1]}
+            step={step}
+            onChange={(event) => updateMin(event.target.value)}
+            className="w-20 rounded-md border border-slate-200 px-2 py-1 text-md uppercase font-bold"
+            style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
+          />
+          <div className="relative flex-1 h-6">
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 rounded-full bg-slate-200" style={{ height: 4 }} />
+            <div
+              className="absolute top-1/2 -translate-y-1/2 rounded-full bg-slate-900"
+              style={{ left: `${percent(range[0])}%`, right: `${100 - percent(range[1])}%`, height: 4 }}
+            />
+            <input
+              type="range"
+              min={min}
+              max={max}
+              step={step}
+              value={range[0]}
+              aria-label="Minimum value"
+              onChange={(event) => updateMin(event.target.value)}
+            />
+            <input
+              type="range"
+              min={min}
+              max={max}
+              step={step}
+              value={range[1]}
+              aria-label="Maximum value"
+              onChange={(event) => updateMax(event.target.value)}
+            />
+          </div>
+          <input
+            type="number"
+            value={range[1]}
+            min={range[0]}
             max={max}
             step={step}
-            value={range[1]}
-            aria-label="Maximum value"
             onChange={(event) => updateMax(event.target.value)}
+            className="w-20 rounded-md border border-slate-200 px-2 py-1 text-md uppercase font-bold"
+            style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
           />
         </div>
-        <input
-          type="number"
-          value={range[1]}
-          min={range[0]}
-          max={max}
-          step={step}
-          onChange={(event) => updateMax(event.target.value)}
-          className="w-20 rounded-md border border-slate-200 px-2 py-1 text-md uppercase font-bold"
-          style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
-        />
-      </div>
+      )}
     </div>
   )
 }
