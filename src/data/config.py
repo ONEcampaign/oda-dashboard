@@ -16,6 +16,7 @@ logger.setLevel(logging.INFO)
 
 eui_bi_code: int = 919
 
+FINANCING_TIME: dict = {"start": 1990, "end": 2025, "base": 2025}
 BASE_TIME: dict = {"start": 1990, "end": 2024, "base": 2024}  # for currency conversions
 SECTORS_TIME: dict = {"start": 2013, "end": 2024, "base": 2024}
 CURRENCIES: list = ["USD", "EUR", "GBP", "CAD"]

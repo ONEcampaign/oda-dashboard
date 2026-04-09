@@ -82,8 +82,8 @@ function App() {
   const coreOdaNote = indicator === CORE_ODA_CODE
     ? "Core ODA (ONE definition): Total ODA excluding in-donor spending."
     : ""
-  const eu27Note = donor === EU27_EUI_CODE && timeRange[1] === 2024
-    ? "2024 values do not include contributions by EU Institutions."
+  const eu27Note = donor === EU27_EUI_CODE && timeRange[1] === 2025
+    ? "2025 values do not include contributions by EU Institutions."
     : ""
 
   const absoluteSubtitle = React.useMemo(() => {
