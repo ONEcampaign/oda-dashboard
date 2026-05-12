@@ -1,4 +1,4 @@
-import {ONEColors, ONEPalette} from "@one-data/observable-themes/use-colors";
+import {ONEColors} from "npm:@one-data/observable-themes/colors";
 
 export const customPalette = {
     ge: ONEColors.teal0,

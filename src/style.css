@@ -1,10 +1,20 @@
-@import url("@one-data/observable-themes/styles/fonts.css");
+@import "@one-data/observable-themes/styles/index.css";
+@import "./tailwind.generated.css";
+@import "./styles/treemap.css";
 
-@import url("./styles/layout.css");
+/* ── Chart text color defaults ──────────────────────────────────── */
 
-@import url("./styles/components/range-input.css");
-@import url("styles/components/plots.css");
-@import url("styles/components/tables.css");
-@import url("styles/components/treemap.css");
+.plot-title,
+.plot-subtitle {
+    color: #000000;
+}
 
-@import url("styles/embed.css");
+.plot-note {
+    color: #3d3d3d;
+}
+
+[aria-label="x-axis tick label"],
+[aria-label="y-axis label"] text,
+[aria-label="y-axis tick label"] {
+    color: #3d3d3d;
+}

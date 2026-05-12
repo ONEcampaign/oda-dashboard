@@ -1,21 +1,29 @@
 ```js
 import * as React from "npm:react"
-import {NavMenu} from "./components/NavMenu.js"
-import {DropdownMenu} from "./components/DropdownMenu.js"
-import {ToggleSwitch} from "./components/ToggleSwitch.js"
-import {MultiSelect} from "./components/MultiSelect.js"
-import {RangeInput} from "./components/RangeInput.js"
-import {ONEVisual} from "./components/ONEVisual.js"
-import {setCustomColors} from "@one-data/observable-themes/use-colors"
-import {genderQueries, transformTableData, donorOptions, recipientOptions, genderIndicators} from "./js/genderQueries.js"
-import {name2CodeMap, getNameByCode, getCurrencyLabel, formatString} from "./js/utils.js"
+import {
+    DropdownMenu,
+    DropdownMenuMini,
+    RangeInput,
+    ToggleSwitch,
+    ToggleSwitchMini
+} from "npm:@one-data/observable-themes/inputs"
+import {Header} from "npm:@one-data/observable-themes/ui"
+import {ONEVisual, AutoPlot, AutoTable} from "npm:@one-data/observable-themes/charts"
+import {getCurrencyLabel, formatString, resolveScale, isEmbedded} from "npm:@one-data/observable-themes/utils"
+import {setCustomColors} from "npm:@one-data/observable-themes/colors"
+import {
+    genderQueries,
+    transformTableData,
+    donorOptions,
+    recipientOptions,
+    genderIndicators
+} from "./js/genderQueries.js"
+import {name2CodeMap, getNameByCode} from "./js/utils.js"
 import {customPalette, paletteGender} from "./js/colors.js"
-import {downloadXLSX} from "./js/downloads.js"
-import {barPlot, linePlot, sparkbarTable} from "./js/visuals.js"
-import {AutoPlot} from "./components/AutoPlot.js"
-import {AutoTable} from "./components/AutoTable.js"
-import {CURRENCY_OPTIONS, PRICES_OPTIONS} from "./js/config.js"
-import "./js/embed.js"
+import {columnChart} from "./js/columnChart.js"
+import {areaChart} from "./js/areaChart.js"
+import {sparkbarTable} from "./js/sparkBarTable.js"
+import {APP_TITLE, APP_DESCRIPTION, NAV_ITEMS, CURRENCY_OPTIONS, PRICES_OPTIONS, SCALE} from "./js/config.js"
 
 setCustomColors(customPalette)
 
@@ -67,7 +75,7 @@ function App() {
   const [unit, setUnit] = React.useState("value")
 
   const unitOptions = React.useMemo(() => [
-    {label: `Million ${getCurrencyLabel(currency, {currencyOnly: true})}`, value: "value"},
+    {label: getCurrencyLabel(currency, {currencyLong: true, currencyOnly: true}), value: "value"},
     {label: "% of all bilateral ODA", value: "total"}
   ], [currency])
 
@@ -81,6 +89,13 @@ function App() {
   const absoluteData = data?.absolute ?? []
   const relativeData = data?.relative ?? []
 
+  const absoluteScale = React.useMemo(
+    () => resolveScale(absoluteData.map(d => d.value), SCALE),
+    [absoluteData]
+  )
+    
+    
+
   const tableData = React.useMemo(
     () => transformTableData(data?.rawData ?? [], unit, currency, prices),
     [data?.rawData, unit, currency, prices]
@@ -88,10 +103,10 @@ function App() {
 
   const donorName = formatString(getNameByCode(donorMapping, donor) ?? "")
   const recipientName = getNameByCode(recipientMapping, recipient) ?? ""
-  const currencyLabel = getCurrencyLabel(currency, {currencyLong: true, inSentence: true})
+  const currencyLabel = getCurrencyLabel(currency, {currencyOnly: true, currencyLong: true})
   const pricesNote = `${prices}${prices === "constant" ? ` ${timeRangeOptions.base}` : ""}`
 
-  const barSubtitle = React.useMemo(
+  const columnSubtitle = React.useMemo(
     () => buildGenderSubtitle(indicator),
     [indicator]
   )
@@ -101,22 +116,22 @@ function App() {
     [indicator]
   )
 
-  const barPlotFn = React.useCallback(
-    (width) => barPlot(absoluteData, currency, "gender", width, {}),
-    [absoluteData, currency]
+  const columnPlotFn = React.useCallback(
+    (width) => columnChart(absoluteData, currency, "gender", width, { scale: absoluteScale }),
+    [absoluteData, currency, absoluteScale]
   )
 
   const linePlotFn = React.useCallback(
-    (width) => linePlot(relativeData, "gender", width),
+    (width) => areaChart(relativeData, "gender", width),
     [relativeData]
   )
 
   const tableFn = React.useCallback(
-    () => sparkbarTable(tableData, "gender", {}),
-    [tableData]
+    () => sparkbarTable(tableData, "gender", { currency, scale: absoluteScale, unit }),
+    [tableData, currency, absoluteScale, unit]
   )
 
-  const barFilename = formatString(`gender ODA ${donorName} ${recipientName}`, {fileMode: true})
+  const columnFilename = formatString(`gender ODA ${donorName} ${recipientName}`, {fileMode: true})
   const lineFilename = formatString(`gender ODA ${donorName} ${recipientName} share`, {fileMode: true})
   const tableFilename = formatString(`gender ODA ${donorName} ${recipientName} ${unit}`, {fileMode: true})
 
@@ -125,39 +140,42 @@ function App() {
     : `ODA values as a share of all bilateral ODA received by ${recipientName}.`
 
   return (
-    <div className="mx-auto w-full space-y-10 px-6 py-10">
-      <NavMenu currentPage="gender" />
+      <div className="mx-auto space-y-12 px-4 py-10 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
 
-      <section className="p-4 sm:p-6 mb-6">
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="flex flex-col items-stretch gap-6">
-            <DropdownMenu label="Donor" options={DONOR_OPTIONS} value={donor} onChange={setDonor} />
-            <DropdownMenu label="Recipient" options={RECIPIENT_OPTIONS} value={recipient} onChange={setRecipient} />
-          </div>
-          <div className="flex flex-col items-stretch gap-6">
-            <DropdownMenu label="Currency" options={CURRENCY_OPTIONS} value={currency} onChange={setCurrency} />
-            <ToggleSwitch label="Prices" value={prices} options={PRICES_OPTIONS} onChange={setPrices} />
-          </div>
-          <div className="flex flex-col items-stretch gap-6">
-            <RangeInput
-                min={timeRangeOptions.start}
-                max={timeRangeOptions.end}
-                step={1}
-                label="Time range"
-                value={timeRange}
-                onChange={setTimeRange}
-            />
-            <MultiSelect
-                label="Gender is"
-                options={INDICATOR_OPTIONS}
-                value={indicator}
-                onChange={setIndicator}
-                placeholder={null}
-                maxSelected={4}
-            />
-          </div>
+          <Header appTitle={APP_TITLE} appDescription={APP_DESCRIPTION} navItems={NAV_ITEMS} currentPage="gender" />
+
+        <div className="flex flex-col gap-4">
+            <h3 className="section-header">
+                REFINE YOUR VIEW
+            </h3>
+            <div className="grid gap-6 md:grid-cols-3 pl-6">
+                    <div className="flex flex-col items-stretch gap-6">
+                  <DropdownMenu label="Donor" options={DONOR_OPTIONS} value={donor} onChange={setDonor} />
+                  <DropdownMenu label="Recipient" options={RECIPIENT_OPTIONS} value={recipient} onChange={setRecipient} />
+                </div>
+                <div className="flex flex-col items-stretch gap-6">
+                  <DropdownMenu label="Currency" options={CURRENCY_OPTIONS} value={currency} onChange={setCurrency} />
+                  <ToggleSwitch label="Prices" value={prices} options={PRICES_OPTIONS} onChange={setPrices} />
+                </div>
+                <div className="flex flex-col items-stretch gap-6">
+                  <RangeInput
+                      min={timeRangeOptions.start}
+                      max={timeRangeOptions.end}
+                      step={1}
+                      label="Time range"
+                      value={timeRange}
+                      onChange={setTimeRange}
+                  />
+                  <DropdownMenu multi
+                      label="Gender is"
+                      options={INDICATOR_OPTIONS}
+                      value={indicator}
+                      onChange={setIndicator}
+                      placeholder={"Select indicators..."}
+                  />
+                </div>
+            </div>
         </div>
-      </section>
 
       {indicator.length === 0 ? (
         <p className="px-4 sm:px-6 text-sm text-slate-500">Select at least one indicator.</p>
@@ -165,23 +183,22 @@ function App() {
         <>
 
       <div className="grid gap-10 lg:grid-cols-2">
-        <div className="border border-blackbg-white p-4 sm:p-6">
           <ONEVisual
             title={`Gender ODA to ${recipientName} from ${donorName}`}
-            subtitle={barSubtitle}
+            subtitle={columnSubtitle}
             subtitleIsHTML={true}
             source="OECD Creditor Reporting System."
             note={`ODA values in ${pricesNote} ${currencyLabel}.`}
             empty={absoluteData.length === 0}
             emptyMessage="No data available"
-            onDownload={() => downloadXLSX(absoluteData, barFilename)}
-            plotFileName={barFilename}
+            fileName={columnFilename}
+            data={absoluteData}
+            imageDownload={true}
+            dataDownload={true}
           >
-            <AutoPlot data={absoluteData} plotFn={barPlotFn} />
+            <AutoPlot data={absoluteData} plotFn={columnPlotFn} />
           </ONEVisual>
-        </div>
 
-        <div className="border border-blackbg-white p-4 sm:p-6">
           <ONEVisual
             title={`Gender ODA to ${recipientName} from ${donorName}`}
             subtitle={lineSubtitle}
@@ -189,30 +206,38 @@ function App() {
             source="OECD Creditor Reporting System."
             empty={relativeData.length === 0}
             emptyMessage="No data available"
-            onDownload={() => downloadXLSX(relativeData, lineFilename)}
-            plotFileName={lineFilename}
+            fileName={lineFilename}
+            data={relativeData}
+            imageDownload={true}
+            dataDownload={true}
           >
             <AutoPlot data={relativeData} plotFn={linePlotFn} />
           </ONEVisual>
-        </div>
       </div>
-
-      <div className="p-4 sm:p-6">
-        <DropdownMenu label="Unit" options={unitOptions} value={unit} onChange={setUnit} />
-      </div>
-
-      <div className="border border-blackbg-white p-4 sm:p-6">
+      
         <ONEVisual
           title={`Gender ODA to ${recipientName} from ${donorName}`}
+          subtitle={columnSubtitle}
+          subtitleIsHTML={true}
+          controls={
+              <DropdownMenuMini 
+                  label="Unit" 
+                  options={unitOptions} 
+                  value={unit} 
+                  onChange={setUnit} 
+              />
+          }
           source="OECD DAC Table Creditor Reporting System."
           note={tableNote}
           empty={tableData.length === 0}
           emptyMessage="No data available"
-          onDownload={() => downloadXLSX(tableData, tableFilename)}
+          fileName={tableFilename}
+          data={tableData}
+          dataDownload={true}
         >
           <AutoTable data={tableData} tableFn={tableFn} />
         </ONEVisual>
-      </div>
+            
         </>
       )}
     </div>

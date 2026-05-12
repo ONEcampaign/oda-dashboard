@@ -189,3 +189,4 @@ src/data/validation_data/reports/*.md
 /.raw_data
 /docs
 /validation_data/reports
+src/tailwind.generated.css

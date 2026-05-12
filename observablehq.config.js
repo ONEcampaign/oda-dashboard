@@ -1,8 +1,8 @@
-import {icon} from "@one-data/observable-themes/use-images";
+import {icon} from "@one-data/observable-themes/brand";
 
 export default {
   title: "ODA Dashboard",
-  head: `<link rel="icon" href=${icon} type="image/png" sizes="32x32"><script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>`,
+  head: `<link rel="icon" href=${icon} type="image/png" sizes="32x32">`,
 
   base: "/oda-dashboard",
   preserveExtension: true,
