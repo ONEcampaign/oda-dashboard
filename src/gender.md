@@ -178,7 +178,9 @@ function App() {
         </div>
 
       {indicator.length === 0 ? (
-        <p className="px-4 sm:px-6 text-sm text-slate-500">Select at least one indicator.</p>
+          <p className="plain-text flex px-6 py-10 items-center justify-center text-center text-lg text-slate-500">
+              Select at least one indicator.
+          </p>    
       ) : (
         <>
 
