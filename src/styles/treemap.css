@@ -1,0 +1,11 @@
+.treemap-tooltip {
+    position: absolute;
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-ink);
+    padding: 8px 10px;
+    pointer-events: none;
+    font-family: var(--font-italian-plate);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    z-index: 1000;
+}
