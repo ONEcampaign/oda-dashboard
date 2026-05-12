@@ -1,8 +1,11 @@
 ```js
 import * as React from "npm:react"
-import {NavMenu} from "./components/NavMenu.js"
-import {generateList} from "./js/utils.js"
-import "./js/embed.js"
+import { Header } from "npm:@one-data/observable-themes/ui"
+import {
+    generateList,
+    isEmbedded
+} from "npm:@one-data/observable-themes/utils"
+import {APP_TITLE, APP_DESCRIPTION, NAV_ITEMS} from "./js/config.js"
 
 const donorMapping = await FileAttachment("./data/analysis_tools/donors.json").json()
 const recipientMapping = await FileAttachment("./data/analysis_tools/recipients.json").json()
@@ -23,8 +26,11 @@ function GeneratedList({data, mode}) {
 
 function App() {
   return (
-      <div className="mx-auto w-full space-y-10 px-6 py-10">
-        <NavMenu currentPage="faqs" />
+      <div className="mx-auto space-y-12 px-4 py-10 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
+
+          <Header appTitle={APP_TITLE} navItems={NAV_ITEMS} currentPage="faqs" />
+
+          
           <div
               className="max-w-4xl mx-auto space-y-4 text-md [&_a]:text-indigo-500 [&_a]:underline [&_a:hover]:underline [&_a:focus]:underline [&_a:visited]:text-indigo-500"
               style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
@@ -33,8 +39,7 @@ function App() {
               <p>
                 ONE's ODA Dashboard presents Official Development Assistance (ODA) in an accessible format, allowing users to
                 explore trends and gain insights, regardless of their ODA knowledge. It is built using ONE's methodology and
-                custom Python tools for processing the data. For an introduction to ODA and a detailed explanation of our
-                approach, visit the <a className="underline" href="https://one-campaign.observablehq.cloud/oda-cookbook/">ODA Cookbook</a>.
+                custom Python tools for processing the data.
               </p>
               <p>The dashboard is divided into four tabs:</p>
               <p>
@@ -73,17 +78,17 @@ function App() {
               <h2 className="font-bold text-xl mt-8 mb-2">Where does the data come from?</h2>
               <p>
                 ODA data is retrieved from the OECD Data Explorer API via the{" "}
-                <a className="underline" href="https://docs.one.org/tools/oda-data/">oda-data</a> python package.
+                <a target="_blank" className="underline" href="https://docs.one.org/tools/oda-data/">oda-data</a> python package.
               </p>
               <h2 className="font-bold text-xl mt-8 mb-2">How is the data transformed?</h2>
               <p>
                 ODA figures are first obtained in current US Dollars and converted into other currencies and constant prices via{" "}
-                <a className="underline" href="https://github.com/jm-rivera/pydeflate">pydeflate</a>.
+                <a target="_blank" className="underline" href="https://github.com/jm-rivera/pydeflate">pydeflate</a>.
               </p>
               <p>
                 The data preparation scripts are located in the{" "}
                 <span style={{ fontFamily: "monospace" }}>src/data</span> directory of the project's{" "}
-                <a className="underline" href="https://github.com/ONEcampaign/oda-dashboard">GitHub repository</a>.
+                <a target="_blank" className="underline" href="https://github.com/ONEcampaign/oda-dashboard">GitHub repository</a>.
               </p>
               <h2 className="font-bold text-xl mt-8 mb-2">How are sectors and sub-sectors defined?</h2>
               <p>
@@ -91,7 +96,7 @@ function App() {
               </p>
               <h2 className="font-bold text-xl mt-8 mb-2">Who should I contact for questions and suggestions?</h2>
               <p>
-                Please refer your comments to miguel.haroruiz[at]one[dot]org or jorge.rivera[at]one[dot]org.
+                Please refer your comments to <a href="mailto:miguel.haroruiz@one.org">Miguel Haro Ruiz</a> or <a href="mailto:jorge.rivera@one.org">Jorge Rivera</a>.
               </p>
           </div>
     </div>
