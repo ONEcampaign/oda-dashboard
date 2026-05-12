@@ -1,5 +1,6 @@
 import {FileAttachment} from "observablehq:stdlib";
-import {name2CodeMap, convertUnitsToMillions, fillMissingYearIndicators} from "./utils.js";
+import { convertUnitsToMillions } from "npm:@one-data/observable-themes/utils"
+import {name2CodeMap, fillMissingYearIndicators} from "./utils.js";
 
 /**
  * IMPORTANT: Value columns in the parquet file are stored as integers in UNITS (not millions).
