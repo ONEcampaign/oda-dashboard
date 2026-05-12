@@ -4,6 +4,18 @@ import json
 import shutil
 from pathlib import Path
 
+# Fix for Python 3.13 + requests 2.32+ TYPE_CHECKING incompatibility.
+# requests.models declares RequestsCookieJar and HTTPAdapter only under
+# TYPE_CHECKING, so they're absent from runtime globals. Python 3.13's
+# typing.get_type_hints() evaluates annotations strictly in the declaring
+# module's globals, breaking attrs/cattrs when it processes CachedResponse
+# (from requests-cache), which inherits from requests.models.Response.
+import requests.models as _rm
+from requests.adapters import HTTPAdapter as _HTTPAdapter
+from requests.cookies import RequestsCookieJar as _RequestsCookieJar
+_rm.RequestsCookieJar = _RequestsCookieJar
+_rm.HTTPAdapter = _HTTPAdapter
+
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
