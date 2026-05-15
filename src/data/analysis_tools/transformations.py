@@ -257,11 +257,13 @@ def add_share_of_total_oda(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_share_of_recipients_total_oda(df: pd.DataFrame) -> pd.DataFrame:
-    """Add column for share of total ODA"""
+    """Add column for each donor's share of total ODA received by a recipient."""
+
+    all_bilateral_code = DONOR_GROUPS["All bilateral donors"]
 
     total = (
-        df.loc[lambda d: d.recipient_code == 100_000]
-        .groupby(["year", "donor_code"], dropna=False, observed=True)[
+        df.loc[lambda d: d.donor_code == all_bilateral_code]
+        .groupby(["year", "recipient_code"], dropna=False, observed=True)[
             "value_usd_current"
         ]
         .sum()
@@ -269,7 +271,7 @@ def add_share_of_recipients_total_oda(df: pd.DataFrame) -> pd.DataFrame:
         .rename(columns={"value_usd_current": "total_oda"})
     )
 
-    merged = df.merge(total, on=["year", "donor_code"], how="left")
+    merged = df.merge(total, on=["year", "recipient_code"], how="left")
 
     merged["pct_of_total_oda"] = (
         merged["value_usd_current"] / merged["total_oda"]
