@@ -142,7 +142,13 @@ function App() {
   return (
       <div className="mx-auto space-y-12 px-4 py-10 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
 
-          <Header appTitle={APP_TITLE} appDescription={APP_DESCRIPTION} navItems={NAV_ITEMS} currentPage="gender" />
+          <Header 
+              appTitle={APP_TITLE}
+              appDescription={APP_DESCRIPTION}
+              navItems={NAV_ITEMS}
+              currentPage="gender"
+              descriptionMaxWidth={550}
+          />
 
         <div className="flex flex-col gap-4">
             <h3 className="section-header">

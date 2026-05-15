@@ -128,12 +128,18 @@ function App() {
 
   const tableNote = unit === "value"
     ? `ODA values in ${pricesNote} ${currencyLabel}.`
-    : `ODA values as a share of total aid received by ${recipientName} from ${donorName}.`
+    : `ODA values as a share of all aid from bilateral donors to ${recipientName}.`
 
   return (
       <div className="mx-auto space-y-12 px-4 py-10 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
 
-          <Header appTitle={APP_TITLE} appDescription={APP_DESCRIPTION} navItems={NAV_ITEMS} currentPage="recipients" />
+          <Header 
+              appTitle={APP_TITLE}
+              appDescription={APP_DESCRIPTION}
+              navItems={NAV_ITEMS}
+              currentPage="recipients"
+              descriptionMaxWidth={550}
+          />
 
           <div className="flex flex-col gap-4">
               <h3 className="section-header">
@@ -204,7 +210,7 @@ function App() {
                 subtitle={relativeIndicatorSubtitle}
                 subtitleIsHTML={true}
                 source="OECD DAC2A table."
-                note={`ODA values as a share of all aid received by ${recipientName}.`}
+                note={`ODA values as a share of all aid from bilateral donors to ${recipientName}.`}
                 empty={relativeData.length === 0}
                 emptyMessage="No data available"
                 fileName={areaFilename}
