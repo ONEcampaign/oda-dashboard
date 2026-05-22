@@ -12,6 +12,7 @@ from src.data.analysis_tools.transformations import (
     add_recipient_groupings,
     add_recipient_names,
     add_share_of_recipients_total_oda,
+    add_share_of_donors_total_oda,
 )
 from src.data.config import PATHS, RECIPIENTS_INDICATORS, BASE_TIME, logger
 
@@ -116,8 +117,9 @@ def combined_recipients():
         ),
     )
 
-    # Add share of total ODA
+    # Add share of total ODA from recipient's and donor's perspective
     recipients = add_share_of_recipients_total_oda(recipients)
+    recipients = add_share_of_donors_total_oda(recipients)
 
     # Convert values to units (integers) for better compression
     # NOTE: Frontend queries must divide value_* columns by 1e6 to get millions
