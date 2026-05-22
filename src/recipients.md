@@ -61,10 +61,12 @@ function App() {
   const [timeRange, setTimeRange] = React.useState([timeRangeOptions.end - 20, timeRangeOptions.end])
   const [unit, setUnit] = React.useState("value")
   const [tableView, setTableView] = React.useState("disaggregated")
+  const [relativePerspective, setRelativePerspective] = React.useState("recipient")
 
   const unitOptions = React.useMemo(() => [
     {label: getCurrencyLabel(currency, {currencyLong: true, currencyOnly: true}), value: "value"},
-    {label: "% of Bilateral + Imputed multilateral ODA", value: "pct_total"},
+    {label: "% of received aid", value: "pct_total_recipient"},
+    {label: "% of provided aid", value: "pct_total_donor"},
   ], [currency])
 
   const data = React.useMemo(
@@ -75,7 +77,9 @@ function App() {
   )
 
   const absoluteData = data?.absolute ?? []
-  const relativeData = data?.relative ?? []
+  const relativeData = relativePerspective === "recipient"
+    ? (data?.relative ?? [])
+    : (data?.relativeDonor ?? [])
 
   const absoluteScale = React.useMemo(
     () => resolveScale(absoluteData.map(d => d.value), SCALE),
@@ -115,12 +119,15 @@ function App() {
   }, [indicator])
 
   const relativeIndicatorSubtitle = React.useMemo(() => {
+    const shareText = relativePerspective === "recipient"
+      ? `as a share of aid received by ${recipientName}`
+      : `as a share of aid provided by ${donorName}`
     if (indicator.length > 1) {
-      return `<span style="color:${customPalette.bilateral}; font-weight:600">Bilateral</span> and <span style="color:${customPalette.multilateral}; font-weight:600">imputed multilateral</span> as a share of aid received by ${recipientName}`
+      return `<span style="color:${customPalette.bilateral}; font-weight:600">Bilateral</span> and <span style="color:${customPalette.multilateral}; font-weight:600">imputed multilateral</span> ${shareText}`
     }
     const name = getNameByCode(indicatorMapping, indicator) ?? ""
-    return `${name} as a share of the total`
-  }, [indicator])
+    return `${name} ${shareText}`
+  }, [indicator, relativePerspective, recipientName, donorName])
 
   const columnChartFn = React.useCallback(
     (width) => columnChart(absoluteData, currency, "recipients", width, { scale: absoluteScale }),
@@ -133,13 +140,23 @@ function App() {
   )
 
   const tableSubtitle = React.useMemo(() => {
-    if (tableView === "total" && indicator.length > 1) {
-      return unit === "value"
+    if (unit === "value") {
+      return tableView === "total" && indicator.length > 1
         ? `<span style="color:${customPalette.total}; font-weight:600">Bilateral + imputed multilateral</span> ODA`
-        : `<span style="color:${customPalette.total}; font-weight:600">Bilateral + imputed multilateral</span> as a share of aid received by ${recipientName}`
+        : indicatorSubtitle
     }
-    return unit === "value" ? indicatorSubtitle : relativeIndicatorSubtitle
-  }, [tableView, indicator, unit, indicatorSubtitle, relativeIndicatorSubtitle, recipientName])
+    const shareText = unit === "pct_total_recipient"
+      ? `as a share of aid received by ${recipientName}`
+      : `as a share of aid provided by ${donorName}`
+    if (tableView === "total" && indicator.length > 1) {
+      return `<span style="color:${customPalette.total}; font-weight:600">Bilateral + imputed multilateral</span> ${shareText}`
+    }
+    if (indicator.length > 1) {
+      return `<span style="color:${customPalette.bilateral}; font-weight:600">Bilateral</span> and <span style="color:${customPalette.multilateral}; font-weight:600">imputed multilateral</span> ${shareText}`
+    }
+    const name = getNameByCode(indicatorMapping, indicator) ?? ""
+    return `${name} ${shareText}`
+  }, [tableView, indicator, unit, indicatorSubtitle, recipientName, donorName])
 
   const tableFn = React.useCallback(
     () => sparkbarTable(displayTableData, "recipients", { currency, scale: absoluteScale, unit }),
@@ -152,7 +169,9 @@ function App() {
 
   const tableNote = unit === "value"
     ? `ODA values in ${pricesNote} ${currencyLabel}.`
-    : `ODA values as a share of all aid from bilateral donors to ${recipientName}.`
+    : unit === "pct_total_recipient"
+      ? `ODA values as a share of all aid from bilateral donors to ${recipientName}.`
+      : `ODA values as a share of all aid provided by ${donorName} to developing countries.`
 
   return (
       <div className="mx-auto space-y-12 px-4 py-10 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
@@ -234,7 +253,21 @@ function App() {
                 subtitle={relativeIndicatorSubtitle}
                 subtitleIsHTML={true}
                 source="OECD DAC2A table."
-                note={`ODA values as a share of all aid from bilateral donors to ${recipientName}.`}
+                controls={
+                  <ToggleSwitchMini
+                    label="Perspective"
+                    value={relativePerspective}
+                    options={[
+                      {label: "Received", value: "recipient"},
+                      {label: "Provided", value: "donor"}
+                    ]}
+                    onChange={setRelativePerspective}
+                  />
+                }
+                note={relativePerspective === "recipient"
+                  ? `ODA values as a share of all aid from bilateral donors to ${recipientName}.`
+                  : `ODA values as a share of all aid provided by ${donorName} to developing countries.`
+                }
                 empty={relativeData.length === 0}
                 emptyMessage="No data available"
                 fileName={areaFilename}
