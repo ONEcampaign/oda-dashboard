@@ -38,7 +38,8 @@ export function sparkbarTable(data, mode, {breakdown, currency = null, scale = n
         maxValues,
         colorColumn = null,
         getColorForType = () => customPalette.lightGrey,
-        colorPalette = [];
+        colorPalette = [],
+        sortPalette = null;
 
     if (mode === "financing") {
 
@@ -60,7 +61,7 @@ export function sparkbarTable(data, mode, {breakdown, currency = null, scale = n
 
     } else {
 
-        let groupVar, contextColumns, sortPalette;
+        let groupVar, contextColumns;
 
         if (mode === "recipients") {
             groupVar = "Indicator";
@@ -144,8 +145,12 @@ export function sparkbarTable(data, mode, {breakdown, currency = null, scale = n
                                 cellFmt
                             )(rowValue);
                         } else {
+                            const paletteIndex = sortPalette
+                                ? sortPalette.domain.indexOf(column)
+                                : -1;
+                            const effectiveIndex = paletteIndex !== -1 ? paletteIndex : index % colorPalette.length;
                             return sparkbar(
-                                colorPalette[index % colorPalette.length],
+                                colorPalette[effectiveIndex],
                                 "left",
                                 minValues,
                                 maxValues,
