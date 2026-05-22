@@ -33,7 +33,6 @@ OTHER_FINANCING_INDICATORS: dict = {
     "ONE.10.1010C": "Core ODA (ONE Definition)",
     "DAC1.10.1015": "Bilateral ODA",
     "DAC1.10.2000": "Multilateral ODA",
-    "DAC1.10.11026": "Debt relief",
     "DAC1.10.1600": "Debt relief",
     "DAC1.60.11030": "Private sector instruments",
     "DAC1.60.11040": "Private sector instruments",
