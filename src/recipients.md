@@ -60,6 +60,7 @@ function App() {
   const [prices, setPrices] = React.useState("constant")
   const [timeRange, setTimeRange] = React.useState([timeRangeOptions.end - 20, timeRangeOptions.end])
   const [unit, setUnit] = React.useState("value")
+  const [tableView, setTableView] = React.useState("disaggregated")
 
   const unitOptions = React.useMemo(() => [
     {label: getCurrencyLabel(currency, {currencyLong: true, currencyOnly: true}), value: "value"},
@@ -86,6 +87,20 @@ function App() {
     [data?.rawData, unit, currency, prices]
   )
 
+  const displayTableData = React.useMemo(() => {
+    if (tableView === "total" && indicator.length > 1) {
+      const byYear = new Map()
+      for (const row of tableData) {
+        if (!byYear.has(row.year)) {
+          byYear.set(row.year, { ...row, indicator: "Bilateral + imputed multilateral ODA", value: 0 })
+        }
+        byYear.get(row.year).value += row.value ?? 0
+      }
+      return [...byYear.values()]
+    }
+    return tableData
+  }, [tableData, tableView, indicator])
+
   const donorName = formatString(getNameByCode(donorMapping, donor) ?? "")
   const recipientName = getNameByCode(recipientMapping, recipient) ?? ""
     const currencyLabel = getCurrencyLabel(currency, {currencyOnly: true, currencyLong: true})
@@ -101,7 +116,7 @@ function App() {
 
   const relativeIndicatorSubtitle = React.useMemo(() => {
     if (indicator.length > 1) {
-      return `<span style="color:${customPalette.bilateral}; font-weight:600">Bilateral</span> and <span style="color:${customPalette.multilateral}; font-weight:600">imputed multilateral</span> as a share of the total`
+      return `<span style="color:${customPalette.bilateral}; font-weight:600">Bilateral</span> and <span style="color:${customPalette.multilateral}; font-weight:600">imputed multilateral</span> as a share of aid received by ${recipientName}`
     }
     const name = getNameByCode(indicatorMapping, indicator) ?? ""
     return `${name} as a share of the total`
@@ -117,9 +132,18 @@ function App() {
     [relativeData]
   )
 
+  const tableSubtitle = React.useMemo(() => {
+    if (tableView === "total" && indicator.length > 1) {
+      return unit === "value"
+        ? `<span style="color:${customPalette.total}; font-weight:600">Bilateral + imputed multilateral</span> ODA`
+        : `<span style="color:${customPalette.total}; font-weight:600">Bilateral + imputed multilateral</span> as a share of aid received by ${recipientName}`
+    }
+    return unit === "value" ? indicatorSubtitle : relativeIndicatorSubtitle
+  }, [tableView, indicator, unit, indicatorSubtitle, relativeIndicatorSubtitle, recipientName])
+
   const tableFn = React.useCallback(
-    () => sparkbarTable(tableData, "recipients", { currency, scale: absoluteScale, unit }),
-    [tableData, currency, absoluteScale, unit]
+    () => sparkbarTable(displayTableData, "recipients", { currency, scale: absoluteScale, unit }),
+    [displayTableData, currency, absoluteScale, unit]
   )
 
   const columnFilename = formatString(`${donorName} ${recipientName}`, {fileMode: true})
@@ -224,20 +248,33 @@ function App() {
             
             <ONEVisual
               title={`ODA to ${recipientName} from ${donorName}`}
-              subtitle={indicatorSubtitle}
+              subtitle={tableSubtitle}
               subtitleIsHTML={true}
               source="OECD DAC2A table."
               controls={
+                <>
                   <DropdownMenuMini label="Unit" options={unitOptions} value={unit} onChange={setUnit} search={false} />
+                  {indicator.length > 1 && (
+                    <ToggleSwitchMini
+                      label="View"
+                      value={tableView}
+                      options={[
+                        {label: "Disaggregated", value: "disaggregated"},
+                        {label: "Total", value: "total"}
+                      ]}
+                      onChange={setTableView}
+                    />
+                  )}
+                </>
               }
               note={tableNote}
-              empty={tableData.length === 0}
+              empty={displayTableData.length === 0}
               emptyMessage="No data available"
               fileName={tableFilename}
-              data={tableData}
+              data={displayTableData}
               dataDownload={true}
             >
-              <AutoTable data={tableData} tableFn={tableFn} />
+              <AutoTable data={displayTableData} tableFn={tableFn} />
             </ONEVisual>
         </>
       )}
