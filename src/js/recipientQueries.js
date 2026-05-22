@@ -65,13 +65,23 @@ export function recipientsQueries(
         donor: row.donor,
         recipient: row.recipient,
         indicator: row.indicator,
-        value: row.pct_of_total_oda * 100,
+        value: row.pct_total_recipient * 100,
         unit: "% of total ODA",
         source: "OECD DAC2A"
     })), timeRange);
 
     // Return raw rows for table transformation
-    return {absolute, relative, rawData: rows};
+    const relativeDonor = fillMissingYearIndicators(rows.map((row) => ({
+        year: row.year,
+        donor: row.donor,
+        recipient: row.recipient,
+        indicator: row.indicator,
+        value: row.pct_total_donor != null ? row.pct_total_donor * 100 : null,
+        unit: "% of total ODA provided",
+        source: "OECD DAC2A"
+    })), timeRange);
+
+    return {absolute, relative, relativeDonor, rawData: rows};
 }
 
 // Separate table transformation so unit changes don't trigger base query
@@ -83,10 +93,14 @@ export function transformTableData(rows, unit, currency, prices) {
         indicator: row.indicator,
         value: unit === "value"
             ? row.value
-            : row.pct_of_total_oda * 100,
+            : unit === "pct_total_recipient"
+                ? (row.pct_total_recipient != null ? row.pct_total_recipient * 100 : null)
+                : (row.pct_total_donor != null ? row.pct_total_donor * 100 : null),
         unit: unit === "value"
             ? `${currency} ${prices} million`
-            : "% of bilateral + imputed multilateral ODA",
+            : unit === "pct_total_recipient"
+                ? "% of received aid"
+                : "% of provided aid",
         source: "OECD DAC2A"
     }));
 }
@@ -160,7 +174,8 @@ function executeRecipientsSeries(
             recipient: row.recipient_name,
             indicator: row.indicator_name,
             value: convertUnitsToMillions(row[valueColumn]),
-            pct_of_total_oda: row.pct_of_total_oda ?? null
+            pct_total_recipient: row.pct_total_recipient ?? null,
+            pct_total_donor: row.pct_total_donor ?? null
         }))
         .sort((a, b) => {
             if (a.year !== b.year) return a.year - b.year;
