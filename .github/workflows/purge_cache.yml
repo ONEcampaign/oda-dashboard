@@ -27,4 +27,13 @@ jobs:
           curl -X POST "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             -H "Content-Type: application/json" \
-            --data '{"files":["https://data-apps.one.org/${{ env.APP_PATH }}/"]}'
+            --data '{
+              "files": [
+                "https://data-apps.one.org/${{ env.APP_PATH }}/",
+                "https://data-apps.one.org/${{ env.APP_PATH }}/index.html",
+                "https://data-apps.one.org/${{ env.APP_PATH }}/recipients.html",
+                "https://data-apps.one.org/${{ env.APP_PATH }}/gender.html",
+                "https://data-apps.one.org/${{ env.APP_PATH }}/sectors.html",
+                "https://data-apps.one.org/${{ env.APP_PATH }}/faqs.html"
+              ]
+            }'
