@@ -63,13 +63,15 @@ jobs:
 
       # Observable compiled output — keyed on script/config content so a code
       # change forces recompilation without also discarding the bulk data above.
+      # restore-keys includes the script hash so a stale cache from a different
+      # script version is never restored (avoids serving old parquet columns).
       - name: Cache Observable output
         uses: actions/cache@v4
         with:
           path: src/.observablehq/cache
           key: observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py') }}-${{ steps.date.outputs.week }}
           restore-keys: |
-            observable-
+            observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py') }}-
 
       # Download pydeflate exchange-rate + deflator data before the build so
       # every data loader finds it already cached.  Retries handle transient
