@@ -374,15 +374,6 @@ def add_share_of_gni(df: pd.DataFrame) -> pd.DataFrame:
     return merged
 
 
-def add_financing_indicator_codes(df: pd.DataFrame) -> pd.DataFrame:
-    """Add indicator codes to the dataframe"""
-    df = df.rename(columns={"indicator": "indicator_name"})
-    with open(PATHS.FINANCING_INDICATORS_CODES, "r") as f:
-        indicator_map = {v: int(k) for k, v in json.load(f).items()}
-    df = df.assign(indicator=lambda d: d["indicator_name"].map(indicator_map))
-    return df
-
-
 def add_recipient_indicator_codes(df: pd.DataFrame) -> pd.DataFrame:
     """Add indicator codes to the dataframe"""
     df = df.rename(columns={"indicator": "indicator_name"})
