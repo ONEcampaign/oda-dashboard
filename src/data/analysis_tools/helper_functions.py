@@ -34,6 +34,52 @@ def save_time_range_to_json(time_dict: dict, file_name: str):
         json.dump(time_dict, f, indent=2)
 
 
+def generate_view_options(
+    df: pd.DataFrame,
+    columns: dict[str, list[str]],
+    year_col: str = "year",
+    base_year: int | None = None,
+    file_name: str = "view_options.json",
+) -> None:
+    """
+    Generate a JSON file with unique values for each specified column.
+
+    For the year column, outputs {"start": min, "end": max, "base": base_year}.
+    For all other columns, outputs a list of unique string values. Pass a non-empty
+    list as the value to pin those items first (in order); remaining values follow
+    alphabetically. Pass an empty list for purely alphabetical ordering.
+
+    Args:
+        df: Source DataFrame
+        columns: Dict mapping column names to ordering lists. Keys define which columns
+            to include; values are lists of items that should appear first.
+        year_col: Name of the column to treat as a year range (receives {start, end, base} format)
+        base_year: Value for the "base" key; defaults to the maximum year in the data
+        file_name: Output filename written to PATHS.TOOLS
+    """
+    def _ordered(values: list[str], order: list[str]) -> list[str]:
+        pinned = [v for v in order if v in set(values)]
+        rest = sorted(v for v in values if v not in set(order))
+        return pinned + rest
+
+    options = {}
+    for col, order in columns.items():
+        if col == year_col:
+            years = df[col].dropna().astype(int)
+            options[col] = {
+                "start": int(years.min()),
+                "end": int(years.max()),
+                "base": base_year if base_year is not None else int(years.max()),
+            }
+        else:
+            unique_vals = [str(v) for v in df[col].dropna().unique()]
+            options[col] = _ordered(unique_vals, order) if order else sorted(unique_vals)
+
+    logger.info(f"Saving view options to {PATHS.TOOLS}/{file_name}")
+    with open(PATHS.TOOLS / file_name, "w") as f:
+        json.dump(options, f, indent=2)
+
+
 def set_cache_dir(path=PATHS.DATA, oda_data: bool = False, pydeflate: bool = False):
     if not os.path.exists(path):
         logger.info(f"Creating directory for cached data: {path}")
