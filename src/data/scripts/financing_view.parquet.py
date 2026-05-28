@@ -9,6 +9,7 @@ from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
     parquet_to_stdout,
     convert_values_to_units,
+    generate_view_options,
 )
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
@@ -17,8 +18,8 @@ from src.data.analysis_tools.transformations import (
     widen_currency_price, get_group_total,
 )
 from src.data.config import (
-    FINANCING_INDICATORS,
     FINANCING_TIME,
+    ALL_FINANCING_INDICATORS,
     IN_DONOR_FINANCING_INDICATORS,
     OTHER_FINANCING_INDICATORS,
     ALL_DONORS,
@@ -29,14 +30,14 @@ from src.data.config import (
 set_cache_dir(oda_data=True, pydeflate=True)
 
 
-def resolve_indicator_duplicates(dac1_raw: pd.DataFrame) -> pd.DataFrame:
+def resolve_indicator_duplicates(dac1_raw: pd.DataFrame, raise_error: bool = True) -> pd.DataFrame:
     multi_code_names = {
         name
-        for name, count in Counter(FINANCING_INDICATORS.values()).items()
+        for name, count in Counter(ALL_FINANCING_INDICATORS.values()).items()
         if count > 1
     }
 
-    annotated = dac1_raw.assign(_indicator=lambda d: d["one_indicator"].map(FINANCING_INDICATORS))
+    annotated = dac1_raw.assign(_indicator=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS))
     shared = annotated[annotated["_indicator"].isin(multi_code_names)]
 
     conflicts = []
@@ -51,16 +52,21 @@ def resolve_indicator_duplicates(dac1_raw: pd.DataFrame) -> pd.DataFrame:
             drop_indices.extend(group.index[1:].tolist())
         else:
             conflicts.append((year, donor_code, indicator))
+            drop_indices.extend(group.index[1:].tolist())
 
     if conflicts:
         lines = [
             f"  year={y}, donor_code={d}, indicator='{ind}'"
             for y, d, ind in conflicts
         ]
-        raise ValueError(
+        message = (
             "Conflicting values for year-donor pairs with shared indicator codes:\n"
             + "\n".join(lines)
         )
+        if raise_error:
+            raise ValueError(message)
+        else:
+            logger.warning(message)
 
     return dac1_raw.drop(index=drop_indices)
 
@@ -90,8 +96,8 @@ def get_dac1():
         use_bulk_download=True,
     ).get_indicators(list(OTHER_FINANCING_INDICATORS))
 
-    dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw])
-    dac1_raw = resolve_indicator_duplicates(dac1_raw)
+    dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw], ignore_index=True)
+    dac1_raw = resolve_indicator_duplicates(dac1_raw, raise_error=False)
 
     dac1 = (
         dac1_raw.groupby(
@@ -99,7 +105,7 @@ def get_dac1():
         )["value"]
         .sum()
         .reset_index()
-        .assign(indicator_name=lambda d: d["one_indicator"].map(FINANCING_INDICATORS))
+        .assign(indicator_name=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS))
         .drop(columns=["one_indicator"])
     )
 
@@ -183,7 +189,7 @@ def get_eui_eu27_dac1():
         other_ge_client, indicator=list(OTHER_FINANCING_INDICATORS)
     )
 
-    eui_eu27_dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw])
+    eui_eu27_dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw], ignore_index=True)
 
     eui_eu27_dac1_raw = resolve_indicator_duplicates(eui_eu27_dac1_raw)
 
@@ -192,7 +198,7 @@ def get_eui_eu27_dac1():
     eui_eu27_dac1 = (
         eui_eu27_dac1_converted
         .assign(
-            indicator_name=lambda d: d["one_indicator"].map(FINANCING_INDICATORS),
+            indicator_name=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS),
             donor_name="EU27 & EU Institutions",
         ).groupby(["year", "donor_name", "currency", "price", "indicator_name"], dropna=False, observed=True)["value"].sum().reset_index()
     )
@@ -311,10 +317,49 @@ def get_financing_data():
     # NOTE: Frontend queries must divide value_* columns by 1e6 to get millions
     financing = convert_values_to_units(financing)
 
+    financing["donor_name"] = financing["donor_name"].replace({"G7": "G7 countries"})
+
     return financing
 
 
 if __name__ == "__main__":
+
+    indicators_order: list[str] = [
+        "Total ODA",
+        "Core ODA (ONE Definition)",
+        "Bilateral ODA",
+        "Multilateral ODA",
+        "Debt relief",
+        "Grants",
+        "Non-grants",
+        "Refugees in donor countries",
+        "Scholarships and student costs in donor countries",
+        "Scholarships/training in donor country",
+        "Imputed student costs",
+        "Private sector instruments",
+        "Private sector instruments - institutional approach",
+        "Private sector instruments - instrument approach",
+    ]
+
+    donors_order: list[str] = [
+        "DAC countries",
+        "Non-DAC countries",
+        "All bilateral donors",
+        "G7 countries",
+        "EU27 countries",
+        "EU27 & EU Institutions",
+    ]
+
     logger.info("Generating financing table...")
     df = get_financing_data()
+    generate_view_options(
+        df=df,
+        columns={
+            "donor_name": donors_order,
+            "indicator_name": indicators_order,
+            "year": [],
+        },
+        base_year=FINANCING_TIME["base"],
+        file_name="financing_view_options.json",
+    )
     parquet_to_stdout(df)
