@@ -34,7 +34,9 @@ OTHER_FINANCING_INDICATORS: dict = {
     "ONE.10.1010_11010": "Total ODA",
     "ONE.10.1010C": "Core ODA (ONE Definition)",
     "DAC1.10.1015": "Bilateral ODA",
+    "DAC1.10.11015": "Bilateral ODA",
     "DAC1.10.2000": "Multilateral ODA",
+    "DAC1.10.12000": "Multilateral ODA",
     "DAC1.10.1600": "Debt relief",
     "DAC1.10.11026": "Debt relief",
     "DAC1.60.11030": "Private sector instruments",
@@ -43,7 +45,8 @@ OTHER_FINANCING_INDICATORS: dict = {
     "DAC1.60.11024": "Private sector instruments - instrument approach",
 }
 
-FINANCING_INDICATORS: dict = OTHER_FINANCING_INDICATORS | IN_DONOR_FINANCING_INDICATORS
+ALL_FINANCING_INDICATORS: dict = OTHER_FINANCING_INDICATORS | IN_DONOR_FINANCING_INDICATORS
+
 
 RECIPIENTS_INDICATORS: dict = {
     "DAC2A.10.206": "Bilateral",
@@ -68,7 +71,7 @@ DONOR_GROUPS: dict = {
 
 AGGREGATE_DONORS: dict = {
     20_001: "DAC countries",
-    20_006: "non-DAC countries",
+    20_006: "Non-DAC countries",
     20_003: "G7 countries"
 }
 
@@ -131,7 +134,6 @@ class PATHS:
     DONORS = TOOLS / "donors.json"
     RECIPIENTS = TOOLS / "recipients.json"
 
-    FINANCING_INDICATORS_CODES = TOOLS / "financing_indicators.json"
     RECIPIENT_INDICATORS_CODES = TOOLS / "recipients_indicators.json"
 
     DATA = SRC / "data" / "cache"
