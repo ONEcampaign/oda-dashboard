@@ -11,8 +11,7 @@ import {Header} from "npm:@one-data/observable-themes/ui"
 import {ONEVisual, AutoPlot, AutoTable} from "npm:@one-data/observable-themes/charts"
 import {getCurrencyLabel, formatString, resolveScale, isEmbedded} from "npm:@one-data/observable-themes/utils"
 import {setCustomColors} from "npm:@one-data/observable-themes/colors"
-import {financingQueries, transformTableData, donorOptions, financingIndicators} from "./js/financingQueries.js"
-import {name2CodeMap, getNameByCode} from "./js/utils.js"
+import {financingQueries, transformTableData, donorNames, indicatorNames, yearOptions} from "./js/financingQueries.js"
 import {customPalette} from "./js/colors.js"
 import {columnChart} from "./js/columnChart.js"
 import {areaChart} from "./js/areaChart.js"
@@ -21,32 +20,22 @@ import {APP_TITLE, APP_DESCRIPTION, NAV_ITEMS, CURRENCY_OPTIONS, PRICES_OPTIONS,
 
 setCustomColors(customPalette)
 
-const timeRangeOptions = await FileAttachment("./data/analysis_tools/financing_time.json").json()
+const DONOR_OPTIONS = donorNames.map(n => ({label: n, value: n}))
 
-const donorMapping = name2CodeMap(donorOptions, {})
-const indicatorMapping = new Map(
-    Object.entries(financingIndicators).map(([k, v]) => [v, Number(k)])
-)
+const INDICATOR_OPTIONS = indicatorNames.map(n => ({label: n, value: n}))
 
-const DONOR_OPTIONS = Array.from(donorMapping.entries())
-    .map(([label, value]) => ({label, value}))
-    .sort((a, b) => a.label.localeCompare(b.label))
-
-const INDICATOR_OPTIONS = Array.from(indicatorMapping.entries())
-    .map(([label, value]) => ({label, value}))
-
-const TOTAL_ODA_CODE = indicatorMapping.get("Total ODA")
-const CORE_ODA_CODE = indicatorMapping.get("Core ODA (ONE Definition)")
-const EU27_EUI_CODE = donorMapping.get("EU27 + EU Institutions")
+const TOTAL_ODA_CODE = "Total ODA"
+const CORE_ODA_CODE = "Core ODA (ONE Definition)"
+const EU27_EUI_CODE = "EU27 & EU Institutions"
 ```
 
 ```jsx
 function App() {
-    const [donor, setDonor] = React.useState(donorMapping.get("DAC countries"))
+    const [donor, setDonor] = React.useState("DAC countries")
     const [indicator, setIndicator] = React.useState(TOTAL_ODA_CODE)
     const [currency, setCurrency] = React.useState("usd")
     const [prices, setPrices] = React.useState("constant")
-    const [timeRange, setTimeRange] = React.useState([timeRangeOptions.end - 20, timeRangeOptions.end])
+    const [timeRange, setTimeRange] = React.useState([yearOptions.end - 20, yearOptions.end])
     const [unit, setUnit] = React.useState("value")
     const [commitment, setCommitment] = React.useState(false)
 
@@ -80,14 +69,14 @@ function App() {
     )
 
     const tableData = React.useMemo(
-        () => transformTableData(data?.rawData ?? [], unit, indicator, currency, prices),
-        [data?.rawData, unit, indicator, currency, prices]
+        () => transformTableData(data?.rawData ?? [], unit, currency, prices),
+        [data?.rawData, unit, currency, prices]
     )
 
-    const donorName = formatString(getNameByCode(donorMapping, donor) ?? "")
-    const indicatorName = getNameByCode(indicatorMapping, indicator) ?? ""
+    const donorName = formatString(donor ?? "")
+    const indicatorName = indicator ?? ""
     const currencyLabel = getCurrencyLabel(currency, {currencyOnly: true, currencyLong: true})
-    const pricesNote = `${prices}${prices === "constant" ? ` ${timeRangeOptions.base}` : ""}`
+    const pricesNote = `${prices}${prices === "constant" ? ` ${yearOptions.base}` : ""}`
     const coreOdaNote = indicator === CORE_ODA_CODE
         ? "Core ODA (ONE definition): Total ODA excluding in-donor spending."
         : ""
@@ -183,8 +172,8 @@ function App() {
                     </div>
                     <div className="flex flex-col items-stretch gap-6">
                         <RangeInput
-                            min={timeRangeOptions.start}
-                            max={timeRangeOptions.end}
+                            min={yearOptions.start}
+                            max={yearOptions.end}
                             step={1}
                             label="Time range"
                             value={timeRange}

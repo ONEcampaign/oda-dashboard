@@ -2,55 +2,81 @@ import json
 from collections import defaultdict
 
 import pandas as pd
-from oda_data import DAC1Data, provider_groupings
+from oda_data import OECDClient
 from pydeflate import oecd_dac_deflate, oecd_dac_exchange, set_pydeflate_path
 
-from src.data.analysis_tools.helper_functions import get_dac_ids
 from src.data.config import (
     BASE_TIME,
     CURRENCIES,
-    DONOR_GROUPS,
+    ALL_DONORS,
+    BILATERAL_DONORS,
+    EU_COUNTRIES,
     PATHS,
     RECIPIENT_GROUPS,
-    logger,
+    logger, DONOR_GROUPS,
 )
 
 set_pydeflate_path(PATHS.PYDEFLATE)
 
-EU_IDS = provider_groupings()["eu27_countries"]
-
 
 def get_gni(start_year: int, end_year: int) -> pd.DataFrame:
-    donor_ids = get_dac_ids(PATHS.DONORS)
 
-    bilateral_df = DAC1Data(years=range(start_year, end_year + 1)).read(
-        using_bulk_download=True,
-        additional_filters=[
-            ("amount_type", "==", "Current prices"),
-            ("donor_code", "in", donor_ids),
-            ("aidtype_code", "==", 1),
-        ],
-        columns=["donor_code", "year", "value"],
-    )
+    gni_raw = OECDClient(
+        years=range(start_year, end_year + 1),
+        providers=list(ALL_DONORS),
+        measure="net_disbursement",
+        use_bulk_download=True,
+    ).get_indicators("DAC1.40.1")[["donor_code", "donor_name", "year", "value"]]
 
     # Deduplicate - raw data may have duplicate rows with identical GNI values
-    bilateral_df = bilateral_df.drop_duplicates(subset=["donor_code", "year"])
+    gni_df = gni_raw.drop_duplicates(subset=["donor_code", "year"])
 
-    if all(code in bilateral_df.donor_code.unique() for code in EU_IDS):
-        eu_df = (
-            bilateral_df.loc[lambda d: d["donor_code"].isin(EU_IDS)]
-            .groupby(["year"], observed=True, dropna=False)["value"]
-            .sum()
-            .reset_index()
-            .assign(donor_code=918)
-        )
+    eu27_df = get_group_total(gni_df, EU_COUNTRIES, ["year"], donor_name="EU27 countries")
+    eu27_eui_df = get_group_total(gni_df, EU_COUNTRIES, ["year"], donor_name="EU & EU Institutions")
+    bilateral_df = get_group_total(
+        gni_df,
+        BILATERAL_DONORS,
+        ["year"],
+        check_all_keys=False,
+        donor_name="All bilateral donors"
+    )
 
-    else:
-        raise Exception("Not all EU countries present in df")
+    return (
+        pd.concat([gni_df, eu27_df, eu27_eui_df, bilateral_df])
+        .rename(columns={"value": "gni"})
+        .drop(columns="donor_code")
+    )
 
-    df = pd.concat([bilateral_df, eu_df])
+
+
+def get_group_total(
+        df: pd.DataFrame,
+        group_dict: dict,
+        group_cols: list,
+        check_all_keys: bool = True,
+        donor_name: str = None,
+        donor_code: str = None
+) -> pd.DataFrame:
+
+    if check_all_keys & ~all(code in df.donor_code.unique() for code in group_dict):
+
+            raise Exception("Not all countries present in df")
+
+    df = (
+        df.loc[lambda d: d["donor_code"].isin(group_dict)]
+        .groupby(group_cols, observed=True, dropna=False)["value"]
+        .sum()
+        .reset_index()
+    )
+
+    if donor_name:
+        df["donor_name"] = donor_name
+    if donor_code:
+        df["donor_code"] = donor_code
 
     return df
+
+
 
 
 def add_currencies_and_prices(
@@ -241,11 +267,11 @@ def add_share_of_total_oda(df: pd.DataFrame) -> pd.DataFrame:
     total = (
         df.loc[lambda d: d["indicator_name"] == "Total ODA"]
         .copy()
-        .filter(["year", "donor_code", "value_usd_current"])
+        .filter(["year", "donor_name", "value_usd_current"])
         .rename(columns={"value_usd_current": "total_oda"})
     )
 
-    merged = df.merge(total, on=["year", "donor_code"], how="left")
+    merged = df.merge(total, on=["year", "donor_name"], how="left")
 
     merged["pct_of_total_oda"] = (
         merged["value_usd_current"] / merged["total_oda"]
@@ -339,24 +365,13 @@ def add_share_of_gni(df: pd.DataFrame) -> pd.DataFrame:
 
     gni = get_gni(start_year=df["year"].min(), end_year=df["year"].max())
 
-    gni = add_donor_groupings(gni).rename(columns={"value": "gni"})
-
-    merged = df.merge(gni, on=["year", "donor_code"], how="left")
+    merged = df.merge(gni, on=["year", "donor_name"], how="left")
 
     merged["pct_of_gni"] = (merged["value_usd_current"] / merged["gni"]).round(5)
 
     merged = merged.drop(columns=["gni"])
 
     return merged
-
-
-def add_financing_indicator_codes(df: pd.DataFrame) -> pd.DataFrame:
-    """Add indicator codes to the dataframe"""
-    df = df.rename(columns={"indicator": "indicator_name"})
-    with open(PATHS.FINANCING_INDICATORS_CODES, "r") as f:
-        indicator_map = {v: int(k) for k, v in json.load(f).items()}
-    df = df.assign(indicator=lambda d: d["indicator_name"].map(indicator_map))
-    return df
 
 
 def add_recipient_indicator_codes(df: pd.DataFrame) -> pd.DataFrame:

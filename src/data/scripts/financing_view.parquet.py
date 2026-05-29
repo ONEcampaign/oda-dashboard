@@ -1,45 +1,81 @@
+from collections import Counter
+
 import numpy as np
 import pandas as pd
 from oda_data import OECDClient
 from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_indicator
-from oda_data.tools.groupings import provider_groupings
 
 from src.data.analysis_tools.helper_functions import (
-    get_dac_ids,
     set_cache_dir,
     parquet_to_stdout,
     convert_values_to_units,
+    generate_view_options,
 )
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
-    add_donor_groupings,
-    add_donor_names,
-    add_financing_indicator_codes,
     add_share_of_gni,
     add_share_of_total_oda,
-    donor_groups,
-    widen_currency_price,
+    widen_currency_price, get_group_total,
 )
 from src.data.config import (
-    FINANCING_INDICATORS,
     FINANCING_TIME,
+    ALL_FINANCING_INDICATORS,
     IN_DONOR_FINANCING_INDICATORS,
     OTHER_FINANCING_INDICATORS,
-    PATHS,
-    eui_bi_code,
-    logger,
+    ALL_DONORS,
+    EU_TOTAL,
+    logger, EU_COUNTRIES, BILATERAL_DONORS,
 )
 
-donor_ids = get_dac_ids(PATHS.DONORS)
-eu_ids = provider_groupings()["eu27_total"]
 set_cache_dir(oda_data=True, pydeflate=True)
+
+
+def resolve_indicator_duplicates(dac1_raw: pd.DataFrame, raise_error: bool = True) -> pd.DataFrame:
+    multi_code_names = {
+        name
+        for name, count in Counter(ALL_FINANCING_INDICATORS.values()).items()
+        if count > 1
+    }
+
+    annotated = dac1_raw.assign(_indicator=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS))
+    shared = annotated[annotated["_indicator"].isin(multi_code_names)]
+
+    conflicts = []
+    drop_indices = []
+
+    for (year, donor_code, indicator), group in shared.groupby(
+        ["year", "donor_code", "_indicator"], dropna=False, observed=True
+    ):
+        if len(group) <= 1:
+            continue
+        if group["value"].dropna().nunique() <= 1:
+            drop_indices.extend(group.index[1:].tolist())
+        else:
+            conflicts.append((year, donor_code, indicator))
+            drop_indices.extend(group.index[1:].tolist())
+
+    if conflicts:
+        lines = [
+            f"  year={y}, donor_code={d}, indicator='{ind}'"
+            for y, d, ind in conflicts
+        ]
+        message = (
+            "Conflicting values for year-donor pairs with shared indicator codes:\n"
+            + "\n".join(lines)
+        )
+        if raise_error:
+            raise ValueError(message)
+        else:
+            logger.warning(message)
+
+    return dac1_raw.drop(index=drop_indices)
 
 
 def get_dac1():
     # in-donor indicators in net flows
     in_donor_raw = OECDClient(
         years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1),
-        providers=donor_ids,
+        providers=list(ALL_DONORS),
         measure="net_disbursement",
         use_bulk_download=True,
     ).get_indicators(list(IN_DONOR_FINANCING_INDICATORS))
@@ -47,7 +83,7 @@ def get_dac1():
     # other indicators in net flows up to 2017
     other_flow_raw = OECDClient(
         years=range(FINANCING_TIME["start"], 2018),
-        providers=donor_ids,
+        providers=list(ALL_DONORS),
         measure="net_disbursement",
         use_bulk_download=True,
     ).get_indicators(list(OTHER_FINANCING_INDICATORS))
@@ -55,20 +91,21 @@ def get_dac1():
     # other indicators in grant equivalents after 2017
     other_ge_raw = OECDClient(
         years=range(2018, FINANCING_TIME["end"] + 1),
-        providers=donor_ids,
+        providers=list(ALL_DONORS),
         measure="grant_equivalent",
         use_bulk_download=True,
     ).get_indicators(list(OTHER_FINANCING_INDICATORS))
 
-    dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw])
+    dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw], ignore_index=True)
+    dac1_raw = resolve_indicator_duplicates(dac1_raw, raise_error=False)
 
     dac1 = (
         dac1_raw.groupby(
-            ["year", "donor_code", "one_indicator"], dropna=False, observed=True
+            ["year", "donor_code", "donor_name", "one_indicator"], dropna=False, observed=True
         )["value"]
         .sum()
         .reset_index()
-        .assign(indicator=lambda d: d["one_indicator"].map(FINANCING_INDICATORS))
+        .assign(indicator_name=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS))
         .drop(columns=["one_indicator"])
     )
 
@@ -84,14 +121,14 @@ def get_grants():
 
     grants_flow_raw = OECDClient(
         years=range(FINANCING_TIME["start"], 2018),
-        providers=donor_ids,
+        providers=list(ALL_DONORS),
         measure=["net_disbursement_grant", "net_disbursement"],
         use_bulk_download=True,
     ).get_indicators(["DAC1.10.1010"])
 
     grants_ge_raw = OECDClient(
         years=range(2018, FINANCING_TIME["end"] + 1),
-        providers=donor_ids,
+        providers=list(ALL_DONORS),
         measure=["net_disbursement_grant", "grant_equivalent"],
         use_bulk_download=True,
     ).get_indicators(["DAC1.10.1010"])
@@ -99,26 +136,27 @@ def get_grants():
     grants_raw = pd.concat([grants_flow_raw, grants_ge_raw])
 
     grants = (
-        grants_raw.assign(indicator=lambda d: d["fund_flows"].map(mapping))
-        .groupby(["year", "donor_code", "indicator"], dropna=False, observed=True)[
+        grants_raw.assign(indicator_name=lambda d: d["fund_flows"].map(mapping))
+        .groupby(["year", "donor_code", "donor_name", "indicator_name"], dropna=False, observed=True)[
             "value"
         ]
         .sum()
         .reset_index()
-        .pivot(index=["year", "donor_code"], columns="indicator", values="value")
+        .pivot(index=["year", "donor_code", "donor_name"], columns="indicator_name", values="value")
         .reset_index()
         .assign(**{"Non-grants": lambda d: d["Total ODA"] - d["Grants"]})
-        .melt(id_vars=["year", "donor_code"], value_vars=["Grants", "Non-grants"])
+        .melt(id_vars=["year", "donor_code", "donor_name"], value_vars=["Grants", "Non-grants"])
     )
 
     return grants
 
 
 def get_eui_eu27_dac1():
+
     # in-donor indicators in net flows
     in_donor_client = OECDClient(
         years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1),
-        providers=list(eu_ids),
+        providers=list(EU_TOTAL),
         measure="net_disbursement",
         use_bulk_download=True,
     )
@@ -130,7 +168,7 @@ def get_eui_eu27_dac1():
     # other indicators in net flows up to 2017
     other_flow_client = OECDClient(
         years=range(FINANCING_TIME["start"], 2018),
-        providers=list(eu_ids),
+        providers=list(EU_TOTAL),
         measure="net_disbursement",
         use_bulk_download=True,
     )
@@ -142,7 +180,7 @@ def get_eui_eu27_dac1():
     # other indicators in grant equivalents after 2017
     other_ge_client = OECDClient(
         years=range(2018, FINANCING_TIME["end"] + 1),
-        providers=list(eu_ids),
+        providers=list(EU_TOTAL),
         measure="grant_equivalent",
         use_bulk_download=True,
     )
@@ -151,20 +189,25 @@ def get_eui_eu27_dac1():
         other_ge_client, indicator=list(OTHER_FINANCING_INDICATORS)
     )
 
-    eui_eu27_dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw])
+    eui_eu27_dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw], ignore_index=True)
+
+    eui_eu27_dac1_raw = resolve_indicator_duplicates(eui_eu27_dac1_raw)
+
+    eui_eu27_dac1_converted = add_currencies_and_prices(eui_eu27_dac1_raw, base_year=FINANCING_TIME["base"])
 
     eui_eu27_dac1 = (
-        eui_eu27_dac1_raw.query("donor_code == 918")
-        .assign(donor_code=eui_bi_code)
-        .assign(indicator=lambda d: d["one_indicator"].map(FINANCING_INDICATORS))[
-            ["year", "donor_code", "indicator", "value"]
-        ]
+        eui_eu27_dac1_converted
+        .assign(
+            indicator_name=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS),
+            donor_name="EU27 & EU Institutions",
+        ).groupby(["year", "donor_name", "currency", "price", "indicator_name"], dropna=False, observed=True)["value"].sum().reset_index()
     )
 
     return eui_eu27_dac1
 
 
 def get_eui_eu27_grants():
+
     mapping = {
         "Disbursements, net": "Total ODA",
         "Grant equivalents": "Total ODA",
@@ -173,7 +216,7 @@ def get_eui_eu27_grants():
 
     grants_flow_client = OECDClient(
         years=range(FINANCING_TIME["start"], 2018),
-        providers=list(eu_ids),
+        providers=list(EU_TOTAL),
         measure=["net_disbursement_grant", "net_disbursement"],
         use_bulk_download=True,
     )
@@ -184,7 +227,7 @@ def get_eui_eu27_grants():
 
     grants_ge_client = OECDClient(
         years=range(2018, FINANCING_TIME["end"] + 1),
-        providers=list(eu_ids),
+        providers=list(EU_TOTAL),
         measure=["net_disbursement_grant", "grant_equivalent"],
         use_bulk_download=True,
     )
@@ -195,97 +238,60 @@ def get_eui_eu27_grants():
 
     eui_eu27_grants_raw = pd.concat([grants_flow_raw, grants_ge_raw])
 
+    eui_eu27_grants_converted = add_currencies_and_prices(eui_eu27_grants_raw, base_year=FINANCING_TIME["base"])
+
     eui_eu27_grants = (
-        eui_eu27_grants_raw.query("donor_code == 918")
-        .assign(donor_code=eui_bi_code)
-        .assign(indicator=lambda d: d["fund_flows"].map(mapping))
-        .pivot(index=["year", "donor_code"], columns="indicator", values="value")
+        eui_eu27_grants_converted
+        .assign(indicator_name=lambda d: d["fund_flows"].map(mapping))
+        .pivot(index=["year", "donor_code", "currency", "price"], columns="indicator_name", values="value")
         .reset_index()
         .assign(**{"Non-grants": lambda d: d["Total ODA"] - d["Grants"]})
-        .melt(id_vars=["year", "donor_code"], value_vars=["Grants", "Non-grants"])[
-            ["year", "donor_code", "indicator", "value"]
-        ]
+        .melt(id_vars=["year", "donor_code", "currency", "price"], value_vars=["Grants", "Non-grants"])
+        .groupby(["year", "indicator_name", "currency", "price"], dropna=False, observed=True)["value"].sum().reset_index()
+        .assign(donor_name= "EU27 & EU Institutions")
     )
 
     return eui_eu27_grants
-
-
-def _remove_incomplete_aggregates(
-    df: pd.DataFrame, reference_indicator: str = "Total ODA"
-) -> pd.DataFrame:
-    """Remove group aggregates where not all members that report Total ODA
-    also report the indicator for that year."""
-    groups = donor_groups()
-    group_codes = set(groups.keys())
-
-    coverage = df.loc[
-        ~df["donor_code"].isin(group_codes), ["year", "donor_code", "indicator"]
-    ].drop_duplicates()
-
-    to_drop = []
-
-    for group_code, members in groups.items():
-        mc = coverage.loc[coverage["donor_code"].isin(members)]
-
-        ref_counts = (
-            mc.loc[mc["indicator"] == reference_indicator]
-            .groupby("year")["donor_code"]
-            .nunique()
-        )
-
-        ind_counts = mc.groupby(["year", "indicator"])["donor_code"].nunique()
-
-        for (year, indicator), count in ind_counts.items():
-            if indicator != reference_indicator and count < ref_counts.get(year, 0):
-                to_drop.append((group_code, year, indicator))
-                logger.info(
-                    f"Incomplete coverage for '{indicator}' in {year} "
-                    f"(group {group_code}): {count}/{ref_counts.get(year, 0)} members"
-                )
-
-    if not to_drop:
-        return df
-
-    drop_keys = pd.DataFrame(to_drop, columns=["donor_code", "year", "indicator"])
-
-    before = len(df)
-    df = df.merge(
-        drop_keys.assign(_drop=True),
-        on=["donor_code", "year", "indicator"],
-        how="left",
-    )
-    df = df.loc[df["_drop"].isna()].drop(columns=["_drop"])
-
-    logger.info(f"Removed {before - len(df)} incomplete group aggregate rows")
-
-    return df
 
 
 def get_financing_data():
     dac1 = get_dac1()
     grants = get_grants()
 
+    non_eu_financing = pd.concat([dac1, grants])
+
+    # Add currencies and prices
+    non_eu_financing = add_currencies_and_prices(non_eu_financing, base_year=FINANCING_TIME["base"])
+
+    eu27_financing = get_group_total(
+        non_eu_financing,
+        EU_COUNTRIES,
+        check_all_keys=False,
+        group_cols=["year", "indicator_name", "currency", "price"],
+        donor_name="EU27 countries"
+    )
+    all_bilateral_financing = get_group_total(
+        non_eu_financing,
+        BILATERAL_DONORS,
+        check_all_keys=False,
+        group_cols=["year", "indicator_name", "currency", "price"],
+        donor_name="All bilateral donors"
+    )
+
     eui_eu27_dac1 = get_eui_eu27_dac1()
     eui_eu27_grants = get_eui_eu27_grants()
 
-    financing = pd.concat([dac1, grants, eui_eu27_dac1, eui_eu27_grants])
+    financing = pd.concat([
+        non_eu_financing,
+        eu27_financing,
+        all_bilateral_financing,
+        eui_eu27_dac1,
+        eui_eu27_grants
+    ])
 
-    financing = financing.loc[lambda d: d["value"] != 0]
-
-    # Add currencies and prices
-    financing = add_currencies_and_prices(financing, base_year=FINANCING_TIME["base"])
-
-    # Add donor groupings
-    financing = add_donor_groupings(financing)
-
-    # Remove group aggregates where member coverage is incomplete
-    financing = _remove_incomplete_aggregates(financing)
-
-    # Add indicator code
-    financing = add_financing_indicator_codes(financing)
-
-    # Add donor name
-    financing = add_donor_names(financing)
+    financing = financing.loc[
+        lambda d: d["value"].notna() & (d["value"] != 0)
+    ]
 
     # Add type column
     financing["type"] = np.where(financing["year"] < 2018, "Flows", "Grant equivalents")
@@ -295,9 +301,7 @@ def get_financing_data():
         df=financing,
         index_cols=(
             "year",
-            "donor_code",
             "donor_name",
-            "indicator",
             "indicator_name",
             "type",
         ),
@@ -313,10 +317,49 @@ def get_financing_data():
     # NOTE: Frontend queries must divide value_* columns by 1e6 to get millions
     financing = convert_values_to_units(financing)
 
+    financing["donor_name"] = financing["donor_name"].replace({"G7": "G7 countries"})
+
     return financing
 
 
 if __name__ == "__main__":
+
+    indicators_order: list[str] = [
+        "Total ODA",
+        "Core ODA (ONE Definition)",
+        "Bilateral ODA",
+        "Multilateral ODA",
+        "Debt relief",
+        "Grants",
+        "Non-grants",
+        "Refugees in donor countries",
+        "Scholarships and student costs in donor countries",
+        "Scholarships/training in donor country",
+        "Imputed student costs",
+        "Private sector instruments",
+        "Private sector instruments - institutional approach",
+        "Private sector instruments - instrument approach",
+    ]
+
+    donors_order: list[str] = [
+        "DAC countries",
+        "Non-DAC countries",
+        "All bilateral donors",
+        "G7 countries",
+        "EU27 countries",
+        "EU27 & EU Institutions",
+    ]
+
     logger.info("Generating financing table...")
     df = get_financing_data()
+    generate_view_options(
+        df=df,
+        columns={
+            "donor_name": donors_order,
+            "indicator_name": indicators_order,
+            "year": [],
+        },
+        base_year=FINANCING_TIME["base"],
+        file_name="financing_view_options.json",
+    )
     parquet_to_stdout(df)

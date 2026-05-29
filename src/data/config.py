@@ -1,6 +1,8 @@
 import logging
 from pathlib import Path
 
+from oda_data import provider_groupings
+
 logger = logging.getLogger(__name__)
 
 # Create terminal (stream) handler
@@ -32,15 +34,19 @@ OTHER_FINANCING_INDICATORS: dict = {
     "ONE.10.1010_11010": "Total ODA",
     "ONE.10.1010C": "Core ODA (ONE Definition)",
     "DAC1.10.1015": "Bilateral ODA",
+    "DAC1.10.11015": "Bilateral ODA",
     "DAC1.10.2000": "Multilateral ODA",
+    "DAC1.10.12000": "Multilateral ODA",
     "DAC1.10.1600": "Debt relief",
+    "DAC1.10.11026": "Debt relief",
     "DAC1.60.11030": "Private sector instruments",
     "DAC1.60.11040": "Private sector instruments",
     "DAC1.60.11023": "Private sector instruments - institutional approach",
     "DAC1.60.11024": "Private sector instruments - instrument approach",
 }
 
-FINANCING_INDICATORS: dict = OTHER_FINANCING_INDICATORS | IN_DONOR_FINANCING_INDICATORS
+ALL_FINANCING_INDICATORS: dict = OTHER_FINANCING_INDICATORS | IN_DONOR_FINANCING_INDICATORS
+
 
 RECIPIENTS_INDICATORS: dict = {
     "DAC2A.10.206": "Bilateral",
@@ -60,8 +66,25 @@ DONOR_GROUPS: dict = {
     "EU27 countries": 20_002,
     "EU27 + EU Institutions": 20_003,
     "G7 countries": 20_004,
-    "non-DAC countries": 20_005,
+    "non-DAC countries": 20_005
 }
+
+AGGREGATE_DONORS: dict = {
+    20_001: "DAC countries",
+    20_006: "Non-DAC countries",
+    20_003: "G7 countries"
+}
+
+BILATERAL_DONORS: dict = provider_groupings()["all_bilateral"]
+ALL_DONORS: dict = BILATERAL_DONORS | AGGREGATE_DONORS
+
+EU_TOTAL: dict = provider_groupings()["eu27_total"]
+EU_COUNTRIES: dict = provider_groupings()["eu27_countries"]
+EU_INSTITUTIONS: dict = { k: v for k, v in EU_TOTAL.items() if EU_COUNTRIES.get(k) != v}
+
+EU_27: dict = { 1_000_000: "EU27 countries"}
+EU_27_INSTITUTIONS: dict = {2_000_000: "EU27 & EU Institutions "}
+ALL_BILATERAL: dict = {3_000_000: "All bilateral donors"}
 
 RECIPIENT_GROUPS: dict = {
     "Developing countries": 100_000,
@@ -111,7 +134,6 @@ class PATHS:
     DONORS = TOOLS / "donors.json"
     RECIPIENTS = TOOLS / "recipients.json"
 
-    FINANCING_INDICATORS_CODES = TOOLS / "financing_indicators.json"
     RECIPIENT_INDICATORS_CODES = TOOLS / "recipients_indicators.json"
 
     DATA = SRC / "data" / "cache"
