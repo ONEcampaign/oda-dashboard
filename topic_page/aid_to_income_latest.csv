@@ -1,6 +1,6 @@
-name,year,recipient,value,share,lable
-"DAC Countries, Total",2024,High income,0.7,0.3%,High income: 0.3%
-"DAC Countries, Total",2024,Low income,30.8,14.8%,Low income: 14.8%
-"DAC Countries, Total",2024,Lower-middle income,47.4,22.7%,Lower-middle income: 22.7%
-"DAC Countries, Total",2024,Not classified by income,85.3,40.9%,Not classified by income: 40.9%
-"DAC Countries, Total",2024,Upper-middle income,44.4,21.3%,Upper-middle income: 21.3%
+name,year,recipient,value,share,label
+"DAC Countries, Total",2024,High income,0.8,0.4%,High income: 0.4%
+"DAC Countries, Total",2024,Low income,27.0,12.9%,Low income: 12.9%
+"DAC Countries, Total",2024,Lower-middle income,48.0,23.0%,Lower-middle income: 23.0%
+"DAC Countries, Total",2024,Not classified by income,88.3,42.2%,Not classified by income: 42.2%
+"DAC Countries, Total",2024,Upper-middle income,44.8,21.5%,Upper-middle income: 21.5%

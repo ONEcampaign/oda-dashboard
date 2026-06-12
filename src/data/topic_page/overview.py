@@ -1,8 +1,9 @@
+import pandas as pd
 from bblocks import format_number
 
 from src.data.analysis_tools.helper_functions import set_cache_dir
 
-from oda_data import OECDClient
+from oda_data import OECDClient, provider_groupings
 
 from src.data.config import PATHS, logger
 from src.data.topic_page.common import (
@@ -167,7 +168,6 @@ def aid_to_incomes_latest():
     data = (
         client.get_indicators(indicators=["DAC2A.10.106", "DAC2A.10.206"])
         .assign(recipient=lambda d: d.recipient_code.map(recipients))
-        .rename(columns={"donor": "donor_name", "recipient_name": "recipient"})
         .groupby(["year", "donor_name", "recipient"], dropna=False)[["value"]]
         .sum()
         .reset_index(drop=False)
@@ -182,9 +182,9 @@ def aid_to_incomes_latest():
                 as_percentage=True,
             ),
             value=lambda d: format_number(d.value * 1e6, as_billions=True, decimals=1),
-            lable=lambda d: d["recipient"] + ": " + d["share"],
+            label=lambda d: d["recipient"] + ": " + d["share"],
         )
-        .filter(["name", "year", "recipient", "value", "share", "lable"], axis=1)
+        .filter(["name", "year", "recipient", "value", "share", "label"], axis=1)
     )
     # chart version
     data.to_csv(f"{PATHS.TOPIC_PAGE}/aid_to_income_latest.csv", index=False)
@@ -263,11 +263,79 @@ def aid_to_sectors_ts() -> None:
     logger.debug("Updated dynamic text ODA topic page oda_key_numbers.json")
 
 
+KEY_SECTORS: list[str] = [
+    "Humanitarian",
+    "Education",
+    "Health",
+    "Refugees in Donor Countries",
+    "Environment Protection",
+]
+
+
+def key_sector_shares() -> None:
+    """Generate sector shares of total bilateral + imputed multilateral ODA, by donor and year."""
+    donor_names: dict[int, str] = provider_groupings()["dac_countries"] | {
+        20001: "DAC Countries, Total"
+    }
+
+    raw = total_sectors(
+        years=range(START_YEAR, LATEST_YEAR_DETAIL + 1),
+        as_total=True,
+        broad=True,
+        base_year=LATEST_YEAR_DETAIL,
+    )
+
+    # Sum across all recipients → one row per year/donor/sector
+    by_donor = (
+        raw.groupby(["year", "donor_code", "sub_sector"], dropna=False, observed=True)[
+            "value"
+        ]
+        .sum()
+        .reset_index()
+    )
+
+    # Build DAC total as the sum of individual donors
+    # (20001 is not in the CRS/imputed-multilateral micro-data)
+    dac_total = (
+        by_donor.groupby(["year", "sub_sector"], dropna=False, observed=True)["value"]
+        .sum()
+        .reset_index()
+        .assign(donor_code=20001)
+    )
+
+    data = (
+        pd.concat([by_donor, dac_total], ignore_index=True)
+        .assign(name=lambda d: d["donor_code"].map(donor_names))
+        .loc[lambda d: d["name"].notna()]
+    )
+
+    data["share"] = (
+        data["value"]
+        / data.groupby(["year", "donor_code"])["value"].transform("sum")
+    ).round(4)
+
+    result = (
+        data.pivot(index=["year", "name"], columns="sub_sector", values="share")
+        .rename_axis(None, axis=1)
+        .reset_index()
+        .filter(["year", "name"] + KEY_SECTORS, axis=1)
+        # DAC total first within each year, then donors alphabetically
+        .assign(_sort=lambda d: d["name"].where(d["name"] != "DAC Countries, Total", ""))
+        .sort_values(["year", "_sort"])
+        .drop(columns="_sort")
+        .reset_index(drop=True)
+    )
+
+    result.to_csv(PATHS.TOPIC_PAGE / "key_sector_shares.csv", index=False)
+    logger.info("Saved chart version of key_sector_shares.csv")
+
+
 if __name__ == "__main__":
     set_cache_dir(oda_data=True, pydeflate=True)
 
     total_aid_key_number()
     aid_gni_key_number()
     aid_to_africa_ts()
-    # aid_to_incomes_latest()
-    # aid_to_sectors_ts()
+    aid_to_incomes_latest()
+    aid_to_sectors_ts()
+    key_sector_shares()
