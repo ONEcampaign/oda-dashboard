@@ -1,16 +1,16 @@
-year,name,recipient,sub_sector,Total Humanitarian Aid,Share of total ODA
-2010,"DAC Countries, Total",All Developing Countries,Humanitarian,11.4,7.4%
-2011,"DAC Countries, Total",All Developing Countries,Humanitarian,10.8,7.0%
-2012,"DAC Countries, Total",All Developing Countries,Humanitarian,12.2,6.8%
-2013,"DAC Countries, Total",All Developing Countries,Humanitarian,14.9,7.6%
-2014,"DAC Countries, Total",All Developing Countries,Humanitarian,18.0,9.0%
-2015,"DAC Countries, Total",All Developing Countries,Humanitarian,19.4,9.4%
-2016,"DAC Countries, Total",All Developing Countries,Humanitarian,21.2,9.2%
-2017,"DAC Countries, Total",All Developing Countries,Humanitarian,23.7,10.3%
-2018,"DAC Countries, Total",All Developing Countries,Humanitarian,23.1,10.1%
-2019,"DAC Countries, Total",All Developing Countries,Humanitarian,24.7,10.9%
-2020,"DAC Countries, Total",All Developing Countries,Humanitarian,24.9,10.3%
-2021,"DAC Countries, Total",All Developing Countries,Humanitarian,29.2,11.2%
-2022,"DAC Countries, Total",All Developing Countries,Humanitarian,31.9,10.8%
-2023,"DAC Countries, Total",All Developing Countries,Humanitarian,33.3,10.6%
-2024,"DAC Countries, Total",All Developing Countries,Humanitarian,29.5,10.3%
+Year,Donor,Recipient,Sector,Total Humanitarian Aid,Share of total ODA
+2010,DAC countries,All Developing Countries,Humanitarian,11.4,"""7.4%"""
+2011,DAC countries,All Developing Countries,Humanitarian,10.8,"""7.0%"""
+2012,DAC countries,All Developing Countries,Humanitarian,12.2,"""6.8%"""
+2013,DAC countries,All Developing Countries,Humanitarian,14.9,"""7.6%"""
+2014,DAC countries,All Developing Countries,Humanitarian,18.0,"""9.0%"""
+2015,DAC countries,All Developing Countries,Humanitarian,19.4,"""9.4%"""
+2016,DAC countries,All Developing Countries,Humanitarian,21.2,"""9.2%"""
+2017,DAC countries,All Developing Countries,Humanitarian,23.7,"""10.3%"""
+2018,DAC countries,All Developing Countries,Humanitarian,23.1,"""10.1%"""
+2019,DAC countries,All Developing Countries,Humanitarian,24.7,"""10.9%"""
+2020,DAC countries,All Developing Countries,Humanitarian,24.9,"""10.3%"""
+2021,DAC countries,All Developing Countries,Humanitarian,29.2,"""11.2%"""
+2022,DAC countries,All Developing Countries,Humanitarian,31.9,"""10.8%"""
+2023,DAC countries,All Developing Countries,Humanitarian,33.3,"""10.6%"""
+2024,DAC countries,All Developing Countries,Humanitarian,29.5,"""10.3%"""
