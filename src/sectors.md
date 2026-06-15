@@ -242,6 +242,8 @@ function App() {
             {label: getCurrencyLabel(currency, {currencyLong: true, currencyOnly: true}), value: "value"},
             {label: `% of ${sector} ODA`, value: "pct_sector", disabled: breakdownIsDisabled || !effectiveBreakdown},
             {label: `% of ${indicatorLabel} ODA`, value: "pct_total"},
+            {label: "% of provided aid", value: "pct_total_donor"},
+            {label: "% of received aid", value: "pct_total_recipient"},
         ]
     }, [currency, indicator, sector, breakdownIsDisabled, effectiveBreakdown])
 
@@ -288,6 +290,8 @@ function App() {
     const tableNote = React.useMemo(() => {
         if (unit === "value") return `ODA values in ${pricesNote} ${currencyLabel}.`
         if (unit === "pct_sector") return `ODA values as a share of ${sector} ODA received by ${recipientName} from ${donorName}.`
+        if (unit === "pct_total_donor") return `ODA values as a share of all aid provided by ${donorName} to developing countries.`
+        if (unit === "pct_total_recipient") return `ODA values as a share of all aid received by ${recipientName} from bilateral donors.`
         return `ODA values as a share of total aid received by ${recipientName} from ${donorName}.`
     }, [unit, currencyLabel, sector, recipientName, donorName])
 
