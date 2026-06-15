@@ -111,10 +111,6 @@ export function sectorsQueries(
 
     const donorName = getNameByCode(donorMapping, donor) ?? "Unknown";
     const recipientName = getNameByCode(recipientMapping, recipient) ?? "Unknown";
-    const indicatorUnitLabel = indicators.length > 1
-        ? "Bilateral + Imputed multilateral ODA"
-        : indicatorLabelMap.get(indicators[0]) ?? "Total ODA";
-
     const basePromise = fetchSectorsSeries({
         donor,
         recipient,
@@ -152,12 +148,11 @@ export function sectorsQueries(
         selectedSector,
         currency,
         prices,
-        indicatorUnitLabel,
         code2Subsector,
         subsector2Sector
     }));
 
-    return {treemap, selectedBase, tableBase, indicatorUnitLabel};
+    return {treemap, selectedBase, tableBase};
 }
 
 function sectorsCacheKey({donor, recipient, indicators, currency, prices, timeRange}) {
@@ -292,8 +287,7 @@ async function runSectorsQuery(db, {
                 sub_sector,
                 indicator_label,
                 converted_value,
-                original_value,
-                SUM(original_value) OVER (PARTITION BY year) AS indicator_original_value
+                original_value
             FROM aggregated
             ORDER BY year, sub_sector
         `
@@ -308,7 +302,6 @@ async function runSectorsQuery(db, {
         indicator: row.indicator_label,
         converted_value: row.converted_value ?? null,
         original_value: row.original_value ?? null,
-        indicator_total_original: row.indicator_original_value ?? null,
         pct_total_donor: row.pct_total_donor ?? null,
         pct_total_recipient: row.pct_total_recipient ?? null
     }));
@@ -414,7 +407,6 @@ function buildTableBase(rows, {
     selectedSector,
     currency,
     prices,
-    indicatorUnitLabel,
     code2Subsector,
     subsector2Sector
 }) {
@@ -459,12 +451,10 @@ function buildTableBase(rows, {
                 converted_value: row.converted_value ?? null,
                 original_value: row.original_value ?? null,
                 sector_total: sectorTotalsByYear.get(row.year) ?? null,
-                indicator_total: row.indicator_total_original ?? null,
                 pct_total_donor: row.pct_total_donor ?? null,
                 pct_total_recipient: row.pct_total_recipient ?? null,
                 currency,
                 prices,
-                indicatorUnitLabel,
                 source: "OECD CRS, MultiSystem",
                 __order: orderIndex.get(subsectorName) ?? orderedSubsectors.length
             };
@@ -473,14 +463,12 @@ function buildTableBase(rows, {
         .map(({__order, ...rest}) => rest);
 }
 
-function valueForUnit({unit, convertedValue, originalValue, sectorTotal, indicatorTotal, pctTotalDonor, pctTotalRecipient}) {
+function valueForUnit({unit, convertedValue, originalValue, sectorTotal, pctTotalDonor, pctTotalRecipient}) {
     switch (unit) {
         case "value":
             return convertedValue ?? null;
         case "pct_sector":
             return ratioAsPct(originalValue, sectorTotal);
-        case "pct_total":
-            return ratioAsPct(originalValue, indicatorTotal);
         case "pct_total_donor":
             return pctTotalDonor != null ? pctTotalDonor * 100 : null;
         case "pct_total_recipient":
@@ -490,17 +478,13 @@ function valueForUnit({unit, convertedValue, originalValue, sectorTotal, indicat
     }
 }
 
-function tableUnitLabel(unit, currency, prices, selectedSector, indicatorUnitLabel) {
+function tableUnitLabel(unit, currency, prices, selectedSector) {
     if (unit === "value") {
         return `${currency} ${prices} million`;
     }
 
     if (unit === "pct_sector") {
         return `% of ${selectedSector}`;
-    }
-
-    if (unit === "pct_total") {
-        return `% of ${indicatorUnitLabel}`;
     }
 
     if (unit === "pct_total_donor") {
@@ -558,8 +542,8 @@ export function transformTableData(baseData, unit, breakdown) {
     if (!baseData || baseData.length === 0) return [];
 
     // First row has metadata we need
-    const {currency, prices, sector, indicatorUnitLabel} = baseData[0];
-    const unitLabel = tableUnitLabel(unit, currency, prices, sector, indicatorUnitLabel);
+    const {currency, prices, sector} = baseData[0];
+    const unitLabel = tableUnitLabel(unit, currency, prices, sector);
 
     if (breakdown) {
         // Return granular data with unit applied
@@ -575,7 +559,6 @@ export function transformTableData(baseData, unit, breakdown) {
                 convertedValue: row.converted_value,
                 originalValue: row.original_value,
                 sectorTotal: row.sector_total,
-                indicatorTotal: row.indicator_total,
                 pctTotalDonor: row.pct_total_donor,
                 pctTotalRecipient: row.pct_total_recipient
             }),
@@ -595,13 +578,11 @@ export function transformTableData(baseData, unit, breakdown) {
             indicator: row.indicator,
             convertedValue: 0,
             originalValue: 0,
-            indicatorTotal: row.indicator_total,
             pctTotalDonor: 0,
             pctTotalRecipient: 0
         };
         entry.convertedValue += row.converted_value ?? 0;
         entry.originalValue += row.original_value ?? 0;
-        entry.indicatorTotal = row.indicator_total ?? entry.indicatorTotal;
         entry.pctTotalDonor += row.pct_total_donor ?? 0;
         entry.pctTotalRecipient += row.pct_total_recipient ?? 0;
         aggregatedByYear.set(row.year, entry);
@@ -620,7 +601,6 @@ export function transformTableData(baseData, unit, breakdown) {
                 convertedValue: entry.convertedValue,
                 originalValue: entry.originalValue,
                 sectorTotal: entry.originalValue,
-                indicatorTotal: entry.indicatorTotal,
                 pctTotalDonor: entry.pctTotalDonor,
                 pctTotalRecipient: entry.pctTotalRecipient
             }),

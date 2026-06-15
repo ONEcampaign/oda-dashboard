@@ -241,7 +241,6 @@ function App() {
         return [
             {label: getCurrencyLabel(currency, {currencyLong: true, currencyOnly: true}), value: "value"},
             {label: `% of ${sector} ODA`, value: "pct_sector", disabled: breakdownIsDisabled || !effectiveBreakdown},
-            {label: `% of ${indicatorLabel} ODA`, value: "pct_total"},
             {label: "% of provided aid", value: "pct_total_donor"},
             {label: "% of received aid", value: "pct_total_recipient"},
         ]
