@@ -5,7 +5,7 @@
     "oda_gni": "0.26%",
     "oda_gni_distance": "302 billion",
     "aid_to_africa": "59.0 billion",
-    "aid_to_africa_share": "26.8%",
+    "aid_to_africa_share": "\"26.8%\"",
     "aid_to_incomes": {
         "High income": {
             "value": "0.8",
@@ -29,7 +29,7 @@
         }
     },
     "aid_to_health": "27.6 billion",
-    "aid_to_health_share": "9.6%",
+    "aid_to_health_share": "\"9.6%\"",
     "aid_to_humanitarian": "29.5 billion",
-    "aid_to_humanitarian_share": "10.3%"
+    "aid_to_humanitarian_share": "\"10.3%\""
 }
