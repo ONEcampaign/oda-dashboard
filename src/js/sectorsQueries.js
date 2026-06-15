@@ -287,7 +287,9 @@ async function runSectorsQuery(db, {
                 sub_sector,
                 indicator_label,
                 converted_value,
-                original_value
+                original_value,
+                pct_total_donor,
+                pct_total_recipient
             FROM aggregated
             ORDER BY year, sub_sector
         `
