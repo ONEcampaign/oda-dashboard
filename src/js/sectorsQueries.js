@@ -273,7 +273,9 @@ async function runSectorsQuery(db, {
                         : "indicator_name AS indicator_label,"
                     }
                     SUM(${valueColumn}) / 1e6 AS converted_value,
-                    SUM(value_usd_current) / 1e6 AS original_value
+                    SUM(value_usd_current) / 1e6 AS original_value,
+                    SUM(pct_total_donor) AS pct_total_donor,
+                    SUM(pct_total_recipient) AS pct_total_recipient
                 FROM ${parquetClause}
                 WHERE
                     donor_code = ${donor}
@@ -306,7 +308,9 @@ async function runSectorsQuery(db, {
         indicator: row.indicator_label,
         converted_value: row.converted_value ?? null,
         original_value: row.original_value ?? null,
-        indicator_total_original: row.indicator_original_value ?? null
+        indicator_total_original: row.indicator_original_value ?? null,
+        pct_total_donor: row.pct_total_donor ?? null,
+        pct_total_recipient: row.pct_total_recipient ?? null
     }));
 }
 
@@ -456,6 +460,8 @@ function buildTableBase(rows, {
                 original_value: row.original_value ?? null,
                 sector_total: sectorTotalsByYear.get(row.year) ?? null,
                 indicator_total: row.indicator_total_original ?? null,
+                pct_total_donor: row.pct_total_donor ?? null,
+                pct_total_recipient: row.pct_total_recipient ?? null,
                 currency,
                 prices,
                 indicatorUnitLabel,
@@ -467,7 +473,7 @@ function buildTableBase(rows, {
         .map(({__order, ...rest}) => rest);
 }
 
-function valueForUnit({unit, convertedValue, originalValue, sectorTotal, indicatorTotal}) {
+function valueForUnit({unit, convertedValue, originalValue, sectorTotal, indicatorTotal, pctTotalDonor, pctTotalRecipient}) {
     switch (unit) {
         case "value":
             return convertedValue ?? null;
@@ -475,6 +481,10 @@ function valueForUnit({unit, convertedValue, originalValue, sectorTotal, indicat
             return ratioAsPct(originalValue, sectorTotal);
         case "pct_total":
             return ratioAsPct(originalValue, indicatorTotal);
+        case "pct_total_donor":
+            return pctTotalDonor != null ? pctTotalDonor * 100 : null;
+        case "pct_total_recipient":
+            return pctTotalRecipient != null ? pctTotalRecipient * 100 : null;
         default:
             return convertedValue ?? null;
     }
@@ -491,6 +501,14 @@ function tableUnitLabel(unit, currency, prices, selectedSector, indicatorUnitLab
 
     if (unit === "pct_total") {
         return `% of ${indicatorUnitLabel}`;
+    }
+
+    if (unit === "pct_total_donor") {
+        return "% of total ODA provided";
+    }
+
+    if (unit === "pct_total_recipient") {
+        return "% of total ODA received";
     }
 
     return `${currency} ${prices} million`;
@@ -557,7 +575,9 @@ export function transformTableData(baseData, unit, breakdown) {
                 convertedValue: row.converted_value,
                 originalValue: row.original_value,
                 sectorTotal: row.sector_total,
-                indicatorTotal: row.indicator_total
+                indicatorTotal: row.indicator_total,
+                pctTotalDonor: row.pct_total_donor,
+                pctTotalRecipient: row.pct_total_recipient
             }),
             unit: unitLabel,
             source: row.source
@@ -575,11 +595,15 @@ export function transformTableData(baseData, unit, breakdown) {
             indicator: row.indicator,
             convertedValue: 0,
             originalValue: 0,
-            indicatorTotal: row.indicator_total
+            indicatorTotal: row.indicator_total,
+            pctTotalDonor: 0,
+            pctTotalRecipient: 0
         };
         entry.convertedValue += row.converted_value ?? 0;
         entry.originalValue += row.original_value ?? 0;
         entry.indicatorTotal = row.indicator_total ?? entry.indicatorTotal;
+        entry.pctTotalDonor += row.pct_total_donor ?? 0;
+        entry.pctTotalRecipient += row.pct_total_recipient ?? 0;
         aggregatedByYear.set(row.year, entry);
     }
 
@@ -596,7 +620,9 @@ export function transformTableData(baseData, unit, breakdown) {
                 convertedValue: entry.convertedValue,
                 originalValue: entry.originalValue,
                 sectorTotal: entry.originalValue,
-                indicatorTotal: entry.indicatorTotal
+                indicatorTotal: entry.indicatorTotal,
+                pctTotalDonor: entry.pctTotalDonor,
+                pctTotalRecipient: entry.pctTotalRecipient
             }),
             unit: unitLabel,
             source: baseData[0].source
