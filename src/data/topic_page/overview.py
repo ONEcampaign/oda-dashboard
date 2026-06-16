@@ -36,24 +36,16 @@ def total_aid_key_number() -> None:
         )
         .loc[lambda d: d.year == d.year.max()]
         .assign(
-            name=lambda d: d.donor_name,
             value=lambda d: d.value * 1e6,
             pct_change=lambda d: d["pct_change"].str.replace("%", ""),
             first_line=lambda d: f"As of {d.year.item()}",
             second_line=lambda d: f"real change from {d.year.item() - 1}",
-            centre=lambda d: round(d["pct_change"].astype(float) / 10, 2),
+            centre=lambda d: round(d["pct_change"].astype(float) / 100, 2),
         )
-        .filter(["name", "first_line", "value", "second_line", "pct_change", "centre"])
+        .filter(["first_line", "value", "second_line", "pct_change", "centre"])
     )
 
-    data.rename(columns={
-        "name": "Donor",
-        "first_line": "Period",
-        "value": "Total ODA",
-        "second_line": "Subtitle",
-        "pct_change": "Annual change",
-        "centre": "Centre",
-    }).to_csv(PATHS.TOPIC_PAGE / "sm_total_oda_csv", index=False)
+    data.to_csv(PATHS.TOPIC_PAGE / "sm_total_oda.csv", index=False)
     logger.info(f"Saved chart version of sm_total_oda.csv for {LATEST_YEAR_AGG}")
 
     kn = {
@@ -68,7 +60,7 @@ def total_aid_key_number() -> None:
 
 def aid_gni_key_number() -> None:
     client = OECDClient(
-        years=[LATEST_YEAR_AGG],
+        years=[LATEST_YEAR_AGG, LATEST_YEAR_AGG - 1],
         providers=20001,
         measure=["grant_equivalent", "net_disbursement"],
         use_bulk_download=True,
@@ -83,19 +75,15 @@ def aid_gni_key_number() -> None:
             distance=lambda d: round(d["DAC1.40.1"] * 0.007 - d["DAC1.10.11010"], 1),
             first_line=f"As of {LATEST_YEAR_AGG}",
             second_line="Additional required to get to 0.7%",
-            centre="",
         )
-        .filter(["name", "first_line", "oda_gni", "second_line", "distance", "centre"])
+        .sort_values("year")
+        .assign(centre=lambda d: d["oda_gni"].pct_change().round(4))
+        .loc[lambda d: d["year"] == d["year"].max()]
+        .filter(["first_line", "oda_gni", "second_line", "distance", "centre"])
     )
 
     # Save chart version
-    data.rename(columns={
-        "first_line": "Period",
-        "oda_gni": "ODA/GNI",
-        "second_line": "Subtitle",
-        "distance": "Gap to 0.7%",
-        "centre": "Centre",
-    }).to_csv(PATHS.TOPIC_PAGE / "oda_gni_sm.csv", index=False)
+    data.to_csv(PATHS.TOPIC_PAGE / "oda_gni_sm.csv", index=False)
     logger.info(f"Saved chart version of oda_gni_sm.csv for {LATEST_YEAR_AGG}")
 
     # Save dynamic text version
@@ -130,25 +118,33 @@ def aid_to_africa_ts() -> None:
 
     data = (
         data.assign(
-            share=lambda d: (d["Africa, Total"] / d["Developing Countries, Total"]).apply(
-                lambda x: f'"{x:.1%}"' if pd.notna(x) else ""
+            share=lambda d: format_number(
+                d["Africa, Total"] / d["Developing Countries, Total"],
+                as_percentage=True,
+                decimals=1,
             )
         )
         .rename(columns={"Africa, Total": "value"})
         .filter(["year", "donor_name", "value", "share"])
         .pipe(add_change, as_formatted_str=True, grouper="donor_name")
-        .assign(value=lambda d: format_number(d.value * 1e6, as_billions=True, decimals=1))
-        .rename(columns={
-            "year": "Year",
-            "donor_name": "Donor",
-            "value": "Aid to Africa",
-            "share": "Share of total ODA",
-            "pct_change": "Annual change",
-        })
+        .assign(
+            value=lambda d: format_number(d.value * 1e6, as_billions=True, decimals=1),
+        )
+        .rename(
+            columns={
+                "year": "Year",
+                "donor_name": "Donor",
+                "value": "Aid to Africa",
+                "share": "Share of total ODA",
+                "pct_change": "Annual change"
+            }
+        )
     )
+    # chart version
     data.to_csv(f"{PATHS.TOPIC_PAGE}/aid_to_africa_ts.csv", index=False)
     logger.info(f"Saved chart version of aid_to_africa_ts.csv for {LATEST_YEAR_AGG}")
 
+    # Dynamic text version
     kn = {
         "aid_to_africa": f"{data['Aid to Africa'].values[-1]} billion",
         "aid_to_africa_share": f"{data['Share of total ODA'].values[-1]}",
@@ -186,7 +182,6 @@ def aid_to_incomes_latest():
         .pivot(index=["year", "donor_name"], columns="recipient", values="value")
         .reset_index(drop=False)
         .melt(id_vars=["year", "donor_name", "Developing Countries, Total"])
-        .rename(columns={"donor_name": "name"})
         .assign(
             share=lambda d: format_number(
                 d.value / d["Developing Countries, Total"],
@@ -196,28 +191,31 @@ def aid_to_incomes_latest():
             value=lambda d: format_number(d.value * 1e6, as_billions=True, decimals=1),
             label=lambda d: d["recipient"] + ": " + d["share"],
         )
-        .filter(["name", "year", "recipient", "value", "share", "label"], axis=1)
+        .rename(
+            columns={
+                "year": "Year",
+                "donor_name": "Donor",
+                "recipient": "Recipient",
+                "value": "ODA",
+                "share": "Share of total ODA",
+                "label": "Label"
+            })
+        .filter(["Year", "Donor", "Recipient", "ODA", "Share of total ODA", "Label"], axis=1)
     )
-    # Dynamic text version (must run before rename to preserve internal column names)
+    # chart version
+    data.to_csv(f"{PATHS.TOPIC_PAGE}/aid_to_income_latest.csv", index=False)
+    logger.debug("Saved chart version of aid_to_income_latest.csv")
+
+    # Dynamic text version
     income_dict = df_to_key_number(
-        data,
+        data.rename(columns={"ODA": "value", "Share of total ODA": "share"}),
         indicator_name="aid_to_incomes",
-        id_column="recipient",
+        id_column="Recipient",
         value_columns=["value", "share"],
     )
+
     update_key_number(f"{PATHS.TOPIC_PAGE}/oda_key_numbers.json", income_dict)
     logger.debug("Updated dynamic text ODA topic page oda_key_numbers.json")
-
-    # Chart version
-    data.rename(columns={
-        "name": "Donor",
-        "year": "Year",
-        "recipient": "Recipient",
-        "value": "ODA",
-        "share": "Share of total ODA",
-        "label": "Label",
-    }).to_csv(f"{PATHS.TOPIC_PAGE}/aid_to_income_latest.csv", index=False)
-    logger.debug("Saved chart version of aid_to_income_latest.csv")
 
 
 def aid_to_sectors_ts() -> None:
@@ -229,31 +227,35 @@ def aid_to_sectors_ts() -> None:
             broad=True,
             base_year=LATEST_YEAR_DETAIL,
         )
-        .assign(recipient="All Developing Countries", name="DAC countries")
+        .assign(recipient="All Developing Countries", donor="DAC Countries, Total")
         .groupby(
-            ["year", "name", "recipient", "sub_sector"], dropna=False, observed=True
+            ["year", "donor", "recipient", "sub_sector"], dropna=False, observed=True
         )["value"]
         .sum()
         .reset_index(drop=False)
     )
 
-    data["share"] = (
+    data["share"] = format_number(
         data["value"]
-        / data.groupby(["year", "name", "recipient"])["value"].transform("sum")
-    ).apply(lambda x: f'"{x:.1%}"' if pd.notna(x) else "")
+        / data.groupby(["year", "donor", "recipient"])["value"].transform("sum"),
+        decimals=1,
+        as_percentage=True,
+    )
 
     data["value"] = format_number(data["value"] * 1e6, as_billions=True, decimals=1)
 
-    # Health
-    data_health = data.loc[lambda d: d.sub_sector.isin(["Health"])].rename(
+    data = data.rename(
         columns={
             "year": "Year",
-            "name": "Donor",
+            "donor": "Donor",
             "recipient": "Recipient",
             "sub_sector": "Sector",
-            "value": "Total aid to health",
-            "share": "Share of total ODA",
-        }
+            "share": "Share of total ODA"
+    })
+
+    # Health
+    data_health = data.loc[lambda d: d.Sector.isin(["Health"])].rename(
+        columns={"value": "Total aid to health"}
     )
 
     # chart version
@@ -268,15 +270,8 @@ def aid_to_sectors_ts() -> None:
     logger.debug("Updated dynamic text ODA topic page oda_key_numbers.json")
 
     # Humanitarian
-    data_humanitarian = data.loc[lambda d: d.sub_sector.isin(["Humanitarian"])].rename(
-        columns={
-            "year": "Year",
-            "name": "Donor",
-            "recipient": "Recipient",
-            "sub_sector": "Sector",
-            "value": "Total Humanitarian Aid",
-            "share": "Share of total ODA",
-        }
+    data_humanitarian = data.loc[lambda d: d.Sector.isin(["Humanitarian"])].rename(
+        columns={"value": "Total Humanitarian Aid"}
     )
     # chart version
     data_humanitarian.to_csv(
@@ -305,7 +300,7 @@ KEY_SECTORS: list[str] = [
 def key_sector_shares() -> None:
     """Generate sector shares of total bilateral + imputed multilateral ODA, by donor and year."""
     donor_names: dict[int, str] = provider_groupings()["dac_countries"] | {
-        20001: "DAC countries"
+        20001: "DAC Countries, Total"
     }
 
     raw = total_sectors(
@@ -350,11 +345,16 @@ def key_sector_shares() -> None:
         .reset_index()
         .filter(["year", "name"] + KEY_SECTORS, axis=1)
         # DAC total first within each year, then donors alphabetically
-        .assign(_sort=lambda d: d["name"].where(d["name"] != "DAC countries", ""))
+        .assign(_sort=lambda d: d["name"].where(d["name"] != "DAC Countries, Total", ""))
         .sort_values(["year", "_sort"])
         .drop(columns="_sort")
         .reset_index(drop=True)
-        .rename(columns={"year": "Year", "name": "Donor"})
+        .rename(
+            columns={
+                "year": "Year",
+                "donor": "Donor"
+            }
+        )
     )
 
     result.to_csv(PATHS.TOPIC_PAGE / "key_sector_shares.csv", index=False)
