@@ -183,13 +183,9 @@ def aid_to_incomes_latest():
         .reset_index(drop=False)
         .melt(id_vars=["year", "donor_name", "Developing Countries, Total"])
         .assign(
-            share=lambda d: format_number(
-                d.value / d["Developing Countries, Total"],
-                decimals=1,
-                as_percentage=True,
-            ),
+            share=lambda d: (d.value / d["Developing Countries, Total"] * 100).round(1),
             value=lambda d: format_number(d.value * 1e6, as_billions=True, decimals=1),
-            label=lambda d: d["recipient"] + ": " + d["share"],
+            label=lambda d: d["recipient"] + ": " + d["share"].astype(str) + "%",
         )
         .rename(
             columns={
@@ -208,7 +204,8 @@ def aid_to_incomes_latest():
 
     # Dynamic text version
     income_dict = df_to_key_number(
-        data.rename(columns={"ODA": "value", "Share of total ODA": "share"}),
+        data.rename(columns={"ODA": "value", "Share of total ODA": "share"})
+        .assign(share=lambda d: d['share'].astype(str) + "%"),
         indicator_name="aid_to_incomes",
         id_column="Recipient",
         value_columns=["value", "share"],
@@ -364,9 +361,9 @@ def key_sector_shares() -> None:
 if __name__ == "__main__":
     set_cache_dir(oda_data=True, pydeflate=True)
 
-    total_aid_key_number()
-    aid_gni_key_number()
-    aid_to_africa_ts()
+    # total_aid_key_number()
+    # aid_gni_key_number()
+    # aid_to_africa_ts()
     aid_to_incomes_latest()
-    aid_to_sectors_ts()
-    key_sector_shares()
+    # aid_to_sectors_ts()
+    # key_sector_shares()
