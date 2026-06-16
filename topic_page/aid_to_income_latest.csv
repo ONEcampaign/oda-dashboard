@@ -1,6 +1,6 @@
-Donor,Year,Recipient,ODA,Share of total ODA,Label
-"DAC Countries, Total",2024,High income,0.8,0.4%,High income: 0.4%
-"DAC Countries, Total",2024,Low income,27.0,12.9%,Low income: 12.9%
-"DAC Countries, Total",2024,Lower-middle income,48.0,23.0%,Lower-middle income: 23.0%
-"DAC Countries, Total",2024,Not classified by income,88.3,42.2%,Not classified by income: 42.2%
-"DAC Countries, Total",2024,Upper-middle income,44.8,21.5%,Upper-middle income: 21.5%
+Year,Donor,Recipient,ODA,Share of total ODA,Label
+2024,"DAC Countries, Total",High income,0.8,0.4%,High income: 0.4%
+2024,"DAC Countries, Total",Low income,27.0,12.9%,Low income: 12.9%
+2024,"DAC Countries, Total",Lower-middle income,48.0,23.0%,Lower-middle income: 23.0%
+2024,"DAC Countries, Total",Not classified by income,88.3,42.2%,Not classified by income: 42.2%
+2024,"DAC Countries, Total",Upper-middle income,44.8,21.5%,Upper-middle income: 21.5%
