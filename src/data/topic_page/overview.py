@@ -141,7 +141,11 @@ def aid_to_africa_ts() -> None:
         )
     )
     # chart version
-    data.to_csv(f"{PATHS.TOPIC_PAGE}/aid_to_africa_ts.csv", index=False)
+    (data
+     .assign(**{"Share of total ODA": lambda d: '"' + d["Share of total ODA"] + '"'})
+     .to_csv(f"{PATHS.TOPIC_PAGE}/aid_to_africa_ts.csv", index=False))
+    _p = PATHS.TOPIC_PAGE / "aid_to_africa_ts.csv"
+    _p.write_text(_p.read_text().replace('"""', '"'))
     logger.info(f"Saved chart version of aid_to_africa_ts.csv for {LATEST_YEAR_AGG}")
 
     # Dynamic text version
@@ -199,7 +203,11 @@ def aid_to_incomes_latest():
         .filter(["Year", "Donor", "Recipient", "ODA", "Share of total ODA", "Label"], axis=1)
     )
     # chart version
-    data.to_csv(f"{PATHS.TOPIC_PAGE}/aid_to_income_latest.csv", index=False)
+    (
+        data
+        .assign(ODA=lambda d: 'US$' + d["ODA"] + ' billion')
+        .to_csv(f"{PATHS.TOPIC_PAGE}/aid_to_income_latest.csv", index=False)
+    )
     logger.debug("Saved chart version of aid_to_income_latest.csv")
 
     # Dynamic text version
@@ -256,7 +264,13 @@ def aid_to_sectors_ts() -> None:
     )
 
     # chart version
-    data_health.to_csv(f"{PATHS.TOPIC_PAGE}/aid_to_health_ts.csv", index=False)
+    (
+        data_health
+        .assign(**{"Share of total ODA": lambda d: '"' + d["Share of total ODA"] + '"'})
+        .to_csv(f"{PATHS.TOPIC_PAGE}/aid_to_health_ts.csv", index=False)
+    )
+    _p = PATHS.TOPIC_PAGE / "aid_to_health_ts.csv"
+    _p.write_text(_p.read_text().replace('"""', '"'))
     logger.debug("Saved chart version of aid_to_health_ts.csv")
 
     kn = {
@@ -271,9 +285,13 @@ def aid_to_sectors_ts() -> None:
         columns={"value": "Total Humanitarian Aid"}
     )
     # chart version
-    data_humanitarian.to_csv(
-        f"{PATHS.TOPIC_PAGE}/aid_to_humanitarian_ts.csv", index=False
+    (
+        data_humanitarian
+        .assign(**{"Share of total ODA": lambda d: '"' + d["Share of total ODA"] + '"'})
+        .to_csv(f"{PATHS.TOPIC_PAGE}/aid_to_humanitarian_ts.csv", index=False)
     )
+    _p = PATHS.TOPIC_PAGE / "aid_to_humanitarian_ts.csv"
+    _p.write_text(_p.read_text().replace('"""', '"'))
     logger.info("Saved chart version of aid_to_humanitarian_ts.csv")
 
     # Dynamic text version
@@ -361,9 +379,9 @@ def key_sector_shares() -> None:
 if __name__ == "__main__":
     set_cache_dir(oda_data=True, pydeflate=True)
 
-    # total_aid_key_number()
-    # aid_gni_key_number()
-    # aid_to_africa_ts()
+    total_aid_key_number()
+    aid_gni_key_number()
+    aid_to_africa_ts()
     aid_to_incomes_latest()
-    # aid_to_sectors_ts()
-    # key_sector_shares()
+    aid_to_sectors_ts()
+    key_sector_shares()
