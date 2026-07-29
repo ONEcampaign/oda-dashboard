@@ -1,6 +1,6 @@
 import {FileAttachment} from "observablehq:stdlib";
 import { convertUnitsToMillions } from "npm:@one-data/observable-themes/utils"
-import {name2CodeMap, fillMissingYearIndicators} from "./utils.js";
+import {fillMissingYearIndicators} from "./utils.js";
 
 /**
  * IMPORTANT: Value columns in the parquet file are stored as integers in UNITS (not millions).
@@ -8,47 +8,22 @@ import {name2CodeMap, fillMissingYearIndicators} from "./utils.js";
  * Use the convertUnitsToMillions() helper function for this conversion.
  */
 
-// Load metadata and parquet data in parallel
-const [donorOptions, recipientOptions, recipientsIndicators, recipientsTable] = await Promise.all([
-    FileAttachment("../data/analysis_tools/donors.json").json(),
-    FileAttachment("../data/analysis_tools/recipients.json").json(),
-    FileAttachment("../data/analysis_tools/recipients_indicators.json").json(),
+const [viewOptions, recipientsTable] = await Promise.all([
+    FileAttachment("../data/analysis_tools/recipients_view_options.json").json(),
     FileAttachment("../data/scripts/recipients_view.parquet").parquet()
 ]);
 
-// Convert Arrow table to JavaScript array for fast in-memory filtering
 const recipientsData = recipientsTable.toArray();
 
-// Export for use in recipients.md to avoid duplicate loading
-export {donorOptions, recipientOptions, recipientsIndicators};
-
-const donorMapping = name2CodeMap(donorOptions, {})
-
-const recipientMapping = name2CodeMap(recipientOptions, { useRecipientGroups: true })
-
+export const donorNames = viewOptions.donor_name;
+export const recipientNames = viewOptions.recipient_name;
+export const indicatorNames = viewOptions.indicator_name;
+export const yearOptions = viewOptions.year;
 
 const recipientsCache = new Map();
 
-// RECIPIENTS VIEW
-export function recipientsQueries(
-    donor,
-    recipient,
-    indicator,
-    currency,
-    prices,
-    timeRange
-) {
-
-    const indicators = indicator.length > 0 ? indicator : [-1];
-
-    const rows = fetchRecipientsSeries(
-        donor,
-        recipient,
-        indicators,
-        currency,
-        prices,
-        timeRange
-    );
+export function recipientsQueries(donor, recipient, indicator, currency, prices, timeRange) {
+    const rows = fetchRecipientsSeries(donor, recipient, indicator, currency, prices, timeRange);
 
     const absolute = fillMissingYearIndicators(rows.map((row) => ({
         year: row.year,
@@ -70,7 +45,6 @@ export function recipientsQueries(
         source: "OECD DAC2A"
     })), timeRange);
 
-    // Return raw rows for table transformation
     const relativeDonor = fillMissingYearIndicators(rows.map((row) => ({
         year: row.year,
         donor: row.donor,
@@ -84,7 +58,6 @@ export function recipientsQueries(
     return {absolute, relative, relativeDonor, rawData: rows};
 }
 
-// Separate table transformation so unit changes don't trigger base query
 export function transformTableData(rows, unit, currency, prices) {
     return rows.map((row) => ({
         year: row.year,
@@ -106,65 +79,29 @@ export function transformTableData(rows, unit, currency, prices) {
 }
 
 function recipientsCacheKey({donor, recipient, indicator, currency, prices, timeRange}) {
-    const donorKey = Array.isArray(donor) ? [...donor].sort().join(",") : String(donor);
-    const recipientKey = Array.isArray(recipient) ? [...recipient].sort().join(",") : String(recipient);
     const indicatorKey = Array.isArray(indicator) ? [...indicator].sort().join(",") : String(indicator);
     const timeRangeKey = Array.isArray(timeRange) ? `${timeRange[0]}-${timeRange[1]}` : String(timeRange);
-
-    return JSON.stringify({
-        donor: donorKey,
-        recipient: recipientKey,
-        indicator: indicatorKey,
-        currency,
-        prices,
-        timeRange: timeRangeKey
-    });
+    return JSON.stringify({donor, recipient, indicator: indicatorKey, currency, prices, timeRange: timeRangeKey});
 }
 
-function fetchRecipientsSeries(
-    donor,
-    recipient,
-    indicators,
-    currency,
-    prices,
-    timeRange
-) {
+function fetchRecipientsSeries(donor, recipient, indicators, currency, prices, timeRange) {
     const cacheKey = recipientsCacheKey({donor, recipient, indicator: indicators, currency, prices, timeRange});
-
     if (!recipientsCache.has(cacheKey)) {
-        recipientsCache.set(cacheKey, executeRecipientsSeries(
-            donor,
-            recipient,
-            indicators,
-            currency,
-            prices,
-            timeRange
-        ));
+        recipientsCache.set(cacheKey, executeRecipientsSeries(donor, recipient, indicators, currency, prices, timeRange));
     }
-
     return recipientsCache.get(cacheKey);
 }
 
-function executeRecipientsSeries(
-    donor,
-    recipient,
-    indicators,
-    currency,
-    prices,
-    timeRange
-) {
-    if (indicators.length === 0 || (indicators.length === 1 && indicators[0] === -1)) {
-        return [];
-    }
+function executeRecipientsSeries(donor, recipient, indicators, currency, prices, timeRange) {
+    if (indicators.length === 0) return [];
 
-    // In-memory filtering - much faster than DuckDB for simple queries on 11MB dataset
     const valueColumn = `value_${currency}_${prices}`;
 
     return recipientsData
         .filter(row =>
-            row.donor_code === donor &&
-            row.recipient_code === recipient &&
-            indicators.includes(row.indicator) &&
+            row.donor_name === donor &&
+            row.recipient_name === recipient &&
+            indicators.includes(row.indicator_name) &&
             row.year >= timeRange[0] &&
             row.year <= timeRange[1]
         )

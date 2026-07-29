@@ -12,13 +12,13 @@ import {ONEVisual, AutoPlot, AutoTable} from "npm:@one-data/observable-themes/ch
 import {getCurrencyLabel, formatString, resolveScale, isEmbedded} from "npm:@one-data/observable-themes/utils"
 import {setCustomColors} from "npm:@one-data/observable-themes/colors"
 import {
-    recipientsIndicators,
-    donorOptions,
-    recipientOptions,
+    donorNames,
+    recipientNames,
+    indicatorNames,
+    yearOptions,
     recipientsQueries,
     transformTableData
 } from "./js/recipientQueries.js"
-import {name2CodeMap, getNameByCode} from "./js/utils.js"
 import {customPalette} from "./js/colors.js"
 import {columnChart} from "./js/columnChart.js"
 import {areaChart} from "./js/areaChart.js"
@@ -27,38 +27,19 @@ import {APP_TITLE, APP_DESCRIPTION, NAV_ITEMS, CURRENCY_OPTIONS, PRICES_OPTIONS,
 
 setCustomColors(customPalette)
 
-const timeRangeOptions = await FileAttachment("./data/analysis_tools/base_time.json").json()
-
-const donorMapping = name2CodeMap(donorOptions, {})
-const recipientMapping = name2CodeMap(recipientOptions, {useRecipientGroups: true})
-const indicatorMapping = new Map(
-    Object.entries(recipientsIndicators).map(([k, v]) => [v, Number(k)])
-)
-
-const DONOR_OPTIONS = Array.from(donorMapping.entries())
-    .map(([label, value]) => ({label, value}))
-    .sort((a, b) => a.label.localeCompare(b.label))
-
-const RECIPIENT_OPTIONS = Array.from(recipientMapping.entries())
-    .map(([label, value]) => ({label, value}))
-    .sort((a, b) => a.label.localeCompare(b.label))
-
-const INDICATOR_OPTIONS = Array.from(indicatorMapping.entries())
-    .map(([label, value]) => ({label, value}))
-
+const DONOR_OPTIONS = donorNames.map(n => ({label: n, value: n}))
+const RECIPIENT_OPTIONS = recipientNames.map(n => ({label: n, value: n}))
+const INDICATOR_OPTIONS = indicatorNames.map(n => ({label: n, value: n}))
 ```
 
 ```jsx
-const BILATERAL_CODE = indicatorMapping.get("Bilateral")
-const MULTILATERAL_CODE = indicatorMapping.get("Imputed multilateral")
-
 function App() {
-  const [donor, setDonor] = React.useState(donorMapping.get("DAC countries"))
-  const [recipient, setRecipient] = React.useState(recipientMapping.get("Developing countries"))
-  const [indicator, setIndicator] = React.useState([BILATERAL_CODE, MULTILATERAL_CODE])
+  const [donor, setDonor] = React.useState("DAC countries")
+  const [recipient, setRecipient] = React.useState("ODA eligible countries")
+  const [indicator, setIndicator] = React.useState(["Bilateral", "Imputed multilateral"])
   const [currency, setCurrency] = React.useState("usd")
   const [prices, setPrices] = React.useState("constant")
-  const [timeRange, setTimeRange] = React.useState([timeRangeOptions.end - 20, timeRangeOptions.end])
+  const [timeRange, setTimeRange] = React.useState([yearOptions.end - 20, yearOptions.end])
   const [unit, setUnit] = React.useState("value")
   const [tableView, setTableView] = React.useState("disaggregated")
   const [relativePerspective, setRelativePerspective] = React.useState("recipient")
@@ -72,7 +53,7 @@ function App() {
   const data = React.useMemo(
     () => indicator.length > 0
       ? recipientsQueries(donor, recipient, indicator, currency, prices, timeRange)
-      : {absolute: [], relative: [], rawData: []},
+      : {absolute: [], relative: [], relativeDonor: [], rawData: []},
     [donor, recipient, indicator, currency, prices, timeRange]
   )
 
@@ -105,17 +86,16 @@ function App() {
     return tableData
   }, [tableData, tableView, indicator])
 
-  const donorName = formatString(getNameByCode(donorMapping, donor) ?? "")
-  const recipientName = getNameByCode(recipientMapping, recipient) ?? ""
-    const currencyLabel = getCurrencyLabel(currency, {currencyOnly: true, currencyLong: true})
-  const pricesNote = `${prices}${prices === "constant" ? ` ${timeRangeOptions.base}` : ""}`
+  const donorName = formatString(donor ?? "")
+  const recipientName = recipient ?? ""
+  const currencyLabel = getCurrencyLabel(currency, {currencyOnly: true, currencyLong: true})
+  const pricesNote = `${prices}${prices === "constant" ? ` ${yearOptions.base}` : ""}`
 
   const indicatorSubtitle = React.useMemo(() => {
     if (indicator.length > 1) {
       return `<span style="color:${customPalette.bilateral}; font-weight:600">Bilateral</span> and <span style="color:${customPalette.multilateral}; font-weight:600">imputed multilateral</span> ODA`
     }
-    const name = getNameByCode(indicatorMapping, indicator) ?? ""
-    return `${name} ODA`
+    return `${indicator[0] ?? ""} ODA`
   }, [indicator])
 
   const relativeIndicatorSubtitle = React.useMemo(() => {
@@ -125,8 +105,7 @@ function App() {
     if (indicator.length > 1) {
       return `<span style="color:${customPalette.bilateral}; font-weight:600">Bilateral</span> and <span style="color:${customPalette.multilateral}; font-weight:600">imputed multilateral</span> ${shareText}`
     }
-    const name = getNameByCode(indicatorMapping, indicator) ?? ""
-    return `${name} ${shareText}`
+    return `${indicator[0] ?? ""} ${shareText}`
   }, [indicator, relativePerspective, recipientName, donorName])
 
   const columnChartFn = React.useCallback(
@@ -154,8 +133,7 @@ function App() {
     if (indicator.length > 1) {
       return `<span style="color:${customPalette.bilateral}; font-weight:600">Bilateral</span> and <span style="color:${customPalette.multilateral}; font-weight:600">imputed multilateral</span> ${shareText}`
     }
-    const name = getNameByCode(indicatorMapping, indicator) ?? ""
-    return `${name} ${shareText}`
+    return `${indicator[0] ?? ""} ${shareText}`
   }, [tableView, indicator, unit, indicatorSubtitle, recipientName, donorName])
 
   const tableFn = React.useCallback(
@@ -205,8 +183,8 @@ function App() {
                 </div>          
                 <div className="flex flex-col items-stretch gap-6">
                     <RangeInput
-                        min={timeRangeOptions.start}
-                        max={timeRangeOptions.end}
+                        min={yearOptions.start}
+                        max={yearOptions.end}
                         step={1}
                         label="Time range"
                         value={timeRange}
@@ -243,7 +221,6 @@ function App() {
                 data={absoluteData}
                 imageDownload={true}
                 dataDownload={true}
-                
               >
                   <AutoPlot data={absoluteData} plotFn={columnChartFn} />
               </ONEVisual>

@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from oda_data import provider_groupings
+from oda_data import provider_groupings, recipient_groupings
 
 logger = logging.getLogger(__name__)
 
@@ -16,21 +16,12 @@ logger.addHandler(shell_handler)
 # Set logger level
 logger.setLevel(logging.INFO)
 
-eui_bi_code: int = 919
-
 FINANCING_TIME: dict = {"start": 1990, "end": 2025, "base": 2025}
 BASE_TIME: dict = {"start": 1990, "end": 2024, "base": 2024}  # for currency conversions
 SECTORS_TIME: dict = {"start": 2013, "end": 2024, "base": 2024}
 CURRENCIES: list = ["USD", "EUR", "GBP", "CAD"]
 
-IN_DONOR_FINANCING_INDICATORS: dict = {
-    "DAC1.10.1820": "Refugees in donor countries",
-    "DAC1.10.1500": "Scholarships and student costs in donor countries",
-    "DAC1.10.1510": "Scholarships/training in donor country",
-    "DAC1.10.1520": "Imputed student costs",
-}
-
-OTHER_FINANCING_INDICATORS: dict = {
+AGGREGATE_FINANCING_INDICATORS: dict = {
     "ONE.10.1010_11010": "Total ODA",
     "ONE.10.1010C": "Core ODA (ONE Definition)",
     "DAC1.10.1015": "Bilateral ODA",
@@ -39,14 +30,30 @@ OTHER_FINANCING_INDICATORS: dict = {
     "DAC1.10.12000": "Multilateral ODA",
     "DAC1.10.1600": "Debt relief",
     "DAC1.10.11026": "Debt relief",
+}
+
+PSI_FINANCING_INDICATORS: dict = {
     "DAC1.60.11030": "Private sector instruments",
     "DAC1.60.11040": "Private sector instruments",
     "DAC1.60.11023": "Private sector instruments - institutional approach",
     "DAC1.60.11024": "Private sector instruments - instrument approach",
 }
 
-ALL_FINANCING_INDICATORS: dict = OTHER_FINANCING_INDICATORS | IN_DONOR_FINANCING_INDICATORS
+IN_DONOR_FINANCING_INDICATORS: dict = {
+    "DAC1.10.1820": "Refugees in donor countries",
+    "DAC1.10.1500": "Scholarships and student costs in donor countries",
+    "DAC1.10.1510": "Scholarships/training in donor country",
+    "DAC1.10.1520": "Imputed student costs",
+}
 
+ALL_FINANCING_INDICATORS: dict = AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS | IN_DONOR_FINANCING_INDICATORS
+
+FINANCING_INDICATORS_ORDER: list[str] = (
+    list(dict.fromkeys(AGGREGATE_FINANCING_INDICATORS.values()))
+    + ["Grants", "Non-grants"]
+    + list(dict.fromkeys(IN_DONOR_FINANCING_INDICATORS.values()))
+    + list(dict.fromkeys(PSI_FINANCING_INDICATORS.values()))
+)
 
 RECIPIENTS_INDICATORS: dict = {
     "DAC2A.10.206": "Bilateral",
@@ -80,11 +87,55 @@ ALL_DONORS: dict = BILATERAL_DONORS | AGGREGATE_DONORS
 
 EU_TOTAL: dict = provider_groupings()["eu27_total"]
 EU_COUNTRIES: dict = provider_groupings()["eu27_countries"]
-EU_INSTITUTIONS: dict = { k: v for k, v in EU_TOTAL.items() if EU_COUNTRIES.get(k) != v}
+# Whatever eu27_total holds beyond the member states, i.e. {918: "EU Institutions"}
+EU_INSTITUTIONS: dict = {k: v for k, v in EU_TOTAL.items() if k not in EU_COUNTRIES}
 
-EU_27: dict = { 1_000_000: "EU27 countries"}
-EU_27_INSTITUTIONS: dict = {2_000_000: "EU27 & EU Institutions "}
-ALL_BILATERAL: dict = {3_000_000: "All bilateral donors"}
+# EU institutions spend both their own resources and money contributed by EU member states.
+# Only the former can be added to bilateral providers without double counting members'
+# contributions, and that portion is what this series holds. It feeds the "All bilateral
+# donors" total and is then dropped, so it never reaches the view.
+EUI_BILATERAL_NAME: str = "EU Institutions, bilateral"
+
+DONORS_ORDER: list[str] = [
+    "DAC countries",
+    "Non-DAC countries",
+    "All bilateral donors",
+    "G7 countries",
+    "EU27 countries",
+    "EU Institutions",
+    "EU27 & EU Institutions",
+]
+
+AGGREGATE_RECIPIENTS: dict = {
+    10_100: "ODA eligible countries",
+    998: "ODA eligible countries, unspecified",
+    10_016: "Least Developed Countries (LDCs)",
+    10_045: "Low Income Countries (LICs)",
+    10_046: "Lower-Middle Income Countries (LMICs)",
+    10_047: "Upper-Middle Income Countries (UMICs)",
+    10_048: "High Income Countries (HICs)",
+    10_030: "Heavily Indebted Poor Countries (HIPCs)",
+    10_203: "Fragile states"
+}
+
+FRANCE_PRIORITY_RECIPIENTS: dict = recipient_groupings()["france_priority"]
+SAHEL_RECIPIENTS: dict = recipient_groupings()["sahel"]
+
+COUNTRIES_REGIONS_RECIPIENTS: dict = recipient_groupings()["all_developing_countries_regions"]
+ALL_RECIPIENTS: dict = AGGREGATE_RECIPIENTS | COUNTRIES_REGIONS_RECIPIENTS
+
+RECIPIENTS_ORDER: list[str] = [
+    "ODA eligible countries",
+    "Least Developed Countries (LDCs)",
+    "Low Income Countries (LICs)",
+    "Lower-Middle Income Countries (LMICs)",
+    "Upper-Middle Income Countries (UMICs)",
+    "High Income Countries (HICs)",
+    "Heavily Indebted Poor Countries (HIPCs)",
+    "Fragile states",
+    "France priority countries",
+    "Sahel countries",
+]
 
 RECIPIENT_GROUPS: dict = {
     "Developing countries": 100_000,
@@ -134,7 +185,9 @@ class PATHS:
     DONORS = TOOLS / "donors.json"
     RECIPIENTS = TOOLS / "recipients.json"
 
-    RECIPIENT_INDICATORS_CODES = TOOLS / "recipients_indicators.json"
+    # Only the sectors view still needs this indicator code map; the recipients view
+    # now carries indicator names directly.
+    SECTORS_INDICATORS_CODES = TOOLS / "sectors_indicators.json"
 
     DATA = SRC / "data" / "cache"
     PYDEFLATE = DATA
