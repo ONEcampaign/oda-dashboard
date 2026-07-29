@@ -15,8 +15,9 @@ from src.data.analysis_tools.transformations import (
     add_donor_names,
     add_recipient_names,
     widen_currency_price,
+    add_share_of_donors_total_oda,
 )
-from src.data.config import PATHS, SECTORS_TIME, logger
+from src.data.config import PATHS, SECTORS_TIME, DONOR_GROUPS, logger
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
     get_dac_ids,
@@ -178,6 +179,27 @@ def combined_sectors():
 
     with open(PATHS.TOOLS / "sectors.json", "w") as f:
         json.dump(sector_mapping_filtered, f, indent=2)
+
+    # Add donor perspective share (share of donor's total ODA to developing countries)
+    sectors = add_share_of_donors_total_oda(sectors)
+
+    # Add recipient perspective share (share of ODA received by recipient from all donors).
+    # Computed from individual donor codes only — aggregate group codes (20_000–20_005)
+    # are excluded from the denominator to prevent double-counting and to include EU
+    # Institutions (918), which is absent from the "All bilateral donors" (20_000) group.
+    aggregate_codes = set(DONOR_GROUPS.values())
+    total_received = (
+        sectors.loc[~sectors["donor_code"].isin(aggregate_codes)]
+        .groupby(["year", "recipient_code"], dropna=False, observed=True)["value_usd_current"]
+        .sum()
+        .reset_index()
+        .rename(columns={"value_usd_current": "total_oda"})
+    )
+    sectors = sectors.merge(total_received, on=["year", "recipient_code"], how="left")
+    sectors["pct_total_recipient"] = (
+        sectors["value_usd_current"] / sectors["total_oda"]
+    ).round(6)
+    sectors = sectors.drop(columns=["total_oda"])
 
     # Convert values to units (integers) for better compression
     # NOTE: Frontend queries must divide value_* columns by 1e6 to get millions
