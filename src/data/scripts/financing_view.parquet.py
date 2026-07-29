@@ -7,6 +7,7 @@ from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_ind
 
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
+    apply_name_overrides,
     parquet_to_stdout,
     convert_values_to_units,
     generate_view_options,
@@ -18,13 +19,19 @@ from src.data.analysis_tools.transformations import (
     widen_currency_price, get_group_total,
 )
 from src.data.config import (
+    logger,
     FINANCING_TIME,
-    ALL_FINANCING_INDICATORS,
+    AGGREGATE_FINANCING_INDICATORS,
+    PSI_FINANCING_INDICATORS,
     IN_DONOR_FINANCING_INDICATORS,
-    OTHER_FINANCING_INDICATORS,
+    ALL_FINANCING_INDICATORS,
     ALL_DONORS,
+    AGGREGATE_DONORS,
     EU_TOTAL,
-    logger, EU_COUNTRIES, BILATERAL_DONORS,
+    EU_COUNTRIES,
+    BILATERAL_DONORS,
+    DONORS_ORDER,
+    FINANCING_INDICATORS_ORDER,
 )
 
 set_cache_dir(oda_data=True, pydeflate=True)
@@ -86,7 +93,7 @@ def get_dac1():
         providers=list(ALL_DONORS),
         measure="net_disbursement",
         use_bulk_download=True,
-    ).get_indicators(list(OTHER_FINANCING_INDICATORS))
+    ).get_indicators(list(AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS))
 
     # other indicators in grant equivalents after 2017
     other_ge_raw = OECDClient(
@@ -94,7 +101,7 @@ def get_dac1():
         providers=list(ALL_DONORS),
         measure="grant_equivalent",
         use_bulk_download=True,
-    ).get_indicators(list(OTHER_FINANCING_INDICATORS))
+    ).get_indicators(list(AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS))
 
     dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw], ignore_index=True)
     dac1_raw = resolve_indicator_duplicates(dac1_raw, raise_error=False)
@@ -108,6 +115,8 @@ def get_dac1():
         .assign(indicator_name=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS))
         .drop(columns=["one_indicator"])
     )
+
+    dac1 = apply_name_overrides(dac1, AGGREGATE_DONORS, "donor")
 
     return dac1
 
@@ -148,6 +157,8 @@ def get_grants():
         .melt(id_vars=["year", "donor_code", "donor_name"], value_vars=["Grants", "Non-grants"])
     )
 
+    grants = apply_name_overrides(grants, AGGREGATE_DONORS, "donor")
+
     return grants
 
 
@@ -174,7 +185,7 @@ def get_eui_eu27_dac1():
     )
 
     other_flow_raw = get_eui_plus_bilateral_providers_indicator(
-        other_flow_client, indicator=list(OTHER_FINANCING_INDICATORS)
+        other_flow_client, indicator=list(AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS)
     )
 
     # other indicators in grant equivalents after 2017
@@ -186,7 +197,7 @@ def get_eui_eu27_dac1():
     )
 
     other_ge_raw = get_eui_plus_bilateral_providers_indicator(
-        other_ge_client, indicator=list(OTHER_FINANCING_INDICATORS)
+        other_ge_client, indicator=list(AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS)
     )
 
     eui_eu27_dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw], ignore_index=True)
@@ -214,10 +225,15 @@ def get_eui_eu27_grants():
         "Disbursements, grants": "Grants",
     }
 
+    # NOTE: measure order matters. get_eui_plus_bilateral_providers_indicator derives the
+    # EU institutions weight from measure[0] only, so the total-ODA measure must come
+    # first. With the grants measure first the weight is computed on grants (negative in
+    # some years), which understates the EUI share and breaks
+    # Grants + Non-grants == Total ODA for this aggregate.
     grants_flow_client = OECDClient(
         years=range(FINANCING_TIME["start"], 2018),
         providers=list(EU_TOTAL),
-        measure=["net_disbursement_grant", "net_disbursement"],
+        measure=["net_disbursement", "net_disbursement_grant"],
         use_bulk_download=True,
     )
 
@@ -228,7 +244,7 @@ def get_eui_eu27_grants():
     grants_ge_client = OECDClient(
         years=range(2018, FINANCING_TIME["end"] + 1),
         providers=list(EU_TOTAL),
-        measure=["net_disbursement_grant", "grant_equivalent"],
+        measure=["grant_equivalent", "net_disbursement_grant"],
         use_bulk_download=True,
     )
 
@@ -266,16 +282,14 @@ def get_financing_data():
     eu27_financing = get_group_total(
         non_eu_financing,
         EU_COUNTRIES,
-        check_all_keys=False,
         group_cols=["year", "indicator_name", "currency", "price"],
-        donor_name="EU27 countries"
+        group_name="EU27 countries"
     )
     all_bilateral_financing = get_group_total(
         non_eu_financing,
         BILATERAL_DONORS,
-        check_all_keys=False,
         group_cols=["year", "indicator_name", "currency", "price"],
-        donor_name="All bilateral donors"
+        group_name="All bilateral donors"
     )
 
     eui_eu27_dac1 = get_eui_eu27_dac1()
@@ -317,46 +331,18 @@ def get_financing_data():
     # NOTE: Frontend queries must divide value_* columns by 1e6 to get millions
     financing = convert_values_to_units(financing)
 
-    financing["donor_name"] = financing["donor_name"].replace({"G7": "G7 countries"})
-
     return financing
 
 
 if __name__ == "__main__":
-
-    indicators_order: list[str] = [
-        "Total ODA",
-        "Core ODA (ONE Definition)",
-        "Bilateral ODA",
-        "Multilateral ODA",
-        "Debt relief",
-        "Grants",
-        "Non-grants",
-        "Refugees in donor countries",
-        "Scholarships and student costs in donor countries",
-        "Scholarships/training in donor country",
-        "Imputed student costs",
-        "Private sector instruments",
-        "Private sector instruments - institutional approach",
-        "Private sector instruments - instrument approach",
-    ]
-
-    donors_order: list[str] = [
-        "DAC countries",
-        "Non-DAC countries",
-        "All bilateral donors",
-        "G7 countries",
-        "EU27 countries",
-        "EU27 & EU Institutions",
-    ]
 
     logger.info("Generating financing table...")
     df = get_financing_data()
     generate_view_options(
         df=df,
         columns={
-            "donor_name": donors_order,
-            "indicator_name": indicators_order,
+            "donor_name": DONORS_ORDER,
+            "indicator_name": FINANCING_INDICATORS_ORDER,
             "year": [],
         },
         base_year=FINANCING_TIME["base"],
