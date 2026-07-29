@@ -97,7 +97,7 @@ def get_dac1():
     ).get_indicators(list(OTHER_FINANCING_INDICATORS))
 
     dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw], ignore_index=True)
-    dac1_raw = resolve_indicator_duplicates(dac1_raw, raise_error=False)
+    dac1_raw = resolve_indicator_duplicates(dac1_raw)
 
     dac1 = (
         dac1_raw.groupby(
