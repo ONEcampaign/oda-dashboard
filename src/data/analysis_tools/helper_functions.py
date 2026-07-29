@@ -25,7 +25,28 @@ import pyarrow.dataset as ds
 from oda_data import set_data_path
 from pydeflate import set_pydeflate_path
 
-from src.data.config import PATHS, logger, eui_bi_code
+from src.data.config import PATHS, logger
+
+
+def apply_name_overrides(df: pd.DataFrame, mapping: dict, column: str) -> pd.DataFrame:
+    """Override a name column for rows whose code appears in a config mapping dict.
+
+    Ensures that codes with canonical names defined in config (e.g. AGGREGATE_DONORS,
+    INCOME_RECIPIENTS) produce consistent name strings even when OECDClient returns
+    a different spelling or casing, so that downstream name-based merges and filters
+    work reliably.
+
+    Args:
+        df: DataFrame with {column}_code and {column}_name columns.
+        mapping: Dict of {code: canonical_name} (e.g. AGGREGATE_DONORS).
+        column: "donor" or "recipient".
+    """
+    code_col = f"{column}_code"
+    name_col = f"{column}_name"
+    df = df.copy()
+    mask = df[code_col].isin(mapping)
+    df.loc[mask, name_col] = df.loc[mask, code_col].map(mapping)
+    return df
 
 
 def save_time_range_to_json(time_dict: dict, file_name: str):
@@ -161,12 +182,6 @@ def parquet_to_stdout(df: pd.DataFrame):
     # Write to stdout
     buf_bytes = buf.getvalue().to_pybytes()
     sys.stdout.buffer.write(buf_bytes)
-
-
-def get_eui(df: pd.DataFrame) -> pd.DataFrame:
-    eui_df = df.query("dac_code == 918").assign(dac_code=eui_bi_code)
-
-    return eui_df
 
 
 def convert_values_to_units(df: pd.DataFrame) -> pd.DataFrame:
