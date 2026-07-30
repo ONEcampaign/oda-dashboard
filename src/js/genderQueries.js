@@ -1,6 +1,6 @@
 import {FileAttachment} from "observablehq:stdlib";
 import { convertUnitsToMillions } from "npm:@one-data/observable-themes/utils"
-import {name2CodeMap, fillMissingYearIndicators} from "./utils.js";
+import {fillMissingYearIndicators} from "./utils.js";
 
 /**
  * IMPORTANT: Value columns in the parquet file are stored as integers in UNITS (not millions).
@@ -8,22 +8,20 @@ import {name2CodeMap, fillMissingYearIndicators} from "./utils.js";
  * Use the convertUnitsToMillions() helper function for this conversion.
  */
 
-// Load metadata and parquet data in parallel
-const [donorOptions, recipientOptions, genderIndicators, genderTable] = await Promise.all([
-    FileAttachment("../data/analysis_tools/donors.json").json(),
-    FileAttachment("../data/analysis_tools/recipients.json").json(),
-    FileAttachment("../data/analysis_tools/gender_indicators.json").json(),
+// Donors, recipients and marker scores are all identified by name; the loader publishes
+// the option lists alongside the data.
+const [viewOptions, genderTable] = await Promise.all([
+    FileAttachment("../data/analysis_tools/gender_view_options.json").json(),
     FileAttachment("../data/scripts/gender_view.parquet").parquet()
 ]);
 
 // Convert Arrow table to JavaScript array for fast in-memory filtering
 const genderData = genderTable.toArray();
 
-// Export for use in gender.md to avoid duplicate loading
-export {donorOptions, recipientOptions, genderIndicators};
-
-const donorMapping = name2CodeMap(donorOptions, {});
-const recipientMapping = name2CodeMap(recipientOptions);
+export const donorNames = viewOptions.donor_name;
+export const recipientNames = viewOptions.recipient_name;
+export const indicatorNames = viewOptions.indicator_name;
+export const yearOptions = viewOptions.year;
 
 const genderCache = new Map();
 
@@ -37,7 +35,7 @@ export function genderQueries(
     timeRange
 ) {
 
-    const indicators = indicator.length > 0 ? indicator : [-1];
+    const indicators = indicator;
 
     const rows = fetchGenderSeries(
         donor,
@@ -145,7 +143,7 @@ function executeGenderSeries(
     prices,
     timeRange
 ) {
-    if (indicators.length === 0 || (indicators.length === 1 && indicators[0] === -1)) {
+    if (indicators.length === 0) {
         return [];
     }
 
@@ -154,9 +152,9 @@ function executeGenderSeries(
 
     return genderData
         .filter(row =>
-            row.donor_code === donor &&
-            row.recipient_code === recipient &&
-            indicators.includes(row.indicator) &&
+            row.donor_name === donor &&
+            row.recipient_name === recipient &&
+            indicators.includes(row.indicator_name) &&
             row.year >= timeRange[0] &&
             row.year <= timeRange[1]
         )
