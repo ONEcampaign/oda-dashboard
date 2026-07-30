@@ -168,20 +168,20 @@ def check_name_mappings_complete(df: pd.DataFrame) -> CheckResult:
     errors = []
 
     # Check donor mappings
-    if "donor_code" in df.columns and "donor_name" in df.columns:
-        unmapped = df[df["donor_name"].isna()]["donor_code"].unique()
+    if "donor_name" in df.columns:
+        unmapped = df[df["donor_name"].isna()].index.unique()
         if len(unmapped) > 0:
             errors.append(f"Unmapped donor codes: {sorted(unmapped)[:10]}")
 
     # Check recipient mappings
-    if "recipient_code" in df.columns and "recipient_name" in df.columns:
-        unmapped = df[df["recipient_name"].isna()]["recipient_code"].unique()
+    if "recipient_name" in df.columns:
+        unmapped = df[df["recipient_name"].isna()].index.unique()
         if len(unmapped) > 0:
             errors.append(f"Unmapped recipient codes: {sorted(unmapped)[:10]}")
 
     # Check indicator mappings
-    if "indicator" in df.columns and "indicator_name" in df.columns:
-        unmapped = df[df["indicator_name"].isna()]["indicator"].unique()
+    if "indicator_name" in df.columns:
+        unmapped = df[df["indicator_name"].isna()].index.unique()
         if len(unmapped) > 0:
             errors.append(f"Unmapped indicator codes: {list(unmapped)[:10]}")
 
@@ -191,7 +191,7 @@ def check_name_mappings_complete(df: pd.DataFrame) -> CheckResult:
 def check_critical_dimensions(
     df: pd.DataFrame,
     expected_latest_year: int,
-    critical_donors: list[int],
+    critical_donors: list[str],
 ) -> CheckResult:
     """
     Hard gate: Critical donors and years must be present.
@@ -199,7 +199,7 @@ def check_critical_dimensions(
     Args:
         df: DataFrame to validate
         expected_latest_year: The latest year that must exist
-        critical_donors: Donor codes that must have data
+        critical_donors: Donor names that must have data
 
     Returns:
         CheckResult with pass/fail
@@ -215,8 +215,8 @@ def check_critical_dimensions(
             )
 
     # Check critical donors exist
-    if "donor_code" in df.columns:
-        donors = set(df["donor_code"].unique())
+    if "donor_name" in df.columns:
+        donors = set(df["donor_name"].unique())
         missing_donors = [d for d in critical_donors if d not in donors]
         if missing_donors:
             errors.append(f"Missing critical donors: {missing_donors}")

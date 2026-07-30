@@ -161,18 +161,6 @@ def set_cache_dir(path=PATHS.DATA, oda_data: bool = False, pydeflate: bool = Fal
         set_pydeflate_path(path)
 
 
-def get_dac_ids(path, remove_eui_bi: bool = True) -> list:
-    with open(path, "r") as f:
-        data = json.load(f)
-
-    dac_ids = [int(key) for key in data.keys()]
-
-    if remove_eui_bi:
-        dac_ids = [x for x in dac_ids if x != 919]
-
-    return dac_ids
-
-
 def export_parquet(df: pd.DataFrame, file_path: Path):
     """
     Export DataFrame to Parquet file with optimized types and compression.
@@ -453,7 +441,18 @@ def write_partitioned_dataset(
     missing = [col for col in partition_cols if col not in table.column_names]
     if missing:
         raise ValueError(f"Partition columns absent from the data: {missing}")
-    partition_schema = pa.schema([table.schema.field(col) for col in partition_cols])
+    partition_fields = []
+    for col in partition_cols:
+        field = table.schema.field(col)
+        # Dictionary-typed partition keys make pyarrow hang in teardown across thousands of
+        # partitions, so partition on the underlying values instead.
+        if pa.types.is_dictionary(field.type):
+            field = field.with_type(field.type.value_type)
+            table = table.set_column(
+                table.schema.get_field_index(col), field, table[col].cast(field.type)
+            )
+        partition_fields.append(field)
+    partition_schema = pa.schema(partition_fields)
 
     # Configure parquet format with write options
     parquet_format = ds.ParquetFileFormat()

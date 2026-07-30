@@ -67,14 +67,6 @@ GENDER_INDICATORS: dict = {
     "not_screened": "Not screened",
 }
 
-DONOR_GROUPS: dict = {
-    "All bilateral donors": 20_000,
-    "DAC countries": 20_001,
-    "EU27 countries": 20_002,
-    "EU27 + EU Institutions": 20_003,
-    "G7 countries": 20_004,
-    "non-DAC countries": 20_005
-}
 
 AGGREGATE_DONORS: dict = {
     20_001: "DAC countries",
@@ -147,14 +139,24 @@ CRS_REGION_ROLLUPS: dict = {
     "America": ["Caribbean & Central America", "South America", "America"],
 }
 
+# Channels through which EU member states' core contributions reach the EU institutions.
+# Members' imputed multilateral on these channels is excluded from the EU27 + institutions
+# bloc, or it would be counted once there and again as the institutions' own spending.
+# Source: human-development-dashboard/src/data/scripts/imputations.py
+EUI_CHANNEL_CODES: frozenset[int] = frozenset({42000, 42001, 42003, 42004, 42999})
+
 # Sentinels for recipients the CRS never classifies. Distinct from the CRS's own
 # "Part I unallocated by income" class, which is a real reported category.
-SECTORS_UNCLASSIFIED_REGION: str = "Region not reported"
-SECTORS_UNCLASSIFIED_INCOME: str = "Income group not reported"
+CRS_UNCLASSIFIED_REGION: str = "Region not reported"
+CRS_UNCLASSIFIED_INCOME: str = "Income group not reported"
+
+# Every provider that reports to the CRS in its own right. The CRS has no aggregate
+# providers, so the donor groups of both CRS views are summed from these.
+CRS_PROVIDERS: dict = BILATERAL_DONORS | EU_INSTITUTIONS
 
 # "EU27 & EU Institutions" is deliberately absent: it cannot be computed from the CRS, which
 # offers no equivalent of the DAC1 EU-institutions weighting used by the other views.
-SECTORS_DONORS_ORDER: list[str] = [
+CRS_DONORS_ORDER: list[str] = [
     "DAC countries",
     "Non-DAC countries",
     "All bilateral donors",
@@ -163,7 +165,7 @@ SECTORS_DONORS_ORDER: list[str] = [
     "EU Institutions",
 ]
 
-SECTORS_RECIPIENTS_ORDER: list[str] = [
+CRS_RECIPIENTS_ORDER: list[str] = [
     "ODA eligible countries",
     *CRS_INCOME_LABELS.values(),
     *CRS_REGION_ROLLUPS,
@@ -211,39 +213,6 @@ RECIPIENTS_ORDER: list[str] = [
     "Sahel countries",
 ]
 
-RECIPIENT_GROUPS: dict = {
-    "Developing countries": 100_000,
-    "Africa": 100_001,
-    "America": 100_002,
-    "Asia": 100_003,
-    "Caribbean": 100_004,
-    "Central America": 100_006,
-    "Central America and the Caribbean": 10_005,
-    "Eastern Africa": 100_007,
-    "Europe": 100_008,
-    "Far East Asia": 100_009,
-    "Fragile and conflict-affected countries": 100_010,
-    "France priority countries": 100_011,
-    "Least developed countries": 100_012,
-    "Low income countries": 100_013,
-    "Lower-middle income countries": 100_014,
-    "Melanesia": 100_015,
-    "Micronesia": 100_016,
-    "Middle Africa": 100_017,
-    "Middle East": 100_018,
-    "North America": 100_019,
-    "Northern Africa": 100_02,
-    "Oceania": 100_021,
-    "Polynesia": 100_022,
-    "Sahel countries": 100_023,
-    "South America": 100_024,
-    "Southern Africa": 100_025,
-    "Southern and Central Asia": 100_026,
-    "Sub-Saharan Africa": 10_003,
-    "Upper-middle income countries": 100_028,
-    "Western Africa": 100_029,
-    "Middle income countries": 100_030,
-}
 
 
 class PATHS:
@@ -256,8 +225,6 @@ class PATHS:
 
     TOOLS = SRC / "data" / "analysis_tools"
     INDICATORS = TOOLS / "indicators.json"
-    DONORS = TOOLS / "donors.json"
-    RECIPIENTS = TOOLS / "recipients.json"
 
     DATA = SRC / "data" / "cache"
     PYDEFLATE = DATA

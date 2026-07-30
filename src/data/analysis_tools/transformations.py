@@ -1,6 +1,3 @@
-import json
-from collections import defaultdict
-
 import pandas as pd
 from oda_data import OECDClient
 from pydeflate import oecd_dac_deflate, oecd_dac_exchange, set_pydeflate_path
@@ -14,11 +11,23 @@ from src.data.config import (
     BILATERAL_DONORS,
     EU_COUNTRIES,
     PATHS,
-    RECIPIENT_GROUPS,
-    DONOR_GROUPS,
+    CRS_PROVIDERS,
+    DAC_COUNTRIES,
+    G7_COUNTRIES,
+    NON_DAC_COUNTRIES,
+    SAHEL_RECIPIENTS,
+    FRANCE_PRIORITY_RECIPIENTS,
+    CRS_INCOME_LABELS,
+    CRS_REGION_ROLLUPS,
+    CRS_UNCLASSIFIED_REGION,
+    CRS_UNCLASSIFIED_INCOME,
+    EU_INSTITUTIONS,
 )
 
-from src.data.analysis_tools.helper_functions import apply_name_overrides
+from src.data.analysis_tools.helper_functions import (
+    apply_name_overrides,
+    normalize_unspecified_names,
+)
 
 set_pydeflate_path(PATHS.PYDEFLATE)
 
@@ -199,6 +208,280 @@ def get_group_total(
 
 
 
+# CRS column names carrying the classifications both CRS-based views group by.
+CRS_REGION_COL = "recipient_region"
+CRS_INCOME_COL = "incomegroup_name"
+_CONTINENT_COL = "_continent"
+
+_CRS_CLASSIFICATION_COLUMNS = [
+    "year",
+    "recipient_code",
+    "recipient_name",
+    CRS_REGION_COL,
+    CRS_INCOME_COL,
+]
+
+
+def _modal_value(series: pd.Series):
+    """Return the most common non-null value, ties broken by sort order for determinism."""
+    present = series.dropna()
+    if present.empty:
+        return pd.NA
+    return present.mode().sort_values().iloc[0]
+
+
+def get_crs_recipient_classifications(
+    years: range | list | int, recipients: list | None = None
+) -> pd.DataFrame:
+    """Build the recipient name, region and income-group table the CRS views group by.
+
+    Only the CRS carries these classifications. Imputed multilateral spending is keyed on
+    [channel, purpose, recipient, year, currency, prices] and policy marker data on
+    [provider, agency, recipient, modality, finance type, purpose, year], so neither knows a
+    recipient's region or income group. Building one table here and joining it to every frame
+    keeps them consistent: grouping one frame on a column another lacks is what double counts.
+
+    Args:
+        years: Years to cover.
+        recipients: Recipient codes to restrict to, or None for all.
+
+    Returns:
+        One row per (recipient_code, year) with recipient name, region and income group.
+    """
+    from oda_data import CRSData
+
+    raw = CRSData(years=years, recipients=recipients).read(
+        using_bulk_download=True, columns=_CRS_CLASSIFICATION_COLUMNS
+    )
+
+    # CRSData.read silently drops requested columns that do not exist, which would quietly
+    # empty the classifications, so check rather than trust.
+    missing = [c for c in _CRS_CLASSIFICATION_COLUMNS if c not in raw.columns]
+    if missing:
+        raise ValueError(f"CRS did not return required columns: {missing}")
+
+    raw["recipient_name"] = normalize_unspecified_names(raw["recipient_name"])
+
+    attributes = ["recipient_name", CRS_REGION_COL, CRS_INCOME_COL]
+    grouped = raw.groupby(["recipient_code", "year"], dropna=False, observed=True)[attributes]
+
+    # Reduce each column to its most common non-null value, rather than deduplicating whole
+    # rows. A recipient-year often has some transactions with a blank region or income group,
+    # and dropping duplicate rows can pick one of those and lose a value the data does have.
+    # Where transactions genuinely disagree, the majority wins, so the result does not depend
+    # on row order.
+    classified = grouped.agg(_modal_value).reset_index()
+
+    conflicts = grouped.nunique(dropna=True)
+    for col in attributes:
+        disagreeing = conflicts.index[conflicts[col] > 1]
+        if len(disagreeing):
+            logger.warning(
+                "%s (recipient_code, year) combinations report more than one %s; taking the "
+                "most common. Recipient codes: %s",
+                len(disagreeing), col,
+                sorted({int(code) for code, _ in disagreeing})[:10],
+            )
+
+    logger.info("Recipient classification table: %s recipient-years", f"{len(classified):,}")
+
+    return classified
+
+
+def add_recipient_classifications(
+    df: pd.DataFrame, classified: pd.DataFrame, label: str
+) -> pd.DataFrame:
+    """Attach recipient name, region and income group, keyed on (recipient_code, year).
+
+    Recipient-years the CRS never classifies fall back to the recipient's own classification
+    from other years, and anything still unmatched gets an explicit sentinel — never NaN in a
+    grouping key, and never silently dropped.
+
+    Args:
+        df: Frame with recipient_code, year and a "value" column.
+        classified: Table from get_crs_recipient_classifications.
+        label: Name of the frame, used in log messages.
+
+    Returns:
+        The frame with recipient_name, region and income group attached.
+    """
+    before_rows, before_value = len(df), df["value"].sum()
+    merged = df.drop(columns=["recipient_name"], errors="ignore").merge(
+        classified, on=["recipient_code", "year"], how="left", validate="m:1"
+    )
+
+    if len(merged) != before_rows:
+        raise ValueError(
+            f"{label}: classification join changed the row count "
+            f"({before_rows:,} -> {len(merged):,})"
+        )
+
+    # Fall back to the recipient's classification from any year before giving up.
+    per_recipient = (
+        classified.sort_values("year")
+        .drop_duplicates("recipient_code", keep="last")
+        .set_index("recipient_code")
+    )
+    for col in ("recipient_name", CRS_REGION_COL, CRS_INCOME_COL):
+        gaps = merged[col].isna()
+        if gaps.any():
+            merged.loc[gaps, col] = merged.loc[gaps, "recipient_code"].map(
+                per_recipient[col]
+            )
+            logger.info(
+                "%s: %s rows had no %s for their year; filled from the recipient's other "
+                "years where possible",
+                label, f"{int(gaps.sum()):,}", col,
+            )
+
+    for col, sentinel in (
+        (CRS_REGION_COL, CRS_UNCLASSIFIED_REGION),
+        (CRS_INCOME_COL, CRS_UNCLASSIFIED_INCOME),
+    ):
+        still_missing = merged[col].isna()
+        if still_missing.any():
+            logger.warning(
+                "%s: %s rows worth %s have no %s in the CRS at all; labelled %r. "
+                "Recipient codes: %s",
+                label, f"{int(still_missing.sum()):,}",
+                f"{merged.loc[still_missing, 'value'].sum():,.1f}", col, sentinel,
+                sorted(merged.loc[still_missing, "recipient_code"].dropna().unique())[:10],
+            )
+            merged[col] = merged[col].fillna(sentinel)
+
+    if abs(merged["value"].sum() - before_value) > max(1e-6, abs(before_value) * 1e-9):
+        raise ValueError(
+            f"{label}: classification join changed the total "
+            f"({before_value:,.2f} -> {merged['value'].sum():,.2f})"
+        )
+
+    return merged
+
+
+def build_crs_recipient_group_totals(
+    df: pd.DataFrame, group_cols: list[str]
+) -> list[pd.DataFrame]:
+    """Build every recipient aggregate: overall total, income groups, regions, continents, lists.
+
+    Args:
+        df: Frame carrying the CRS classification columns and a "value" column.
+        group_cols: Columns identifying everything except the recipient, e.g.
+            year, donor_code, donor_name, indicator_name, currency, price.
+
+    Returns:
+        One frame per aggregate, each naming its group in recipient_name.
+    """
+    overall = (
+        df.groupby(group_cols, dropna=False, observed=True)["value"]
+        .sum()
+        .reset_index()
+        .assign(recipient_name="ODA eligible countries")
+    )
+
+    income = get_attribute_total(
+        df, CRS_INCOME_COL, group_cols, label_map=CRS_INCOME_LABELS
+    )
+
+    # The CRS uses continent names as region values too, for aid recorded against a whole
+    # continent. Those rows belong to the continent rollup below, so they are excluded here:
+    # emitting them as regions as well would produce two rows per continent, which the pivot
+    # would silently merge.
+    regions = get_attribute_total(
+        df.loc[~df[CRS_REGION_COL].isin(CRS_REGION_ROLLUPS)], CRS_REGION_COL, group_cols
+    )
+
+    # Continents are rollups of the CRS regions, so they are summed from the same column.
+    region_to_continent = {
+        region: continent
+        for continent, regions_in in CRS_REGION_ROLLUPS.items()
+        for region in regions_in
+    }
+    continents = get_attribute_total(
+        df.assign(**{_CONTINENT_COL: lambda d: d[CRS_REGION_COL].map(region_to_continent)}),
+        _CONTINENT_COL,
+        group_cols,
+    ).dropna(subset=["recipient_name"])
+
+    lists = [
+        get_group_total(
+            df, members, column="recipient", group_cols=group_cols, group_name=name
+        )
+        for name, members in (
+            ("Sahel countries", SAHEL_RECIPIENTS),
+            ("France priority countries", FRANCE_PRIORITY_RECIPIENTS),
+        )
+    ]
+
+    return [overall, income, regions, continents, *lists]
+
+
+def build_crs_donor_group_totals(
+    df: pd.DataFrame, group_cols: list[str], include_eu27_eui: bool = True
+) -> list[pd.DataFrame]:
+    """Build every donor aggregate by summing the providers that report to the CRS.
+
+    "All bilateral donors" includes EU Institutions in full. The CRS offers no equivalent of
+    the DAC1 weighting the other views use to strip out EU member contributions, so this
+    total does double count them; it is also the denominator for recipient-perspective shares.
+
+    "EU27 & EU Institutions" is a plain sum of the member states and the institutions, which is
+    correct only where the data has no imputed multilateral component — there is then no channel
+    through which members' core contributions could be counted twice. Views that do carry
+    imputed multilateral spending must pass include_eu27_eui=False and build the bloc
+    themselves, excluding members' contributions routed through EU institution channels.
+
+    Args:
+        df: Frame with donor_code and a "value" column.
+        group_cols: Columns identifying everything except the donor.
+        include_eu27_eui: Whether to add the EU27 + institutions bloc as a plain sum.
+
+    Returns:
+        One frame per aggregate, each naming its group in donor_name.
+    """
+    groups = [
+        ("All bilateral donors", CRS_PROVIDERS),
+        ("DAC countries", DAC_COUNTRIES),
+        ("Non-DAC countries", NON_DAC_COUNTRIES),
+        ("G7 countries", G7_COUNTRIES),
+        ("EU27 countries", EU_COUNTRIES),
+    ]
+    if include_eu27_eui:
+        groups.append(("EU27 & EU Institutions", EU_COUNTRIES | EU_INSTITUTIONS))
+
+    return [
+        get_group_total(df, members, group_cols=group_cols, group_name=name)
+        for name, members in groups
+    ]
+
+
+def add_share_of_group_total(
+    df: pd.DataFrame, group_cols: list[str], pct_col: str
+) -> pd.DataFrame:
+    """Add each row's value_usd_current as a share of its own group's total.
+
+    Unlike add_share_of_reference_total, the denominator is not a reference entity but the
+    group the row already belongs to — used where the indicators partition a whole, as the
+    gender marker scores do.
+
+    Args:
+        df: Wide-form frame containing value_usd_current.
+        group_cols: Columns defining the group whose total is the denominator.
+        pct_col: Name of the share column to add.
+
+    Returns:
+        The frame with pct_col added.
+    """
+    total = (
+        df.groupby(group_cols, dropna=False, observed=True)["value_usd_current"]
+        .sum()
+        .reset_index()
+        .rename(columns={"value_usd_current": "total_oda"})
+    )
+    merged = df.merge(total, on=group_cols, how="left", validate="m:1")
+    merged[pct_col] = (merged["value_usd_current"] / merged["total_oda"]).round(6)
+    return merged.drop(columns=["total_oda"])
+
+
 def get_attribute_total(
     df: pd.DataFrame,
     attribute_col: str,
@@ -231,16 +514,20 @@ def get_attribute_total(
         .reset_index()
     )
 
+    # The attribute may arrive dictionary-encoded, in which case mapping it to new labels and
+    # filling gaps would fail on values outside its categories. Work in plain objects.
+    attribute = totals[attribute_col].astype("object")
+
     if label_map:
-        unmapped = sorted(set(totals[attribute_col].dropna().unique()) - set(label_map))
+        unmapped = sorted(set(attribute.dropna().unique()) - set(label_map))
         if unmapped:
             logger.warning(
                 "%s: no display label configured for %s, keeping the raw value(s): %s",
                 attribute_col, len(unmapped), unmapped,
             )
-        totals[name_col] = totals[attribute_col].map(label_map).fillna(totals[attribute_col])
+        totals[name_col] = attribute.map(label_map).fillna(attribute)
     else:
-        totals[name_col] = totals[attribute_col]
+        totals[name_col] = attribute
 
     return totals.drop(columns=[attribute_col])
 
@@ -322,96 +609,6 @@ def add_currencies_and_prices(
     return pd.concat(current_dfs + constant_dfs, ignore_index=True)
 
 
-def donor_groups() -> dict:
-    """Invert donor JSON structure to map group names to lists of numeric codes."""
-    group_map = defaultdict(list)
-    with open(PATHS.DONORS, "r") as f:
-        data = json.load(f)
-
-    for code, info in data.items():
-        for group in info.get("groups", []):
-            group_map[group].append(int(code))
-
-    return {DONOR_GROUPS[group]: sorted(codes) for group, codes in group_map.items()}
-
-
-def recipient_groups() -> dict:
-    """Invert donor JSON structure to map group names to lists of numeric codes."""
-    group_map = defaultdict(list)
-    with open(PATHS.RECIPIENTS, "r") as f:
-        data = json.load(f)
-
-    for code, info in data.items():
-        for group in info.get("groups", []):
-            group_map[group].append(int(code))
-
-    return {
-        RECIPIENT_GROUPS[group]: sorted(codes) for group, codes in group_map.items()
-    }
-
-
-def add_donor_groupings(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Add donor groupings (DAC countries, G7, etc.) by aggregating member countries.
-
-    Optimized to minimize copies and use pre-computed column lists.
-    """
-    # Pre-compute groupby columns once (much faster than in loop)
-    groupby_cols = [c for c in df.columns if c != "value"]
-
-    groups = []
-    for group, members in donor_groups().items():
-        # Create boolean mask without copying dataframe
-        mask = df["donor_code"].isin(members)
-
-        if mask.any():
-            # Only copy the filtered subset (not entire dataframe)
-            filtered = df.loc[mask].copy()
-            filtered["donor_code"] = group
-
-            # Aggregate using pre-computed column list
-            aggregated = (
-                filtered.groupby(groupby_cols, dropna=False, observed=True)["value"]
-                .sum()
-                .reset_index()
-            )
-            groups.append(aggregated)
-
-    return pd.concat([df] + groups, ignore_index=True)
-
-
-def add_recipient_groupings(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Add recipient groupings (Africa, LDCs, etc.) by aggregating member countries.
-
-    Optimized to minimize copies and use pre-computed column lists.
-    """
-    # Pre-compute groupby columns once (much faster than in loop)
-    groupby_cols = [c for c in df.columns if c != "value"]
-
-    groups = []
-    for group, members in recipient_groups().items():
-        # Create boolean mask without copying dataframe
-        # Convert to set once for faster lookup
-        members_set = set(members)
-        mask = df["recipient_code"].isin(members_set)
-
-        if mask.any():
-            # Only copy the filtered subset (not entire dataframe)
-            filtered = df.loc[mask].copy()
-            filtered["recipient_code"] = group
-
-            # Aggregate using pre-computed column list
-            aggregated = (
-                filtered.groupby(groupby_cols, dropna=False, observed=True)["value"]
-                .sum()
-                .reset_index()
-            )
-            groups.append(aggregated)
-
-    return pd.concat([df] + groups, ignore_index=True)
-
-
 def widen_currency_price(
     df: pd.DataFrame,
     index_cols: tuple[str, ...] = ("year", "donor_code", "indicator"),
@@ -428,10 +625,12 @@ def widen_currency_price(
     # Pre-process values in long format (much faster than on wide data)
     df["value"] = df["value"].round(4).astype("float32")
 
-    # Check for duplicates before pivoting and aggregate if found
+    # Check for duplicates before pivoting and aggregate if found. Use subset= rather than
+    # df[pivot_cols].duplicated(): the latter materialises a second copy of every index
+    # column, which on the sectors frame means tens of millions of rows twice over.
     pivot_cols = list(index_cols) + ["currency", "price"]
     logger.info("Checking for duplicates before pivot...")
-    duplicates = df[pivot_cols].duplicated()
+    duplicates = df.duplicated(subset=pivot_cols)
 
     if duplicates.any():
         logger.warning(f"Found {duplicates.sum():,} duplicate rows before pivoting")
@@ -484,29 +683,6 @@ def add_share_of_total_oda(df: pd.DataFrame) -> pd.DataFrame:
     return merged
 
 
-def add_gender_share_of_total_oda(df: pd.DataFrame) -> pd.DataFrame:
-    """Add column for share of total ODA"""
-
-    total = (
-        df.groupby(
-            ["year", "donor_code", "recipient_code"], dropna=False, observed=True
-        )["value_usd_current"]
-        .sum()
-        .reset_index()
-        .rename(columns={"value_usd_current": "total_oda"})
-    )
-
-    merged = df.merge(total, on=["year", "donor_code", "recipient_code"], how="left")
-
-    merged["pct_of_total_oda"] = (
-        merged["value_usd_current"] / merged["total_oda"]
-    ).round(6)
-
-    merged = merged.drop(columns=["total_oda"])
-
-    return merged
-
-
 def add_share_of_gni(df: pd.DataFrame) -> pd.DataFrame:
     """Add column for share of GNI"""
 
@@ -521,31 +697,3 @@ def add_share_of_gni(df: pd.DataFrame) -> pd.DataFrame:
     return merged
 
 
-def add_gender_indicator_codes(df: pd.DataFrame) -> pd.DataFrame:
-    with open(PATHS.TOOLS / "gender_indicators.json", "r") as f:
-        indicator_mapping = {v: int(k) for k, v in json.load(f).items()}
-
-    df["indicator_code"] = df["indicator"].map(indicator_mapping)
-    return df.rename(
-        columns={"indicator": "indicator_name", "indicator_code": "indicator"}
-    )
-
-
-def add_donor_names(df: pd.DataFrame) -> pd.DataFrame:
-    from oda_data import provider_groupings
-
-    providers = provider_groupings()["all_official"] | {
-        v: k for k, v in DONOR_GROUPS.items()
-    }
-
-    return df.assign(donor_name=lambda d: d["donor_code"].map(providers))
-
-
-def add_recipient_names(df: pd.DataFrame) -> pd.DataFrame:
-    from oda_data import recipient_groupings
-
-    recipients = recipient_groupings()["all_recipients"] | {
-        v: k for k, v in RECIPIENT_GROUPS.items()
-    }
-
-    return df.assign(recipient_name=lambda d: d["recipient_code"].map(recipients))
