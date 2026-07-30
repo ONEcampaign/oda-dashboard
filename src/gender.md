@@ -14,11 +14,11 @@ import {setCustomColors} from "npm:@one-data/observable-themes/colors"
 import {
     genderQueries,
     transformTableData,
-    donorOptions,
-    recipientOptions,
-    genderIndicators
+    donorNames,
+    recipientNames,
+    indicatorNames,
+    yearOptions
 } from "./js/genderQueries.js"
-import {name2CodeMap, getNameByCode} from "./js/utils.js"
 import {customPalette, paletteGender} from "./js/colors.js"
 import {columnChart} from "./js/columnChart.js"
 import {areaChart} from "./js/areaChart.js"
@@ -27,24 +27,11 @@ import {APP_TITLE, APP_DESCRIPTION, NAV_ITEMS, CURRENCY_OPTIONS, PRICES_OPTIONS,
 
 setCustomColors(customPalette)
 
-const timeRangeOptions = await FileAttachment("./data/analysis_tools/base_time.json").json()
+const timeRangeOptions = yearOptions
 
-const donorMapping = name2CodeMap(donorOptions, {removeEU27EUI: true})
-const recipientMapping = name2CodeMap(recipientOptions, {useRecipientGroups: true})
-const indicatorMapping = new Map(
-    Object.entries(genderIndicators).map(([k, v]) => [v, Number(k)])
-)
-
-const DONOR_OPTIONS = Array.from(donorMapping.entries())
-    .map(([label, value]) => ({label, value}))
-    .sort((a, b) => a.label.localeCompare(b.label))
-
-const RECIPIENT_OPTIONS = Array.from(recipientMapping.entries())
-    .map(([label, value]) => ({label, value}))
-    .sort((a, b) => a.label.localeCompare(b.label))
-
-const INDICATOR_OPTIONS = Array.from(indicatorMapping.entries())
-    .map(([label, value]) => ({label, value}))
+const DONOR_OPTIONS = donorNames.map(name => ({label: name, value: name}))
+const RECIPIENT_OPTIONS = recipientNames.map(name => ({label: name, value: name}))
+const INDICATOR_OPTIONS = indicatorNames.map(name => ({label: name, value: name}))
 
 const GENDER_COLOR_MAP = new Map(
     paletteGender.domain.map((name, i) => [name, paletteGender.range[i]])
@@ -52,23 +39,22 @@ const GENDER_COLOR_MAP = new Map(
 ```
 
 ```jsx
-const MAIN_CODE = indicatorMapping.get("Main target")
-const SECONDARY_CODE = indicatorMapping.get("Secondary target")
+const MAIN_TARGET = "Main target"
+const SECONDARY_TARGET = "Secondary target"
 
-function buildGenderSubtitle(indicatorCodes, suffix = "") {
-  const parts = indicatorCodes.map((code, i) => {
-    const name = getNameByCode(indicatorMapping, code) ?? ""
+function buildGenderSubtitle(indicatorNamesSelected, suffix = "") {
+  const parts = indicatorNamesSelected.map((name, i) => {
     const color = GENDER_COLOR_MAP.get(name) ?? "inherit"
-    const sep = i < indicatorCodes.length - 1 ? ", " : ""
+    const sep = i < indicatorNamesSelected.length - 1 ? ", " : ""
     return `<span style="color:${color}; font-weight:600">${name}</span>${sep}`
   })
   return `Gender is ${parts.join("")}${suffix}`
 }
 
 function App() {
-  const [donor, setDonor] = React.useState(donorMapping.get("DAC countries"))
-  const [recipient, setRecipient] = React.useState(recipientMapping.get("Developing countries"))
-  const [indicator, setIndicator] = React.useState([MAIN_CODE, SECONDARY_CODE])
+  const [donor, setDonor] = React.useState("DAC countries")
+  const [recipient, setRecipient] = React.useState("ODA eligible countries")
+  const [indicator, setIndicator] = React.useState([MAIN_TARGET, SECONDARY_TARGET])
   const [currency, setCurrency] = React.useState("usd")
   const [prices, setPrices] = React.useState("constant")
   const [timeRange, setTimeRange] = React.useState([timeRangeOptions.end - 10, timeRangeOptions.end])
@@ -101,8 +87,8 @@ function App() {
     [data?.rawData, unit, currency, prices]
   )
 
-  const donorName = formatString(getNameByCode(donorMapping, donor) ?? "")
-  const recipientName = getNameByCode(recipientMapping, recipient) ?? ""
+  const donorName = formatString(donor ?? "")
+  const recipientName = recipient ?? ""
   const currencyLabel = getCurrencyLabel(currency, {currencyOnly: true, currencyLong: true})
   const pricesNote = `${prices}${prices === "constant" ? ` ${timeRangeOptions.base}` : ""}`
 
@@ -156,8 +142,9 @@ function App() {
             </h3>
             <div className="grid gap-6 md:grid-cols-3 pl-6">
                     <div className="flex flex-col items-stretch gap-6">
-                  <DropdownMenu label="Donor" options={DONOR_OPTIONS} value={donor} onChange={setDonor} />
-                  <DropdownMenu label="Recipient" options={RECIPIENT_OPTIONS} value={recipient} onChange={setRecipient} />
+                  <DropdownMenu label="Donor" options={DONOR_OPTIONS} value={donor} onChange={setDonor} search={true}/>
+                  <DropdownMenu label="Recipient" options={RECIPIENT_OPTIONS} value={recipient} onChange={setRecipient}
+                                search={true}/>
                 </div>
                 <div className="flex flex-col items-stretch gap-6">
                   <DropdownMenu label="Currency" options={CURRENCY_OPTIONS} value={currency} onChange={setCurrency} />
