@@ -1,6 +1,5 @@
 import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {FileAttachment} from "observablehq:stdlib";
-import {name2CodeMap, getNameByCode} from "./utils.js";
 
 /**
  * IMPORTANT: Value columns in the parquet file are stored as integers in UNITS (not millions).
@@ -8,25 +7,21 @@ import {name2CodeMap, getNameByCode} from "./utils.js";
  * This conversion is done in the DuckDB SQL queries below.
  */
 
-// Load only metadata required for sectors queries
-const [
-    donorOptions,
-    recipientOptions,
-    sectorsIndicators,
-    code2Subsector,
-    subsector2Sector
-] = await Promise.all([
-    FileAttachment("../data/analysis_tools/donors.json").json(),
-    FileAttachment("../data/analysis_tools/recipients.json").json(),
-    FileAttachment("../data/analysis_tools/sectors_indicators.json").json(),
-    FileAttachment("../data/analysis_tools/sub_sectors.json").json(),
-    FileAttachment("../data/analysis_tools/sectors.json").json()
-]);
+// Donors, recipients, indicators and sectors are all identified by name; the loader
+// publishes the option lists and the name-to-slug maps used to address partitions.
+const viewOptions = await FileAttachment("../data/analysis_tools/sectors_view_options.json").json();
 
-// Export metadata to avoid duplicate loading in sectors.md
-export {donorOptions, recipientOptions, sectorsIndicators, code2Subsector, subsector2Sector};
+export const donorNames = viewOptions.donor_name;
+export const recipientNames = viewOptions.recipient_name;
+export const indicatorNames = viewOptions.indicator_name;
+export const sectorNames = viewOptions.sector_name;
+export const yearOptions = viewOptions.year;
+export const subSectorsBySector = viewOptions.sub_sectors_by_sector;
 
-// Parquet dataset URL (partitioned by donor_code and recipient_code)
+const donorSlugs = viewOptions.donor_slugs;
+const recipientSlugs = viewOptions.recipient_slugs;
+
+// Parquet dataset URL (partitioned by donor_slug and recipient_slug)
 const PARQUET_DATASET_URL = "https://storage.googleapis.com/data-apps-one-data/sources/sectors_view";
 
 // Lazy initialization: DuckDB instance is created on first query
@@ -50,13 +45,6 @@ function getDB() {
   return dbPromise;
 }
 
-const donorMapping = name2CodeMap(donorOptions);
-const recipientMapping = name2CodeMap(recipientOptions, {useRecipientGroups: true});
-
-const indicatorLabelMap = new Map(
-    Object.entries(sectorsIndicators).map(([code, label]) => [Number(code), label])
-);
-
 const sectorsCache = new Map();
 
 function toArray(value) {
@@ -68,10 +56,14 @@ function buildPartitionPaths({donor, recipient}) {
     const recipients = toArray(recipient);
 
     const paths = new Set();
-    for (const donorCode of donors) {
-        for (const recipientCode of recipients) {
+    for (const donorName of donors) {
+        for (const recipientName of recipients) {
+            const donorSlug = donorSlugs[donorName];
+            const recipientSlug = recipientSlugs[recipientName];
+            // A name with no slug has no partition, so there is nothing to fetch.
+            if (!donorSlug || !recipientSlug) continue;
             paths.add(
-                `${PARQUET_DATASET_URL}/donor_code=${donorCode}/recipient_code=${recipientCode}/part-0.parquet`
+                `${PARQUET_DATASET_URL}/donor_slug=${donorSlug}/recipient_slug=${recipientSlug}/part-0.parquet`
             );
         }
     }
@@ -107,10 +99,10 @@ export function sectorsQueries(
     timeRange
 ) {
 
-    const indicators = indicator.length > 0 ? indicator : [-1];
+    const indicators = indicator;
 
-    const donorName = getNameByCode(donorMapping, donor) ?? "Unknown";
-    const recipientName = getNameByCode(recipientMapping, recipient) ?? "Unknown";
+    const donorName = donor;
+    const recipientName = recipient;
     const basePromise = fetchSectorsSeries({
         donor,
         recipient,
@@ -126,8 +118,6 @@ export function sectorsQueries(
         currency,
         prices,
         timeRange,
-        code2Subsector,
-        subsector2Sector
     }));
 
     // Return base data for selected sector (granular: year + subsector)
@@ -137,8 +127,6 @@ export function sectorsQueries(
         selectedSector,
         currency,
         prices,
-        code2Subsector,
-        subsector2Sector
     }));
 
     // Return base data for table (granular: year + subsector with all raw values)
@@ -148,8 +136,6 @@ export function sectorsQueries(
         selectedSector,
         currency,
         prices,
-        code2Subsector,
-        subsector2Sector
     }));
 
     return {treemap, selectedBase, tableBase};
@@ -203,11 +189,11 @@ async function executeSectorsSeries({
     prices,
     timeRange
 }) {
-    if (indicators.length === 0 || (indicators.length === 1 && indicators[0] === -1)) {
+    if (indicators.length === 0) {
         return [];
     }
 
-    const indicatorSelection = indicators.join(", ");
+    const indicatorSelection = indicators.map((name) => `'${name}'`).join(", ");
     const combineIndicators = indicators.length > 1;
     const valueColumn = `value_${currency}_${prices}`;
 
@@ -273,9 +259,7 @@ async function runSectorsQuery(db, {
                     SUM(pct_total_recipient) AS pct_total_recipient
                 FROM ${parquetClause}
                 WHERE
-                    donor_code = ${donor}
-                    AND recipient_code = ${recipient}
-                    AND indicator IN (${indicatorSelection})
+                    indicator_name IN (${indicatorSelection})
                     AND year BETWEEN ${timeRange[0]} AND ${timeRange[1]}
                 GROUP BY year, donor_name, recipient_name, sector_name, sub_sector_name${combineIndicators ? "" : ", indicator_name"}
             )
@@ -315,8 +299,6 @@ function buildTreemap(rows, {
     currency,
     prices,
     timeRange,
-    code2Subsector,
-    subsector2Sector
 }) {
     if (!rows.length) return [];
 
@@ -357,8 +339,6 @@ function buildSelectedBase(rows, {
     selectedSector,
     currency,
     prices,
-    code2Subsector,
-    subsector2Sector
 }) {
     const relevantRows = rows.filter((row) => {
         const sectorName = row.sector_name ?? "Other";
@@ -409,8 +389,6 @@ function buildTableBase(rows, {
     selectedSector,
     currency,
     prices,
-    code2Subsector,
-    subsector2Sector
 }) {
     const relevantRows = rows.filter((row) => {
         const sectorName = row.sector_name ?? "Other";
