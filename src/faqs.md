@@ -9,7 +9,6 @@ import {APP_TITLE, APP_DESCRIPTION, NAV_ITEMS} from "./js/config.js"
 
 const donorMapping = await FileAttachment("./data/analysis_tools/donors.json").json()
 const recipientMapping = await FileAttachment("./data/analysis_tools/recipients.json").json()
-const sectorMapping = await FileAttachment("./data/analysis_tools/sectors.json").json()
 ```
 
 ```jsx
