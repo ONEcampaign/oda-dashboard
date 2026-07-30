@@ -19,17 +19,16 @@ import {
 } from "npm:@one-data/observable-themes/utils"
 import {setCustomColors} from "npm:@one-data/observable-themes/colors"
 import {
-    donorOptions,
-    recipientOptions,
-    sectorsIndicators,
-    code2Subsector,
-    subsector2Sector,
+    donorNames,
+    recipientNames,
+    indicatorNames,
+    yearOptions,
+    subSectorsBySector,
     sectorsQueries,
     transformTableData,
     transformSelectedData
 } from "./js/sectorsQueries.js"
 import {treemapChart, selectSector} from "./js/treemapChart.js"
-import {name2CodeMap, getNameByCode} from "./js/utils.js"
 import {customPalette, paletteSubsectors} from "./js/colors.js"
 import {columnChart} from "./js/columnChart.js"
 import {sparkbarTable} from "./js/sparkBarTable.js"
@@ -37,28 +36,13 @@ import {APP_TITLE, APP_DESCRIPTION, NAV_ITEMS, CURRENCY_OPTIONS, PRICES_OPTIONS,
 
 setCustomColors(customPalette)
 
-const timeRangeOptions = await FileAttachment("./data/analysis_tools/base_time.json").json()
+const timeRangeOptions = yearOptions
 
-const donorMapping = name2CodeMap(donorOptions, {removeEU27EUI: true})
-const recipientMapping = name2CodeMap(recipientOptions, {useRecipientGroups: true})
-const indicatorMapping = new Map(
-    Object.entries(sectorsIndicators).map(([k, v]) => [v, Number(k)])
-)
+const DONOR_OPTIONS = donorNames.map(name => ({label: name, value: name}))
+const RECIPIENT_OPTIONS = recipientNames.map(name => ({label: name, value: name}))
+const INDICATOR_OPTIONS = indicatorNames.map(name => ({label: name, value: name}))
 
-const DONOR_OPTIONS = Array.from(donorMapping.entries())
-    .map(([label, value]) => ({label, value}))
-    .sort((a, b) => a.label.localeCompare(b.label))
-
-const RECIPIENT_OPTIONS = Array.from(recipientMapping.entries())
-    .map(([label, value]) => ({label, value}))
-    .sort((a, b) => a.label.localeCompare(b.label))
-
-const INDICATOR_OPTIONS = Array.from(indicatorMapping.entries())
-    .map(([label, value]) => ({label, value}))
-
-const BILATERAL_CODE = indicatorMapping.get("Bilateral")
-const MULTILATERAL_CODE = indicatorMapping.get("Imputed multilateral")
-const SECTORS_MIN_YEAR = 2013
+const SECTORS_MIN_YEAR = yearOptions.start
 ```
 
 ```jsx
@@ -106,7 +90,7 @@ function TreemapContainer({data, currency, sector, onSectorChange}) {
 function buildSectorColumnSubtitle(selectedData, effectiveBreakdown, breakdownIsDisabled, indicator) {
     const indicatorLabel = indicator.length > 1
         ? "Bilateral + Imputed multilateral"
-        : (getNameByCode(indicatorMapping, indicator) ?? "")
+        : (indicator[0] ?? "")
 
     if (effectiveBreakdown && !breakdownIsDisabled && selectedData.length > 0) {
         const uniqueSubsectors = [...new Set(selectedData.map(row => row["sub_sector"]))]
@@ -125,9 +109,9 @@ function buildSectorColumnSubtitle(selectedData, effectiveBreakdown, breakdownIs
 
 function App() {
     // All state at the top
-    const [donor, setDonor] = React.useState(donorMapping.get("DAC countries"))
-    const [recipient, setRecipient] = React.useState(recipientMapping.get("Developing countries"))
-    const [indicator, setIndicator] = React.useState([BILATERAL_CODE, MULTILATERAL_CODE])
+    const [donor, setDonor] = React.useState("DAC countries")
+    const [recipient, setRecipient] = React.useState("ODA eligible countries")
+    const [indicator, setIndicator] = React.useState(["Bilateral", "Imputed multilateral"])
     const [currency, setCurrency] = React.useState("usd")
     const [prices, setPrices] = React.useState("constant")
     const [breakdown, setBreakdown] = React.useState(true)
@@ -144,7 +128,7 @@ function App() {
     const [error, setError] = React.useState(null)
 
     const breakdownIsDisabled = React.useMemo(
-        () => Object.values(subsector2Sector).filter(s => s === sector).length === 1,
+        () => (subSectorsBySector[sector] ?? []).length === 1,
         [sector]
     )
 
@@ -237,7 +221,7 @@ function App() {
     const unitOptions = React.useMemo(() => {
         const indicatorLabel = indicator.length > 1
             ? "Bilateral + Imputed multilateral"
-            : (getNameByCode(indicatorMapping, indicator) ?? "")
+            : (indicator[0] ?? "")
         return [
             {label: getCurrencyLabel(currency, {currencyLong: true, currencyOnly: true}), value: "value"},
             {label: `% of ${sector} ODA`, value: "pct_sector", disabled: breakdownIsDisabled || !effectiveBreakdown},
@@ -246,12 +230,12 @@ function App() {
         ]
     }, [currency, indicator, sector, breakdownIsDisabled, effectiveBreakdown])
 
-    const donorName = formatString(getNameByCode(donorMapping, donor) ?? "")
-    const recipientName = getNameByCode(recipientMapping, recipient) ?? ""
+    const donorName = formatString(donor ?? "")
+    const recipientName = recipient ?? ""
     const currencyLabel = getCurrencyLabel(currency, {currencyOnly: true, currencyLong: true})
     const indicatorLabel = indicator.length > 1
         ? "Bilateral + Imputed multilateral"
-        : (getNameByCode(indicatorMapping, indicator) ?? "")
+        : (indicator[0] ?? "")
 
     const treemapSubtitle = `${indicatorLabel} ODA; ${year}`
 
