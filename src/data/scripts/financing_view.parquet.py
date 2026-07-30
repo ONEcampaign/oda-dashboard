@@ -27,6 +27,7 @@ from src.data.config import (
     ALL_FINANCING_INDICATORS,
     ALL_DONORS,
     AGGREGATE_DONORS,
+    EU_INSTITUTIONS,
     EU_TOTAL,
     EU_COUNTRIES,
     BILATERAL_DONORS,
@@ -82,7 +83,7 @@ def get_dac1():
     # in-donor indicators in net flows
     in_donor_raw = OECDClient(
         years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1),
-        providers=list(ALL_DONORS),
+        providers=list(ALL_DONORS | EU_INSTITUTIONS),
         measure="net_disbursement",
         use_bulk_download=True,
     ).get_indicators(list(IN_DONOR_FINANCING_INDICATORS))
@@ -90,7 +91,7 @@ def get_dac1():
     # other indicators in net flows up to 2017
     other_flow_raw = OECDClient(
         years=range(FINANCING_TIME["start"], 2018),
-        providers=list(ALL_DONORS),
+        providers=list(ALL_DONORS | EU_INSTITUTIONS),
         measure="net_disbursement",
         use_bulk_download=True,
     ).get_indicators(list(AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS))
@@ -98,7 +99,7 @@ def get_dac1():
     # other indicators in grant equivalents after 2017
     other_ge_raw = OECDClient(
         years=range(2018, FINANCING_TIME["end"] + 1),
-        providers=list(ALL_DONORS),
+        providers=list(ALL_DONORS | EU_INSTITUTIONS),
         measure="grant_equivalent",
         use_bulk_download=True,
     ).get_indicators(list(AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS))
@@ -130,14 +131,14 @@ def get_grants():
 
     grants_flow_raw = OECDClient(
         years=range(FINANCING_TIME["start"], 2018),
-        providers=list(ALL_DONORS),
+        providers=list(ALL_DONORS | EU_INSTITUTIONS),
         measure=["net_disbursement_grant", "net_disbursement"],
         use_bulk_download=True,
     ).get_indicators(["DAC1.10.1010"])
 
     grants_ge_raw = OECDClient(
         years=range(2018, FINANCING_TIME["end"] + 1),
-        providers=list(ALL_DONORS),
+        providers=list(ALL_DONORS | EU_INSTITUTIONS),
         measure=["net_disbursement_grant", "grant_equivalent"],
         use_bulk_download=True,
     ).get_indicators(["DAC1.10.1010"])
