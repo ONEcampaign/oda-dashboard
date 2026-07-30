@@ -4,6 +4,7 @@ from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_ind
 
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
+    add_share_of_reference_total,
     get_group_total,
     widen_currency_price,
 )
@@ -28,39 +29,13 @@ from src.data.config import (
 from src.data.analysis_tools.helper_functions import (
     set_cache_dir,
     apply_name_overrides,
+    normalize_unspecified_names,
     parquet_to_stdout,
     convert_values_to_units,
     generate_view_options,
 )
 
 set_cache_dir(oda_data=True, pydeflate=True)
-
-
-def _add_pct_column(
-    df: pd.DataFrame,
-    filter_col: str,
-    filter_val: str,
-    merge_cols: list[str],
-    pct_col: str,
-) -> pd.DataFrame:
-    """Compute each row's value_usd_current as a share of a reference total.
-
-    The reference total is the sum of value_usd_current across ALL indicators
-    for the entity identified by filter_col == filter_val, grouped by merge_cols.
-    Summing across indicators means the two indicator percentages for any
-    (year, donor, recipient) pair sum to that entity's combined share, never
-    exceeding 100%.
-    """
-    total = (
-        df.loc[lambda d: d[filter_col] == filter_val]
-        .groupby(merge_cols, dropna=False, observed=True)["value_usd_current"]
-        .sum()
-        .reset_index()
-        .rename(columns={"value_usd_current": "total_oda"})
-    )
-    merged = df.merge(total, on=merge_cols, how="left")
-    merged[pct_col] = (merged["value_usd_current"] / merged["total_oda"]).round(6)
-    return merged.drop(columns=["total_oda"])
 
 
 def get_dac2a():
@@ -88,6 +63,7 @@ def get_dac2a():
 
     dac2a = apply_name_overrides(dac2a, AGGREGATE_DONORS, "donor")
     dac2a = apply_name_overrides(dac2a, AGGREGATE_RECIPIENTS, "recipient")
+    dac2a["recipient_name"] = normalize_unspecified_names(dac2a["recipient_name"])
 
     return dac2a
 
@@ -117,6 +93,9 @@ def get_dac2a_eui_eu27() -> tuple[pd.DataFrame, pd.DataFrame]:
     )
 
     eui_eu27_dac2a_raw = apply_name_overrides(eui_eu27_dac2a_raw, AGGREGATE_RECIPIENTS, "recipient")
+    eui_eu27_dac2a_raw["recipient_name"] = normalize_unspecified_names(
+        eui_eu27_dac2a_raw["recipient_name"]
+    )
 
     eui_eu27_dac2a_converted = add_currencies_and_prices(
         eui_eu27_dac2a_raw, base_year=BASE_TIME["base"]
@@ -235,14 +214,14 @@ def combined_recipients():
         index_cols=("year", "donor_name", "recipient_name", "indicator_name"),
     )
 
-    recipients = _add_pct_column(
+    recipients = add_share_of_reference_total(
         recipients,
         filter_col="donor_name",
         filter_val="All bilateral donors",
         merge_cols=["year", "recipient_name"],
         pct_col="pct_total_recipient",
     )
-    recipients = _add_pct_column(
+    recipients = add_share_of_reference_total(
         recipients,
         filter_col="recipient_name",
         filter_val="ODA eligible countries",
