@@ -154,7 +154,7 @@ def detect_missing_expected_data(
 
     Args:
         df: DataFrame to check
-        major_donors: Dict of donor_code -> donor_name for critical donors
+        major_donors: Donor names that must have data
         value_column: Column to check for values
 
     Returns:
@@ -167,15 +167,15 @@ def detect_missing_expected_data(
 
     latest_year = df["year"].max()
 
-    for donor_code, donor_name in major_donors.items():
+    for donor_name in major_donors:
         # Check if donor exists in latest year
         donor_latest = df[
-            (df["donor_code"] == donor_code) & (df["year"] == latest_year)
+            (df["donor_name"] == donor_name) & (df["year"] == latest_year)
         ]
 
         # Check if had data in previous year
         donor_prev = df[
-            (df["donor_code"] == donor_code) & (df["year"] == latest_year - 1)
+            (df["donor_name"] == donor_name) & (df["year"] == latest_year - 1)
         ]
 
         # Had data last year but not this year
