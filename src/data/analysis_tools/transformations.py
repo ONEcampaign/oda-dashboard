@@ -199,6 +199,88 @@ def get_group_total(
 
 
 
+def get_attribute_total(
+    df: pd.DataFrame,
+    attribute_col: str,
+    group_cols: list,
+    column: str = "recipient",
+    label_map: dict | None = None,
+) -> pd.DataFrame:
+    """Sum rows by a classification the data itself carries, e.g. CRS region or income group.
+
+    The counterpart to get_group_total: that one aggregates a group defined by a list of
+    member codes, this one aggregates a group defined by an attribute column, so the
+    membership never has to be maintained anywhere.
+
+    Args:
+        df: Long-form frame with a "value" column and the attribute column.
+        attribute_col: Column holding the classification, e.g. "incomegroup_name".
+        group_cols: Columns to group by alongside the attribute.
+        column: Entity the groups stand in for, "donor" or "recipient".
+        label_map: Optional display labels keyed by attribute value. Values missing from
+            the map keep their original label and are logged.
+
+    Returns:
+        One row per attribute value per group_cols combination, named as the entity.
+    """
+    name_col = f"{column}_name"
+
+    totals = (
+        df.groupby(group_cols + [attribute_col], dropna=False, observed=True)["value"]
+        .sum()
+        .reset_index()
+    )
+
+    if label_map:
+        unmapped = sorted(set(totals[attribute_col].dropna().unique()) - set(label_map))
+        if unmapped:
+            logger.warning(
+                "%s: no display label configured for %s, keeping the raw value(s): %s",
+                attribute_col, len(unmapped), unmapped,
+            )
+        totals[name_col] = totals[attribute_col].map(label_map).fillna(totals[attribute_col])
+    else:
+        totals[name_col] = totals[attribute_col]
+
+    return totals.drop(columns=[attribute_col])
+
+
+def add_share_of_reference_total(
+    df: pd.DataFrame,
+    filter_col: str,
+    filter_val: str,
+    merge_cols: list[str],
+    pct_col: str,
+) -> pd.DataFrame:
+    """Add each row's value_usd_current as a share of a reference entity's total.
+
+    The reference total sums value_usd_current across ALL indicators for the entity
+    identified by filter_col == filter_val, grouped by merge_cols. Summing across
+    indicators means the indicator percentages for any (year, donor, recipient) pair sum to
+    that entity's combined share, never exceeding 100%.
+
+    Args:
+        df: Wide-form frame containing value_usd_current.
+        filter_col: Column identifying the reference entity, e.g. "donor_name".
+        filter_val: Value identifying the reference entity, e.g. "All bilateral donors".
+        merge_cols: Columns the reference total is grouped by and merged on.
+        pct_col: Name of the share column to add.
+
+    Returns:
+        The frame with pct_col added.
+    """
+    total = (
+        df.loc[lambda d: d[filter_col] == filter_val]
+        .groupby(merge_cols, dropna=False, observed=True)["value_usd_current"]
+        .sum()
+        .reset_index()
+        .rename(columns={"value_usd_current": "total_oda"})
+    )
+    merged = df.merge(total, on=merge_cols, how="left", validate="m:1")
+    merged[pct_col] = (merged["value_usd_current"] / merged["total_oda"]).round(6)
+    return merged.drop(columns=["total_oda"])
+
+
 def add_currencies_and_prices(
     df: pd.DataFrame, base_year: int = BASE_TIME["base"]
 ) -> pd.DataFrame:
@@ -437,15 +519,6 @@ def add_share_of_gni(df: pd.DataFrame) -> pd.DataFrame:
     merged = merged.drop(columns=["gni"])
 
     return merged
-
-
-def add_recipient_indicator_codes(df: pd.DataFrame) -> pd.DataFrame:
-    """Add indicator codes to the dataframe"""
-    df = df.rename(columns={"indicator": "indicator_name"})
-    with open(PATHS.SECTORS_INDICATORS_CODES, "r") as f:
-        indicator_map = {v: int(k) for k, v in json.load(f).items()}
-    df = df.assign(indicator=lambda d: d["indicator_name"].map(indicator_map))
-    return df
 
 
 def add_gender_indicator_codes(df: pd.DataFrame) -> pd.DataFrame:

@@ -106,6 +106,80 @@ DONORS_ORDER: list[str] = [
     "EU27 & EU Institutions",
 ]
 
+# ---------------------------------------------------------------------------------------
+# Sectors groupings
+#
+# The CRS is transaction level: unlike DAC1 and DAC2A it reports no aggregate providers or
+# recipients, so every sectors aggregate is summed locally from these memberships. Donor
+# memberships come from oda_data; recipient groupings come from the CRS's own
+# recipient_region and incomegroup_name columns.
+# ---------------------------------------------------------------------------------------
+
+DAC_COUNTRIES: dict = provider_groupings()["dac_countries"]
+G7_COUNTRIES: dict = provider_groupings()["g7"]
+NON_DAC_COUNTRIES: dict = provider_groupings()["non_dac_countries"]
+
+# The CRS records aid that cannot be allocated to a country against regional codes
+# ("Africa, regional") and "Developing countries, unspecified", which together are roughly
+# half of all bilateral flows. COUNTRIES_REGIONS_RECIPIENTS omits them, so the sectors view
+# needs the full recipient list. Safe to sum: the CRS never reports the same money against
+# both a country and a region, and it contains no "X, Total" style aggregates.
+CRS_RECIPIENTS: dict = recipient_groupings()["all_recipients"]
+
+# CRS income class -> display label. Membership is entirely the CRS incomegroup_name column;
+# only the wording is mapped, to match the recipients view.
+CRS_INCOME_LABELS: dict = {
+    "LDCs": "Least Developed Countries (LDCs)",
+    "Other LICs": "Other Low Income Countries",
+    "LMICs": "Lower-Middle Income Countries (LMICs)",
+    "UMICs": "Upper-Middle Income Countries (UMICs)",
+    "MADCTs": "More Advanced Developing Countries",
+    "Part I unallocated by income": "Unallocated by income",
+}
+
+# Continent totals, rolled up from CRS regions. The regions themselves are read from the
+# data; this only records which regions make up each continent. Each list includes the
+# continent-level region value the CRS uses for aid it records against a whole continent
+# (e.g. "Africa, regional"), so a continent total covers its sub-regions plus that.
+CRS_REGION_ROLLUPS: dict = {
+    "Africa": ["North of Sahara", "South of Sahara", "Africa"],
+    "Asia": ["South & Central Asia", "Far East Asia", "Middle East", "Asia"],
+    "America": ["Caribbean & Central America", "South America", "America"],
+}
+
+# Sentinels for recipients the CRS never classifies. Distinct from the CRS's own
+# "Part I unallocated by income" class, which is a real reported category.
+SECTORS_UNCLASSIFIED_REGION: str = "Region not reported"
+SECTORS_UNCLASSIFIED_INCOME: str = "Income group not reported"
+
+# "EU27 & EU Institutions" is deliberately absent: it cannot be computed from the CRS, which
+# offers no equivalent of the DAC1 EU-institutions weighting used by the other views.
+SECTORS_DONORS_ORDER: list[str] = [
+    "DAC countries",
+    "Non-DAC countries",
+    "All bilateral donors",
+    "G7 countries",
+    "EU27 countries",
+    "EU Institutions",
+]
+
+SECTORS_RECIPIENTS_ORDER: list[str] = [
+    "ODA eligible countries",
+    *CRS_INCOME_LABELS.values(),
+    *CRS_REGION_ROLLUPS,
+    "North of Sahara",
+    "South of Sahara",
+    "Caribbean & Central America",
+    "South America",
+    "South & Central Asia",
+    "Far East Asia",
+    "Middle East",
+    "Europe",
+    "Oceania",
+    "Sahel countries",
+    "France priority countries",
+]
+
 AGGREGATE_RECIPIENTS: dict = {
     10_100: "ODA eligible countries",
     998: "ODA eligible countries, unspecified",
@@ -184,10 +258,6 @@ class PATHS:
     INDICATORS = TOOLS / "indicators.json"
     DONORS = TOOLS / "donors.json"
     RECIPIENTS = TOOLS / "recipients.json"
-
-    # Only the sectors view still needs this indicator code map; the recipients view
-    # now carries indicator names directly.
-    SECTORS_INDICATORS_CODES = TOOLS / "sectors_indicators.json"
 
     DATA = SRC / "data" / "cache"
     PYDEFLATE = DATA

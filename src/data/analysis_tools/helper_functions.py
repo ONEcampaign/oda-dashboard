@@ -1,7 +1,9 @@
 import os
+import re
 import sys
 import json
 import shutil
+import unicodedata
 from pathlib import Path
 
 # Fix for Python 3.13 + requests 2.32+ TYPE_CHECKING incompatibility.
@@ -49,6 +51,47 @@ def apply_name_overrides(df: pd.DataFrame, mapping: dict, column: str) -> pd.Dat
     return df
 
 
+def slugify(value: str) -> str:
+    """Reduce a name to a lowercase ASCII slug safe for use in a URL path segment.
+
+    Used for partition keys, so that a dataset addressed over HTTP needs no percent
+    encoding and no numeric codes. Deterministic; callers must check the results are
+    unique, since two names could in principle reduce to the same slug.
+
+    Args:
+        value: Name to convert, e.g. "Côte d'Ivoire".
+
+    Returns:
+        Slug, e.g. "cote-d-ivoire".
+    """
+    decomposed = unicodedata.normalize("NFKD", str(value))
+    ascii_only = decomposed.encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", ascii_only.lower())).strip("-")
+
+
+def normalize_unspecified_names(names: pd.Series) -> pd.Series:
+    """Standardise the labels for aid that is not allocated to a specific country.
+
+    The sources spell one concept three ways: the CRS says "Africa, regional", DAC2A says
+    "Caribbean unspecified", and some entries already say "Bilateral, unspecified". All
+    become "<area>, unspecified" so the views agree and "regional" never reaches a reader.
+
+    Matching is deliberately case sensitive and anchored to the end of the label, which
+    leaves the CRS region value "Regional and Unspecified" alone.
+
+    Args:
+        names: Recipient names.
+
+    Returns:
+        The names with trailing "regional"/"unspecified" variants normalised.
+    """
+    return (
+        names.astype("string")
+        .str.replace(r",?\s+regional$", ", unspecified", regex=True)
+        .str.replace(r"(?<!,)\s+unspecified$", ", unspecified", regex=True)
+    )
+
+
 def save_time_range_to_json(time_dict: dict, file_name: str):
     logger.info(f"Saving time range to {PATHS.TOOLS}/{file_name}")
     with open(PATHS.TOOLS / file_name, "w") as f:
@@ -61,6 +104,7 @@ def generate_view_options(
     year_col: str = "year",
     base_year: int | None = None,
     file_name: str = "view_options.json",
+    extra: dict | None = None,
 ) -> None:
     """
     Generate a JSON file with unique values for each specified column.
@@ -77,6 +121,8 @@ def generate_view_options(
         year_col: Name of the column to treat as a year range (receives {start, end, base} format)
         base_year: Value for the "base" key; defaults to the maximum year in the data
         file_name: Output filename written to PATHS.TOOLS
+        extra: Additional keys merged into the output, e.g. name-to-slug maps needed to
+            build partition paths, or a sector-to-sub-sector index.
     """
     def _ordered(values: list[str], order: list[str]) -> list[str]:
         pinned = [v for v in order if v in set(values)]
@@ -95,6 +141,9 @@ def generate_view_options(
         else:
             unique_vals = [str(v) for v in df[col].dropna().unique()]
             options[col] = _ordered(unique_vals, order) if order else sorted(unique_vals)
+
+    if extra:
+        options |= extra
 
     logger.info(f"Saving view options to {PATHS.TOOLS}/{file_name}")
     with open(PATHS.TOOLS / file_name, "w") as f:
@@ -382,6 +431,13 @@ def write_partitioned_dataset(
         additional_categorical_cols=["sector_name", "sub_sector_name"],
     )
 
+    # Sort by the partition columns so each fragment written covers only a few partitions.
+    # optimize_dataframe_types sorts by code columns, which a name-partitioned dataset does
+    # not have; unsorted input makes every fragment span every partition and pyarrow then
+    # refuses the write.
+    if all(col in optimized.columns for col in partition_cols):
+        optimized = optimized.sort_values(partition_cols, kind="stable")
+
     # Convert to Arrow table
     table = pa.Table.from_pandas(optimized, preserve_index=False)
 
@@ -392,9 +448,12 @@ def write_partitioned_dataset(
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Define partition schema (all partition cols must be int32 for Hive partitioning)
-    partition_fields = [pa.field(col, pa.int32()) for col in partition_cols]
-    partition_schema = pa.schema(partition_fields)
+    # Take each partition column's type from the table, so both string slugs and numeric
+    # codes work. Forcing int32 here silently ruled out name-based partitioning.
+    missing = [col for col in partition_cols if col not in table.column_names]
+    if missing:
+        raise ValueError(f"Partition columns absent from the data: {missing}")
+    partition_schema = pa.schema([table.schema.field(col) for col in partition_cols])
 
     # Configure parquet format with write options
     parquet_format = ds.ParquetFileFormat()
@@ -405,6 +464,11 @@ def write_partitioned_dataset(
         write_statistics=True,
     )
 
+    # pyarrow's default ceiling is 1024 partitions per fragment; raise it to what the data
+    # actually needs so a legitimate dataset is never silently capped.
+    n_partitions = optimized.groupby(partition_cols, observed=True, dropna=False).ngroups
+    logger.info("Writing %s partitions to %s", f"{n_partitions:,}", output_dir)
+
     # Write partitioned dataset
     ds.write_dataset(
         data=table,
@@ -414,6 +478,7 @@ def write_partitioned_dataset(
         basename_template="part-{i}.parquet",
         file_options=file_options,
         existing_data_behavior="delete_matching",
+        max_partitions=max(1_024, n_partitions + 1),
         max_rows_per_file=1_000_000,
         max_rows_per_group=100_000,
         min_rows_per_group=100_000,
