@@ -10,23 +10,13 @@ Exits 0 on success, 1 if all retries fail.
 import sys
 import time
 
-# Fix for Python 3.13 + requests 2.32+ TYPE_CHECKING incompatibility.
-# requests.models imports RequestsCookieJar and HTTPAdapter only under
-# TYPE_CHECKING, so they're absent from runtime globals. Python 3.13's
-# typing.get_type_hints() evaluates annotations strictly in the declaring
-# module's globals, breaking attrs/cattrs resolution of CachedResponse
-# (from requests-cache) which inherits from requests.models.Response.
-import requests.models as _rm
-from requests.adapters import HTTPAdapter as _HTTPAdapter
-from requests.cookies import RequestsCookieJar as _RequestsCookieJar
-_rm.RequestsCookieJar = _RequestsCookieJar
-_rm.HTTPAdapter = _HTTPAdapter
-
 import pandas as pd
 from pydeflate import oecd_dac_deflate, oecd_dac_exchange
 
-from src.data.analysis_tools.helper_functions import set_cache_dir
+# config applies the requests-cache compatibility patch on import, which has to happen before
+# pydeflate makes its first request. See src/data/_compat.py.
 from src.data.config import BASE_TIME, logger
+from src.data.analysis_tools.outputs import set_cache_dir
 
 MAX_RETRIES = 3
 RETRY_DELAY = 30  # seconds between retries

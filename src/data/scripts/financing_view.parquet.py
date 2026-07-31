@@ -1,3 +1,17 @@
+"""Builds the financing view: ODA totals and their components, by donor and year.
+
+Shape of the pipeline:
+    1. DAC1 aggregates, private sector instruments and in-donor items, read in net flows up to
+       GRANT_EQUIVALENT_START_YEAR and grant equivalents from then on
+    2. the grants / non-grants split, derived from one indicator read under two measures
+    3. the EU27 + institutions aggregate, which oda_data weights so that member states'
+       contributions to the institutions are not counted twice
+    4. donor aggregates summed locally, then shares of total ODA and of GNI
+    5. one parquet on stdout for Observable, plus the dropdown options beside it
+
+Output is keyed by name: year, donor_name, indicator_name, type.
+"""
+
 from collections import Counter
 
 import numpy as np
@@ -5,22 +19,23 @@ import pandas as pd
 from oda_data import OECDClient
 from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_indicator
 
-from src.data.analysis_tools.helper_functions import (
+from src.data.analysis_tools.outputs import (
     set_cache_dir,
-    apply_name_overrides,
     parquet_to_stdout,
-    convert_values_to_units,
     generate_view_options,
 )
+from src.data.analysis_tools.naming import apply_name_overrides
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
     add_share_of_gni,
     add_share_of_total_oda,
+    convert_values_to_units,
     widen_currency_price, get_group_total,
 )
 from src.data.config import (
     logger,
     FINANCING_TIME,
+    GRANT_EQUIVALENT_START_YEAR,
     AGGREGATE_FINANCING_INDICATORS,
     PSI_FINANCING_INDICATORS,
     IN_DONOR_FINANCING_INDICATORS,
@@ -38,7 +53,26 @@ from src.data.config import (
 set_cache_dir(oda_data=True, pydeflate=True)
 
 
-def resolve_indicator_duplicates(dac1_raw: pd.DataFrame, raise_error: bool = True) -> pd.DataFrame:
+def resolve_indicator_duplicates(
+    dac1_raw: pd.DataFrame, raise_error: bool = True
+) -> pd.DataFrame:
+    """Drop the duplicate rows created by indicators that share a display name.
+
+    The DAC renumbered several indicators when it moved to grant equivalents, so two codes can
+    map to one name (1015 and 11015 are both "Bilateral ODA"). Where both are present for the
+    same donor and year they report the same figure, and keeping both would double it.
+
+    Args:
+        dac1_raw: Raw DAC1 rows, with a one_indicator column.
+        raise_error: Whether disagreeing values are fatal. They should be, since it would mean
+            the two codes are not interchangeable after all; pass False to log and continue.
+
+    Returns:
+        The rows with duplicates removed, keeping the first of each set.
+
+    Raises:
+        ValueError: If two codes for one name disagree and raise_error is True.
+    """
     multi_code_names = {
         name
         for name, count in Counter(ALL_FINANCING_INDICATORS.values()).items()
@@ -79,7 +113,15 @@ def resolve_indicator_duplicates(dac1_raw: pd.DataFrame, raise_error: bool = Tru
     return dac1_raw.drop(index=drop_indices)
 
 
-def get_dac1():
+def get_dac1() -> pd.DataFrame:
+    """Read the DAC1 indicators, switching measure at the grant-equivalent boundary.
+
+    In-donor items stay in net flows throughout, because the DAC never restated them as grant
+    equivalents.
+
+    Returns:
+        One row per year, donor and indicator name.
+    """
     # in-donor indicators in net flows
     in_donor_raw = OECDClient(
         years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1),
@@ -90,7 +132,7 @@ def get_dac1():
 
     # other indicators in net flows up to 2017
     other_flow_raw = OECDClient(
-        years=range(FINANCING_TIME["start"], 2018),
+        years=range(FINANCING_TIME["start"], GRANT_EQUIVALENT_START_YEAR),
         providers=list(ALL_DONORS | EU_INSTITUTIONS),
         measure="net_disbursement",
         use_bulk_download=True,
@@ -98,7 +140,7 @@ def get_dac1():
 
     # other indicators in grant equivalents after 2017
     other_ge_raw = OECDClient(
-        years=range(2018, FINANCING_TIME["end"] + 1),
+        years=range(GRANT_EQUIVALENT_START_YEAR, FINANCING_TIME["end"] + 1),
         providers=list(ALL_DONORS | EU_INSTITUTIONS),
         measure="grant_equivalent",
         use_bulk_download=True,
@@ -122,7 +164,15 @@ def get_dac1():
     return dac1
 
 
-def get_grants():
+def get_grants() -> pd.DataFrame:
+    """Split total ODA into grants and non-grants.
+
+    Both come from one indicator read under two measures: the grant-only measure gives grants,
+    and the headline measure minus that gives non-grants.
+
+    Returns:
+        Long-form rows for the two derived indicator names.
+    """
     mapping = {
         "Disbursements, net": "Total ODA",
         "Grant equivalents": "Total ODA",
@@ -130,14 +180,14 @@ def get_grants():
     }
 
     grants_flow_raw = OECDClient(
-        years=range(FINANCING_TIME["start"], 2018),
+        years=range(FINANCING_TIME["start"], GRANT_EQUIVALENT_START_YEAR),
         providers=list(ALL_DONORS | EU_INSTITUTIONS),
         measure=["net_disbursement_grant", "net_disbursement"],
         use_bulk_download=True,
     ).get_indicators(["DAC1.10.1010"])
 
     grants_ge_raw = OECDClient(
-        years=range(2018, FINANCING_TIME["end"] + 1),
+        years=range(GRANT_EQUIVALENT_START_YEAR, FINANCING_TIME["end"] + 1),
         providers=list(ALL_DONORS | EU_INSTITUTIONS),
         measure=["net_disbursement_grant", "grant_equivalent"],
         use_bulk_download=True,
@@ -163,7 +213,15 @@ def get_grants():
     return grants
 
 
-def get_eui_eu27_dac1():
+def get_eui_eu27_dac1() -> pd.DataFrame:
+    """Read the DAC1 indicators for the EU27 + institutions aggregate.
+
+    oda_data scales the institutions' spending by the share not funded by member state
+    contributions, so summing members and institutions does not double count.
+
+    Returns:
+        One row per year, indicator, currency and price for the aggregate.
+    """
 
     # in-donor indicators in net flows
     in_donor_client = OECDClient(
@@ -179,7 +237,7 @@ def get_eui_eu27_dac1():
 
     # other indicators in net flows up to 2017
     other_flow_client = OECDClient(
-        years=range(FINANCING_TIME["start"], 2018),
+        years=range(FINANCING_TIME["start"], GRANT_EQUIVALENT_START_YEAR),
         providers=list(EU_TOTAL),
         measure="net_disbursement",
         use_bulk_download=True,
@@ -191,7 +249,7 @@ def get_eui_eu27_dac1():
 
     # other indicators in grant equivalents after 2017
     other_ge_client = OECDClient(
-        years=range(2018, FINANCING_TIME["end"] + 1),
+        years=range(GRANT_EQUIVALENT_START_YEAR, FINANCING_TIME["end"] + 1),
         providers=list(EU_TOTAL),
         measure="grant_equivalent",
         use_bulk_download=True,
@@ -218,7 +276,12 @@ def get_eui_eu27_dac1():
     return eui_eu27_dac1
 
 
-def get_eui_eu27_grants():
+def get_eui_eu27_grants() -> pd.DataFrame:
+    """Split the EU27 + institutions aggregate into grants and non-grants.
+
+    Returns:
+        Long-form rows for the two derived indicator names, for the aggregate.
+    """
 
     mapping = {
         "Disbursements, net": "Total ODA",
@@ -232,7 +295,7 @@ def get_eui_eu27_grants():
     # some years), which understates the EUI share and breaks
     # Grants + Non-grants == Total ODA for this aggregate.
     grants_flow_client = OECDClient(
-        years=range(FINANCING_TIME["start"], 2018),
+        years=range(FINANCING_TIME["start"], GRANT_EQUIVALENT_START_YEAR),
         providers=list(EU_TOTAL),
         measure=["net_disbursement", "net_disbursement_grant"],
         use_bulk_download=True,
@@ -243,7 +306,7 @@ def get_eui_eu27_grants():
     )
 
     grants_ge_client = OECDClient(
-        years=range(2018, FINANCING_TIME["end"] + 1),
+        years=range(GRANT_EQUIVALENT_START_YEAR, FINANCING_TIME["end"] + 1),
         providers=list(EU_TOTAL),
         measure=["grant_equivalent", "net_disbursement_grant"],
         use_bulk_download=True,
@@ -271,7 +334,13 @@ def get_eui_eu27_grants():
     return eui_eu27_grants
 
 
-def get_financing_data():
+def get_financing_data() -> pd.DataFrame:
+    """Assemble the financing view from its parts.
+
+    Returns:
+        Wide frame keyed by year, donor_name, indicator_name and type, with one column per
+        currency and price pair plus the two share columns.
+    """
     dac1 = get_dac1()
     grants = get_grants()
 
@@ -309,7 +378,9 @@ def get_financing_data():
     ]
 
     # Add type column
-    financing["type"] = np.where(financing["year"] < 2018, "Flows", "Grant equivalents")
+    financing["type"] = np.where(
+        financing["year"] < GRANT_EQUIVALENT_START_YEAR, "Flows", "Grant equivalents"
+    )
 
     # Pivot values to columns
     financing = widen_currency_price(
@@ -329,7 +400,6 @@ def get_financing_data():
     financing = add_share_of_gni(financing)
 
     # Convert values to units (integers) for better compression
-    # NOTE: Frontend queries must divide value_* columns by 1e6 to get millions
     financing = convert_values_to_units(financing)
 
     return financing

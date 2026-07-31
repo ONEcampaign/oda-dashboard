@@ -1,3 +1,17 @@
+"""Builds the recipients view: who gives to whom, by year.
+
+Shape of the pipeline:
+    1. DAC2A bilateral and imputed multilateral flows, for reported donors and recipients
+    2. the EU27 + institutions aggregate, plus the institutions' bilateral-equivalent series
+       that keeps "All bilateral donors" free of double counting
+    3. recipient groups (Sahel, France priority) summed before donor groups, so every donor
+       aggregate covers them
+    4. shares from both perspectives: of what a recipient received, and of what a donor gave
+    5. one parquet on stdout for Observable, plus the dropdown options beside it
+
+Output is keyed by name: year, donor_name, recipient_name, indicator_name.
+"""
+
 import pandas as pd
 from oda_data import OECDClient
 from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_indicator
@@ -5,6 +19,7 @@ from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_ind
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
     add_share_of_reference_total,
+    convert_values_to_units,
     get_group_total,
     widen_currency_price,
 )
@@ -26,19 +41,25 @@ from src.data.config import (
     DONORS_ORDER,
     RECIPIENTS_ORDER
 )
-from src.data.analysis_tools.helper_functions import (
+from src.data.analysis_tools.outputs import (
     set_cache_dir,
+    parquet_to_stdout,
+    generate_view_options,
+)
+from src.data.analysis_tools.naming import (
     apply_name_overrides,
     normalize_unspecified_names,
-    parquet_to_stdout,
-    convert_values_to_units,
-    generate_view_options,
 )
 
 set_cache_dir(oda_data=True, pydeflate=True)
 
 
-def get_dac2a():
+def get_dac2a() -> pd.DataFrame:
+    """Read DAC2A flows for every reported donor and recipient.
+
+    Returns:
+        One row per year, donor, recipient and indicator name, with names made canonical.
+    """
     dac2a_raw = OECDClient(
         years=range(BASE_TIME["start"], BASE_TIME["end"] + 1),
         # EU Institutions is reported separately from the bilateral providers, and is
@@ -124,7 +145,13 @@ def get_dac2a_eui_eu27() -> tuple[pd.DataFrame, pd.DataFrame]:
     return eui_eu27_dac2a, eui_bilateral
 
 
-def combined_recipients():
+def combined_recipients() -> pd.DataFrame:
+    """Assemble the recipients view from its parts.
+
+    Returns:
+        Wide frame keyed by year, donor_name, recipient_name and indicator_name, with one
+        column per currency and price pair plus the two share columns.
+    """
     dac2a = get_dac2a()
 
     dac2a_converted = add_currencies_and_prices(dac2a, base_year=BASE_TIME["base"])
