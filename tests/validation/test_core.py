@@ -1,14 +1,11 @@
 """Tests for core validation orchestration."""
 
-import tempfile
-from pathlib import Path
-
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from validation.core import validate_dataset, validate_all
+from validation.core import validate_dataset
 from validation.models import ValidationReport
 
 
@@ -18,12 +15,10 @@ def sample_parquet(tmp_path):
     df = pd.DataFrame(
         {
             "year": [2022, 2023, 2024] * 4,
-            "donor_code": [4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7],
             "donor_name": ["France"] * 3
             + ["Germany"] * 3
             + ["Italy"] * 3
             + ["Japan"] * 3,
-            "indicator": ["total_oda"] * 12,
             "indicator_name": ["Total ODA"] * 12,
             "type": ["Grant equivalents"] * 12,
             "value_usd_current": [1000, 1100, 1150] * 4,
@@ -51,10 +46,10 @@ class TestValidateDataset:
         # Create a minimal config override for testing
         dataset_config = {
             "file": path.name,
-            "key_columns": ["year", "donor_code", "indicator"],
+            "key_columns": ["year", "donor_name", "indicator_name"],
             "value_column": "value_usd_constant",
             "required_columns": list(df.columns),
-            "critical_donors": [4, 5],  # France, Germany
+            "critical_donors": ["France", "Germany"],
         }
 
         result = validate_dataset(
