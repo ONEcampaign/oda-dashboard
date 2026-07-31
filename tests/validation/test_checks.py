@@ -1,14 +1,13 @@
 """Tests for hard gate validation checks."""
 
 import pandas as pd
-import pytest
 from validation.checks import (
     check_schema,
     check_not_empty,
     check_no_duplicate_keys,
     check_value_columns_populated,
     check_value_bounds,
-    check_name_mappings_complete,
+    check_names_populated,
     check_critical_dimensions,
 )
 
@@ -154,27 +153,41 @@ class TestCheckValueBounds:
         )
 
 
-class TestCheckNameMappingsComplete:
-    def test_complete_mappings(self):
+class TestCheckNamesPopulated:
+    def test_populated_names(self):
         df = pd.DataFrame(
             {
-                "donor_code": [1, 2],
+                "year": [2023, 2024],
                 "donor_name": ["Austria", "Belgium"],
             }
         )
-        result = check_name_mappings_complete(df)
+        result = check_names_populated(df)
         assert result.passed is True
 
-    def test_missing_name_mapping(self):
+    def test_null_name_fails(self):
+        # A null name is unaddressable: published but unreachable from the frontend.
         df = pd.DataFrame(
             {
-                "donor_code": [1, 2, 3],
+                "year": [2023, 2024, 2024],
                 "donor_name": ["Austria", "Belgium", None],
             }
         )
-        result = check_name_mappings_complete(df)
+        result = check_names_populated(df)
         assert result.passed is False
-        assert any("unmapped" in e.lower() or "3" in e for e in result.errors)
+        assert any("donor_name" in e for e in result.errors)
+        assert any("2024" in e for e in result.errors)
+
+    def test_checks_every_name_column(self):
+        df = pd.DataFrame(
+            {
+                "year": [2024, 2024],
+                "donor_name": ["France", "France"],
+                "sub_sector_name": ["Agriculture", None],
+            }
+        )
+        result = check_names_populated(df)
+        assert result.passed is False
+        assert any("sub_sector_name" in e for e in result.errors)
 
 
 class TestCheckCriticalDimensions:
@@ -182,42 +195,48 @@ class TestCheckCriticalDimensions:
         df = pd.DataFrame(
             {
                 "year": [2023, 2024, 2023, 2024],
-                "donor_code": [4, 4, 5, 5],  # France and Germany
+                "donor_name": ["France", "France", "Germany", "Germany"],
             }
         )
         result = check_critical_dimensions(
             df,
-            expected_latest_year=2024,
-            critical_donors=[4, 5],
+            critical_donors=["France", "Germany"],
+            previous_latest_year=2024,
         )
         assert result.passed is True
 
-    def test_missing_latest_year(self):
+    def test_latest_year_going_backwards_fails(self):
         df = pd.DataFrame(
             {
                 "year": [2022, 2023],
-                "donor_code": [4, 5],
+                "donor_name": ["France", "Germany"],
             }
         )
         result = check_critical_dimensions(
             df,
-            expected_latest_year=2024,
-            critical_donors=[4, 5],
+            critical_donors=["France", "Germany"],
+            previous_latest_year=2024,
         )
         assert result.passed is False
         assert any("2024" in e for e in result.errors)
+
+    def test_year_check_skipped_without_a_baseline(self):
+        # No previous release means nothing to compare against; the donor check still applies.
+        df = pd.DataFrame({"year": [2022], "donor_name": ["France"]})
+        result = check_critical_dimensions(df, critical_donors=["France"])
+        assert result.passed is True
 
     def test_missing_critical_donor(self):
         df = pd.DataFrame(
             {
                 "year": [2024, 2024],
-                "donor_code": [4, 6],  # France and Italy, missing Germany (5)
+                "donor_name": ["France", "Italy"],  # Germany missing
             }
         )
         result = check_critical_dimensions(
             df,
-            expected_latest_year=2024,
-            critical_donors=[4, 5],
+            critical_donors=["France", "Germany"],
+            previous_latest_year=2024,
         )
         assert result.passed is False
-        assert any("5" in str(e) for e in result.errors)
+        assert any("Germany" in str(e) for e in result.errors)

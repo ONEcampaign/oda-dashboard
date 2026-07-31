@@ -14,7 +14,7 @@ from validation.config import (
     SEEK_PCT_CHANGE_HIGH,
     SEEK_HEALTH_PURPOSE_CODES,
     SEEK_AGRICULTURE_PURPOSE_CODES,
-    MAJOR_DONORS,
+    SEEK_CRITICAL_DONORS,
 )
 from validation.seek_data import compute_sector_aggregates
 
@@ -130,13 +130,13 @@ def detect_seek_missing_donors(
         previous_aggregates: {donor_code: value} for previous release
         sector_name: "total", "health", or "agriculture" for messages
         donor_names: {donor_code: donor_name} for readable messages
-        critical_donors: List of donor codes to check (defaults to MAJOR_DONORS)
+        critical_donors: Donor codes to check (defaults to SEEK_CRITICAL_DONORS)
 
     Returns:
         List of Warning objects for missing donors
     """
     warnings = []
-    critical_donors = critical_donors or MAJOR_DONORS
+    critical_donors = critical_donors or SEEK_CRITICAL_DONORS
 
     for donor in critical_donors:
         prev_val = previous_aggregates.get(donor, 0)
@@ -225,7 +225,7 @@ def run_seek_validation(
         donor_names: {donor_code: donor_name} mapping
         health_codes: Health purpose codes (defaults to config)
         agriculture_codes: Agriculture purpose codes (defaults to config)
-        critical_donors: Donors to check for missing data (defaults to MAJOR_DONORS)
+        critical_donors: Donor codes to check for missing data (defaults to SEEK_CRITICAL_DONORS)
 
     Returns:
         List of Warning objects from all checks
@@ -233,7 +233,7 @@ def run_seek_validation(
     warnings = []
     health_codes = health_codes or SEEK_HEALTH_PURPOSE_CODES
     agriculture_codes = agriculture_codes or SEEK_AGRICULTURE_PURPOSE_CODES
-    critical_donors = critical_donors or MAJOR_DONORS
+    critical_donors = critical_donors or SEEK_CRITICAL_DONORS
 
     # Compute current aggregates
     current_aggs = compute_sector_aggregates(

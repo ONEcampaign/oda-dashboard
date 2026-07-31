@@ -20,17 +20,16 @@ from validation.checks import (
     check_no_duplicate_keys,
     check_value_columns_populated,
     check_value_bounds,
-    check_name_mappings_complete,
+    check_names_populated,
     check_critical_dimensions,
 )
 from validation.anomalies import (
     detect_yoy_anomalies,
     detect_release_drift,
     detect_missing_expected_data,
-    detect_new_or_removed_codes,
+    detect_new_or_removed_entities,
     detect_row_count_change,
     detect_indicator_coverage_gaps,
-    detect_agency_drift,
     detect_sector_drift,
 )
 from validation import manifest as manifest_module
@@ -206,22 +205,23 @@ def _run_hard_gates(
         check_value_bounds(df),
     )
 
-    # Name mappings
+    # Names populated
     report.add_check_result(
         dataset_name,
-        "name_mappings",
-        check_name_mappings_complete(df),
+        "names_populated",
+        check_names_populated(df),
     )
 
-    # Critical dimensions
-    latest_year = df["year"].max() if "year" in df.columns else None
+    # Critical dimensions. The expected latest year comes from the previous release, never from
+    # df: deriving it from the frame under test is what made this check unable to fail.
+    previous_year_range = (previous_release or {}).get("year_range")
     report.add_check_result(
         dataset_name,
         "critical_dimensions",
         check_critical_dimensions(
             df,
-            expected_latest_year=latest_year,
             critical_donors=config.get("critical_donors", MAJOR_DONORS),
+            previous_latest_year=previous_year_range[1] if previous_year_range else None,
         ),
     )
 
@@ -259,8 +259,8 @@ def _run_anomaly_detection(
         for w in warnings:
             report.add_warning(w)
 
-        # New/removed codes
-        warnings = detect_new_or_removed_codes(df, previous_release)
+        # New/removed donors, indicators, sectors and sub-sectors
+        warnings = detect_new_or_removed_entities(df, previous_release)
         for w in warnings:
             w.dataset = dataset_name
             report.add_warning(w)
@@ -271,19 +271,8 @@ def _run_anomaly_detection(
             w.dataset = dataset_name
             report.add_warning(w)
 
-        # Agency drift (for multilateral data)
-        warnings = detect_agency_drift(df, previous_release, value_column)
-        for w in warnings:
-            w.dataset = dataset_name
-            report.add_warning(w)
-
         # Sector drift (for sectors_view)
-        donor_names_map = {}
-        if "donor_name" in df.columns:
-            donor_names_map = df.groupby("donor_code")["donor_name"].first().to_dict()
-        warnings = detect_sector_drift(
-            df, previous_release, value_column, donor_names_map
-        )
+        warnings = detect_sector_drift(df, previous_release, value_column)
         for w in warnings:
             w.dataset = dataset_name
             report.add_warning(w)

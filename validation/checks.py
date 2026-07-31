@@ -155,9 +155,12 @@ def check_value_bounds(df: pd.DataFrame) -> CheckResult:
     return CheckResult(passed=len(errors) == 0, errors=errors)
 
 
-def check_name_mappings_complete(df: pd.DataFrame) -> CheckResult:
+def check_names_populated(df: pd.DataFrame) -> CheckResult:
     """
-    Hard gate: All codes must have corresponding names.
+    Hard gate: The name columns the views are keyed by must never be null.
+
+    A null name is unaddressable: the frontend selects by name, so the row is published but
+    unreachable, and it silently drops out of every group total keyed on that column.
 
     Args:
         df: DataFrame to validate
@@ -167,51 +170,52 @@ def check_name_mappings_complete(df: pd.DataFrame) -> CheckResult:
     """
     errors = []
 
-    # Check donor mappings
-    if "donor_name" in df.columns:
-        unmapped = df[df["donor_name"].isna()].index.unique()
-        if len(unmapped) > 0:
-            errors.append(f"Unmapped donor codes: {sorted(unmapped)[:10]}")
+    for column in ("donor_name", "recipient_name", "indicator_name", "sector_name",
+                   "sub_sector_name"):
+        if column not in df.columns:
+            continue
+        null_count = int(df[column].isna().sum())
+        if not null_count:
+            continue
 
-    # Check recipient mappings
-    if "recipient_name" in df.columns:
-        unmapped = df[df["recipient_name"].isna()].index.unique()
-        if len(unmapped) > 0:
-            errors.append(f"Unmapped recipient codes: {sorted(unmapped)[:10]}")
-
-    # Check indicator mappings
-    if "indicator_name" in df.columns:
-        unmapped = df[df["indicator_name"].isna()].index.unique()
-        if len(unmapped) > 0:
-            errors.append(f"Unmapped indicator codes: {list(unmapped)[:10]}")
+        # Say where the nulls are: there is no code column left to identify them by, and the
+        # year narrows down which release introduced them.
+        where = ""
+        if "year" in df.columns:
+            years = sorted(df.loc[df[column].isna(), "year"].dropna().unique().tolist())
+            where = f", in years {years[:10]}"
+        errors.append(f"Column '{column}' has {null_count:,} null values{where}")
 
     return CheckResult(passed=len(errors) == 0, errors=errors)
 
 
 def check_critical_dimensions(
     df: pd.DataFrame,
-    expected_latest_year: int,
     critical_donors: list[str],
+    previous_latest_year: int | None = None,
 ) -> CheckResult:
     """
-    Hard gate: Critical donors and years must be present.
+    Hard gate: Critical donors must be present, and the data must not lose its latest year.
 
     Args:
         df: DataFrame to validate
-        expected_latest_year: The latest year that must exist
         critical_donors: Donor names that must have data
+        previous_latest_year: Latest year in the previous release, if there is one. The check is
+            that the data never goes backwards — the caller must not derive this from ``df``,
+            which is what made the old version unable to fail.
 
     Returns:
         CheckResult with pass/fail
     """
     errors = []
 
-    # Check latest year exists
-    if "year" in df.columns:
-        years = df["year"].unique()
-        if expected_latest_year not in years:
+    # The latest year must not regress
+    if previous_latest_year is not None and "year" in df.columns:
+        latest_year = int(df["year"].max())
+        if latest_year < previous_latest_year:
             errors.append(
-                f"Missing latest year: {expected_latest_year}. Years present: {sorted(years)[-5:]}"
+                f"Latest year went backwards: {latest_year}, was {previous_latest_year} "
+                f"in the previous release"
             )
 
     # Check critical donors exist

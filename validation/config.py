@@ -157,12 +157,31 @@ DATASETS = {
 # Fallback for datasets that do not name their own critical donors.
 MAJOR_DONORS = CRITICAL_DONORS
 
+# The same idea for the SEEK checks, which are deliberately not name-based: they read raw CRS,
+# which still carries donor_code, and their manifest is keyed by code to match.
+#
+# These are exactly the codes SEEK checked before the dashboard views moved to names — France,
+# Germany, Italy, Netherlands, the UK, Canada and the US. That migration turned the shared
+# MAJOR_DONORS into a list of names, which SEEK kept reading as codes, so every lookup missed
+# and its three missing-donor checks silently stopped firing. Keeping a separate list is what
+# lets the views be name-based without disabling SEEK.
+#
+# Code 7 is the Netherlands. The original list annotated it as Japan (which is 701), so Japan
+# has in fact never been covered here — left as it was rather than quietly widening the check.
+SEEK_CRITICAL_DONORS: list[int] = [4, 5, 6, 7, 12, 301, 302]
+
 # Anomaly detection settings
 ANOMALY_Z_SCORE_THRESHOLD = 2.0  # Flag if >2 standard deviations from historical mean
 ANOMALY_Z_SCORE_HIGH = 3.0  # High priority if >3 standard deviations
 
-# Value bounds (in units, i.e., actual currency units not millions)
-MAX_SANE_VALUE = 1e18  # 1 trillion in units (frontend divides by 1e6)
+# Value bounds, in whole currency units (the views publish units; the frontend divides by 1e6).
+#
+# The point of this bound is to catch a unit-scale mistake — a value left in millions, or
+# multiplied by 1e6 twice. The largest legitimate single value across the four views is about
+# 2.6e11 (roughly $261bn, an aggregate donor's total in one year), so 1e15 leaves ~4,000x
+# headroom for genuine growth while still catching a 1e6 error by three orders of magnitude.
+# It was previously 1e18, which no unit error could ever have exceeded.
+MAX_SANE_VALUE = 1e15
 
 # SEEK validation settings
 # Purpose code filters from SEEK R code for sector-specific validation
