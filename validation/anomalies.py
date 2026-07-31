@@ -4,6 +4,29 @@ import pandas as pd
 from validation.models import Warning
 from validation.config import ANOMALY_Z_SCORE_THRESHOLD, ANOMALY_Z_SCORE_HIGH
 
+# Dimensions whose membership is compared release to release: the manifest key holding the
+# previous values, the column holding the current ones, a label for the message, and how
+# seriously to treat a value disappearing. A sector vanishing is worse than a donor doing so,
+# because it means a whole slice of spending stopped being classified.
+ENTITY_DIMENSIONS: tuple[tuple[str, str, str, str], ...] = (
+    ("donors_present", "donor_name", "donors", "medium"),
+    ("indicators_present", "indicator_name", "indicators", "medium"),
+    ("sectors_present", "sector_name", "sectors", "high"),
+    ("sub_sectors_present", "sub_sector_name", "sub-sectors", "medium"),
+)
+
+# How many values to name before summarising, so a long list stays readable but never looks
+# like the whole story when it is not.
+_SAMPLE_LIMIT = 20
+
+
+def _sample(values: set[str]) -> str:
+    """Render a set of names for a warning message, saying how many were left out."""
+    shown = sorted(values)[:_SAMPLE_LIMIT]
+    remainder = len(values) - len(shown)
+
+    return f"{shown}" + (f" (+{remainder} more)" if remainder else "")
+
 
 def detect_yoy_anomalies(
     df: pd.DataFrame,
@@ -24,16 +47,11 @@ def detect_yoy_anomalies(
     """
     warnings = []
 
-    if "donor_code" not in df.columns or "year" not in df.columns:
+    if "donor_name" not in df.columns or "year" not in df.columns:
         return warnings
 
-    for donor in df["donor_code"].unique():
-        donor_data = df[df["donor_code"] == donor].copy()
-        donor_name = (
-            donor_data["donor_name"].iloc[0]
-            if "donor_name" in donor_data.columns
-            else str(donor)
-        )
+    for donor_name in df["donor_name"].dropna().unique():
+        donor_data = df[df["donor_name"] == donor_name]
 
         # Get yearly totals
         yearly = donor_data.groupby("year")[value_column].sum().sort_index()
@@ -110,19 +128,11 @@ def detect_release_drift(
     if not previous_release or "aggregates" not in previous_release:
         return warnings
 
-    # Compute current aggregates
-    current_by_donor = df.groupby("donor_code")[value_column].sum()
-
-    # Get donor names for messages
-    donor_names = {}
-    if "donor_name" in df.columns:
-        donor_names = df.groupby("donor_code")["donor_name"].first().to_dict()
-
+    current_by_donor = df.groupby("donor_name", observed=True)[value_column].sum()
     previous_by_donor = previous_release["aggregates"].get("by_donor", {})
 
-    for donor_str, prev_total in previous_by_donor.items():
-        donor = int(donor_str)
-        curr_total = current_by_donor.get(donor, 0)
+    for donor_name, prev_total in previous_by_donor.items():
+        curr_total = current_by_donor.get(donor_name, 0)
 
         if prev_total == 0:
             continue
@@ -132,7 +142,6 @@ def detect_release_drift(
         # Flag significant changes (>20% for medium, >40% for high)
         if abs(pct_change) > 0.20:
             level = "high" if abs(pct_change) > 0.40 else "medium"
-            donor_name = donor_names.get(donor, str(donor))
             warnings.append(
                 Warning(
                     level=level,
@@ -146,7 +155,7 @@ def detect_release_drift(
 
 def detect_missing_expected_data(
     df: pd.DataFrame,
-    major_donors: dict[int, str],
+    major_donors: list[str],
     value_column: str,
 ) -> list[Warning]:
     """
@@ -204,154 +213,49 @@ def detect_missing_expected_data(
     return warnings
 
 
-def detect_new_or_removed_codes(
+def detect_new_or_removed_entities(
     df: pd.DataFrame,
     previous_release: dict,
 ) -> list[Warning]:
     """
-    Flag new or removed donor/recipient/indicator codes.
+    Flag donors, indicators, sectors or sub-sectors that appeared or disappeared.
 
     Args:
         df: Current DataFrame
         previous_release: Previous release data from manifest
 
     Returns:
-        List of warnings for code changes
+        List of warnings, one per dimension that gained or lost values
     """
     warnings = []
 
     if not previous_release:
         return warnings
 
-    # Check donors
-    if "donor_code" in df.columns:
-        current_donors = set(int(x) for x in df["donor_code"].unique())
-        previous_donors = set(previous_release.get("donors_present", []))
+    for presence_key, column, label, removed_level in ENTITY_DIMENSIONS:
+        if column not in df.columns:
+            continue
 
-        new_donors = current_donors - previous_donors
-        removed_donors = previous_donors - current_donors
+        current = set(str(x) for x in df[column].dropna().unique())
+        previous = set(str(x) for x in previous_release.get(presence_key, []))
 
-        if new_donors:
+        if new := current - previous:
             warnings.append(
                 Warning(
                     level="info",
                     dataset="",
-                    message=f"New donor codes: {sorted(new_donors)}",
+                    message=f"New {label}: {_sample(new)}",
                 )
             )
 
-        if removed_donors:
+        # A disappearance is the serious direction: it means a slice of the data silently
+        # stopped being published.
+        if removed := previous - current:
             warnings.append(
                 Warning(
-                    level="medium",
+                    level=removed_level,
                     dataset="",
-                    message=f"Removed donor codes: {sorted(removed_donors)}",
-                )
-            )
-
-    # Check indicators
-    if "indicator" in df.columns:
-        current_indicators = set(df["indicator"].unique())
-        previous_indicators = set(previous_release.get("indicators_present", []))
-
-        new_indicators = current_indicators - previous_indicators
-        removed_indicators = previous_indicators - current_indicators
-
-        if new_indicators:
-            warnings.append(
-                Warning(
-                    level="info",
-                    dataset="",
-                    message=f"New indicators: {sorted(new_indicators)}",
-                )
-            )
-
-        if removed_indicators:
-            warnings.append(
-                Warning(
-                    level="medium",
-                    dataset="",
-                    message=f"Removed indicators: {sorted(removed_indicators)}",
-                )
-            )
-
-    # Check purpose codes (for sectors)
-    if "purpose_code" in df.columns:
-        current_codes = set(int(x) for x in df["purpose_code"].unique())
-        previous_codes = set(previous_release.get("purpose_codes_present", []))
-
-        new_codes = current_codes - previous_codes
-        removed_codes = previous_codes - current_codes
-
-        if new_codes:
-            sample = sorted(new_codes)[:20]
-            warnings.append(
-                Warning(
-                    level="info",
-                    dataset="",
-                    message=f"New purpose codes: {sample}{'...' if len(new_codes) > 20 else ''}",
-                )
-            )
-
-        if removed_codes:
-            sample = sorted(removed_codes)[:20]
-            warnings.append(
-                Warning(
-                    level="medium",
-                    dataset="",
-                    message=f"Removed purpose codes: {sample}{'...' if len(removed_codes) > 20 else ''}",
-                )
-            )
-
-    # Check sub-sector codes (for sectors_view)
-    if "sub_sector_code" in df.columns:
-        current_codes = set(int(x) for x in df["sub_sector_code"].dropna().unique())
-        previous_codes = set(previous_release.get("sub_sector_codes_present", []))
-
-        new_codes = current_codes - previous_codes
-        removed_codes = previous_codes - current_codes
-
-        if new_codes:
-            warnings.append(
-                Warning(
-                    level="info",
-                    dataset="",
-                    message=f"New sub-sector codes: {sorted(new_codes)}",
-                )
-            )
-
-        if removed_codes:
-            warnings.append(
-                Warning(
-                    level="medium",
-                    dataset="",
-                    message=f"Removed sub-sector codes: {sorted(removed_codes)}",
-                )
-            )
-
-    # Check sector names (for sectors_view)
-    if "sector_name" in df.columns:
-        current_sectors = set(df["sector_name"].dropna().unique())
-        previous_sectors = set(previous_release.get("sectors_present", []))
-
-        new_sectors = current_sectors - previous_sectors
-        removed_sectors = previous_sectors - current_sectors
-
-        if new_sectors:
-            warnings.append(
-                Warning(
-                    level="info",
-                    dataset="",
-                    message=f"New sectors: {sorted(new_sectors)}",
-                )
-            )
-
-        if removed_sectors:
-            warnings.append(
-                Warning(
-                    level="high",
-                    dataset="",
-                    message=f"Removed sectors: {sorted(removed_sectors)}",
+                    message=f"Removed {label}: {_sample(removed)}",
                 )
             )
 
@@ -414,13 +318,13 @@ def detect_indicator_coverage_gaps(
     """
     warnings = []
 
-    if "indicator" not in df.columns or not previous_release:
+    if "indicator_name" not in df.columns or not previous_release:
         return warnings
 
     previous_indicators = set(previous_release.get("indicators_present", []))
 
     for indicator in previous_indicators:
-        indicator_data = df[df["indicator"] == indicator]
+        indicator_data = df[df["indicator_name"] == indicator]
 
         if len(indicator_data) == 0:
             warnings.append(
@@ -442,57 +346,10 @@ def detect_indicator_coverage_gaps(
     return warnings
 
 
-def detect_agency_drift(
-    df: pd.DataFrame,
-    previous_release: dict,
-    value_column: str,
-) -> list[Warning]:
-    """
-    Flag significant changes in multilateral agency allocations.
-
-    Args:
-        df: Current DataFrame
-        previous_release: Previous release data
-        value_column: Column to compare
-
-    Returns:
-        List of warnings for agency drift
-    """
-    warnings = []
-
-    if "agency_code" not in df.columns or not previous_release:
-        return warnings
-
-    current_by_agency = df.groupby("agency_code")[value_column].sum()
-    previous_by_agency = previous_release.get("aggregates", {}).get("by_agency", {})
-
-    for agency_str, prev_total in previous_by_agency.items():
-        agency = int(agency_str)
-        curr_total = current_by_agency.get(agency, 0)
-
-        if prev_total == 0:
-            continue
-
-        pct_change = (curr_total - prev_total) / prev_total
-
-        if abs(pct_change) > 0.20:
-            level = "high" if abs(pct_change) > 0.40 else "medium"
-            warnings.append(
-                Warning(
-                    level=level,
-                    dataset="",
-                    message=f"Agency {agency}: {pct_change:+.1%} vs previous release",
-                )
-            )
-
-    return warnings
-
-
 def detect_sector_drift(
     df: pd.DataFrame,
     previous_release: dict,
     value_column: str,
-    donor_names: dict = None,
 ) -> list[Warning]:
     """
     Flag significant changes in sector allocations (overall and per-donor).
@@ -501,7 +358,6 @@ def detect_sector_drift(
         df: Current DataFrame
         previous_release: Previous release data
         value_column: Column to compare
-        donor_names: Optional dict mapping donor_code to donor_name
 
     Returns:
         List of warnings for sector drift
@@ -534,11 +390,10 @@ def detect_sector_drift(
             )
 
     # Donor-sector drift (catches individual donor problems masked by totals)
-    if "donor_code" not in df.columns:
+    if "donor_name" not in df.columns:
         return warnings
 
-    donor_names = donor_names or {}
-    current_by_donor_sector = df.groupby(["donor_code", "sector_name"], observed=True)[
+    current_by_donor_sector = df.groupby(["donor_name", "sector_name"], observed=True)[
         value_column
     ].sum()
     previous_by_donor_sector = previous_release.get("aggregates", {}).get(
@@ -549,9 +404,8 @@ def detect_sector_drift(
         if "|" not in key:
             continue
 
-        donor_str, sector = key.split("|", 1)
-        donor = int(donor_str)
-        curr_total = current_by_donor_sector.get((donor, sector), 0)
+        donor_name, sector = key.split("|", 1)
+        curr_total = current_by_donor_sector.get((donor_name, sector), 0)
 
         if prev_total == 0:
             continue
@@ -561,12 +415,11 @@ def detect_sector_drift(
         # Higher threshold for donor-sector (40%/60%) since there's more variance
         if abs(pct_change) > 0.40:
             level = "high" if abs(pct_change) > 0.60 else "medium"
-            donor_label = donor_names.get(donor, f"Donor {donor}")
             warnings.append(
                 Warning(
                     level=level,
                     dataset="",
-                    message=f"{donor_label} - {sector}: {pct_change:+.1%} vs previous release",
+                    message=f"{donor_name} - {sector}: {pct_change:+.1%} vs previous release",
                 )
             )
 

@@ -8,6 +8,31 @@ import pandas as pd
 
 from validation.config import MANIFESTS_DIR
 
+# The dimensions a manifest can be keyed by, and the column carrying each one.
+#
+# All names, no codes. The views publish no code columns at all, so a manifest keyed by codes
+# cannot be compared against them — and because every producer below was guarded on
+# "code column in df.columns", the aggregates silently came out empty rather than failing. Adding
+# a dimension here is the only place it needs declaring; the guard stays only for dimensions a
+# given view genuinely does not have (financing has no recipient, only sectors has sub-sectors).
+AGGREGATE_DIMENSIONS: dict[str, str] = {
+    "by_donor": "donor_name",
+    "by_year": "year",
+    "by_indicator": "indicator_name",
+    "by_recipient": "recipient_name",
+    "by_sector": "sector_name",
+    "by_sub_sector": "sub_sector_name",
+}
+
+# The same dimensions, recorded as the set of values present rather than as totals.
+PRESENCE_DIMENSIONS: dict[str, str] = {
+    "donors_present": "donor_name",
+    "recipients_present": "recipient_name",
+    "indicators_present": "indicator_name",
+    "sectors_present": "sector_name",
+    "sub_sectors_present": "sub_sector_name",
+}
+
 
 class NumpyEncoder(json.JSONEncoder):
     """JSON encoder that handles numpy types, NaN, and infinite values."""
@@ -83,58 +108,28 @@ def save_manifest(manifest: dict, path: Path) -> None:
 
 
 def compute_aggregates(df: pd.DataFrame, value_column: str) -> dict:
-    """
-    Compute aggregate statistics for the dataset.
+    """Total the value column by each dimension the frame carries.
 
     Args:
-        df: DataFrame to analyze
-        value_column: Column to aggregate
+        df: Frame to analyse.
+        value_column: Column to total.
 
     Returns:
-        Dict with aggregates by various dimensions
+        ``{"by_<dimension>": {name: total}}``, for whichever of AGGREGATE_DIMENSIONS are present,
+        plus ``by_donor_sector`` keyed ``"<donor>|<sector>"``.
     """
     aggregates = {}
 
-    # By donor
-    if "donor_code" in df.columns:
-        by_donor = df.groupby("donor_code")[value_column].sum()
-        aggregates["by_donor"] = {str(k): float(v) for k, v in by_donor.items()}
+    for key, column in AGGREGATE_DIMENSIONS.items():
+        if column not in df.columns:
+            continue
+        totals = df.groupby(column, observed=True)[value_column].sum()
+        aggregates[key] = {str(k): float(v) for k, v in totals.items()}
 
-    # By year
-    if "year" in df.columns:
-        by_year = df.groupby("year")[value_column].sum()
-        aggregates["by_year"] = {str(k): float(v) for k, v in by_year.items()}
-
-    # By indicator
-    if "indicator" in df.columns:
-        by_indicator = df.groupby("indicator")[value_column].sum()
-        aggregates["by_indicator"] = {str(k): float(v) for k, v in by_indicator.items()}
-
-    # By recipient region (if recipient_code exists, group by first digit for region)
-    if "recipient_code" in df.columns:
-        by_recipient = df.groupby("recipient_code")[value_column].sum()
-        aggregates["by_recipient"] = {str(k): float(v) for k, v in by_recipient.items()}
-
-    # By agency (if present, for multilateral data)
-    if "agency_code" in df.columns:
-        by_agency = df.groupby("agency_code")[value_column].sum()
-        aggregates["by_agency"] = {str(k): float(v) for k, v in by_agency.items()}
-
-    # By sector (if present, for sectors_view)
-    if "sector_name" in df.columns:
-        by_sector = df.groupby("sector_name", observed=True)[value_column].sum()
-        aggregates["by_sector"] = {str(k): float(v) for k, v in by_sector.items()}
-
-    # By sub-sector (if present, for sectors_view)
-    if "sub_sector_code" in df.columns:
-        by_sub_sector = df.groupby("sub_sector_code", observed=True)[value_column].sum()
-        aggregates["by_sub_sector"] = {
-            str(k): float(v) for k, v in by_sub_sector.items()
-        }
-
-    # By donor-sector combination (if both present, for sectors_view)
-    if "donor_code" in df.columns and "sector_name" in df.columns:
-        by_donor_sector = df.groupby(["donor_code", "sector_name"], observed=True)[
+    # Donor crossed with sector, which catches one donor's allocation collapsing while the
+    # sector total stays flat.
+    if "donor_name" in df.columns and "sector_name" in df.columns:
+        by_donor_sector = df.groupby(["donor_name", "sector_name"], observed=True)[
             value_column
         ].sum()
         aggregates["by_donor_sector"] = {
@@ -181,15 +176,15 @@ def compute_historical_variation(df: pd.DataFrame, value_column: str) -> dict:
     Returns:
         Dict with variation statistics by donor and overall
     """
-    if "year" not in df.columns or "donor_code" not in df.columns:
+    if "year" not in df.columns or "donor_name" not in df.columns:
         return {"overall": {"mean": 0, "std": 0}, "by_donor": {}}
 
     # Compute YoY changes per donor
     yoy_changes = []
     by_donor = {}
 
-    for donor in df["donor_code"].unique():
-        donor_data = df[df["donor_code"] == donor].sort_values("year")
+    for donor in df["donor_name"].unique():
+        donor_data = df[df["donor_name"] == donor].sort_values("year")
 
         if len(donor_data) < 2:
             continue
@@ -246,7 +241,18 @@ def update_manifest(
 
     Returns:
         Updated manifest dict
+
+    Raises:
+        ValueError: If a declared key column is absent. Writing a manifest from a frame that is
+            missing one would record an empty dimension, and every later release would then
+            compare against nothing and pass.
     """
+    missing = [col for col in key_columns if col not in df.columns]
+    if missing:
+        raise ValueError(
+            f"Cannot build a manifest: declared key columns absent from the data: {missing}"
+        )
+
     # Initialize if empty
     if not manifest:
         manifest = {
@@ -265,39 +271,17 @@ def update_manifest(
         "year_range": [int(df["year"].min()), int(df["year"].max())]
         if "year" in df.columns
         else None,
-        "donors_present": sorted([int(x) for x in df["donor_code"].unique()])
-        if "donor_code" in df.columns
-        else [],
-        "recipients_present": sorted([int(x) for x in df["recipient_code"].unique()])[
-            :100
-        ]
-        if "recipient_code" in df.columns
-        else [],
-        "indicators_present": list(df["indicator"].unique())
-        if "indicator" in df.columns
-        else [],
         "aggregates": compute_aggregates(df, value_column),
         "distribution": compute_distribution(df, value_column),
         "historical_variation": compute_historical_variation(df, value_column),
     }
 
-    # Add purpose codes if present
-    if "purpose_code" in df.columns:
-        release_data["purpose_codes_present"] = sorted(
-            [int(x) for x in df["purpose_code"].unique()]
-        )
-
-    # Add sub-sector codes if present (for sectors_view)
-    if "sub_sector_code" in df.columns:
-        release_data["sub_sector_codes_present"] = sorted(
-            [int(x) for x in df["sub_sector_code"].dropna().unique()]
-        )
-
-    # Add sector names if present
-    if "sector_name" in df.columns:
-        release_data["sectors_present"] = sorted(
-            df["sector_name"].dropna().unique().tolist()
-        )
+    # Which values each dimension holds. Recorded in full: the previous version capped
+    # recipients at 100, which made every recipient past the hundredth look newly removed.
+    for key, column in PRESENCE_DIMENSIONS.items():
+        if column not in df.columns:
+            continue
+        release_data[key] = sorted(str(x) for x in df[column].dropna().unique())
 
     manifest["releases"][release] = release_data
 
