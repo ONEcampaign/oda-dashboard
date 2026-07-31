@@ -1,5 +1,24 @@
+"""Builds the sectors view: ODA by sector and sub-sector, bilateral and imputed multilateral.
+
+Shape of the pipeline:
+    1. CRS bilateral disbursements by purpose code, mapped to sub-sectors
+    2. imputed multilateral spending by purpose, plus a channel-corrected second read used
+       only for the EU27 + institutions aggregate
+    3. recipient names, regions and income groups from the shared CRS classification table
+    4. recipient groups then donor groups, summed locally because the CRS publishes neither
+    5. shares from both perspectives, then values as integer units
+    6. a partitioned dataset under cdn_files, addressed by donor and recipient slug
+
+This is the largest view by far, so the frame is kept dictionary-encoded and stripped of spent
+columns before the pivot; see _as_categoricals and the drop before widen_currency_price.
+
+Output is keyed by name: year, donor_name, recipient_name, indicator_name, sector_name,
+sub_sector_name, with donor_slug and recipient_slug as the partition keys.
+"""
+
 import os
 import sys
+from functools import cache
 
 import pandas as pd
 
@@ -17,6 +36,7 @@ from src.data.analysis_tools.transformations import (
     add_share_of_reference_total,
     build_crs_donor_group_totals,
     build_crs_recipient_group_totals,
+    convert_values_to_units,
     get_crs_recipient_classifications,
     widen_currency_price,
 )
@@ -24,21 +44,22 @@ from src.data.config import (
     logger,
     SECTORS_TIME,
     CRS_PROVIDERS,
+    CRS_FLOW_CATEGORIES,
     CRS_RECIPIENTS,
-    CRS_DONORS_ORDER,
+    DONORS_ORDER,
+    LABEL_COLUMNS,
     CRS_RECIPIENTS_ORDER,
     EU_COUNTRIES,
     EU_INSTITUTIONS,
     EU_TOTAL,
     EUI_CHANNEL_CODES,
 )
-from src.data.analysis_tools.helper_functions import (
+from src.data.analysis_tools.outputs import (
     set_cache_dir,
     generate_view_options,
-    slugify,
     write_partitioned_dataset,
-    convert_values_to_units,
 )
+from src.data.analysis_tools.naming import slugify
 
 set_cache_dir(oda_data=True, pydeflate=True)
 
@@ -70,29 +91,53 @@ def _as_categoricals(df: pd.DataFrame) -> pd.DataFrame:
     Sectors carries tens of millions of rows through the currency expansion and the pivot, so
     the label columns have to be dictionary-encoded or the frame does not fit in a CI runner.
     """
-    for col in (
-        "donor_name", "recipient_name", "sub_sector", "sub_sector_name", "indicator_name",
-        "sector_name", CRS_REGION_COL, CRS_INCOME_COL, "currency", "price",
-    ):
+    for col in (*LABEL_COLUMNS, CRS_REGION_COL, CRS_INCOME_COL):
         if col in df.columns and df[col].dtype.name != "category":
             df[col] = df[col].astype("category")
     return df
 
 
-def _assign_sub_sector(df: pd.DataFrame) -> pd.DataFrame:
-    """Label each row with its sub-sector, based on the purpose code."""
-    for name, codes in sector_lists.get_sector_groups().items():
-        df.loc[df["purpose_code"].isin(codes), "sub_sector"] = name
+@cache
+def _purpose_to_sub_sector() -> dict[int, str]:
+    """Build the purpose code to sub-sector lookup once per run.
 
-    # Purpose codes outside every group would otherwise leave a NaN grouping key.
-    unmatched = int(df["sub_sector"].isna().sum()) if "sub_sector" in df else len(df)
+    oda_data expresses the mapping the other way round, as 70 groups each listing its purpose
+    codes. Inverting it once turns sub-sector assignment into a single map, where scanning the
+    frame per group meant 70 passes over millions of rows every time.
+
+    Three purpose codes appear in more than one group. Building the dict in group order means
+    the last group wins, which is what the original sequence of overwriting assignments did.
+
+    Returns:
+        ``{purpose_code: sub-sector name}``.
+    """
+    mapping: dict[int, str] = {}
+    for name, codes in sector_lists.get_sector_groups().items():
+        mapping.update({int(code): name for code in codes})
+
+    return mapping
+
+
+def _assign_sub_sector(df: pd.DataFrame) -> pd.DataFrame:
+    """Label each row with its sub-sector, from its purpose code.
+
+    Args:
+        df: Frame with a purpose_code column.
+
+    Returns:
+        The frame with a sub_sector column, never null: purpose codes outside every group are
+        labelled explicitly, since a null here would become a null grouping key downstream.
+    """
+    sub_sector = df["purpose_code"].map(_purpose_to_sub_sector())
+
+    unmatched = int(sub_sector.isna().sum())
     if unmatched:
         logger.info(
             "%s rows have a purpose code outside the sector groups, labelled %r",
             f"{unmatched:,}", UNALLOCATED_SUB_SECTOR,
         )
-    df["sub_sector"] = df.get("sub_sector", pd.Series(index=df.index, dtype="object"))
-    df["sub_sector"] = df["sub_sector"].fillna(UNALLOCATED_SUB_SECTOR)
+
+    df["sub_sector"] = sub_sector.fillna(UNALLOCATED_SUB_SECTOR)
 
     return df
 
@@ -104,7 +149,7 @@ def get_bilateral_by_sector() -> pd.DataFrame:
         additional_filters=[
             ("donor_code", "in", list(CRS_PROVIDERS)),
             ("recipient_code", "in", list(CRS_RECIPIENTS)),
-            ("category", "in", [10, 60]),
+            ("category", "in", CRS_FLOW_CATEGORIES),
         ],
         columns=CRS_COLUMNS,
     )
@@ -208,7 +253,17 @@ def get_eu27_eui_imputed() -> pd.DataFrame:
 def build_eu27_eui_total(
     sectors: pd.DataFrame, eu_imputed: pd.DataFrame, group_cols: list[str]
 ) -> pd.DataFrame:
-    """Combine the bloc's bilateral spending with its corrected imputed multilateral."""
+    """Combine the bloc's bilateral spending with its corrected imputed multilateral.
+
+    Args:
+        sectors: The converted frame, used for the bilateral half.
+        eu_imputed: The channel-corrected imputed multilateral from get_eu27_eui_imputed,
+            already carrying its own recipient groups.
+        group_cols: Columns identifying everything except the donor.
+
+    Returns:
+        One frame of rows named "EU27 & EU Institutions".
+    """
     bilateral = sectors.loc[
         sectors["donor_code"].isin(EU_COUNTRIES | EU_INSTITUTIONS)
         & sectors["indicator_name"].astype("object").eq("Bilateral")
@@ -224,6 +279,12 @@ def build_eu27_eui_total(
 
 
 def combined_sectors() -> pd.DataFrame:
+    """Assemble the sectors view from its parts.
+
+    Returns:
+        Wide frame keyed by year, donor_name, recipient_name, indicator_name, sector_name and
+        sub_sector_name, with the partition slugs and the two share columns.
+    """
     logger.info("Fetching bilateral data...")
     sectors_bi = get_bilateral_by_sector()
 
@@ -354,7 +415,6 @@ def combined_sectors() -> pd.DataFrame:
 
     sectors = _add_partition_slugs(sectors)
 
-    # NOTE: Frontend queries must divide value_* columns by 1e6 to get millions
     return convert_values_to_units(sectors)
 
 
@@ -409,7 +469,7 @@ if __name__ == "__main__":
     generate_view_options(
         df=df,
         columns={
-            "donor_name": CRS_DONORS_ORDER,
+            "donor_name": DONORS_ORDER,
             "recipient_name": CRS_RECIPIENTS_ORDER,
             "indicator_name": [],
             "sector_name": [],

@@ -1,3 +1,24 @@
+"""Reshaping and aggregating the data: DataFrame in, DataFrame out.
+
+Everything here takes one or more frames and returns a frame — currency conversion, group
+totals, the CRS classification join, the long-to-wide pivot, and the share columns. Nothing
+here writes an artifact, and nothing decides how an entity is labelled.
+
+The rule for what belongs elsewhere: writing artifacts is ``outputs``, labelling is ``naming``,
+constants are ``config``. Two functions here do fetch from the OECD — ``get_gni`` and
+``get_crs_recipient_classifications`` — because each exists only to feed the transform beside
+it, and splitting them out would separate a denominator or a lookup from its single use.
+
+Sections, in order:
+    1. Units
+    2. GNI, and the share of it
+    3. Group totals, by code list and by data attribute
+    4. CRS classifications — the table, the join, and the group builders it feeds
+    5. Currencies and prices
+    6. Long to wide
+    7. Shares
+"""
+
 import pandas as pd
 from oda_data import OECDClient
 from pydeflate import oecd_dac_deflate, oecd_dac_exchange, set_pydeflate_path
@@ -22,9 +43,11 @@ from src.data.config import (
     CRS_UNCLASSIFIED_REGION,
     CRS_UNCLASSIFIED_INCOME,
     EU_INSTITUTIONS,
+    INT32_MAX,
+    UNITS_PER_MILLION,
 )
 
-from src.data.analysis_tools.helper_functions import (
+from src.data.analysis_tools.naming import (
     apply_name_overrides,
     normalize_unspecified_names,
 )
@@ -32,7 +55,62 @@ from src.data.analysis_tools.helper_functions import (
 set_pydeflate_path(PATHS.PYDEFLATE)
 
 
+def convert_values_to_units(df: pd.DataFrame) -> pd.DataFrame:
+    """Convert every value column from millions to whole currency units.
+
+    Integers in units compress far better in parquet than floats in millions, which matters for
+    a dataset served over HTTP. Percentage columns are left alone.
+
+    Args:
+        df: Wide frame whose value_* columns are in millions.
+
+    Returns:
+        The frame with value_* columns as Int32, or Int64 where the range demands it.
+
+    Note:
+        This is the contract with the frontend: it divides value_* columns by
+        UNITS_PER_MILLION to get back to millions.
+    """
+    df = df.copy()
+    promoted_to_int64 = []
+    value_cols = [c for c in df.columns if c.startswith("value_")]
+
+    for col in value_cols:
+        # UNITS_PER_MILLION is a float on purpose; an int multiplier silently coarsens the
+        # result to float32 precision. See the note on the constant before touching this line.
+        units = (df[col] * UNITS_PER_MILLION).round()
+        largest = units.abs().max()
+
+        # Int32 tops out at ~2.1 billion units, i.e. ~2,147 million.
+        if pd.notna(largest) and largest > INT32_MAX:
+            df[col] = units.astype("Int64")
+            promoted_to_int64.append(col)
+        else:
+            df[col] = units.astype("Int32")
+
+    logger.info(
+        "Converted %s value columns to units%s",
+        len(value_cols),
+        f"; {', '.join(promoted_to_int64)} needed Int64" if promoted_to_int64 else "",
+    )
+
+    return df
+
+
 def get_gni(start_year: int, end_year: int) -> pd.DataFrame:
+    """Read donor GNI, with the aggregates the financing view needs.
+
+    A fetch rather than a transformation, kept here because add_share_of_gni is its only caller
+    and the two are easier to follow together. EU institutions have no GNI of their own, so the
+    EU27 + institutions denominator is the member states' combined GNI.
+
+    Args:
+        start_year: First year to read.
+        end_year: Last year to read.
+
+    Returns:
+        One row per year and donor_name, with a gni column.
+    """
 
     gni_raw = OECDClient(
         years=range(start_year, end_year + 1),

@@ -1,3 +1,16 @@
+"""Builds the gender view: bilateral ODA by gender policy marker score.
+
+Shape of the pipeline:
+    1. CRS bilateral flows for each of the four marker scores
+    2. recipient names, regions and income groups from the shared CRS classification table,
+       since the marker data carries only recipient codes
+    3. recipient groups then donor groups, summed locally because the CRS publishes neither
+    4. each score as a share of the entity's own screened total, so the four sum to 100%
+    5. one parquet on stdout for Observable, plus the dropdown options beside it
+
+Output is keyed by name: year, donor_name, recipient_name, indicator_name.
+"""
+
 import pandas as pd
 
 from oda_data import bilateral_policy_marker
@@ -8,6 +21,7 @@ from src.data.analysis_tools.transformations import (
     add_share_of_group_total,
     build_crs_donor_group_totals,
     build_crs_recipient_group_totals,
+    convert_values_to_units,
     get_crs_recipient_classifications,
     widen_currency_price,
 )
@@ -17,14 +31,13 @@ from src.data.config import (
     GENDER_INDICATORS,
     CRS_PROVIDERS,
     CRS_RECIPIENTS,
-    CRS_DONORS_ORDER,
+    DONORS_ORDER,
     CRS_RECIPIENTS_ORDER,
 )
-from src.data.analysis_tools.helper_functions import (
+from src.data.analysis_tools.outputs import (
     set_cache_dir,
     generate_view_options,
     parquet_to_stdout,
-    convert_values_to_units,
 )
 
 set_cache_dir(oda_data=True, pydeflate=True)
@@ -78,6 +91,12 @@ def get_gender_markers() -> pd.DataFrame:
 
 
 def combined_gender() -> pd.DataFrame:
+    """Assemble the gender view from its parts.
+
+    Returns:
+        Wide frame keyed by year, donor_name, recipient_name and indicator_name, with one
+        column per currency and price pair plus pct_of_total_oda.
+    """
     logger.info("Fetching gender marker data...")
     gender = get_gender_markers()
 
@@ -115,7 +134,6 @@ def combined_gender() -> pd.DataFrame:
         pct_col="pct_of_total_oda",
     )
 
-    # NOTE: Frontend queries must divide value_* columns by 1e6 to get millions
     return convert_values_to_units(gender)
 
 
@@ -125,7 +143,7 @@ if __name__ == "__main__":
     generate_view_options(
         df=df,
         columns={
-            "donor_name": CRS_DONORS_ORDER,
+            "donor_name": DONORS_ORDER,
             "recipient_name": CRS_RECIPIENTS_ORDER,
             "indicator_name": list(GENDER_INDICATORS.values()),
             "year": [],

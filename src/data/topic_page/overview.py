@@ -1,7 +1,7 @@
 import pandas as pd
 from bblocks import format_number
 
-from src.data.analysis_tools.helper_functions import set_cache_dir
+from src.data.analysis_tools.outputs import set_cache_dir
 
 from oda_data import OECDClient, provider_groupings
 

@@ -1,7 +1,7 @@
 import numpy as np
 from oda_data import OECDClient
 
-from src.data.analysis_tools.helper_functions import set_cache_dir
+from src.data.analysis_tools.outputs import set_cache_dir
 from src.data.config import logger, PATHS
 from src.data.topic_page.common import (
     LATEST_YEAR_AGG,
