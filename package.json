@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@observablehq/framework": "^1.13.3",
-    "@one-data/observable-themes": "^0.9.6",
+    "@one-data/observable-themes": "^0.9.9",
     "react": "^19.2.6"
   },
   "devDependencies": {
