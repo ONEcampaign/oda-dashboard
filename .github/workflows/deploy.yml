@@ -71,7 +71,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            src/.observablehq/cache
+            src/.observablehq/cache/*
             !src/.observablehq/cache/_npm
           key: observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py') }}-${{ steps.date.outputs.week }}
           restore-keys: |
