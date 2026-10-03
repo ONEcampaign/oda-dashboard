@@ -2,7 +2,7 @@ import {icon} from "@one-data/observable-themes/brand";
 
 export default {
   title: "ODA Dashboard",
-  head: `<link rel="icon" href=${icon} type="image/png" sizes="32x32">`,
+  head: `<link rel="icon" href=${icon}>`,
 
   base: "/oda-dashboard",
   preserveExtension: true,
