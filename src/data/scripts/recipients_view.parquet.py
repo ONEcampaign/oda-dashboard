@@ -1,7 +1,8 @@
 """Builds the recipients view: who gives to whom, by year.
 
 Shape of the pipeline:
-    1. DAC2A bilateral and imputed multilateral flows, for reported donors and recipients
+    1. DAC2A bilateral and imputed multilateral flows, for reported donors and every recipient
+       DAC2A reports, countries and its published groups (continents, regions, income) alike
     2. the EU27 + institutions aggregate, plus the institutions' bilateral-equivalent series
        that keeps "All bilateral donors" free of double counting
     3. recipient groups (Sahel, France priority) summed before donor groups, so every donor
@@ -34,12 +35,14 @@ from src.data.config import (
     EU_INSTITUTIONS,
     EUI_BILATERAL_NAME,
     BILATERAL_DONORS,
-    ALL_RECIPIENTS,
-    AGGREGATE_RECIPIENTS,
+    DAC2A_AGGREGATE_CODE_MIN,
+    DAC2A_MISSING_RECIPIENT_CODES,
+    EXCLUDED_DAC2A_RECIPIENTS,
+    RECIPIENT_NAME_OVERRIDES,
     SAHEL_RECIPIENTS,
     FRANCE_PRIORITY_RECIPIENTS,
     DONORS_ORDER,
-    RECIPIENTS_ORDER
+    RECIPIENTS_ORDER,
 )
 from src.data.analysis_tools.outputs import (
     set_cache_dir,
@@ -54,6 +57,61 @@ from src.data.analysis_tools.naming import (
 set_cache_dir(oda_data=True, pydeflate=True)
 
 
+def canonical_recipients(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop the DAC2A recipients the view leaves out and give the rest their display names.
+
+    Args:
+        df: DAC2A rows with recipient_code and recipient_name.
+
+    Returns:
+        The kept rows, with canonical recipient names.
+
+    Raises:
+        ValueError: If two recipient codes end up with one name, which the pivot on
+            recipient_name would otherwise merge silently.
+    """
+    df = df.assign(
+        recipient_code=df["recipient_code"].fillna(
+            df["recipient_name"].astype("string").map(DAC2A_MISSING_RECIPIENT_CODES)
+        )
+    )
+    uncoded = sorted(
+        df.loc[df["recipient_code"].isna(), "recipient_name"].astype(str).unique()
+    )
+    if uncoded:
+        logger.warning(
+            "DAC2A recipients without a code, kept by name but not checked against "
+            "EXCLUDED_DAC2A_RECIPIENTS: %s",
+            uncoded,
+        )
+
+    df = df.loc[~df["recipient_code"].isin(EXCLUDED_DAC2A_RECIPIENTS)]
+    df = apply_name_overrides(df, RECIPIENT_NAME_OVERRIDES, "recipient")
+    df["recipient_name"] = normalize_unspecified_names(df["recipient_name"])
+
+    codes_per_name = df.groupby("recipient_name", observed=True)[
+        "recipient_code"
+    ].nunique()
+    clashes = codes_per_name[codes_per_name > 1].index.tolist()
+    if clashes:
+        raise ValueError(f"Recipient names shared by more than one code: {clashes}")
+
+    return df
+
+
+def aggregate_recipient_names(df: pd.DataFrame) -> list[str]:
+    """List the DAC2A recipient groups in the data, e.g. "Africa", alphabetically.
+
+    Args:
+        df: Canonical DAC2A rows with recipient_code and recipient_name.
+
+    Returns:
+        Group names, leaving out the "<area>, unspecified" codes in the aggregate range.
+    """
+    names = df.loc[df["recipient_code"] >= DAC2A_AGGREGATE_CODE_MIN, "recipient_name"]
+    return sorted(n for n in names.unique() if not n.endswith(", unspecified"))
+
+
 def get_dac2a() -> pd.DataFrame:
     """Read DAC2A flows for every reported donor and recipient.
 
@@ -66,13 +124,20 @@ def get_dac2a() -> pd.DataFrame:
         # selectable in its own right. It is deliberately absent from BILATERAL_DONORS
         # and EU_COUNTRIES, so it never affects those group totals.
         providers=list(ALL_DONORS | EU_INSTITUTIONS),
-        recipients=list(ALL_RECIPIENTS),
+        recipients=None,  # every DAC2A recipient, groups included
         use_bulk_download=False,
     ).get_indicators(list(RECIPIENTS_INDICATORS.keys()))
 
     dac2a = (
         dac2a_raw.groupby(
-            ["year", "donor_code", "donor_name", "recipient_code", "recipient_name", "one_indicator"],
+            [
+                "year",
+                "donor_code",
+                "donor_name",
+                "recipient_code",
+                "recipient_name",
+                "one_indicator",
+            ],
             dropna=False,
             observed=True,
         )["value"]
@@ -83,10 +148,8 @@ def get_dac2a() -> pd.DataFrame:
     )
 
     dac2a = apply_name_overrides(dac2a, AGGREGATE_DONORS, "donor")
-    dac2a = apply_name_overrides(dac2a, AGGREGATE_RECIPIENTS, "recipient")
-    dac2a["recipient_name"] = normalize_unspecified_names(dac2a["recipient_name"])
 
-    return dac2a
+    return canonical_recipients(dac2a)
 
 
 def get_dac2a_eui_eu27() -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -105,7 +168,7 @@ def get_dac2a_eui_eu27() -> tuple[pd.DataFrame, pd.DataFrame]:
     dac2a_client = OECDClient(
         years=range(BASE_TIME["start"], BASE_TIME["end"] + 1),
         providers=list(EU_TOTAL),
-        recipients=list(ALL_RECIPIENTS),
+        recipients=None,  # every DAC2A recipient, groups included
         use_bulk_download=False,
     )
 
@@ -113,10 +176,7 @@ def get_dac2a_eui_eu27() -> tuple[pd.DataFrame, pd.DataFrame]:
         dac2a_client, indicator=list(RECIPIENTS_INDICATORS.keys())
     )
 
-    eui_eu27_dac2a_raw = apply_name_overrides(eui_eu27_dac2a_raw, AGGREGATE_RECIPIENTS, "recipient")
-    eui_eu27_dac2a_raw["recipient_name"] = normalize_unspecified_names(
-        eui_eu27_dac2a_raw["recipient_name"]
-    )
+    eui_eu27_dac2a_raw = canonical_recipients(eui_eu27_dac2a_raw)
 
     eui_eu27_dac2a_converted = add_currencies_and_prices(
         eui_eu27_dac2a_raw, base_year=BASE_TIME["base"]
@@ -125,34 +185,43 @@ def get_dac2a_eui_eu27() -> tuple[pd.DataFrame, pd.DataFrame]:
     # recipient_code is kept so that recipient group totals (Sahel, France priority) can
     # be derived for these series too; it is dropped before the pivot.
     group_cols = [
-        "year", "donor_name", "recipient_code", "recipient_name", "indicator_name",
-        "currency", "price",
+        "year",
+        "donor_name",
+        "recipient_code",
+        "recipient_name",
+        "indicator_name",
+        "currency",
+        "price",
     ]
 
     eui_eu27_dac2a = (
-        eui_eu27_dac2a_converted
-        .assign(donor_name="EU27 & EU Institutions")
-        .groupby(group_cols, dropna=False, observed=True)["value"].sum().reset_index()
+        eui_eu27_dac2a_converted.assign(donor_name="EU27 & EU Institutions")
+        .groupby(group_cols, dropna=False, observed=True)["value"]
+        .sum()
+        .reset_index()
     )
 
     eui_bilateral = (
-        eui_eu27_dac2a_converted
-        .loc[lambda d: d["donor_code"].isin(EU_INSTITUTIONS)]
+        eui_eu27_dac2a_converted.loc[lambda d: d["donor_code"].isin(EU_INSTITUTIONS)]
         .assign(donor_name=EUI_BILATERAL_NAME)
-        .groupby(group_cols, dropna=False, observed=True)["value"].sum().reset_index()
+        .groupby(group_cols, dropna=False, observed=True)["value"]
+        .sum()
+        .reset_index()
     )
 
     return eui_eu27_dac2a, eui_bilateral
 
 
-def combined_recipients() -> pd.DataFrame:
+def combined_recipients() -> tuple[pd.DataFrame, list[str]]:
     """Assemble the recipients view from its parts.
 
     Returns:
-        Wide frame keyed by year, donor_name, recipient_name and indicator_name, with one
-        column per currency and price pair plus the two share columns.
+        (wide frame keyed by year, donor_name, recipient_name and indicator_name, with one
+        column per currency and price pair plus the two share columns; the names of the
+        DAC2A recipient groups it contains, for the dropdown ordering).
     """
     dac2a = get_dac2a()
+    group_names = aggregate_recipient_names(dac2a)
 
     dac2a_converted = add_currencies_and_prices(dac2a, base_year=BASE_TIME["base"])
 
@@ -168,7 +237,12 @@ def combined_recipients() -> pd.DataFrame:
     # Recipient group totals must keep donor_code: the donor group totals below select
     # their members by code, and rows without one are silently excluded from them.
     recipient_group_cols = [
-        "year", "donor_code", "donor_name", "indicator_name", "currency", "price",
+        "year",
+        "donor_code",
+        "donor_name",
+        "indicator_name",
+        "currency",
+        "price",
     ]
     sahel_recipients = get_group_total(
         donors_long,
@@ -185,11 +259,14 @@ def combined_recipients() -> pd.DataFrame:
         group_name="France priority countries",
     )
 
-    with_recipient_groups = pd.concat([
-        donors_long,
-        sahel_recipients,
-        france_priority_recipients,
-    ], ignore_index=True)
+    with_recipient_groups = pd.concat(
+        [
+            donors_long,
+            sahel_recipients,
+            france_priority_recipients,
+        ],
+        ignore_index=True,
+    )
 
     # Donor group totals are computed from the extended dataset so that
     # All bilateral / EU27 rows exist for every recipient including Sahel
@@ -206,27 +283,31 @@ def combined_recipients() -> pd.DataFrame:
     # are added explicitly here; using the scaled series rather than the full EU
     # Institutions total keeps EU member contributions from being counted twice. This is
     # also the pct_total_recipient denominator, so it must stay double-count free.
-    all_bilateral_rows = pd.concat([
-        with_recipient_groups.loc[lambda d: d["donor_code"].isin(BILATERAL_DONORS)],
-        with_recipient_groups.loc[lambda d: d["donor_name"] == EUI_BILATERAL_NAME],
-    ])
+    all_bilateral_rows = pd.concat(
+        [
+            with_recipient_groups.loc[lambda d: d["donor_code"].isin(BILATERAL_DONORS)],
+            with_recipient_groups.loc[lambda d: d["donor_name"] == EUI_BILATERAL_NAME],
+        ]
+    )
     all_bilateral_recipients = (
-        all_bilateral_rows
-        .groupby(donor_group_cols, dropna=False, observed=True)["value"]
+        all_bilateral_rows.groupby(donor_group_cols, dropna=False, observed=True)[
+            "value"
+        ]
         .sum()
         .reset_index()
         .assign(donor_name="All bilateral donors")
     )
 
-    recipients = pd.concat([
-        with_recipient_groups,
-        eu27_recipients,
-        all_bilateral_recipients,
-    ], ignore_index=True)
+    recipients = pd.concat(
+        [
+            with_recipient_groups,
+            eu27_recipients,
+            all_bilateral_recipients,
+        ],
+        ignore_index=True,
+    )
 
-    recipients = recipients.loc[
-        lambda d: d["value"].notna() & (d["value"] != 0)
-    ]
+    recipients = recipients.loc[lambda d: d["value"].notna() & (d["value"] != 0)]
 
     # The EU institutions bilateral series exists only to keep "All bilateral donors" (and
     # therefore the pct_total_recipient denominator) free of double counting. That total is
@@ -234,7 +315,9 @@ def combined_recipients() -> pd.DataFrame:
     # without changing any published value.
     recipients = recipients.loc[lambda d: d["donor_name"] != EUI_BILATERAL_NAME]
 
-    recipients = recipients.drop(columns=["donor_code", "recipient_code"], errors="ignore")
+    recipients = recipients.drop(
+        columns=["donor_code", "recipient_code"], errors="ignore"
+    )
 
     recipients = widen_currency_price(
         df=recipients,
@@ -258,17 +341,23 @@ def combined_recipients() -> pd.DataFrame:
 
     recipients = convert_values_to_units(recipients)
 
-    return recipients
+    return recipients, group_names
 
 
 if __name__ == "__main__":
     logger.info("Generating recipients table...")
-    df = combined_recipients()
+    df, group_names = combined_recipients()
+    recipients_order = [
+        *RECIPIENTS_ORDER,
+        *(n for n in group_names if n not in RECIPIENTS_ORDER),
+        "France priority countries",
+        "Sahel countries",
+    ]
     generate_view_options(
         df=df,
         columns={
             "donor_name": DONORS_ORDER,
-            "recipient_name": RECIPIENTS_ORDER,
+            "recipient_name": recipients_order,
             "indicator_name": [],
             "year": [],
         },
