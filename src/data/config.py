@@ -167,6 +167,16 @@ GENDER_INDICATORS: dict = {
     "not_screened": "Not screened",
 }
 
+# The OECD scores the gender marker 0 (screened, not targeted), 1 (significant) or 2
+# (principal) and leaves it blank for activities not screened. oda_data's not_screened read
+# returns all allocable aid, so the gender view derives it as the total allocable read minus
+# the three screened scores, which is exactly the blank rows.
+NOT_SCREENED_SCORE: str = "not_screened"
+TOTAL_ALLOCABLE_SCORE: str = "total_allocable"
+
+# Differences below this many USD millions are subtraction residue, not unscreened aid.
+GENDER_RESIDUAL_TOLERANCE: float = 1e-6
+
 # CRS flow categories read by the sectors and gender views: ODA (10) and other official
 # flows (60). Anything else is out of scope for those views.
 CRS_FLOW_CATEGORIES: list[int] = [10, 60]
@@ -174,20 +184,11 @@ CRS_FLOW_CATEGORIES: list[int] = [10, 60]
 # ---------------------------------------------------------------------------------------
 # 5. Donors
 #
-# DAC1 and DAC2A publish aggregate providers, so financing and recipients request them by code.
-# The CRS does not, so the sectors and gender views sum the memberships below instead.
+# Every view reads individual providers and sums the memberships below into donor aggregates,
+# rather than requesting the OECD's own aggregate providers, so each aggregate is defined once.
 # ---------------------------------------------------------------------------------------
 
-# ONE's own aggregate provider codes, accepted by OECDClient as providers.
-AGGREGATE_DONORS: dict = {
-    20_001: "DAC countries",
-    20_006: "Non-DAC countries",
-    20_003: "G7 countries",
-}
-
 BILATERAL_DONORS: dict = provider_groupings()["all_bilateral"]
-ALL_DONORS: dict = BILATERAL_DONORS | AGGREGATE_DONORS
-
 DAC_COUNTRIES: dict = provider_groupings()["dac_countries"]
 G7_COUNTRIES: dict = provider_groupings()["g7"]
 NON_DAC_COUNTRIES: dict = provider_groupings()["non_dac_countries"]
@@ -197,15 +198,33 @@ EU_COUNTRIES: dict = provider_groupings()["eu27_countries"]
 # Whatever eu27_total holds beyond the member states, i.e. {918: "EU Institutions"}
 EU_INSTITUTIONS: dict = {k: v for k, v in EU_TOTAL.items() if k not in EU_COUNTRIES}
 
-# Every provider that reports to the CRS in its own right, and so the basis of "All bilateral
-# donors" in the sectors and gender views.
-CRS_PROVIDERS: dict = BILATERAL_DONORS | EU_INSTITUTIONS
+# Every provider the views read: the bilateral donors, plus EU Institutions, which is shown on
+# its own but belongs to no donor group.
+PROVIDERS: dict = BILATERAL_DONORS | EU_INSTITUTIONS
 
-# EU institutions spend both their own resources and money contributed by EU member states.
-# Only the former can be added to bilateral providers without double counting members'
-# contributions, and that portion is what this series holds. It feeds the "All bilateral
-# donors" total in the recipients view and is then dropped, so it never reaches the view.
-EUI_BILATERAL_NAME: str = "EU Institutions, bilateral"
+# Donor aggregates, each the sum of its members, built the same way in every view. "All
+# bilateral donors" is exactly DAC countries plus Non-DAC countries. EU Institutions is left
+# out of every group, as in the OECD's headline totals: much of its spending is funded by
+# donors' contributions, which their own totals already include.
+DONOR_GROUPS: dict[str, dict] = {
+    "All bilateral donors": BILATERAL_DONORS,
+    "DAC countries": DAC_COUNTRIES,
+    "Non-DAC countries": NON_DAC_COUNTRIES,
+    "G7 countries": G7_COUNTRIES,
+    "EU27 countries": EU_COUNTRIES,
+}
+if DAC_COUNTRIES.keys() & NON_DAC_COUNTRIES.keys() or (
+    BILATERAL_DONORS.keys() != DAC_COUNTRIES.keys() | NON_DAC_COUNTRIES.keys()
+):
+    raise ValueError(
+        "oda_data's all_bilateral grouping no longer splits into dac_countries and "
+        "non_dac_countries, so All bilateral donors would not equal DAC + Non-DAC."
+    )
+
+# The EU27 + institutions bloc needs EU members' contributions to the institutions to avoid
+# counting them twice. Preliminary DAC1 data for the latest year do not yet carry them, so
+# the financing view shows the bloc only up to this year.
+EU27_EUI_LAST_YEAR: int = 2024
 
 # Channels through which EU member states' core contributions reach the EU institutions.
 # Members' imputed multilateral on these channels is excluded from the EU27 + institutions
@@ -260,10 +279,12 @@ DAC2A_MISSING_RECIPIENT_CODES: dict = {
 # DAC2A recipients the recipients view drops:
 # - the DAC-list income groups (Other LICs, LMICs, UMICs, unallocated by income, MADCTs),
 #   since the view uses the World Bank classification and both have an "LMICs" and "UMICs";
-# - multilateral agencies reported as recipients (IDA, UNDP, ...), as the view covers
-#   developing countries and regions. Their total, "All multilateral recipients", stays.
+# - multilateral agencies reported as recipients (IDA, UNDP, ...), and their totals "All
+#   multilateral recipients" (10150) and "All recipients" (10200), as the view covers
+#   developing countries and regions. Bilateral flows to those totals include donors' core
+#   contributions to multilaterals, which the imputed multilateral series counts again.
 EXCLUDED_DAC2A_RECIPIENTS: frozenset[int] = frozenset(
-    {10_017, 10_018, 10_019, 10_024, 10_025, 816, *range(900, 990)}
+    {10_017, 10_018, 10_019, 10_024, 10_025, 10_150, 10_200, 816, *range(900, 990)}
 )
 
 # The CRS records aid that cannot be allocated to a country against regional codes

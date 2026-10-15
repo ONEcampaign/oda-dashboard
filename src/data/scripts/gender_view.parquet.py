@@ -1,11 +1,13 @@
 """Builds the gender view: bilateral ODA by gender policy marker score.
 
 Shape of the pipeline:
-    1. CRS bilateral flows for each of the four marker scores
+    1. CRS bilateral allocable flows by gender marker score, with "Not screened" derived as
+       the allocable total minus the three screened scores
     2. recipient names, regions and income groups from the shared CRS classification table,
        since the marker data carries only recipient codes
     3. recipient groups then donor groups, summed locally because the CRS publishes neither
-    4. each score as a share of the entity's own screened total, so the four sum to 100%
+    4. each score as a share of the entity's bilateral allocable total, which the four scores
+       make up together, so they sum to 100%
     5. one parquet on stdout for Observable, plus the dropdown options beside it
 
 Output is keyed by name: year, donor_name, recipient_name, indicator_name.
@@ -19,17 +21,23 @@ from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
     add_recipient_classifications,
     add_share_of_group_total,
-    build_crs_donor_group_totals,
+    build_donor_group_totals,
     build_crs_recipient_group_totals,
     convert_values_to_units,
     get_crs_recipient_classifications,
+    get_group_total,
     widen_currency_price,
 )
 from src.data.config import (
     logger,
     BASE_TIME,
     GENDER_INDICATORS,
-    CRS_PROVIDERS,
+    GENDER_RESIDUAL_TOLERANCE,
+    NOT_SCREENED_SCORE,
+    TOTAL_ALLOCABLE_SCORE,
+    PROVIDERS,
+    EU_COUNTRIES,
+    EU_INSTITUTIONS,
     CRS_RECIPIENTS,
     DONORS_ORDER,
     CRS_RECIPIENTS_ORDER,
@@ -49,42 +57,72 @@ RECIPIENT_GROUP_COLS = [
     "year", "donor_code", "donor_name", "indicator_name", "currency", "price",
 ]
 DONOR_GROUP_COLS = ["year", "recipient_name", "indicator_name", "currency", "price"]
+# The level each marker score is summed to before "Not screened" is derived.
+GENDER_KEY = ["year", "donor_code", "donor_name", "recipient_code"]
+
+
+def read_marker_score(score: str) -> pd.Series:
+    """Read gross disbursements for one gender marker score, summed by donor and recipient.
+
+    Args:
+        score: A marker score bilateral_policy_marker accepts, e.g. "principal".
+
+    Returns:
+        Values indexed by GENDER_KEY.
+    """
+    marker = bilateral_policy_marker(
+        years=YEARS,
+        providers=list(PROVIDERS),
+        recipients=list(CRS_RECIPIENTS),
+        measure="gross_disbursement",
+        marker="gender",
+        marker_score=score,
+    )
+    if marker[GENDER_KEY].isna().any().any():
+        raise ValueError(f"Gender marker rows for {score!r} have a missing key column")
+
+    return marker.groupby(GENDER_KEY, observed=True)["value"].sum()
 
 
 def get_gender_markers() -> pd.DataFrame:
     """Read gross disbursements by gender marker score.
 
-    bilateral_policy_marker returns donor_code, donor_name and recipient_code only, so the
-    recipient's name, region and income group are attached later from the shared CRS
-    classification table.
+    "Not screened" is the allocable total minus the three screened scores (see
+    NOT_SCREENED_SCORE in config). bilateral_policy_marker returns donor_code, donor_name and
+    recipient_code only, so the recipient's name, region and income group are attached later
+    from the shared CRS classification table.
+
+    Returns:
+        One row per year, donor, recipient and indicator name, zero rows dropped.
+
+    Raises:
+        ValueError: If screened rows fall outside the allocable total.
     """
-    scores = [
-        bilateral_policy_marker(
-            years=YEARS,
-            providers=list(CRS_PROVIDERS),
-            recipients=list(CRS_RECIPIENTS),
-            measure="gross_disbursement",
-            marker="gender",
-            marker_score=score,
-        )
+    scores = {
+        score: read_marker_score(score)
         for score in GENDER_INDICATORS
-    ]
+        if score != NOT_SCREENED_SCORE
+    }
+    allocable = read_marker_score(TOTAL_ALLOCABLE_SCORE)
 
-    gender_raw = pd.concat(scores, ignore_index=True)
+    screened = pd.concat(scores.values(), axis=1).sum(axis=1)
+    if not screened.index.difference(allocable.index).empty:
+        raise ValueError("Screened gender marker rows fall outside the allocable total")
 
-    unmapped = sorted(set(gender_raw["gender"].dropna().unique()) - set(GENDER_INDICATORS))
-    if unmapped:
-        raise ValueError(f"Unmapped gender marker scores: {unmapped}")
+    # Can be negative: unscreened rows include negative disbursements (corrections).
+    not_screened = allocable.sub(screened, fill_value=0)
+    scores[NOT_SCREENED_SCORE] = not_screened.where(
+        not_screened.abs() > GENDER_RESIDUAL_TOLERANCE, 0
+    )
 
-    gender = (
-        gender_raw.assign(indicator_name=lambda d: d["gender"].map(GENDER_INDICATORS))
-        .groupby(
-            ["year", "donor_code", "donor_name", "recipient_code", "indicator_name"],
-            dropna=False,
-            observed=True,
-        )["value"]
-        .sum()
-        .reset_index()
+    gender = pd.concat(
+        [
+            values.rename("value")
+            .reset_index()
+            .assign(indicator_name=GENDER_INDICATORS[score])
+            for score, values in scores.items()
+        ],
+        ignore_index=True,
     )
 
     return gender[gender["value"] != 0]
@@ -116,7 +154,18 @@ def combined_gender() -> pd.DataFrame:
         ignore_index=True,
     )
     gender = pd.concat(
-        [gender, *build_crs_donor_group_totals(gender, DONOR_GROUP_COLS)],
+        [
+            gender,
+            *build_donor_group_totals(gender, DONOR_GROUP_COLS).values(),
+            # A plain sum is safe here: the marker data has no imputed multilateral leg
+            # through which member contributions could be counted twice.
+            get_group_total(
+                gender,
+                EU_COUNTRIES | EU_INSTITUTIONS,
+                group_cols=DONOR_GROUP_COLS,
+                group_name="EU27 & EU Institutions",
+            ),
+        ],
         ignore_index=True,
     )
 
