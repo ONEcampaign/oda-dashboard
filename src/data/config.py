@@ -149,9 +149,7 @@ IN_DONOR_FINANCING_INDICATORS: dict = {
 }
 
 ALL_FINANCING_INDICATORS: dict = (
-    AGGREGATE_FINANCING_INDICATORS
-    | PSI_FINANCING_INDICATORS
-    | IN_DONOR_FINANCING_INDICATORS
+    AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS | IN_DONOR_FINANCING_INDICATORS
 )
 
 RECIPIENTS_INDICATORS: dict = {
@@ -233,9 +231,7 @@ AGGREGATE_RECIPIENTS: dict = {
     10_203: "Fragile states",
 }
 
-COUNTRIES_REGIONS_RECIPIENTS: dict = recipient_groupings()[
-    "all_developing_countries_regions"
-]
+COUNTRIES_REGIONS_RECIPIENTS: dict = recipient_groupings()["all_developing_countries_regions"]
 ALL_RECIPIENTS: dict = AGGREGATE_RECIPIENTS | COUNTRIES_REGIONS_RECIPIENTS
 
 # The CRS records aid that cannot be allocated to a country against regional codes
