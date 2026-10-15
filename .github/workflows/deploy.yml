@@ -61,6 +61,18 @@ jobs:
           restore-keys: |
             oda-bulk-
 
+      # The OECD file server puts a browser challenge in front of the CRS and MultiSystem bulk
+      # files (ONEcampaign/oda_reader#50), so CI loads browser-downloaded copies kept as assets
+      # on the oecd-bulk-data release instead of downloading them.
+      - name: Seed OECD bulk cache
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          gh release download oecd-bulk-data --dir src/data/raw_data/oecd_bulk --clobber
+          uv run python src/data/scripts/seed_bulk_cache.py
+        timeout-minutes: 30
+
       # Observable compiled output — keyed on script/config content so a code
       # change forces recompilation without also discarding the bulk data above.
       # restore-keys includes the script hash so a stale cache from a different
