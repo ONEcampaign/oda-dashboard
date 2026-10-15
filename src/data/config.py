@@ -134,6 +134,13 @@ PSI_FINANCING_INDICATORS: dict = {
     "DAC1.60.11024": "Private sector instruments - instrument approach",
 }
 
+# Code kept when aliases of one name disagree for a donor and year. 11030 and 11040 should
+# report the same PSI figure, but the October 2026 DAC1 has them differ for 2023-24 (reported
+# to the OECD). Until that is resolved the grant-equivalent figure is used.
+PREFERRED_FINANCING_CODES: dict = {
+    "Private sector instruments": "DAC1.60.11040",
+}
+
 IN_DONOR_FINANCING_INDICATORS: dict = {
     "DAC1.10.1820": "Refugees in donor countries",
     "DAC1.10.1500": "Scholarships and student costs in donor countries",
@@ -142,7 +149,9 @@ IN_DONOR_FINANCING_INDICATORS: dict = {
 }
 
 ALL_FINANCING_INDICATORS: dict = (
-    AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS | IN_DONOR_FINANCING_INDICATORS
+    AGGREGATE_FINANCING_INDICATORS
+    | PSI_FINANCING_INDICATORS
+    | IN_DONOR_FINANCING_INDICATORS
 )
 
 RECIPIENTS_INDICATORS: dict = {
@@ -224,7 +233,9 @@ AGGREGATE_RECIPIENTS: dict = {
     10_203: "Fragile states",
 }
 
-COUNTRIES_REGIONS_RECIPIENTS: dict = recipient_groupings()["all_developing_countries_regions"]
+COUNTRIES_REGIONS_RECIPIENTS: dict = recipient_groupings()[
+    "all_developing_countries_regions"
+]
 ALL_RECIPIENTS: dict = AGGREGATE_RECIPIENTS | COUNTRIES_REGIONS_RECIPIENTS
 
 # The CRS records aid that cannot be allocated to a country against regional codes
