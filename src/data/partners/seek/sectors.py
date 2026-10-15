@@ -1,6 +1,6 @@
 import pandas as pd
 from oda_data import (
-    set_data_path,
+    set_cache_root,
     sector_imputations,
     add_sectors,
     add_broad_sectors,
@@ -12,7 +12,7 @@ from oda_data.clean_data.channels import add_channel_names
 from src.data import config
 from src.data.config import PATHS
 
-set_data_path(config.PATHS.DATA)
+set_cache_root(config.PATHS.DATA)
 
 START_YEAR: int = 2012
 END_YEAR: int = 2024
