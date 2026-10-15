@@ -2,7 +2,6 @@ import json
 import os
 
 import pandas as pd
-from bblocks import format_number
 
 LONG_START_YEAR: int = 2000
 START_YEAR: int = 2010
@@ -10,6 +9,29 @@ SHORT_START_YEAR: int = 2015
 LATEST_YEAR_AGG: int = 2025
 LATEST_YEAR_DETAIL: int = 2024
 CONSTANT_YEAR: int = 2025
+
+BILLION: float = 1e9
+
+
+def _format(series: pd.Series, template: str) -> pd.Series:
+    """Format a numeric series as strings with a str.format template.
+
+    Raises:
+        ValueError: If the series is not numeric.
+    """
+    if not pd.api.types.is_numeric_dtype(series):
+        raise ValueError(f"Expected a numeric series, got {series.dtype}")
+    return series.map(template.format)
+
+
+def format_percentage(series: pd.Series, decimals: int = 1) -> pd.Series:
+    """Format shares where 1 means 100%, e.g. 0.1234 -> "12.3%"."""
+    return _format(series, f"{{:,.{decimals}%}}")
+
+
+def format_billions(series: pd.Series, decimals: int = 1) -> pd.Series:
+    """Format absolute values in billions with thousands separators, e.g. 1.5e9 -> "1.5"."""
+    return _format(series / BILLION, f"{{:,.{decimals}f}}")
 
 
 def add_change(
@@ -23,11 +45,7 @@ def add_change(
     if not as_formatted_str:
         return df
 
-    df["pct_change"] = format_number(
-        df["pct_change"],
-        as_percentage=True,
-        decimals=1,
-    ).replace("nan%", "")
+    df["pct_change"] = format_percentage(df["pct_change"], decimals=1).replace("nan%", "")
 
     return df
 
