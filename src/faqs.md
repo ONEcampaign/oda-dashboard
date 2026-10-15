@@ -87,6 +87,71 @@ function App() {
                 <span style={{ fontFamily: "monospace" }}>src/data</span> directory of the project's{" "}
                 <a target="_blank" className="underline" href="https://github.com/ONEcampaign/oda-dashboard">GitHub repository</a>.
               </p>
+              <h2 className="font-bold text-xl mt-8 mb-2">Which measure does each tab use?</h2>
+              <ul className="list-disc pl-6 text-base text-slate-700 space-y-1">
+                <li><strong>Financing</strong>: net flows up to 2017 and grant equivalents from 2018, the OECD's headline measure.</li>
+                <li><strong>Recipients</strong>: net disbursements, from the OECD's DAC2A table.</li>
+                <li><strong>Sectors</strong> and <strong>Gender</strong>: gross disbursements, from the Creditor Reporting System (CRS).</li>
+              </ul>
+              <p>
+                Totals for the same donor and year therefore differ between tabs.
+              </p>
+              <h2 className="font-bold text-xl mt-8 mb-2">How are donor groups defined?</h2>
+              <p>
+                Every group is the sum of its members, built the same way in all four tabs. DAC countries, Non-DAC
+                countries, G7 countries and EU27 countries add up their member countries. EU Institutions is shown on
+                its own and belongs to none of them. Because the groups add up individual countries, Non-DAC countries
+                can be smaller than the OECD's own Non-DAC total, which includes amounts the OECD does not publish
+                country by country.
+              </p>
+              <p>
+                <strong>All bilateral donors</strong> is DAC countries plus Non-DAC countries. It does not include
+                EU Institutions, following the OECD's headline totals: much of EU Institutions' spending is funded by
+                contributions from EU member states and other donors, which their own totals already include, so adding
+                it would count the same money twice. The OECD's own "DAC Members" total does add EU Institutions in full,
+                so it is larger than All bilateral donors.
+              </p>
+              <p>
+                <strong>EU27 & EU Institutions</strong> combines EU member states and EU Institutions without counting
+                members' contributions to the institutions twice. The Financing and Recipients tabs keep only the share of
+                EU Institutions' spending not funded by EU members. The Sectors tab removes members' multilateral spending
+                that passes through EU institutions. The Gender tab adds the two together, because members'
+                contributions to the institutions are not part of that data. The Financing tab shows this group up to
+                2024, the last year for which members' contributions are reported.
+              </p>
+              <h2 className="font-bold text-xl mt-8 mb-2">How is double counting with multilateral contributions avoided?</h2>
+              <p>
+                Since the April 2026 release, the CRS includes donors' core contributions to multilateral organisations
+                as separate records. The dashboard leaves them out of bilateral figures, because the same money appears
+                under <em>imputed multilateral</em>, which shows how multilateral organisations spend it.
+              </p>
+              <p>
+                For the same reason, the Recipients tab does not offer the "All recipients" and "All multilateral
+                recipients" groups. Bilateral flows to those groups include core contributions to multilateral
+                organisations.
+              </p>
+              <h2 className="font-bold text-xl mt-8 mb-2">Why are some figures missing for the latest year?</h2>
+              <p>
+                The OECD's preliminary data for the latest year are incomplete. The split of Total ODA into grants and
+                non-grants is left out for a group in any year where members that do not report it account for more than
+                1% of the group's Total ODA. Countries that report the split keep their own figures. EU27 & EU
+                Institutions is shown up to 2024, as explained above.
+              </p>
+              <p>
+                Where the OECD reports two different totals for private sector instruments for the same donor and year,
+                the dashboard uses the grant-equivalent figure.
+              </p>
+              <h2 className="font-bold text-xl mt-8 mb-2">How is the gender marker used?</h2>
+              <p>
+                Donors score each activity 2 if gender equality is its main objective, 1 if it is a significant one, and
+                0 if it was screened and does not target gender equality. Activities that were not screened are left
+                blank, and the dashboard shows them as "Not screened".
+              </p>
+              <p>
+                Shares are calculated over a donor's bilateral allocable aid, which the four categories add up to. The
+                OECD's own figures use screened aid only, and commitments rather than disbursements, so its shares differ
+                from the dashboard's and are usually higher.
+              </p>
               <h2 className="font-bold text-xl mt-8 mb-2">How are sectors and sub-sectors defined?</h2>
               <p>
                 The groupings are based on the <em>purpose</em> field from the Creditor Reporting System (CRS) database.
