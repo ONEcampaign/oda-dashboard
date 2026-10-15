@@ -149,7 +149,9 @@ IN_DONOR_FINANCING_INDICATORS: dict = {
 }
 
 ALL_FINANCING_INDICATORS: dict = (
-    AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS | IN_DONOR_FINANCING_INDICATORS
+    AGGREGATE_FINANCING_INDICATORS
+    | PSI_FINANCING_INDICATORS
+    | IN_DONOR_FINANCING_INDICATORS
 )
 
 RECIPIENTS_INDICATORS: dict = {
@@ -214,14 +216,19 @@ EUI_CHANNEL_CODES: frozenset[int] = frozenset({42000, 42001, 42003, 42004, 42999
 # ---------------------------------------------------------------------------------------
 # 6. Recipients
 #
-# DAC2A publishes aggregate recipients, requested by code below. The CRS does not, so the
-# sectors and gender views group by the classifications in section 7 instead.
+# The recipients view takes every recipient DAC2A reports, countries and published groups
+# alike. The CRS publishes no groups, so the sectors and gender views build them from the
+# classifications in section 7 instead.
 # ---------------------------------------------------------------------------------------
 
-# DAC2A aggregate recipient codes, with the labels the views display.
-AGGREGATE_RECIPIENTS: dict = {
+# DAC2A recipient codes from here up are groups (continents, regions, income groups), except
+# a few "<area> unspecified" codes, which are recognised by name instead.
+DAC2A_AGGREGATE_CODE_MIN: int = 10_000
+
+# Display labels for DAC2A recipients, keyed by code. Labels only: what the view contains is
+# whatever DAC2A returns. Regions are renamed to match the sectors and gender views.
+RECIPIENT_NAME_OVERRIDES: dict = {
     10_100: "ODA eligible countries",
-    998: "ODA eligible countries, unspecified",
     10_016: "Least Developed Countries (LDCs)",
     10_045: "Low Income Countries (LICs)",
     10_046: "Lower-Middle Income Countries (LMICs)",
@@ -229,16 +236,41 @@ AGGREGATE_RECIPIENTS: dict = {
     10_048: "High Income Countries (HICs)",
     10_030: "Heavily Indebted Poor Countries (HIPCs)",
     10_203: "Fragile states",
+    10_002: "North of Sahara",
+    189: "North of Sahara, unspecified",
+    10_003: "South of Sahara",
+    289: "South of Sahara, unspecified",
+    10_009: "South & Central Asia",
+    689: "South & Central Asia, unspecified",
+    10_005: "Caribbean & Central America",
+    389: "Caribbean & Central America, unspecified",
+    # DAC2A calls both the sub-region and the country (code 860) "Micronesia"
+    10_058: "Micronesia (region)",
 }
 
-COUNTRIES_REGIONS_RECIPIENTS: dict = recipient_groupings()["all_developing_countries_regions"]
-ALL_RECIPIENTS: dict = AGGREGATE_RECIPIENTS | COUNTRIES_REGIONS_RECIPIENTS
+# DAC2A recipients that come back without a code. The cause is upstream in oda_reader's area
+# code mapping: a correction overwrites EDF's code, and the other two are missing from it.
+# Remove once that is fixed. Codes as in recipient_groupings()["all_recipients"].
+DAC2A_MISSING_RECIPIENT_CODES: dict = {
+    "East African Community": 237,
+    "Indus Basin": 650,
+    "European Development Fund [EDF]": 918,
+}
+
+# DAC2A recipients the recipients view drops:
+# - the DAC-list income groups (Other LICs, LMICs, UMICs, unallocated by income, MADCTs),
+#   since the view uses the World Bank classification and both have an "LMICs" and "UMICs";
+# - multilateral agencies reported as recipients (IDA, UNDP, ...), as the view covers
+#   developing countries and regions. Their total, "All multilateral recipients", stays.
+EXCLUDED_DAC2A_RECIPIENTS: frozenset[int] = frozenset(
+    {10_017, 10_018, 10_019, 10_024, 10_025, 816, *range(900, 990)}
+)
 
 # The CRS records aid that cannot be allocated to a country against regional codes
 # ("Africa, regional") and "Developing countries, unspecified", which together are roughly
-# half of all bilateral flows. COUNTRIES_REGIONS_RECIPIENTS omits them, so the CRS views
-# need the full recipient list. Safe to sum: the CRS never reports the same money against
-# both a country and a region, and it contains no "X, Total" style aggregates.
+# half of all bilateral flows, so the CRS views need the full recipient list. Safe to sum:
+# the CRS never reports the same money against both a country and a region, and it contains
+# no "X, Total" style aggregates.
 CRS_RECIPIENTS: dict = recipient_groupings()["all_recipients"]
 
 # Country lists that no source publishes as an aggregate, so every view sums them.
@@ -303,7 +335,8 @@ FINANCING_INDICATORS_ORDER: list[str] = (
     + list(dict.fromkeys(PSI_FINANCING_INDICATORS.values()))
 )
 
-# Recipients view: the DAC2A aggregates, then the two summed country lists.
+# Recipients view: the income and status groups. The script appends the remaining DAC2A groups
+# and the two summed country lists, read from the data.
 RECIPIENTS_ORDER: list[str] = [
     "ODA eligible countries",
     "Least Developed Countries (LDCs)",
@@ -313,8 +346,6 @@ RECIPIENTS_ORDER: list[str] = [
     "High Income Countries (HICs)",
     "Heavily Indebted Poor Countries (HIPCs)",
     "Fragile states",
-    "France priority countries",
-    "Sahel countries",
 ]
 
 # CRS views: the overall total, then income groups, continents, CRS regions, country lists.
