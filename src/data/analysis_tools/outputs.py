@@ -19,7 +19,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
-from oda_data import set_data_path
+from oda_data import set_cache_root
 from pydeflate import set_pydeflate_path
 
 from src.data.config import LABEL_COLUMNS, PATHS, logger
@@ -83,7 +83,8 @@ def set_cache_dir(
 
     Args:
         path: Cache directory.
-        oda_data: Whether to point oda_data at it.
+        oda_data: Whether to point oda_data at it. oda_data chains the same root to
+            oda_reader and keeps its own files under ``path / "oda-data"``.
         pydeflate: Whether to point pydeflate at it.
     """
     if not path.exists():
@@ -91,7 +92,7 @@ def set_cache_dir(
         path.mkdir(parents=True, exist_ok=True)
 
     if oda_data:
-        set_data_path(path)
+        set_cache_root(path)
     if pydeflate:
         set_pydeflate_path(path)
 

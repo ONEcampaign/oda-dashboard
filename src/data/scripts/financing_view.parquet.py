@@ -30,7 +30,8 @@ from src.data.analysis_tools.transformations import (
     add_share_of_gni,
     add_share_of_total_oda,
     convert_values_to_units,
-    widen_currency_price, get_group_total,
+    widen_currency_price,
+    get_group_total,
 )
 from src.data.config import (
     logger,
@@ -40,6 +41,7 @@ from src.data.config import (
     PSI_FINANCING_INDICATORS,
     IN_DONOR_FINANCING_INDICATORS,
     ALL_FINANCING_INDICATORS,
+    PREFERRED_FINANCING_CODES,
     ALL_DONORS,
     AGGREGATE_DONORS,
     EU_INSTITUTIONS,
@@ -60,7 +62,9 @@ def resolve_indicator_duplicates(
 
     The DAC renumbered several indicators when it moved to grant equivalents, so two codes can
     map to one name (1015 and 11015 are both "Bilateral ODA"). Where both are present for the
-    same donor and year they report the same figure, and keeping both would double it.
+    same donor and year they report the same figure, and keeping both would double it. Where they
+    disagree and the name has an entry in PREFERRED_FINANCING_CODES, that code's row is kept and
+    the conflict is logged.
 
     Args:
         dac1_raw: Raw DAC1 rows, with a one_indicator column.
@@ -68,10 +72,12 @@ def resolve_indicator_duplicates(
             the two codes are not interchangeable after all; pass False to log and continue.
 
     Returns:
-        The rows with duplicates removed, keeping the first of each set.
+        The rows with duplicates removed, keeping the first of each set, or the preferred code's
+        row where the values disagree.
 
     Raises:
-        ValueError: If two codes for one name disagree and raise_error is True.
+        ValueError: If two codes for one name disagree, no preferred code applies, and
+            raise_error is True.
     """
     multi_code_names = {
         name
@@ -79,10 +85,13 @@ def resolve_indicator_duplicates(
         if count > 1
     }
 
-    annotated = dac1_raw.assign(_indicator=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS))
+    annotated = dac1_raw.assign(
+        _indicator=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS)
+    )
     shared = annotated[annotated["_indicator"].isin(multi_code_names)]
 
     conflicts = []
+    preferred = []
     drop_indices = []
 
     for (year, donor_code, indicator), group in shared.groupby(
@@ -92,14 +101,28 @@ def resolve_indicator_duplicates(
             continue
         if group["value"].dropna().nunique() <= 1:
             drop_indices.extend(group.index[1:].tolist())
+            continue
+
+        keep = group.index[
+            group["one_indicator"] == PREFERRED_FINANCING_CODES.get(indicator)
+        ]
+        if len(keep):
+            preferred.append((year, donor_code, indicator))
+            drop_indices.extend(group.index.difference(keep[:1]).tolist())
         else:
             conflicts.append((year, donor_code, indicator))
             drop_indices.extend(group.index[1:].tolist())
 
+    if preferred:
+        logger.warning(
+            "Shared indicator codes disagree; kept the preferred code for %s year-donor pairs: %s",
+            len(preferred),
+            ", ".join(f"{ind} {y} donor {d}" for y, d, ind in preferred),
+        )
+
     if conflicts:
         lines = [
-            f"  year={y}, donor_code={d}, indicator='{ind}'"
-            for y, d, ind in conflicts
+            f"  year={y}, donor_code={d}, indicator='{ind}'" for y, d, ind in conflicts
         ]
         message = (
             "Conflicting values for year-donor pairs with shared indicator codes:\n"
@@ -146,16 +169,22 @@ def get_dac1() -> pd.DataFrame:
         use_bulk_download=True,
     ).get_indicators(list(AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS))
 
-    dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw], ignore_index=True)
+    dac1_raw = pd.concat(
+        [in_donor_raw, other_flow_raw, other_ge_raw], ignore_index=True
+    )
     dac1_raw = resolve_indicator_duplicates(dac1_raw)
 
     dac1 = (
         dac1_raw.groupby(
-            ["year", "donor_code", "donor_name", "one_indicator"], dropna=False, observed=True
+            ["year", "donor_code", "donor_name", "one_indicator"],
+            dropna=False,
+            observed=True,
         )["value"]
         .sum()
         .reset_index()
-        .assign(indicator_name=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS))
+        .assign(
+            indicator_name=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS)
+        )
         .drop(columns=["one_indicator"])
     )
 
@@ -197,15 +226,24 @@ def get_grants() -> pd.DataFrame:
 
     grants = (
         grants_raw.assign(indicator_name=lambda d: d["fund_flows"].map(mapping))
-        .groupby(["year", "donor_code", "donor_name", "indicator_name"], dropna=False, observed=True)[
-            "value"
-        ]
+        .groupby(
+            ["year", "donor_code", "donor_name", "indicator_name"],
+            dropna=False,
+            observed=True,
+        )["value"]
         .sum()
         .reset_index()
-        .pivot(index=["year", "donor_code", "donor_name"], columns="indicator_name", values="value")
+        .pivot(
+            index=["year", "donor_code", "donor_name"],
+            columns="indicator_name",
+            values="value",
+        )
         .reset_index()
         .assign(**{"Non-grants": lambda d: d["Total ODA"] - d["Grants"]})
-        .melt(id_vars=["year", "donor_code", "donor_name"], value_vars=["Grants", "Non-grants"])
+        .melt(
+            id_vars=["year", "donor_code", "donor_name"],
+            value_vars=["Grants", "Non-grants"],
+        )
     )
 
     grants = apply_name_overrides(grants, AGGREGATE_DONORS, "donor")
@@ -244,7 +282,8 @@ def get_eui_eu27_dac1() -> pd.DataFrame:
     )
 
     other_flow_raw = get_eui_plus_bilateral_providers_indicator(
-        other_flow_client, indicator=list(AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS)
+        other_flow_client,
+        indicator=list(AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS),
     )
 
     # other indicators in grant equivalents after 2017
@@ -256,21 +295,32 @@ def get_eui_eu27_dac1() -> pd.DataFrame:
     )
 
     other_ge_raw = get_eui_plus_bilateral_providers_indicator(
-        other_ge_client, indicator=list(AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS)
+        other_ge_client,
+        indicator=list(AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS),
     )
 
-    eui_eu27_dac1_raw = pd.concat([in_donor_raw, other_flow_raw, other_ge_raw], ignore_index=True)
+    eui_eu27_dac1_raw = pd.concat(
+        [in_donor_raw, other_flow_raw, other_ge_raw], ignore_index=True
+    )
 
     eui_eu27_dac1_raw = resolve_indicator_duplicates(eui_eu27_dac1_raw)
 
-    eui_eu27_dac1_converted = add_currencies_and_prices(eui_eu27_dac1_raw, base_year=FINANCING_TIME["base"])
+    eui_eu27_dac1_converted = add_currencies_and_prices(
+        eui_eu27_dac1_raw, base_year=FINANCING_TIME["base"]
+    )
 
     eui_eu27_dac1 = (
-        eui_eu27_dac1_converted
-        .assign(
+        eui_eu27_dac1_converted.assign(
             indicator_name=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS),
             donor_name="EU27 & EU Institutions",
-        ).groupby(["year", "donor_name", "currency", "price", "indicator_name"], dropna=False, observed=True)["value"].sum().reset_index()
+        )
+        .groupby(
+            ["year", "donor_name", "currency", "price", "indicator_name"],
+            dropna=False,
+            observed=True,
+        )["value"]
+        .sum()
+        .reset_index()
     )
 
     return eui_eu27_dac1
@@ -318,17 +368,31 @@ def get_eui_eu27_grants() -> pd.DataFrame:
 
     eui_eu27_grants_raw = pd.concat([grants_flow_raw, grants_ge_raw])
 
-    eui_eu27_grants_converted = add_currencies_and_prices(eui_eu27_grants_raw, base_year=FINANCING_TIME["base"])
+    eui_eu27_grants_converted = add_currencies_and_prices(
+        eui_eu27_grants_raw, base_year=FINANCING_TIME["base"]
+    )
 
     eui_eu27_grants = (
-        eui_eu27_grants_converted
-        .assign(indicator_name=lambda d: d["fund_flows"].map(mapping))
-        .pivot(index=["year", "donor_code", "currency", "price"], columns="indicator_name", values="value")
+        eui_eu27_grants_converted.assign(
+            indicator_name=lambda d: d["fund_flows"].map(mapping)
+        )
+        .pivot(
+            index=["year", "donor_code", "currency", "price"],
+            columns="indicator_name",
+            values="value",
+        )
         .reset_index()
         .assign(**{"Non-grants": lambda d: d["Total ODA"] - d["Grants"]})
-        .melt(id_vars=["year", "donor_code", "currency", "price"], value_vars=["Grants", "Non-grants"])
-        .groupby(["year", "indicator_name", "currency", "price"], dropna=False, observed=True)["value"].sum().reset_index()
-        .assign(donor_name= "EU27 & EU Institutions")
+        .melt(
+            id_vars=["year", "donor_code", "currency", "price"],
+            value_vars=["Grants", "Non-grants"],
+        )
+        .groupby(
+            ["year", "indicator_name", "currency", "price"], dropna=False, observed=True
+        )["value"]
+        .sum()
+        .reset_index()
+        .assign(donor_name="EU27 & EU Institutions")
     )
 
     return eui_eu27_grants
@@ -347,35 +411,37 @@ def get_financing_data() -> pd.DataFrame:
     non_eu_financing = pd.concat([dac1, grants])
 
     # Add currencies and prices
-    non_eu_financing = add_currencies_and_prices(non_eu_financing, base_year=FINANCING_TIME["base"])
+    non_eu_financing = add_currencies_and_prices(
+        non_eu_financing, base_year=FINANCING_TIME["base"]
+    )
 
     eu27_financing = get_group_total(
         non_eu_financing,
         EU_COUNTRIES,
         group_cols=["year", "indicator_name", "currency", "price"],
-        group_name="EU27 countries"
+        group_name="EU27 countries",
     )
     all_bilateral_financing = get_group_total(
         non_eu_financing,
         BILATERAL_DONORS,
         group_cols=["year", "indicator_name", "currency", "price"],
-        group_name="All bilateral donors"
+        group_name="All bilateral donors",
     )
 
     eui_eu27_dac1 = get_eui_eu27_dac1()
     eui_eu27_grants = get_eui_eu27_grants()
 
-    financing = pd.concat([
-        non_eu_financing,
-        eu27_financing,
-        all_bilateral_financing,
-        eui_eu27_dac1,
-        eui_eu27_grants
-    ])
+    financing = pd.concat(
+        [
+            non_eu_financing,
+            eu27_financing,
+            all_bilateral_financing,
+            eui_eu27_dac1,
+            eui_eu27_grants,
+        ]
+    )
 
-    financing = financing.loc[
-        lambda d: d["value"].notna() & (d["value"] != 0)
-    ]
+    financing = financing.loc[lambda d: d["value"].notna() & (d["value"] != 0)]
 
     # Add type column
     financing["type"] = np.where(
@@ -406,7 +472,6 @@ def get_financing_data() -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-
     logger.info("Generating financing table...")
     df = get_financing_data()
     generate_view_options(

@@ -134,6 +134,13 @@ PSI_FINANCING_INDICATORS: dict = {
     "DAC1.60.11024": "Private sector instruments - instrument approach",
 }
 
+# Code kept when aliases of one name disagree for a donor and year. 11030 and 11040 should
+# report the same PSI figure, but the October 2026 DAC1 has them differ for 2023-24 (reported
+# to the OECD). Until that is resolved the grant-equivalent figure is used.
+PREFERRED_FINANCING_CODES: dict = {
+    "Private sector instruments": "DAC1.60.11040",
+}
+
 IN_DONOR_FINANCING_INDICATORS: dict = {
     "DAC1.10.1820": "Refugees in donor countries",
     "DAC1.10.1500": "Scholarships and student costs in donor countries",
