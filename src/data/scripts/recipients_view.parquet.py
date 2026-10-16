@@ -17,8 +17,13 @@ import pandas as pd
 from oda_data import OECDClient
 from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_indicator
 
+from src.data.analysis_tools.recipients import (
+    aggregate_recipient_names,
+    canonical_recipients,
+)
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
+    drop_empty_values,
     add_share_of_reference_total,
     build_donor_group_totals,
     convert_values_to_units,
@@ -31,10 +36,6 @@ from src.data.config import (
     RECIPIENTS_INDICATORS,
     PROVIDERS,
     EU_TOTAL,
-    DAC2A_AGGREGATE_CODE_MIN,
-    DAC2A_MISSING_RECIPIENT_CODES,
-    EXCLUDED_DAC2A_RECIPIENTS,
-    RECIPIENT_NAME_OVERRIDES,
     SAHEL_RECIPIENTS,
     FRANCE_PRIORITY_RECIPIENTS,
     DONORS_ORDER,
@@ -46,66 +47,10 @@ from src.data.analysis_tools.outputs import (
     generate_view_options,
 )
 from src.data.analysis_tools.naming import (
-    apply_name_overrides,
-    normalize_unspecified_names,
+    map_indicator_names,
 )
 
 set_cache_dir(oda_data=True, pydeflate=True)
-
-
-def canonical_recipients(df: pd.DataFrame) -> pd.DataFrame:
-    """Drop the DAC2A recipients the view leaves out and give the rest their display names.
-
-    Args:
-        df: DAC2A rows with recipient_code and recipient_name.
-
-    Returns:
-        The kept rows, with canonical recipient names.
-
-    Raises:
-        ValueError: If two recipient codes end up with one name, which the pivot on
-            recipient_name would otherwise merge silently.
-    """
-    df = df.assign(
-        recipient_code=df["recipient_code"].fillna(
-            df["recipient_name"].astype("string").map(DAC2A_MISSING_RECIPIENT_CODES)
-        )
-    )
-    uncoded = sorted(
-        df.loc[df["recipient_code"].isna(), "recipient_name"].astype(str).unique()
-    )
-    if uncoded:
-        logger.warning(
-            "DAC2A recipients without a code, kept by name but not checked against "
-            "EXCLUDED_DAC2A_RECIPIENTS: %s",
-            uncoded,
-        )
-
-    df = df.loc[~df["recipient_code"].isin(EXCLUDED_DAC2A_RECIPIENTS)]
-    df = apply_name_overrides(df, RECIPIENT_NAME_OVERRIDES, "recipient")
-    df["recipient_name"] = normalize_unspecified_names(df["recipient_name"])
-
-    codes_per_name = df.groupby("recipient_name", observed=True)[
-        "recipient_code"
-    ].nunique()
-    clashes = codes_per_name[codes_per_name > 1].index.tolist()
-    if clashes:
-        raise ValueError(f"Recipient names shared by more than one code: {clashes}")
-
-    return df
-
-
-def aggregate_recipient_names(df: pd.DataFrame) -> list[str]:
-    """List the DAC2A recipient groups in the data, e.g. "Africa", alphabetically.
-
-    Args:
-        df: Canonical DAC2A rows with recipient_code and recipient_name.
-
-    Returns:
-        Group names, leaving out the "<area>, unspecified" codes in the aggregate range.
-    """
-    names = df.loc[df["recipient_code"] >= DAC2A_AGGREGATE_CODE_MIN, "recipient_name"]
-    return sorted(n for n in names.unique() if not n.endswith(", unspecified"))
 
 
 def get_dac2a() -> pd.DataFrame:
@@ -137,7 +82,11 @@ def get_dac2a() -> pd.DataFrame:
         )["value"]
         .sum()
         .reset_index()
-        .assign(indicator_name=lambda d: d["one_indicator"].map(RECIPIENTS_INDICATORS))
+        .assign(
+            indicator_name=lambda d: map_indicator_names(
+                d["one_indicator"], RECIPIENTS_INDICATORS
+            )
+        )
         .drop(columns=["one_indicator"])
     )
 
@@ -169,7 +118,11 @@ def get_dac2a_eui_eu27() -> pd.DataFrame:
 
     eui_eu27_dac2a_converted = add_currencies_and_prices(
         eui_eu27_dac2a_raw, base_year=BASE_TIME["base"]
-    ).assign(indicator_name=lambda d: d["one_indicator"].map(RECIPIENTS_INDICATORS))
+    ).assign(
+        indicator_name=lambda d: map_indicator_names(
+            d["one_indicator"], RECIPIENTS_INDICATORS
+        )
+    )
 
     # recipient_code is kept so that recipient group totals (Sahel, France priority) can
     # be derived for these series too; it is dropped before the pivot.
@@ -259,7 +212,7 @@ def combined_recipients() -> tuple[pd.DataFrame, list[str]]:
         ignore_index=True,
     )
 
-    recipients = recipients.loc[lambda d: d["value"].notna() & (d["value"] != 0)]
+    recipients = drop_empty_values(recipients, "recipients")
 
     recipients = recipients.drop(
         columns=["donor_code", "recipient_code"], errors="ignore"

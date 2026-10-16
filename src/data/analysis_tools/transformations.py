@@ -5,7 +5,7 @@ totals, the CRS classification join, the long-to-wide pivot, and the share colum
 here writes an artifact, and nothing decides how an entity is labelled.
 
 The rule for what belongs elsewhere: writing artifacts is ``outputs``, labelling is ``naming``,
-constants are ``config``. Two functions here do fetch from the OECD — ``get_gni`` and
+constants are ``config``. Two functions here do fetch from the OECD — ``get_member_gni`` and
 ``get_crs_recipient_classifications`` — because each exists only to feed the transform beside
 it, and splitting them out would separate a denominator or a lookup from its single use.
 
@@ -87,21 +87,22 @@ def convert_values_to_units(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def get_gni(start_year: int, end_year: int) -> pd.DataFrame:
-    """Read donor GNI, with the aggregates the financing view needs.
+def get_member_gni(start_year: int, end_year: int) -> pd.DataFrame:
+    """Read each bilateral donor's GNI.
 
-    A fetch rather than a transformation, kept here because add_share_of_gni is its only caller
-    and the two are easier to follow together. EU institutions have no GNI of their own, so the
-    EU27 + institutions denominator is the member states' combined GNI.
+    A fetch rather than a transformation, kept here because add_share_of_gni is its only
+    consumer and the two are easier to follow together.
 
     Args:
         start_year: First year to read.
         end_year: Last year to read.
 
     Returns:
-        One row per year and donor_name, with a gni column.
-    """
+        One row per donor_code and year, with donor_name and value (GNI, USD millions).
 
+    Raises:
+        ValueError: If the OECD returns two different GNI values for one donor and year.
+    """
     gni_raw = OECDClient(
         years=range(start_year, end_year + 1),
         providers=list(BILATERAL_DONORS),
@@ -109,20 +110,61 @@ def get_gni(start_year: int, end_year: int) -> pd.DataFrame:
         use_bulk_download=True,
     ).get_indicators("DAC1.40.1")[["donor_code", "donor_name", "year", "value"]]
 
-    # Deduplicate - raw data may have duplicate rows with identical GNI values
-    gni_df = gni_raw.drop_duplicates(subset=["donor_code", "year"])
+    key = ["donor_code", "year"]
+    conflicting = gni_raw.groupby(key, observed=True)["value"].nunique() > 1
+    if conflicting.any():
+        raise ValueError(
+            f"Conflicting GNI values for donor-years: {conflicting[conflicting].index.tolist()}"
+        )
+    return gni_raw.drop_duplicates(subset=key)
 
-    group_totals = build_donor_group_totals(gni_df, ["year"])
-    # EU institutions have no GNI of their own, so the EU27 + institutions denominator is
-    # the member states' combined GNI, under the donor_name the views use.
+
+def add_group_gni(member_gni: pd.DataFrame) -> pd.DataFrame:
+    """Add the donor-group GNI the financing view needs to each donor's GNI.
+
+    EU institutions have no GNI of their own, so the EU27 + institutions denominator is the
+    member states' combined GNI, under the donor_name the views use.
+
+    Args:
+        member_gni: Output of get_member_gni.
+
+    Returns:
+        One row per year and donor_name, with a gni column.
+    """
+    group_totals = build_donor_group_totals(member_gni, ["year"])
     eu27_eui_df = group_totals["EU27 countries"].assign(donor_name="EU27 & EU Institutions")
 
     return (
-        pd.concat([gni_df, *group_totals.values(), eu27_eui_df])
+        pd.concat([member_gni, *group_totals.values(), eu27_eui_df])
         .rename(columns={"value": "gni"})
         .drop(columns="donor_code")
     )
 
+
+def build_gni_matched_group_totals(
+    df: pd.DataFrame, member_gni: pd.DataFrame, group_cols: list[str]
+) -> pd.DataFrame:
+    """Sum each donor group over only the members that report GNI in that year.
+
+    A group's share of GNI must divide the ODA of the same members whose GNI is in the
+    denominator. Donors without GNI (Saudi Arabia and Kuwait in some years, for example)
+    would otherwise add ODA to the numerator only.
+
+    Args:
+        df: Long frame of individual donors in current USD, with donor_code and value.
+        member_gni: Output of get_member_gni.
+        group_cols: Columns identifying everything except the donor, e.g. year, indicator.
+
+    Returns:
+        One row per group and group_cols, with the matched total in gni_matched_value.
+    """
+    reporting = df.merge(
+        member_gni[["donor_code", "year"]], on=["donor_code", "year"], how="inner"
+    )
+    return (
+        pd.concat(build_donor_group_totals(reporting, group_cols).values())
+        .rename(columns={"value": "gni_matched_value"})
+    )
 
 
 def _default_coverage_cols(df: pd.DataFrame, column: str) -> list[str]:
@@ -495,6 +537,44 @@ def build_donor_group_totals(
     }
 
 
+# Decimal places kept on share columns; ratios need more than the 4 kept on values.
+SHARE_DECIMALS: int = 6
+
+
+def safe_share(numerator: pd.Series, denominator: pd.Series) -> pd.Series:
+    """Divide, returning NaN where the denominator is zero rather than an infinite share.
+
+    Args:
+        numerator: Values to express as a share.
+        denominator: Totals they are a share of.
+
+    Returns:
+        The ratio, rounded to SHARE_DECIMALS.
+    """
+    return (numerator / denominator.where(denominator != 0)).round(SHARE_DECIMALS)
+
+
+def check_share_column(df: pd.DataFrame, pct_col: str) -> None:
+    """Log how many shares are missing, negative or above one.
+
+    Missing shares come from zero or absent denominators, and shares outside [0, 1] from net
+    flows with negative values, so neither is an error on its own.
+
+    Args:
+        df: Frame holding the share column.
+        pct_col: The share column.
+    """
+    share = df[pct_col]
+    logger.info(
+        "%s: %s missing, %s negative, %s above 1, of %s rows",
+        pct_col,
+        f"{share.isna().sum():,}",
+        f"{(share < 0).sum():,}",
+        f"{(share > 1).sum():,}",
+        f"{len(share):,}",
+    )
+
+
 def add_share_of_group_total(
     df: pd.DataFrame, group_cols: list[str], pct_col: str
 ) -> pd.DataFrame:
@@ -519,7 +599,8 @@ def add_share_of_group_total(
         .rename(columns={"value_usd_current": "total_oda"})
     )
     merged = df.merge(total, on=group_cols, how="left", validate="m:1")
-    merged[pct_col] = (merged["value_usd_current"] / merged["total_oda"]).round(6)
+    merged[pct_col] = safe_share(merged["value_usd_current"], merged["total_oda"])
+    check_share_column(merged, pct_col)
     return merged.drop(columns=["total_oda"])
 
 
@@ -605,38 +686,43 @@ def add_share_of_reference_total(
         .rename(columns={"value_usd_current": "total_oda"})
     )
     merged = df.merge(total, on=merge_cols, how="left", validate="m:1")
-    merged[pct_col] = (merged["value_usd_current"] / merged["total_oda"]).round(6)
+    merged[pct_col] = safe_share(merged["value_usd_current"], merged["total_oda"])
+    check_share_column(merged, pct_col)
     return merged.drop(columns=["total_oda"])
 
 
 def add_currencies_and_prices(
     df: pd.DataFrame, base_year: int = BASE_TIME["base"]
 ) -> pd.DataFrame:
-    """
-    Adds copies of the data in different currencies and prices
-    """
-    # do the currency conversions first
-    current_dfs = []
+    """Copy the data into every currency in CURRENCIES, at current and constant prices.
 
+    Args:
+        df: Long frame in current USD, with donor_code, year and value.
+        base_year: Base year for constant prices.
+
+    Returns:
+        One copy per currency and price, labelled in currency and price columns.
+
+    Raises:
+        ValueError: If the conversions do not return one row per input row.
+    """
     df = df.assign(currency="USD", price="current")
+    converted = []
 
     for currency in CURRENCIES:
         logger.info(f"Converting to {currency}")
-        if currency == "USD":
-            current_dfs.append(df.assign(currency=currency, price="current"))
-        else:
-            converted = oecd_dac_exchange(
+        current = (
+            df
+            if currency == "USD"
+            else oecd_dac_exchange(
                 data=df.copy(),
                 source_currency="USA",
                 target_currency=currency,
                 id_column="donor_code",
                 use_source_codes=True,
             )
-            current_dfs.append(converted.assign(currency=currency, price="current"))
-
-    constant_dfs = []
-    for currency in CURRENCIES:
-        converted = oecd_dac_deflate(
+        )
+        constant = oecd_dac_deflate(
             data=df.copy(),
             base_year=base_year,
             source_currency="USA",
@@ -644,10 +730,53 @@ def add_currencies_and_prices(
             id_column="donor_code",
             use_source_codes=True,
         )
-        constant_dfs.append(converted.assign(currency=currency, price="constant"))
+        converted += [
+            current.assign(currency=currency, price="current"),
+            constant.assign(currency=currency, price="constant"),
+        ]
 
-    # Don't include df in concat since USD/current is already in current_dfs[0]
-    return pd.concat(current_dfs + constant_dfs, ignore_index=True)
+    if any(len(frame) != len(df) for frame in converted):
+        raise ValueError("A currency or price conversion changed the number of rows")
+
+    # Values present in USD but lost in conversion mean a missing exchange rate or deflator.
+    had_value = df["value"].notna().to_numpy()
+    for frame in converted:
+        lost = had_value & frame["value"].isna().to_numpy()
+        if lost.any():
+            logger.warning(
+                "No %s %s conversion for %s rows, so they and any group totals that "
+                "include them are short in that currency (donor codes %s)",
+                frame["currency"].iat[0],
+                frame["price"].iat[0],
+                f"{lost.sum():,}",
+                sorted(frame.loc[lost, "donor_code"].dropna().unique().tolist())[:10],
+            )
+
+    return pd.concat(converted, ignore_index=True)
+
+
+def drop_empty_values(df: pd.DataFrame, label: str) -> pd.DataFrame:
+    """Drop rows whose value is missing or zero, logging how many of each go.
+
+    Zero rows carry no information. Missing values after a currency conversion are the
+    rows add_currencies_and_prices already warned about.
+
+    Args:
+        df: Long frame with a value column.
+        label: Name of the frame, for the log.
+
+    Returns:
+        The rows with a non-zero value.
+    """
+    missing = df["value"].isna()
+    zero = df["value"] == 0
+    logger.info(
+        "%s: dropping %s rows with no value and %s with a zero value",
+        label,
+        f"{missing.sum():,}",
+        f"{zero.sum():,}",
+    )
+    return df.loc[~missing & ~zero]
 
 
 def widen_currency_price(
@@ -657,40 +786,37 @@ def widen_currency_price(
     """Pivot currency/price pairs into wide value columns.
 
     Args:
-        df: Long-form DataFrame with columns: year, donor_code, indicator, currency, price, value.
+        df: Long-form DataFrame with columns: year, donor_code, indicator, currency, price,
+            value. Its value column is rounded in place.
         index_cols: Columns to keep as the row index in the wide table.
 
     Returns:
-        Wide DataFrame where columns are like 'USD_current_value', 'USD_constant_value', etc.
+        Wide DataFrame with value columns like value_usd_current, value_eur_constant.
+
+    Raises:
+        ValueError: If two rows share the same index, currency and price.
     """
-    # Pre-process values in long format (much faster than on wide data)
+    # Pre-process values in long format (much faster than on wide data). This rounds the
+    # caller's frame in place: a copy would double the memory of the sectors frame, and
+    # every caller replaces its frame with the result.
     df["value"] = df["value"].round(4).astype("float32")
 
-    # Check for duplicates before pivoting and aggregate if found. Use subset= rather than
-    # df[pivot_cols].duplicated(): the latter materialises a second copy of every index
-    # column, which on the sectors frame means tens of millions of rows twice over.
+    # A duplicate key would mean two rows merged into one cell, double counting or silently
+    # combining two entities. The pivot itself refuses duplicates, so the full duplicate
+    # scan only runs to describe the failure, not on every call at the memory peak.
     pivot_cols = list(index_cols) + ["currency", "price"]
-    logger.info("Checking for duplicates before pivot...")
-    duplicates = df.duplicated(subset=pivot_cols)
-
-    if duplicates.any():
-        logger.warning(f"Found {duplicates.sum():,} duplicate rows before pivoting")
-        logger.info("Aggregating duplicates by summing values...")
-        # Aggregate duplicates by grouping and summing
-        df = (
-            df.groupby(pivot_cols, dropna=False, observed=True)["value"]
-            .sum()
-            .reset_index()
+    try:
+        wide = df.pivot(
+            index=list(index_cols),
+            columns=["currency", "price"],
+            values="value",
         )
-        logger.info(f"After aggregation: {len(df):,} rows")
-    else:
-        logger.info("No duplicates detected - proceeding with pivot")
-
-    wide = df.pivot(
-        index=list(index_cols),
-        columns=["currency", "price"],
-        values="value",
-    )
+    except ValueError as error:
+        duplicates = df.duplicated(subset=pivot_cols, keep=False)
+        raise ValueError(
+            f"{duplicates.sum():,} rows share a key before the pivot, e.g. "
+            f"{df.loc[duplicates, pivot_cols].head(3).to_dict('records')}"
+        ) from error
 
     # Flatten MultiIndex columns -> "value_usd_current"
     wide.columns = [
@@ -704,37 +830,48 @@ def widen_currency_price(
 
 
 def add_share_of_total_oda(df: pd.DataFrame) -> pd.DataFrame:
-    """Add column for share of total ODA"""
+    """Add each row's value_usd_current as a share of the same donor's Total ODA.
 
-    total = (
-        df.loc[lambda d: d["indicator_name"] == "Total ODA"]
-        .copy()
-        .filter(["year", "donor_name", "value_usd_current"])
-        .rename(columns={"value_usd_current": "total_oda"})
+    Args:
+        df: Wide financing frame keyed by year, donor_name and indicator_name.
+
+    Returns:
+        The frame with pct_of_total_oda added.
+    """
+    return add_share_of_reference_total(
+        df, "indicator_name", "Total ODA", ["year", "donor_name"], "pct_of_total_oda"
     )
 
-    merged = df.merge(total, on=["year", "donor_name"], how="left")
 
-    merged["pct_of_total_oda"] = (
-        merged["value_usd_current"] / merged["total_oda"]
-    ).round(6)
+def add_share_of_gni(
+    df: pd.DataFrame, member_gni: pd.DataFrame, members_usd_current: pd.DataFrame
+) -> pd.DataFrame:
+    """Add each row's value_usd_current as a share of the donor's GNI.
 
-    merged = merged.drop(columns=["total_oda"])
+    Donor groups divide the ODA of only their members that report GNI, so the numerator and
+    denominator cover the same countries.
 
-    return merged
+    Args:
+        df: Wide financing frame keyed by year, donor_name and indicator_name.
+        member_gni: Output of get_member_gni.
+        members_usd_current: Long frame of individual donors in current USD, with
+            donor_code, year, indicator_name and value.
 
-
-def add_share_of_gni(df: pd.DataFrame) -> pd.DataFrame:
-    """Add column for share of GNI"""
-
-    gni = get_gni(start_year=df["year"].min(), end_year=df["year"].max())
-
-    merged = df.merge(gni, on=["year", "donor_name"], how="left")
-
-    merged["pct_of_gni"] = (merged["value_usd_current"] / merged["gni"]).round(5)
-
-    merged = merged.drop(columns=["gni"])
-
-    return merged
-
-
+    Returns:
+        The frame with pct_of_gni added.
+    """
+    gni_matched = build_gni_matched_group_totals(
+        members_usd_current, member_gni, ["year", "indicator_name"]
+    )
+    merged = df.merge(
+        add_group_gni(member_gni), on=["year", "donor_name"], how="left", validate="m:1"
+    ).merge(
+        gni_matched,
+        on=["year", "donor_name", "indicator_name"],
+        how="left",
+        validate="m:1",
+    )
+    numerator = merged["gni_matched_value"].fillna(merged["value_usd_current"])
+    merged["pct_of_gni"] = safe_share(numerator, merged["gni"])
+    check_share_column(merged, "pct_of_gni")
+    return merged.drop(columns=["gni", "gni_matched_value"])

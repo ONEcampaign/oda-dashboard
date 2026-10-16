@@ -12,8 +12,6 @@ Shape of the pipeline:
 Output is keyed by name: year, donor_name, indicator_name, type.
 """
 
-from collections import Counter
-
 import numpy as np
 import pandas as pd
 from oda_data import OECDClient
@@ -24,11 +22,20 @@ from src.data.analysis_tools.outputs import (
     parquet_to_stdout,
     generate_view_options,
 )
+from src.data.analysis_tools.financing import (
+    drop_grants_split,
+    resolve_indicator_duplicates,
+    split_grants,
+    years_missing_grants,
+)
+from src.data.analysis_tools.naming import map_indicator_names
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
+    drop_empty_values,
     add_share_of_gni,
     add_share_of_total_oda,
     convert_values_to_units,
+    get_member_gni,
     widen_currency_price,
     build_donor_group_totals,
 )
@@ -40,7 +47,6 @@ from src.data.config import (
     PSI_FINANCING_INDICATORS,
     IN_DONOR_FINANCING_INDICATORS,
     ALL_FINANCING_INDICATORS,
-    PREFERRED_FINANCING_CODES,
     PROVIDERS,
     DONOR_GROUPS,
     EU27_EUI_LAST_YEAR,
@@ -50,94 +56,6 @@ from src.data.config import (
 )
 
 set_cache_dir(oda_data=True, pydeflate=True)
-
-# The indicators derived from splitting Total ODA by whether it is a grant.
-GRANTS_SPLIT: tuple[str, ...] = ("Grants", "Non-grants")
-
-# A group's grants split is left out for a year when members that do not report it hold
-# more than this share of the group's Total ODA.
-MAX_MISSING_GRANTS_SHARE: float = 0.01
-
-
-def resolve_indicator_duplicates(
-    dac1_raw: pd.DataFrame, raise_error: bool = True
-) -> pd.DataFrame:
-    """Drop the duplicate rows created by indicators that share a display name.
-
-    The DAC renumbered several indicators when it moved to grant equivalents, so two codes can
-    map to one name (1015 and 11015 are both "Bilateral ODA"). Where both are present for the
-    same donor and year they report the same figure, and keeping both would double it. Where they
-    disagree and the name has an entry in PREFERRED_FINANCING_CODES, that code's row is kept and
-    the conflict is logged.
-
-    Args:
-        dac1_raw: Raw DAC1 rows, with a one_indicator column.
-        raise_error: Whether disagreeing values are fatal. They should be, since it would mean
-            the two codes are not interchangeable after all; pass False to log and continue.
-
-    Returns:
-        The rows with duplicates removed, keeping the first of each set, or the preferred code's
-        row where the values disagree.
-
-    Raises:
-        ValueError: If two codes for one name disagree, no preferred code applies, and
-            raise_error is True.
-    """
-    multi_code_names = {
-        name
-        for name, count in Counter(ALL_FINANCING_INDICATORS.values()).items()
-        if count > 1
-    }
-
-    annotated = dac1_raw.assign(
-        _indicator=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS)
-    )
-    shared = annotated[annotated["_indicator"].isin(multi_code_names)]
-
-    conflicts = []
-    preferred = []
-    drop_indices = []
-
-    for (year, donor_code, indicator), group in shared.groupby(
-        ["year", "donor_code", "_indicator"], dropna=False, observed=True
-    ):
-        if len(group) <= 1:
-            continue
-        if group["value"].dropna().nunique() <= 1:
-            drop_indices.extend(group.index[1:].tolist())
-            continue
-
-        keep = group.index[
-            group["one_indicator"] == PREFERRED_FINANCING_CODES.get(indicator)
-        ]
-        if len(keep):
-            preferred.append((year, donor_code, indicator))
-            drop_indices.extend(group.index.difference(keep[:1]).tolist())
-        else:
-            conflicts.append((year, donor_code, indicator))
-            drop_indices.extend(group.index[1:].tolist())
-
-    if preferred:
-        logger.warning(
-            "Shared indicator codes disagree; kept the preferred code for %s year-donor pairs: %s",
-            len(preferred),
-            ", ".join(f"{ind} {y} donor {d}" for y, d, ind in preferred),
-        )
-
-    if conflicts:
-        lines = [
-            f"  year={y}, donor_code={d}, indicator='{ind}'" for y, d, ind in conflicts
-        ]
-        message = (
-            "Conflicting values for year-donor pairs with shared indicator codes:\n"
-            + "\n".join(lines)
-        )
-        if raise_error:
-            raise ValueError(message)
-        else:
-            logger.warning(message)
-
-    return dac1_raw.drop(index=drop_indices)
 
 
 def get_dac1() -> pd.DataFrame:
@@ -187,7 +105,9 @@ def get_dac1() -> pd.DataFrame:
         .sum()
         .reset_index()
         .assign(
-            indicator_name=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS)
+            indicator_name=lambda d: map_indicator_names(
+                d["one_indicator"], ALL_FINANCING_INDICATORS
+            )
         )
         .drop(columns=["one_indicator"])
     )
@@ -204,12 +124,6 @@ def get_grants() -> pd.DataFrame:
     Returns:
         Long-form rows for the two derived indicator names.
     """
-    mapping = {
-        "Disbursements, net": "Total ODA",
-        "Grant equivalents": "Total ODA",
-        "Disbursements, grants": "Grants",
-    }
-
     grants_flow_raw = OECDClient(
         years=range(FINANCING_TIME["start"], GRANT_EQUIVALENT_START_YEAR),
         providers=list(PROVIDERS),
@@ -226,29 +140,7 @@ def get_grants() -> pd.DataFrame:
 
     grants_raw = pd.concat([grants_flow_raw, grants_ge_raw])
 
-    grants = (
-        grants_raw.assign(indicator_name=lambda d: d["fund_flows"].map(mapping))
-        .groupby(
-            ["year", "donor_code", "donor_name", "indicator_name"],
-            dropna=False,
-            observed=True,
-        )["value"]
-        .sum()
-        .reset_index()
-        .pivot(
-            index=["year", "donor_code", "donor_name"],
-            columns="indicator_name",
-            values="value",
-        )
-        .reset_index()
-        .assign(**{"Non-grants": lambda d: d["Total ODA"] - d["Grants"]})
-        .melt(
-            id_vars=["year", "donor_code", "donor_name"],
-            value_vars=["Grants", "Non-grants"],
-        )
-    )
-
-    return grants
+    return split_grants(grants_raw, ["year", "donor_code", "donor_name"])
 
 
 def get_eui_eu27_dac1() -> pd.DataFrame:
@@ -311,7 +203,9 @@ def get_eui_eu27_dac1() -> pd.DataFrame:
 
     eui_eu27_dac1 = (
         eui_eu27_dac1_converted.assign(
-            indicator_name=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS),
+            indicator_name=lambda d: map_indicator_names(
+                d["one_indicator"], ALL_FINANCING_INDICATORS
+            ),
             donor_name="EU27 & EU Institutions",
         )
         .groupby(
@@ -332,12 +226,6 @@ def get_eui_eu27_grants() -> pd.DataFrame:
     Returns:
         Long-form rows for the two derived indicator names, for the aggregate.
     """
-
-    mapping = {
-        "Disbursements, net": "Total ODA",
-        "Grant equivalents": "Total ODA",
-        "Disbursements, grants": "Grants",
-    }
 
     # NOTE: measure order matters. get_eui_plus_bilateral_providers_indicator derives the
     # EU institutions weight from measure[0] only, so the total-ODA measure must come
@@ -373,20 +261,7 @@ def get_eui_eu27_grants() -> pd.DataFrame:
     )
 
     eui_eu27_grants = (
-        eui_eu27_grants_converted.assign(
-            indicator_name=lambda d: d["fund_flows"].map(mapping)
-        )
-        .pivot(
-            index=["year", "donor_code", "currency", "price"],
-            columns="indicator_name",
-            values="value",
-        )
-        .reset_index()
-        .assign(**{"Non-grants": lambda d: d["Total ODA"] - d["Grants"]})
-        .melt(
-            id_vars=["year", "donor_code", "currency", "price"],
-            value_vars=["Grants", "Non-grants"],
-        )
+        split_grants(eui_eu27_grants_converted, ["year", "donor_code", "currency", "price"])
         .groupby(
             ["year", "indicator_name", "currency", "price"], dropna=False, observed=True
         )["value"]
@@ -396,58 +271,6 @@ def get_eui_eu27_grants() -> pd.DataFrame:
     )
 
     return eui_eu27_grants
-
-
-def years_missing_grants(usd_current: pd.DataFrame, members: dict) -> dict[int, float]:
-    """Find the years in which members without a grants split hold too much of Total ODA.
-
-    Preliminary DAC1 data carry the grants measure for only a few donors, so a group's
-    Grants and Non-grants summed over the members that report them would fall far short of
-    the group's Total ODA. A few small donors never report the split, which a group can
-    absorb up to MAX_MISSING_GRANTS_SHARE of its Total ODA.
-
-    Args:
-        usd_current: Long frame of individual donors in current USD, with donor_code.
-        members: The group's donor codes.
-
-    Returns:
-        The years above the threshold, each with the share of Total ODA missing its split.
-    """
-    usd = usd_current.loc[lambda d: d["donor_code"].isin(members)]
-    total = (
-        usd.loc[lambda d: d["indicator_name"] == "Total ODA"]
-        .groupby(["year", "donor_code"])["value"]
-        .sum()
-    )
-    with_grants = usd.loc[
-        lambda d: (d["indicator_name"] == "Grants") & d["value"].notna()
-    ].set_index(["year", "donor_code"]).index
-
-    missing = total[~total.index.isin(with_grants)].groupby(level="year").sum()
-    share = (missing / total.groupby(level="year").sum()).dropna()
-
-    return share[share > MAX_MISSING_GRANTS_SHARE].to_dict()
-
-
-def drop_grants_split(group: pd.DataFrame, years: dict[int, float]) -> pd.DataFrame:
-    """Drop a group's Grants and Non-grants rows for the given years, logging which.
-
-    Args:
-        group: Long frame for one donor group.
-        years: Years whose grants split is incomplete, with the share of Total ODA missing it.
-
-    Returns:
-        The group without its grants split in those years.
-    """
-    incomplete = group["indicator_name"].isin(GRANTS_SPLIT) & group["year"].isin(years)
-    if incomplete.any():
-        logger.info(
-            "%s: grants split left out where members without it hold this share of "
-            "Total ODA: %s",
-            group["donor_name"].iloc[0],
-            {year: round(share, 3) for year, share in sorted(years.items())},
-        )
-    return group.loc[~incomplete]
 
 
 def get_financing_data() -> pd.DataFrame:
@@ -485,11 +308,17 @@ def get_financing_data() -> pd.DataFrame:
                 get_eui_eu27_grants(), years_missing_grants(usd_current, EU_TOTAL)
             ),
         ]
-    ).loc[lambda d: d["year"] <= EU27_EUI_LAST_YEAR]
+    )
+    logger.info(
+        "EU27 & EU Institutions: leaving out years after %s: %s",
+        EU27_EUI_LAST_YEAR,
+        sorted(eui_eu27.loc[lambda d: d["year"] > EU27_EUI_LAST_YEAR, "year"].unique()),
+    )
+    eui_eu27 = eui_eu27.loc[lambda d: d["year"] <= EU27_EUI_LAST_YEAR]
 
     financing = pd.concat([non_eu_financing, *donor_groups, eui_eu27])
 
-    financing = financing.loc[lambda d: d["value"].notna() & (d["value"] != 0)]
+    financing = drop_empty_values(financing, "financing")
 
     # Add type column
     financing["type"] = np.where(
@@ -511,7 +340,8 @@ def get_financing_data() -> pd.DataFrame:
     financing = add_share_of_total_oda(financing)
 
     # Add share of GNI column
-    financing = add_share_of_gni(financing)
+    member_gni = get_member_gni(FINANCING_TIME["start"], FINANCING_TIME["end"])
+    financing = add_share_of_gni(financing, member_gni, usd_current)
 
     # Convert values to units (integers) for better compression
     financing = convert_values_to_units(financing)

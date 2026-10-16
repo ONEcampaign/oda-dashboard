@@ -32,6 +32,7 @@ from src.data.analysis_tools.transformations import (
     CRS_INCOME_COL,
     CRS_REGION_COL,
     add_currencies_and_prices,
+    drop_empty_values,
     add_recipient_classifications,
     add_share_of_reference_total,
     build_donor_group_totals,
@@ -304,13 +305,15 @@ def combined_sectors() -> pd.DataFrame:
         donor_name=lambda d: d["donor_code"].map(donor_names)
     )
     eu_imputed = eu_imputed.assign(donor_name=lambda d: d["donor_code"].map(donor_names))
-    unnamed = sorted(sectors_multi.loc[sectors_multi["donor_name"].isna(), "donor_code"].unique())
-    if unnamed:
+    unnamed = sectors_multi["donor_name"].isna()
+    if unnamed.any():
         logger.warning(
-            "Imputed multilateral rows for providers absent from the CRS side, so unnamed: "
-            "%s. They are dropped from the view.", unnamed,
+            "Imputed multilateral for providers absent from the CRS side, so unnamed, is "
+            "dropped from the view: %s USD million, donor codes %s",
+            f"{sectors_multi.loc[unnamed, 'value'].sum():,.1f}",
+            sorted(sectors_multi.loc[unnamed, "donor_code"].unique()),
         )
-        sectors_multi = sectors_multi[sectors_multi["donor_name"].notna()]
+        sectors_multi = sectors_multi[~unnamed]
 
     # recipient_name comes from the shared classification table, so both halves are
     # identified the same way without either needing to carry it.
@@ -332,12 +335,12 @@ def combined_sectors() -> pd.DataFrame:
 
     logger.info("Adding currencies and prices...")
     sectors = add_currencies_and_prices(sectors, base_year=SECTORS_TIME["base"])
-    sectors = sectors[sectors["value"].notna() & (sectors["value"] != 0)]
+    sectors = drop_empty_values(sectors, "sectors")
     # Converted separately, since it is a differently corrected view of the same spending.
     eu_imputed = _as_categoricals(
         add_currencies_and_prices(eu_imputed, base_year=SECTORS_TIME["base"])
     )
-    eu_imputed = eu_imputed[eu_imputed["value"].notna() & (eu_imputed["value"] != 0)]
+    eu_imputed = drop_empty_values(eu_imputed, "EU27 & EU Institutions imputed")
 
     logger.info("Building donor and recipient group totals...")
     sectors = pd.concat(

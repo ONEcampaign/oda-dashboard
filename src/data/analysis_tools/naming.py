@@ -40,6 +40,29 @@ def apply_name_overrides(df: pd.DataFrame, mapping: dict, column: str) -> pd.Dat
     return df
 
 
+def map_indicator_names(codes: pd.Series, mapping: dict) -> pd.Series:
+    """Name each indicator code from a config mapping, failing on any code it does not know.
+
+    A plain .map would turn an unknown code into a missing name, and the rows would then be
+    grouped under that missing name without warning.
+
+    Args:
+        codes: Indicator codes, e.g. the one_indicator column.
+        mapping: ``{code: display name}`` from config.
+
+    Returns:
+        The display names, aligned with codes.
+
+    Raises:
+        ValueError: If a non-missing code has no entry in mapping.
+    """
+    names = codes.map(mapping)
+    unknown = sorted(set(codes[names.isna() & codes.notna()]))
+    if unknown:
+        raise ValueError(f"Indicator codes with no display name in config: {unknown}")
+    return names
+
+
 def normalize_unspecified_names(names: pd.Series) -> pd.Series:
     """Standardise the labels for aid that is not allocated to a specific country.
 
