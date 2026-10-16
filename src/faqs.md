@@ -94,7 +94,10 @@ function App() {
                 <li><strong>Sectors</strong> and <strong>Gender</strong>: gross disbursements, from the Creditor Reporting System (CRS).</li>
               </ul>
               <p>
-                Totals for the same donor and year therefore differ between tabs.
+                Totals for the same donor and year therefore differ between tabs. All four tabs cover ODA only. From
+                2023 that includes private sector instruments, which the CRS reports in a category of their own from that
+                year, so Sectors and Gender figures rise in 2023 partly for that reason. Other official flows, which are
+                not ODA, are left out.
               </p>
               <h2 className="font-bold text-xl mt-8 mb-2">How are donor groups defined?</h2>
               <p>
@@ -118,6 +121,29 @@ function App() {
                 that passes through EU institutions. The Gender tab adds the two together, because members'
                 contributions to the institutions are not part of that data. The Financing tab shows this group up to
                 2024, the last year for which members' contributions are reported.
+              </p>
+              <h2 className="font-bold text-xl mt-8 mb-2">How are recipient groups defined?</h2>
+              <p>
+                The Recipients tab uses the groups the OECD publishes in its DAC2A table. The Sectors and Gender tabs
+                build regions from the region the CRS records for each recipient.
+              </p>
+              <p>
+                Income groups follow the World Bank classification in every tab. The Sectors and Gender tabs use the July
+                2026 classification (fiscal year 2027) and apply it to every year, as the OECD's own groups in the
+                Recipients tab do. Least Developed Countries follow the UN list and overlap with the income groups.
+                Territories the World Bank does not classify appear as "Countries not classified by the World Bank",
+                and aid to regions or unspecified recipients as "Unallocated by income".
+              </p>
+              <h2 className="font-bold text-xl mt-8 mb-2">How is imputed multilateral aid calculated?</h2>
+              <p>
+                A donor's core contribution to a multilateral organisation is spread across sectors and recipients in
+                the same proportions as that organisation's own spending over a three-year period. Those proportions
+                cover both its ODA and its other official flows, as in the OECD's former method, since some
+                organisations, such as the World Bank's IBRD, report mostly non-concessional lending.
+              </p>
+              <p>
+                Contributions that cannot be traced to a recipient are shown under "Bilateral, unspecified", as the OECD
+                does in its DAC2A table, so the total matches the contributions made.
               </p>
               <h2 className="font-bold text-xl mt-8 mb-2">How is double counting with multilateral contributions avoided?</h2>
               <p>

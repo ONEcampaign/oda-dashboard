@@ -120,7 +120,7 @@ def combined_gender() -> pd.DataFrame:
     gender = get_gender_markers()
 
     logger.info("Attaching recipient classifications...")
-    classified = get_crs_recipient_classifications(YEARS, list(CRS_RECIPIENTS))
+    classified, ldc_members = get_crs_recipient_classifications(YEARS, list(CRS_RECIPIENTS))
     gender = add_recipient_classifications(gender, classified, "gender markers")
 
     logger.info("Adding currencies and prices...")
@@ -131,7 +131,10 @@ def combined_gender() -> pd.DataFrame:
     # aggregate covers every recipient group as well as every country.
     logger.info("Building recipient and donor group totals...")
     gender = pd.concat(
-        [gender, *build_crs_recipient_group_totals(gender, RECIPIENT_GROUP_COLS)],
+        [
+            gender,
+            *build_crs_recipient_group_totals(gender, RECIPIENT_GROUP_COLS, ldc_members),
+        ],
         ignore_index=True,
     )
     gender = pd.concat(

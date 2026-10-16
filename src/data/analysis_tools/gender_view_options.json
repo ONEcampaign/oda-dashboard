@@ -62,10 +62,11 @@
   "recipient_name": [
     "ODA eligible countries",
     "Least Developed Countries (LDCs)",
-    "Other Low Income Countries",
+    "Low Income Countries (LICs)",
     "Lower-Middle Income Countries (LMICs)",
     "Upper-Middle Income Countries (UMICs)",
-    "More Advanced Developing Countries",
+    "High Income Countries (HICs)",
+    "Countries not classified by the World Bank",
     "Unallocated by income",
     "Africa",
     "Asia",

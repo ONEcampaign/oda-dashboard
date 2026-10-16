@@ -1,11 +1,9 @@
 import pandas as pd
 from oda_data import CRSData, provider_groupings
 from oda_data.clean_data.common import convert_units
-from oda_data.indicators.research.sector_imputations import (
-    imputed_multilateral_by_purpose,
-)
 from oda_data.tools import sector_lists
 
+from src.data.analysis_tools.imputations import read_imputed_multilateral
 from src.data.analysis_tools.outputs import (
     set_cache_dir,
 )
@@ -64,13 +62,7 @@ def get_bilateral_by_sector(years: list, broad: bool = False) -> pd.DataFrame:
 
 def get_imputed_multi_by_sector(years: list, broad: bool = False) -> pd.DataFrame:
     """Fetches and aggregates imputed multilateral disbursements by sector."""
-    raw_multi = imputed_multilateral_by_purpose(
-        years=years,
-        providers=DONOR_IDS,
-        measure="gross_disbursement",
-        currency="USD",
-        base_year=None,
-    )
+    raw_multi = read_imputed_multilateral(years, DONOR_IDS)
 
     raw_multi = _assign_sub_sector(raw_multi, broad=broad)
     raw_multi["sub_sector"] = raw_multi["sub_sector"].fillna("Unallocated/unspecificed")

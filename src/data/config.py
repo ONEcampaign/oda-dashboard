@@ -177,9 +177,19 @@ TOTAL_ALLOCABLE_SCORE: str = "total_allocable"
 # Differences below this many USD millions are subtraction residue, not unscreened aid.
 GENDER_RESIDUAL_TOLERANCE: float = 1e-6
 
-# CRS flow categories read by the sectors and gender views: ODA (10) and other official
-# flows (60). Anything else is out of scope for those views.
+# CRS flow categories read by the sectors view: ODA (10) and private sector instruments (60),
+# which the CRS reports from 2023 and which count towards ODA. Other official flows (21) are
+# not ODA and stay out. The gender view gets the same scope from oda_data's oda_only filter.
 CRS_FLOW_CATEGORIES: list[int] = [10, 60]
+
+# Spending whose sector pattern multilaterals' core funding is imputed by, in oda_data's terms.
+# ODA and OOF together, oda_data's default and the former OECD method: OOF-only channels such
+# as IBRD otherwise have no pattern, and far more core funding is left unallocated.
+IMPUTATION_FLOW_TYPES: tuple[str, ...] = ("ODA", "OOF")
+
+# Where imputed multilateral money oda_data cannot assign to a recipient is recorded, as DAC2A
+# does: "Bilateral, unspecified", which the CRS calls developing countries, unspecified.
+UNSPECIFIED_RECIPIENT_CODE: int = 9998
 
 # ---------------------------------------------------------------------------------------
 # 5. Donors
@@ -301,20 +311,28 @@ SAHEL_RECIPIENTS: dict = recipient_groupings()["sahel"]
 # ---------------------------------------------------------------------------------------
 # 7. CRS classifications
 #
-# The CRS carries a region and an income group on every transaction, which is how the sectors
-# and gender views build those groups: membership is read from the data, never maintained here.
+# The CRS carries a region on every transaction, which is how the sectors and gender views
+# build region groups: membership is read from the data, never maintained here. Income groups
+# follow the World Bank classification instead, as in the recipients view, using resolvekit's
+# data (pinned in pyproject.toml, so the classification changes only when resolvekit does).
 # ---------------------------------------------------------------------------------------
 
-# CRS income class -> display label. Membership is entirely the CRS incomegroup_name column;
-# only the wording is mapped, to match the recipients view.
-CRS_INCOME_LABELS: dict = {
-    "LDCs": "Least Developed Countries (LDCs)",
-    "Other LICs": "Other Low Income Countries",
-    "LMICs": "Lower-Middle Income Countries (LMICs)",
-    "UMICs": "Upper-Middle Income Countries (UMICs)",
-    "MADCTs": "More Advanced Developing Countries",
-    "Part I unallocated by income": "Unallocated by income",
+# resolvekit World Bank income group -> display label, matching the recipients view. Like the
+# recipients view's DAC2A groups, one current classification applies to every year.
+WORLD_BANK_INCOME_GROUPS: dict[str, str] = {
+    "World Bank Low-Income Countries": RECIPIENT_NAME_OVERRIDES[10_045],
+    "World Bank Lower-Middle-Income Countries": RECIPIENT_NAME_OVERRIDES[10_046],
+    "World Bank Upper-Middle-Income Countries": RECIPIENT_NAME_OVERRIDES[10_047],
+    "World Bank High-Income Countries": RECIPIENT_NAME_OVERRIDES[10_048],
 }
+# Countries the World Bank does not classify, mostly small territories.
+WORLD_BANK_NOT_CLASSIFIED: str = "Countries not classified by the World Bank"
+# Regional and unspecified recipients, which belong to no income group.
+UNALLOCATED_BY_INCOME: str = "Unallocated by income"
+
+# The UN list of Least Developed Countries, an overlapping group like the recipients view's.
+LDC_GROUP: str = "Least Developed Countries"
+LDC_LABEL: str = RECIPIENT_NAME_OVERRIDES[10_016]
 
 # Continent totals, rolled up from CRS regions. The regions themselves are read from the
 # data; this only records which regions make up each continent. Each list includes the
@@ -326,8 +344,8 @@ CRS_REGION_ROLLUPS: dict = {
     "America": ["Caribbean & Central America", "South America", "America"],
 }
 
-# Sentinels for recipients the CRS never classifies. Distinct from the CRS's own
-# "Part I unallocated by income" class, which is a real reported category.
+# Sentinels for recipients the classification table never covers. Distinct from
+# UNALLOCATED_BY_INCOME, which is a real category for regional and unspecified recipients.
 CRS_UNCLASSIFIED_REGION: str = "Region not reported"
 CRS_UNCLASSIFIED_INCOME: str = "Income group not reported"
 
@@ -372,7 +390,10 @@ RECIPIENTS_ORDER: list[str] = [
 # CRS views: the overall total, then income groups, continents, CRS regions, country lists.
 CRS_RECIPIENTS_ORDER: list[str] = [
     "ODA eligible countries",
-    *CRS_INCOME_LABELS.values(),
+    LDC_LABEL,
+    *WORLD_BANK_INCOME_GROUPS.values(),
+    WORLD_BANK_NOT_CLASSIFIED,
+    UNALLOCATED_BY_INCOME,
     *CRS_REGION_ROLLUPS,
     "North of Sahara",
     "South of Sahara",

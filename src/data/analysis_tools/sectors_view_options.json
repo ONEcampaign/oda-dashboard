@@ -62,10 +62,11 @@
   "recipient_name": [
     "ODA eligible countries",
     "Least Developed Countries (LDCs)",
-    "Other Low Income Countries",
+    "Low Income Countries (LICs)",
     "Lower-Middle Income Countries (LMICs)",
     "Upper-Middle Income Countries (UMICs)",
-    "More Advanced Developing Countries",
+    "High Income Countries (HICs)",
+    "Countries not classified by the World Bank",
     "Unallocated by income",
     "Africa",
     "Asia",
@@ -394,6 +395,7 @@
     "Congo": "congo",
     "Cook Islands": "cook-islands",
     "Costa Rica": "costa-rica",
+    "Countries not classified by the World Bank": "countries-not-classified-by-the-world-bank",
     "Cuba": "cuba",
     "C\u00f4te d'Ivoire": "cote-d-ivoire",
     "Democratic People's Republic of Korea": "democratic-people-s-republic-of-korea",
@@ -425,6 +427,7 @@
     "Guinea-Bissau": "guinea-bissau",
     "Guyana": "guyana",
     "Haiti": "haiti",
+    "High Income Countries (HICs)": "high-income-countries-hics",
     "Honduras": "honduras",
     "India": "india",
     "Indonesia": "indonesia",
@@ -443,6 +446,7 @@
     "Lesotho": "lesotho",
     "Liberia": "liberia",
     "Libya": "libya",
+    "Low Income Countries (LICs)": "low-income-countries-lics",
     "Lower-Middle Income Countries (LMICs)": "lower-middle-income-countries-lmics",
     "Madagascar": "madagascar",
     "Malawi": "malawi",
@@ -463,7 +467,6 @@
     "Mongolia": "mongolia",
     "Montenegro": "montenegro",
     "Montserrat": "montserrat",
-    "More Advanced Developing Countries": "more-advanced-developing-countries",
     "Morocco": "morocco",
     "Mozambique": "mozambique",
     "Myanmar": "myanmar",
@@ -480,7 +483,6 @@
     "ODA eligible countries": "oda-eligible-countries",
     "Oceania": "oceania",
     "Oceania, unspecified": "oceania-unspecified",
-    "Other Low Income Countries": "other-low-income-countries",
     "Pakistan": "pakistan",
     "Palau": "palau",
     "Panama": "panama",
@@ -652,8 +654,7 @@
       "Transport & Storage"
     ],
     "Unallocated/ Unspecified": [
-      "Unallocated/ Unspecified",
-      "Unallocated/unspecified"
+      "Unallocated/ Unspecified"
     ],
     "Water Supply & Sanitation": [
       "Water Supply & Sanitation"

@@ -20,6 +20,7 @@ Sections, in order:
 """
 
 import pandas as pd
+import resolvekit as rk
 from oda_data import OECDClient
 from pydeflate import oecd_dac_deflate, oecd_dac_exchange, set_pydeflate_path
 
@@ -32,7 +33,11 @@ from src.data.config import (
     PATHS,
     SAHEL_RECIPIENTS,
     FRANCE_PRIORITY_RECIPIENTS,
-    CRS_INCOME_LABELS,
+    LDC_GROUP,
+    LDC_LABEL,
+    UNALLOCATED_BY_INCOME,
+    WORLD_BANK_INCOME_GROUPS,
+    WORLD_BANK_NOT_CLASSIFIED,
     CRS_REGION_ROLLUPS,
     CRS_UNCLASSIFIED_REGION,
     CRS_UNCLASSIFIED_INCOME,
@@ -307,18 +312,88 @@ def get_group_total(
 
 
 
-# CRS column names carrying the classifications both CRS-based views group by.
+# Columns carrying the classifications both CRS-based views group by: the CRS region, and the
+# World Bank income group classify_income derives.
 CRS_REGION_COL = "recipient_region"
-CRS_INCOME_COL = "incomegroup_name"
+INCOME_GROUP_COL = "income_group"
+RECIPIENT_CLASSIFICATION_COLS: tuple[str, ...] = (CRS_REGION_COL, INCOME_GROUP_COL)
+_CRS_ISO3_COL = "de_recipientcode"
 _CONTINENT_COL = "_continent"
 
 _CRS_CLASSIFICATION_COLUMNS = [
     "year",
     "recipient_code",
     "recipient_name",
+    _CRS_ISO3_COL,
     CRS_REGION_COL,
-    CRS_INCOME_COL,
 ]
+
+
+def _resolve_iso3(codes: pd.Series, known: set[str]) -> dict[str, str | None]:
+    """Resolve CRS recipient codes to ISO3 with resolvekit, one call per unique code.
+
+    Codes already in known are taken as they are: resolvekit's fuzzy matching finds some valid
+    codes ambiguous (UGA, UKR). Its bulk resolver is not used because it loses Kosovo, which the
+    CRS spells XKV and the scalar resolver maps to XKX.
+
+    Args:
+        codes: CRS de_recipientcode values.
+        known: ISO3 codes that need no resolving.
+
+    Returns:
+        ISO3 code, or None for codes that are not a country, by three-letter code.
+    """
+    resolver = rk.default()
+    resolved = {}
+    for code in codes.dropna().unique():
+        if not (isinstance(code, str) and len(code) == 3 and code.isalpha()):
+            continue
+        if code in known:
+            resolved[code] = code
+            continue
+        try:
+            resolved[code] = resolver.resolve(code, to="iso3")
+        except rk.AmbiguousResolutionError:
+            logger.warning("Recipient code %s matches more than one country", code)
+            resolved[code] = None
+    return resolved
+
+
+def classify_income(iso_codes: pd.Series) -> tuple[pd.Series, pd.Series]:
+    """Assign World Bank income groups and LDC status to recipient codes, using resolvekit.
+
+    Codes that resolve to no country are regional or unspecified recipients, so they are
+    unallocated by income; countries in no World Bank group are not classified.
+
+    Args:
+        iso_codes: The CRS de_recipientcode of each recipient.
+
+    Returns:
+        (income group label, whether the recipient is an LDC), both aligned with iso_codes.
+    """
+    resolver = rk.default()
+    group_of = {
+        iso3: label
+        for group, label in WORLD_BANK_INCOME_GROUPS.items()
+        for iso3 in resolver.members_of(group, as_codes="iso3")
+    }
+    ldcs = set(resolver.members_of(LDC_GROUP, as_codes="iso3"))
+
+    resolved = _resolve_iso3(iso_codes, set(group_of) | ldcs)
+    iso3 = iso_codes.map(resolved)
+
+    is_country = iso3.notna()
+    income = iso3.map(group_of)
+    not_classified = is_country & income.isna()
+    if not_classified.any():
+        logger.info(
+            "Countries the World Bank does not classify: %s",
+            sorted(iso_codes[not_classified].unique()),
+        )
+    income = income.mask(not_classified, WORLD_BANK_NOT_CLASSIFIED)
+    income = income.mask(~is_country, UNALLOCATED_BY_INCOME)
+
+    return income, iso3.isin(ldcs)
 
 
 def _modal_value(series: pd.Series):
@@ -331,10 +406,11 @@ def _modal_value(series: pd.Series):
 
 def get_crs_recipient_classifications(
     years: range | list | int, recipients: list | None = None
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, dict]:
     """Build the recipient name, region and income-group table the CRS views group by.
 
-    Only the CRS carries these classifications. Imputed multilateral spending is keyed on
+    Names and regions come from the CRS, the only source that carries regions; income groups
+    and LDC status from classify_income. Imputed multilateral spending is keyed on
     [channel, purpose, recipient, year, currency, prices] and policy marker data on
     [provider, agency, recipient, modality, finance type, purpose, year], so neither knows a
     recipient's region or income group. Building one table here and joining it to every frame
@@ -345,7 +421,8 @@ def get_crs_recipient_classifications(
         recipients: Recipient codes to restrict to, or None for all.
 
     Returns:
-        One row per (recipient_code, year) with recipient name, region and income group.
+        (one row per recipient_code and year with recipient name, region and income group;
+        the Least Developed Countries among the recipients, as {recipient_code: name}).
     """
     from oda_data import CRSData
 
@@ -361,11 +438,11 @@ def get_crs_recipient_classifications(
 
     raw["recipient_name"] = normalize_unspecified_names(raw["recipient_name"])
 
-    attributes = ["recipient_name", CRS_REGION_COL, CRS_INCOME_COL]
+    attributes = ["recipient_name", _CRS_ISO3_COL, CRS_REGION_COL]
     grouped = raw.groupby(["recipient_code", "year"], dropna=False, observed=True)[attributes]
 
     # Reduce each column to its most common non-null value, rather than deduplicating whole
-    # rows. A recipient-year often has some transactions with a blank region or income group,
+    # rows. A recipient-year often has some transactions with a blank region,
     # and dropping duplicate rows can pick one of those and lose a value the data does have.
     # Where transactions genuinely disagree, the majority wins, so the result does not depend
     # on row order.
@@ -382,9 +459,20 @@ def get_crs_recipient_classifications(
                 sorted({int(code) for code, _ in disagreeing})[:10],
             )
 
+    income, is_ldc = classify_income(classified[_CRS_ISO3_COL])
+    ldc_members = (
+        classified.loc[is_ldc]
+        .drop_duplicates("recipient_code")
+        .set_index("recipient_code")["recipient_name"]
+        .to_dict()
+    )
+    classified = classified.assign(**{INCOME_GROUP_COL: income}).drop(
+        columns=[_CRS_ISO3_COL]
+    )
+
     logger.info("Recipient classification table: %s recipient-years", f"{len(classified):,}")
 
-    return classified
+    return classified, ldc_members
 
 
 def add_recipient_classifications(
@@ -421,7 +509,7 @@ def add_recipient_classifications(
         .drop_duplicates("recipient_code", keep="last")
         .set_index("recipient_code")
     )
-    for col in ("recipient_name", CRS_REGION_COL, CRS_INCOME_COL):
+    for col in ("recipient_name", *RECIPIENT_CLASSIFICATION_COLS):
         gaps = merged[col].isna()
         if gaps.any():
             merged.loc[gaps, col] = merged.loc[gaps, "recipient_code"].map(
@@ -435,7 +523,7 @@ def add_recipient_classifications(
 
     for col, sentinel in (
         (CRS_REGION_COL, CRS_UNCLASSIFIED_REGION),
-        (CRS_INCOME_COL, CRS_UNCLASSIFIED_INCOME),
+        (INCOME_GROUP_COL, CRS_UNCLASSIFIED_INCOME),
     ):
         still_missing = merged[col].isna()
         if still_missing.any():
@@ -458,7 +546,7 @@ def add_recipient_classifications(
 
 
 def build_crs_recipient_group_totals(
-    df: pd.DataFrame, group_cols: list[str]
+    df: pd.DataFrame, group_cols: list[str], ldc_members: dict
 ) -> list[pd.DataFrame]:
     """Build every recipient aggregate: overall total, income groups, regions, continents, lists.
 
@@ -466,6 +554,7 @@ def build_crs_recipient_group_totals(
         df: Frame carrying the CRS classification columns and a "value" column.
         group_cols: Columns identifying everything except the recipient, e.g.
             year, donor_code, donor_name, indicator_name, currency, price.
+        ldc_members: The Least Developed Countries, from get_crs_recipient_classifications.
 
     Returns:
         One frame per aggregate, each naming its group in recipient_name.
@@ -477,9 +566,7 @@ def build_crs_recipient_group_totals(
         .assign(recipient_name="ODA eligible countries")
     )
 
-    income = get_attribute_total(
-        df, CRS_INCOME_COL, group_cols, label_map=CRS_INCOME_LABELS
-    )
+    income = get_attribute_total(df, INCOME_GROUP_COL, group_cols)
 
     # The CRS uses continent names as region values too, for aid recorded against a whole
     # continent. Those rows belong to the continent rollup below, so they are excluded here:
@@ -506,6 +593,8 @@ def build_crs_recipient_group_totals(
             df, members, column="recipient", group_cols=group_cols, group_name=name
         )
         for name, members in (
+            # LDCs overlap the income groups, like the two country lists.
+            (LDC_LABEL, ldc_members),
             ("Sahel countries", SAHEL_RECIPIENTS),
             ("France priority countries", FRANCE_PRIORITY_RECIPIENTS),
         )
@@ -609,7 +698,6 @@ def get_attribute_total(
     attribute_col: str,
     group_cols: list,
     column: str = "recipient",
-    label_map: dict | None = None,
 ) -> pd.DataFrame:
     """Sum rows by a classification the data itself carries, e.g. CRS region or income group.
 
@@ -619,38 +707,21 @@ def get_attribute_total(
 
     Args:
         df: Long-form frame with a "value" column and the attribute column.
-        attribute_col: Column holding the classification, e.g. "incomegroup_name".
+        attribute_col: Column holding the classification, e.g. "recipient_region".
         group_cols: Columns to group by alongside the attribute.
         column: Entity the groups stand in for, "donor" or "recipient".
-        label_map: Optional display labels keyed by attribute value. Values missing from
-            the map keep their original label and are logged.
 
     Returns:
         One row per attribute value per group_cols combination, named as the entity.
     """
-    name_col = f"{column}_name"
-
     totals = (
         df.groupby(group_cols + [attribute_col], dropna=False, observed=True)["value"]
         .sum()
         .reset_index()
     )
-
-    # The attribute may arrive dictionary-encoded, in which case mapping it to new labels and
-    # filling gaps would fail on values outside its categories. Work in plain objects.
-    attribute = totals[attribute_col].astype("object")
-
-    if label_map:
-        unmapped = sorted(set(attribute.dropna().unique()) - set(label_map))
-        if unmapped:
-            logger.warning(
-                "%s: no display label configured for %s, keeping the raw value(s): %s",
-                attribute_col, len(unmapped), unmapped,
-            )
-        totals[name_col] = attribute.map(label_map).fillna(attribute)
-    else:
-        totals[name_col] = attribute
-
+    # The attribute may arrive dictionary-encoded; as plain objects the totals concatenate
+    # with the other group frames without category mismatches.
+    totals[f"{column}_name"] = totals[attribute_col].astype("object")
     return totals.drop(columns=[attribute_col])
 
 

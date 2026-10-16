@@ -24,13 +24,9 @@ import pandas as pd
 
 from oda_data import CRSData
 from oda_data.tools import sector_lists
-from oda_data.indicators.research.sector_imputations import (
-    imputed_multilateral_by_purpose,
-)
 
 from src.data.analysis_tools.transformations import (
-    CRS_INCOME_COL,
-    CRS_REGION_COL,
+    RECIPIENT_CLASSIFICATION_COLS,
     add_currencies_and_prices,
     drop_empty_values,
     add_recipient_classifications,
@@ -55,6 +51,7 @@ from src.data.config import (
     EU_TOTAL,
     EUI_CHANNEL_CODES,
 )
+from src.data.analysis_tools.imputations import read_imputed_multilateral
 from src.data.analysis_tools.outputs import (
     set_cache_dir,
     generate_view_options,
@@ -74,7 +71,8 @@ DONOR_GROUP_COLS = [
     "year", "recipient_name", "indicator_name", "sub_sector", "currency", "price",
 ]
 
-UNALLOCATED_SUB_SECTOR = "Unallocated/unspecified"
+# oda_data's own name for the unallocated purpose codes, used for any code outside a group.
+UNALLOCATED_SUB_SECTOR = "Unallocated/ Unspecified"
 
 CRS_COLUMNS: list[str] = [
     "year",
@@ -92,7 +90,7 @@ def _as_categoricals(df: pd.DataFrame) -> pd.DataFrame:
     Sectors carries tens of millions of rows through the currency expansion and the pivot, so
     the label columns have to be dictionary-encoded or the frame does not fit in a CI runner.
     """
-    for col in (*LABEL_COLUMNS, CRS_REGION_COL, CRS_INCOME_COL):
+    for col in (*LABEL_COLUMNS, *RECIPIENT_CLASSIFICATION_COLS):
         if col in df.columns and df[col].dtype.name != "category":
             df[col] = df[col].astype("category")
     return df
@@ -180,16 +178,7 @@ def get_bilateral_by_sector() -> pd.DataFrame:
 
 def get_imputed_multi_by_sector() -> pd.DataFrame:
     """Read imputed multilateral spending by sub-sector."""
-    raw_multi = imputed_multilateral_by_purpose(
-        years=YEARS,
-        providers=list(PROVIDERS),
-        measure="gross_disbursement",
-        currency="USD",
-        base_year=None,
-    )
-
-    raw_multi = raw_multi[raw_multi["recipient_code"].isin(CRS_RECIPIENTS)]
-    raw_multi = _assign_sub_sector(raw_multi)
+    raw_multi = _assign_sub_sector(read_imputed_multilateral(YEARS, list(PROVIDERS)))
 
     sectors_multi = (
         raw_multi.groupby(
@@ -217,14 +206,7 @@ def get_eu27_eui_imputed() -> pd.DataFrame:
     Read separately rather than by keeping channel_code in the main frame — channel adds a
     dimension to every row, which the eight-fold currency expansion would then multiply.
     """
-    raw = imputed_multilateral_by_purpose(
-        years=YEARS,
-        providers=list(EU_TOTAL),
-        measure="gross_disbursement",
-        currency="USD",
-        base_year=None,
-    )
-    raw = raw[raw["recipient_code"].isin(CRS_RECIPIENTS)]
+    raw = read_imputed_multilateral(YEARS, list(EU_TOTAL))
 
     routed_via_eui = raw["donor_code"].isin(EU_COUNTRIES) & raw["channel_code"].isin(
         EUI_CHANNEL_CODES
@@ -289,7 +271,7 @@ def combined_sectors() -> pd.DataFrame:
     logger.info("Fetching bilateral data...")
     sectors_bi = get_bilateral_by_sector()
 
-    classified = get_crs_recipient_classifications(YEARS, list(CRS_RECIPIENTS))
+    classified, ldc_members = get_crs_recipient_classifications(YEARS, list(CRS_RECIPIENTS))
 
     logger.info("Fetching imputed multilateral data...")
     sectors_multi = get_imputed_multi_by_sector()
@@ -344,7 +326,8 @@ def combined_sectors() -> pd.DataFrame:
 
     logger.info("Building donor and recipient group totals...")
     sectors = pd.concat(
-        [sectors, *build_crs_recipient_group_totals(sectors, RECIPIENT_GROUP_COLS)], ignore_index=True
+        [sectors, *build_crs_recipient_group_totals(sectors, RECIPIENT_GROUP_COLS, ldc_members)],
+        ignore_index=True
     )
     sectors = pd.concat(
         [
@@ -360,7 +343,9 @@ def combined_sectors() -> pd.DataFrame:
                 pd.concat(
                     [
                         eu_imputed,
-                        *build_crs_recipient_group_totals(eu_imputed, RECIPIENT_GROUP_COLS),
+                        *build_crs_recipient_group_totals(
+                            eu_imputed, RECIPIENT_GROUP_COLS, ldc_members
+                        ),
                     ],
                     ignore_index=True,
                 ),
@@ -377,14 +362,14 @@ def combined_sectors() -> pd.DataFrame:
         sectors["sub_sector_name"]
         .astype("object")
         .map(sector_lists.get_broad_sector_groups())
-        .fillna("Unallocated/ Unspecified")
+        .fillna(UNALLOCATED_SUB_SECTOR)
     )
 
     # Codes and classifications have done their work in the group totals above, and the
     # aggregates introduced new group names, which turns the concatenated label columns back
     # into objects. Drop what is spent and re-apply the categories before the pivot.
     sectors = sectors.drop(
-        columns=["donor_code", "recipient_code", CRS_REGION_COL, CRS_INCOME_COL],
+        columns=["donor_code", "recipient_code", *RECIPIENT_CLASSIFICATION_COLS],
         errors="ignore",
     )
     sectors = _as_categoricals(sectors)
