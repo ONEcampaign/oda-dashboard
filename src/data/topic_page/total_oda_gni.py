@@ -1,15 +1,14 @@
 import numpy as np
-from oda_data import OECDClient
+from oda_data import OECDClient, add_gni_share_column, provider_groupings
 
 from src.data.analysis_tools.outputs import set_cache_dir
-from src.data.config import logger, PATHS
+from src.data.config import PATHS, logger
 from src.data.topic_page.common import (
-    LATEST_YEAR_AGG,
     CONSTANT_YEAR,
+    LATEST_YEAR_AGG,
     LONG_START_YEAR,
     sort_dac_first,
 )
-from oda_data import provider_groupings, add_gni_share_column
 
 
 def oda_gni_ts() -> None:
@@ -46,7 +45,7 @@ def oda_gni_ts() -> None:
     logger.info("Saved chart oda_gni_ts.csv")
 
 
-def oda_gni_year_columns():
+def oda_gni_year_columns() -> None:
     client = OECDClient(
         years=range(LONG_START_YEAR, LATEST_YEAR_AGG + 1),
         providers=list(provider_groupings()["dac_countries"]) + [20001],

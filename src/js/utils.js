@@ -104,7 +104,7 @@ export function generateList(data, mode) {
                 let content
                 if (group === "All bilateral donors") {
                     content = "DAC and Non-DAC countries"
-                } else if (group === "Developing countries") {
+                } else if (group === "ODA eligible countries") {
                     content = "All recipient countries and regions"
                 } else {
                     content = countries.join("; ")

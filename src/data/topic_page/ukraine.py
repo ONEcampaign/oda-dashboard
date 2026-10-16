@@ -1,11 +1,11 @@
+import numpy as np
 import pandas as pd
 from oda_data import OECDClient, provider_groupings
-import numpy as np
 
 from src.data.analysis_tools.outputs import set_cache_dir
 from src.data.topic_page.common import (
-    LATEST_YEAR_AGG,
     CONSTANT_YEAR,
+    LATEST_YEAR_AGG,
     SHORT_START_YEAR,
 )
 

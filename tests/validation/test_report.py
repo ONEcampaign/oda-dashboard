@@ -1,11 +1,9 @@
 """Tests for report generation."""
 
 import tempfile
-from datetime import datetime
 from pathlib import Path
 
-import pytest
-from validation.models import CheckResult, Warning, ValidationReport
+from validation.models import CheckResult, ValidationReport, Warning
 from validation.report import generate_report_markdown, save_report
 
 

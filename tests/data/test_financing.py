@@ -28,6 +28,19 @@ def test_equal_aliases_keep_one_row():
     assert len(resolve_indicator_duplicates(raw)) == 1
 
 
+def test_a_missing_alias_never_replaces_a_real_value():
+    raw = dac1_rows(
+        [(2020, "DAC1.10.1015", float("nan")), (2020, "DAC1.10.11015", 5.0)]
+    )
+    assert resolve_indicator_duplicates(raw)["value"].tolist() == [5.0]
+
+
+def test_equal_psi_values_keep_the_preferred_code():
+    raw = dac1_rows([(2023, "DAC1.60.11030", 4.0), (2023, "DAC1.60.11040", 4.0)])
+    kept = resolve_indicator_duplicates(raw)
+    assert kept["one_indicator"].tolist() == ["DAC1.60.11040"]
+
+
 def test_disagreeing_aliases_raise():
     raw = dac1_rows([(2020, "DAC1.10.1015", 10.0), (2020, "DAC1.10.11015", 12.0)])
     with pytest.raises(ValueError, match="Conflicting values"):

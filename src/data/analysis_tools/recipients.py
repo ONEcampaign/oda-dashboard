@@ -2,15 +2,11 @@
 
 import pandas as pd
 
-from src.data.analysis_tools.naming import (
-    apply_name_overrides,
-    normalize_unspecified_names,
-)
+from src.data.analysis_tools.naming import canonical_recipient_names
 from src.data.config import (
     DAC2A_AGGREGATE_CODE_MIN,
     DAC2A_MISSING_RECIPIENT_CODES,
     EXCLUDED_DAC2A_RECIPIENTS,
-    RECIPIENT_NAME_OVERRIDES,
     logger,
 )
 
@@ -44,8 +40,7 @@ def canonical_recipients(df: pd.DataFrame) -> pd.DataFrame:
         )
 
     df = df.loc[~df["recipient_code"].isin(EXCLUDED_DAC2A_RECIPIENTS)]
-    df = apply_name_overrides(df, RECIPIENT_NAME_OVERRIDES, "recipient")
-    df["recipient_name"] = normalize_unspecified_names(df["recipient_name"])
+    df = canonical_recipient_names(df)
 
     codes_per_name = df.groupby("recipient_name", observed=True)[
         "recipient_code"

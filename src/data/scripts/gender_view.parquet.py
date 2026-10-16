@@ -14,48 +14,51 @@ Output is keyed by name: year, donor_name, recipient_name, indicator_name.
 """
 
 import pandas as pd
-
 from oda_data import bilateral_policy_marker
 
 from src.data.analysis_tools.gender import derive_not_screened
+from src.data.analysis_tools.outputs import (
+    generate_view_options,
+    parquet_to_stdout,
+    set_cache_dir,
+)
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
-    drop_empty_values,
     add_recipient_classifications,
     add_share_of_group_total,
     build_donor_group_totals,
-    build_crs_recipient_group_totals,
     convert_values_to_units,
+    drop_empty_values,
     get_crs_recipient_classifications,
     get_group_total,
     widen_currency_price,
+    with_crs_recipient_group_totals,
 )
 from src.data.config import (
-    logger,
     BASE_TIME,
-    GENDER_INDICATORS,
-    NOT_SCREENED_SCORE,
-    TOTAL_ALLOCABLE_SCORE,
-    PROVIDERS,
+    CRS_RECIPIENTS,
+    CRS_RECIPIENTS_ORDER,
+    DONORS_ORDER,
+    EU27_EUI_NAME,
     EU_COUNTRIES,
     EU_INSTITUTIONS,
-    CRS_RECIPIENTS,
-    DONORS_ORDER,
-    CRS_RECIPIENTS_ORDER,
+    GENDER_INDICATORS,
+    NOT_SCREENED_SCORE,
+    PROVIDERS,
+    TOTAL_ALLOCABLE_SCORE,
+    logger,
 )
-from src.data.analysis_tools.outputs import (
-    set_cache_dir,
-    generate_view_options,
-    parquet_to_stdout,
-)
-
-set_cache_dir(oda_data=True, pydeflate=True)
 
 YEARS = range(BASE_TIME["start"], BASE_TIME["end"] + 1)
 
 # Everything identifying a row except the recipient, and except the donor, respectively.
 RECIPIENT_GROUP_COLS = [
-    "year", "donor_code", "donor_name", "indicator_name", "currency", "price",
+    "year",
+    "donor_code",
+    "donor_name",
+    "indicator_name",
+    "currency",
+    "price",
 ]
 DONOR_GROUP_COLS = ["year", "recipient_name", "indicator_name", "currency", "price"]
 # The level each marker score is summed to before "Not screened" is derived.
@@ -120,7 +123,9 @@ def combined_gender() -> pd.DataFrame:
     gender = get_gender_markers()
 
     logger.info("Attaching recipient classifications...")
-    classified, ldc_members = get_crs_recipient_classifications(YEARS, list(CRS_RECIPIENTS))
+    classified, ldc_members = get_crs_recipient_classifications(
+        YEARS, list(CRS_RECIPIENTS)
+    )
     gender = add_recipient_classifications(gender, classified, "gender markers")
 
     logger.info("Adding currencies and prices...")
@@ -130,13 +135,7 @@ def combined_gender() -> pd.DataFrame:
     # Recipient groups must exist before the donor groups are summed, so that every donor
     # aggregate covers every recipient group as well as every country.
     logger.info("Building recipient and donor group totals...")
-    gender = pd.concat(
-        [
-            gender,
-            *build_crs_recipient_group_totals(gender, RECIPIENT_GROUP_COLS, ldc_members),
-        ],
-        ignore_index=True,
-    )
+    gender = with_crs_recipient_group_totals(gender, RECIPIENT_GROUP_COLS, ldc_members)
     gender = pd.concat(
         [
             gender,
@@ -147,7 +146,7 @@ def combined_gender() -> pd.DataFrame:
                 gender,
                 EU_COUNTRIES | EU_INSTITUTIONS,
                 group_cols=DONOR_GROUP_COLS,
-                group_name="EU27 & EU Institutions",
+                group_name=EU27_EUI_NAME,
             ),
         ],
         ignore_index=True,
@@ -171,6 +170,7 @@ def combined_gender() -> pd.DataFrame:
 
 
 if __name__ == "__main__":
+    set_cache_dir(oda_data=True, pydeflate=True)
     logger.info("Generating gender view table...")
     df = combined_gender()
     generate_view_options(

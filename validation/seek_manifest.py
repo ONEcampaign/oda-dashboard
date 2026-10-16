@@ -7,8 +7,8 @@ import pandas as pd
 
 from validation.config import (
     MANIFESTS_DIR,
-    SEEK_HEALTH_PURPOSE_CODES,
     SEEK_AGRICULTURE_PURPOSE_CODES,
+    SEEK_HEALTH_PURPOSE_CODES,
 )
 from validation.manifest import (
     load_manifest,

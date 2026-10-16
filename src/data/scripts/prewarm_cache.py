@@ -7,16 +7,18 @@ API failures (common with the OECD SDMX endpoint) crash the entire build.
 
 Exits 0 on success, 1 if all retries fail.
 """
+
 import sys
 import time
 
 import pandas as pd
 from pydeflate import oecd_dac_deflate, oecd_dac_exchange
 
+from src.data.analysis_tools.outputs import set_cache_dir
+
 # config applies the requests-cache compatibility patch on import, which has to happen before
 # pydeflate makes its first request. See src/data/_compat.py.
 from src.data.config import BASE_TIME, logger
-from src.data.analysis_tools.outputs import set_cache_dir
 
 MAX_RETRIES = 3
 RETRY_DELAY = 30  # seconds between retries
@@ -60,10 +62,10 @@ if __name__ == "__main__":
             prewarm_exchange_rates()
             logger.info("Pydeflate cache pre-warm successful")
             sys.exit(0)
-        except Exception as e:
-            logger.error(f"Attempt {attempt}/{MAX_RETRIES} failed: {e}")
+        except Exception:
+            logger.warning("Attempt %s/%s failed", attempt, MAX_RETRIES, exc_info=True)
             if attempt < MAX_RETRIES:
-                logger.info(f"Waiting {RETRY_DELAY}s before retry...")
+                logger.info("Waiting %ss before retry...", RETRY_DELAY)
                 time.sleep(RETRY_DELAY)
 
     logger.error("Failed to pre-warm pydeflate cache after all retries")

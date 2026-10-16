@@ -4,8 +4,8 @@ from oda_data import OECDClient, provider_groupings
 from src.data.analysis_tools.outputs import set_cache_dir
 from src.data.config import PATHS, logger
 from src.data.topic_page.common import (
-    LATEST_YEAR_AGG,
     CONSTANT_YEAR,
+    LATEST_YEAR_AGG,
     SHORT_START_YEAR,
 )
 from src.data.topic_page.covid import covid_bi_multi_dac

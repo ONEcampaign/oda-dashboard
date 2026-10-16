@@ -2,8 +2,9 @@
 
 import json
 
-from src.data._compat import _corrections_last
 from oda_reader.schemas import dac1_translation, dac2_translation
+
+from src.data._compat import _corrections_last
 
 
 def test_corrected_codes_win_the_inversion(tmp_path):

@@ -7,6 +7,7 @@ from src.data.analysis_tools.imputations import read_imputed_multilateral
 from src.data.analysis_tools.outputs import (
     set_cache_dir,
 )
+from src.data.config import BILATERAL, IMPUTED_MULTILATERAL, UNALLOCATED_SUB_SECTOR
 
 DONOR_IDS = list(provider_groupings()["dac_countries"])
 
@@ -21,7 +22,7 @@ def _assign_sub_sector(df: pd.DataFrame, broad: bool = False) -> pd.DataFrame:
     if broad:
         broad_sectors = sector_lists.get_broad_sector_groups()
         df["sub_sector"] = (
-            df["sub_sector"].map(broad_sectors).fillna("Unallocated/unspecified")
+            df["sub_sector"].map(broad_sectors).fillna(UNALLOCATED_SUB_SECTOR)
         )
     return df
 
@@ -54,7 +55,7 @@ def get_bilateral_by_sector(years: list, broad: bool = False) -> pd.DataFrame:
         .sum()
         .reset_index()
         .rename(columns={"usd_disbursement": "value"})
-        .assign(indicator="Bilateral")
+        .assign(indicator=BILATERAL)
     )
 
     return sectors_bi[lambda d: d.value != 0]
@@ -65,7 +66,7 @@ def get_imputed_multi_by_sector(years: list, broad: bool = False) -> pd.DataFram
     raw_multi = read_imputed_multilateral(years, DONOR_IDS)
 
     raw_multi = _assign_sub_sector(raw_multi, broad=broad)
-    raw_multi["sub_sector"] = raw_multi["sub_sector"].fillna("Unallocated/unspecificed")
+    raw_multi["sub_sector"] = raw_multi["sub_sector"].fillna(UNALLOCATED_SUB_SECTOR)
 
     sectors_multi = (
         raw_multi.groupby(
@@ -75,7 +76,7 @@ def get_imputed_multi_by_sector(years: list, broad: bool = False) -> pd.DataFram
         )["value"]
         .sum()
         .reset_index()
-        .assign(indicator="Imputed multilateral")
+        .assign(indicator=IMPUTED_MULTILATERAL)
     )
 
     return sectors_multi[sectors_multi["value"] != 0]

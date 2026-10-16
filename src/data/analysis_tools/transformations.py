@@ -22,32 +22,36 @@ Sections, in order:
 import pandas as pd
 import resolvekit as rk
 from oda_data import OECDClient
-from pydeflate import oecd_dac_deflate, oecd_dac_exchange, set_pydeflate_path
+from pydeflate import oecd_dac_deflate, oecd_dac_exchange
 
+from src.data.analysis_tools.naming import (
+    canonical_recipient_names,
+    normalize_crs_regions,
+)
 from src.data.config import (
-    logger,
-    BASE_TIME,
-    CURRENCIES,
+    ALL_BILATERAL_DONORS,
     BILATERAL_DONORS,
+    CRS_NON_REGIONS,
+    CRS_REGION_ROLLUPS,
+    CRS_UNCLASSIFIED_INCOME,
+    CRS_UNCLASSIFIED_REGION,
+    CURRENCIES,
     DONOR_GROUPS,
-    PATHS,
-    SAHEL_RECIPIENTS,
+    EU27_COUNTRIES_NAME,
+    EU27_EUI_NAME,
     FRANCE_PRIORITY_RECIPIENTS,
+    INT32_MAX,
     LDC_GROUP,
     LDC_LABEL,
+    ODA_ELIGIBLE,
+    SAHEL_RECIPIENTS,
+    TOTAL_ODA,
     UNALLOCATED_BY_INCOME,
+    UNITS_PER_MILLION,
     WORLD_BANK_INCOME_GROUPS,
     WORLD_BANK_NOT_CLASSIFIED,
-    CRS_REGION_ROLLUPS,
-    CRS_UNCLASSIFIED_REGION,
-    CRS_UNCLASSIFIED_INCOME,
-    INT32_MAX,
-    UNITS_PER_MILLION,
+    logger,
 )
-
-from src.data.analysis_tools.naming import normalize_unspecified_names
-
-set_pydeflate_path(PATHS.PYDEFLATE)
 
 
 def convert_values_to_units(df: pd.DataFrame) -> pd.DataFrame:
@@ -71,9 +75,8 @@ def convert_values_to_units(df: pd.DataFrame) -> pd.DataFrame:
     value_cols = [c for c in df.columns if c.startswith("value_")]
 
     for col in value_cols:
-        # UNITS_PER_MILLION is a float on purpose; an int multiplier silently coarsens the
-        # result to float32 precision. See the note on the constant before touching this line.
-        units = (df[col] * UNITS_PER_MILLION).round()
+        # Widen first: a float32 product would round again, to float32's coarser spacing.
+        units = (df[col].astype("float64") * UNITS_PER_MILLION).round()
         largest = units.abs().max()
 
         # Int32 tops out at ~2.1 billion units, i.e. ~2,147 million.
@@ -137,7 +140,7 @@ def add_group_gni(member_gni: pd.DataFrame) -> pd.DataFrame:
         One row per year and donor_name, with a gni column.
     """
     group_totals = build_donor_group_totals(member_gni, ["year"])
-    eu27_eui_df = group_totals["EU27 countries"].assign(donor_name="EU27 & EU Institutions")
+    eu27_eui_df = group_totals[EU27_COUNTRIES_NAME].assign(donor_name=EU27_EUI_NAME)
 
     return (
         pd.concat([member_gni, *group_totals.values(), eu27_eui_df])
@@ -166,9 +169,8 @@ def build_gni_matched_group_totals(
     reporting = df.merge(
         member_gni[["donor_code", "year"]], on=["donor_code", "year"], how="inner"
     )
-    return (
-        pd.concat(build_donor_group_totals(reporting, group_cols).values())
-        .rename(columns={"value": "gni_matched_value"})
+    return pd.concat(build_donor_group_totals(reporting, group_cols).values()).rename(
+        columns={"value": "gni_matched_value"}
     )
 
 
@@ -219,22 +221,27 @@ def _warn_missing_group_members(
         label: Name of the total being built, used in the log message.
     """
     members = set(group_dict)
-    present = df.loc[df[code_col].isin(members), [code_col, *coverage_cols]].drop_duplicates()
+    present = df.loc[
+        df[code_col].isin(members), [code_col, *coverage_cols]
+    ].drop_duplicates()
     found = set(present[code_col].dropna().unique())
 
     never = sorted(members - found)
     if never:
         logger.warning(
             "%s: %d of %d members never appear in the data, so the total excludes them: %s",
-            label, len(never), len(members), {code: group_dict[code] for code in never},
+            label,
+            len(never),
+            len(members),
+            {code: group_dict[code] for code in never},
         )
 
     if not coverage_cols:
         return
 
-    per_combination = present.groupby(
-        coverage_cols, dropna=False, observed=True
-    )[code_col].nunique()
+    per_combination = present.groupby(coverage_cols, dropna=False, observed=True)[
+        code_col
+    ].nunique()
     incomplete = int((per_combination < len(members)).sum())
     if not incomplete:
         return
@@ -242,7 +249,8 @@ def _warn_missing_group_members(
     total = len(per_combination)
     appearances = present.groupby(code_col, dropna=False, observed=True).size()
     gaps = sorted(
-        ((total - int(appearances.get(code, 0)), code) for code in members), reverse=True
+        ((total - int(appearances.get(code, 0)), code) for code in members),
+        reverse=True,
     )
     worst = ", ".join(
         f"{group_dict[code]} ({missing:,})" for missing, code in gaps[:5] if missing
@@ -251,19 +259,23 @@ def _warn_missing_group_members(
         "%s: %d of %d %s combinations are missing at least one member. Members absent "
         "from the most combinations: %s. This is expected where a member reported "
         "nothing, but a sharp change here means lost coverage.",
-        label, incomplete, total, " x ".join(coverage_cols), worst,
+        label,
+        incomplete,
+        total,
+        " x ".join(coverage_cols),
+        worst,
     )
 
 
 def get_group_total(
-        df: pd.DataFrame,
-        group_dict: dict,
-        group_cols: list,
-        column: str = "donor",
-        check_all_keys: bool = True,
-        group_name: str = None,
-        group_code: str = None,
-        coverage_cols: list[str] = None,
+    df: pd.DataFrame,
+    group_dict: dict,
+    group_cols: list,
+    column: str = "donor",
+    check_all_keys: bool = True,
+    group_name: str | None = None,
+    group_code: int | None = None,
+    coverage_cols: list[str] | None = None,
 ) -> pd.DataFrame:
     """Sum a group of donors or recipients into a single aggregate row per group_cols.
 
@@ -290,7 +302,8 @@ def get_group_total(
             df,
             group_dict,
             code_col,
-            coverage_cols if coverage_cols is not None
+            coverage_cols
+            if coverage_cols is not None
             else _default_coverage_cols(df, column),
             group_name or f"{column} group total",
         )
@@ -308,8 +321,6 @@ def get_group_total(
         df[code_col] = group_code
 
     return df
-
-
 
 
 # Columns carrying the classifications both CRS-based views group by: the CRS region, and the
@@ -396,7 +407,7 @@ def classify_income(iso_codes: pd.Series) -> tuple[pd.Series, pd.Series]:
     return income, iso3.isin(ldcs)
 
 
-def _modal_value(series: pd.Series):
+def _modal_value(series: pd.Series) -> object:
     """Return the most common non-null value, ties broken by sort order for determinism."""
     present = series.dropna()
     if present.empty:
@@ -436,17 +447,20 @@ def get_crs_recipient_classifications(
     if missing:
         raise ValueError(f"CRS did not return required columns: {missing}")
 
-    raw["recipient_name"] = normalize_unspecified_names(raw["recipient_name"])
+    raw[CRS_REGION_COL] = normalize_crs_regions(raw[CRS_REGION_COL])
 
     attributes = ["recipient_name", _CRS_ISO3_COL, CRS_REGION_COL]
-    grouped = raw.groupby(["recipient_code", "year"], dropna=False, observed=True)[attributes]
+    grouped = raw.groupby(["recipient_code", "year"], dropna=False, observed=True)[
+        attributes
+    ]
 
     # Reduce each column to its most common non-null value, rather than deduplicating whole
     # rows. A recipient-year often has some transactions with a blank region,
     # and dropping duplicate rows can pick one of those and lose a value the data does have.
     # Where transactions genuinely disagree, the majority wins, so the result does not depend
     # on row order.
-    classified = grouped.agg(_modal_value).reset_index()
+    # Named after the reduction, which leaves one row per recipient-year to rename.
+    classified = canonical_recipient_names(grouped.agg(_modal_value).reset_index())
 
     conflicts = grouped.nunique(dropna=True)
     for col in attributes:
@@ -455,7 +469,8 @@ def get_crs_recipient_classifications(
             logger.warning(
                 "%s (recipient_code, year) combinations report more than one %s; taking the "
                 "most common. Recipient codes: %s",
-                len(disagreeing), col,
+                len(disagreeing),
+                col,
                 sorted({int(code) for code, _ in disagreeing})[:10],
             )
 
@@ -470,9 +485,16 @@ def get_crs_recipient_classifications(
         columns=[_CRS_ISO3_COL]
     )
 
-    logger.info("Recipient classification table: %s recipient-years", f"{len(classified):,}")
+    logger.info(
+        "Recipient classification table: %s recipient-years", f"{len(classified):,}"
+    )
 
     return classified, ldc_members
+
+
+# Float noise allowed when checking that the classification join kept the total.
+JOIN_TOTAL_ABS_TOLERANCE: float = 1e-6
+JOIN_TOTAL_REL_TOLERANCE: float = 1e-9
 
 
 def add_recipient_classifications(
@@ -518,7 +540,9 @@ def add_recipient_classifications(
             logger.info(
                 "%s: %s rows had no %s for their year; filled from the recipient's other "
                 "years where possible",
-                label, f"{int(gaps.sum()):,}", col,
+                label,
+                f"{int(gaps.sum()):,}",
+                col,
             )
 
     for col, sentinel in (
@@ -530,13 +554,21 @@ def add_recipient_classifications(
             logger.warning(
                 "%s: %s rows worth %s have no %s in the CRS at all; labelled %r. "
                 "Recipient codes: %s",
-                label, f"{int(still_missing.sum()):,}",
-                f"{merged.loc[still_missing, 'value'].sum():,.1f}", col, sentinel,
-                sorted(merged.loc[still_missing, "recipient_code"].dropna().unique())[:10],
+                label,
+                f"{int(still_missing.sum()):,}",
+                f"{merged.loc[still_missing, 'value'].sum():,.1f}",
+                col,
+                sentinel,
+                sorted(merged.loc[still_missing, "recipient_code"].dropna().unique())[
+                    :10
+                ],
             )
             merged[col] = merged[col].fillna(sentinel)
 
-    if abs(merged["value"].sum() - before_value) > max(1e-6, abs(before_value) * 1e-9):
+    tolerance = max(
+        JOIN_TOTAL_ABS_TOLERANCE, abs(before_value) * JOIN_TOTAL_REL_TOLERANCE
+    )
+    if abs(merged["value"].sum() - before_value) > tolerance:
         raise ValueError(
             f"{label}: classification join changed the total "
             f"({before_value:,.2f} -> {merged['value'].sum():,.2f})"
@@ -563,7 +595,7 @@ def build_crs_recipient_group_totals(
         df.groupby(group_cols, dropna=False, observed=True)["value"]
         .sum()
         .reset_index()
-        .assign(recipient_name="ODA eligible countries")
+        .assign(recipient_name=ODA_ELIGIBLE)
     )
 
     income = get_attribute_total(df, INCOME_GROUP_COL, group_cols)
@@ -573,7 +605,9 @@ def build_crs_recipient_group_totals(
     # emitting them as regions as well would produce two rows per continent, which the pivot
     # would silently merge.
     regions = get_attribute_total(
-        df.loc[~df[CRS_REGION_COL].isin(CRS_REGION_ROLLUPS)], CRS_REGION_COL, group_cols
+        df.loc[~df[CRS_REGION_COL].isin([*CRS_REGION_ROLLUPS, *CRS_NON_REGIONS])],
+        CRS_REGION_COL,
+        group_cols,
     )
 
     # Continents are rollups of the CRS regions, so they are summed from the same column.
@@ -583,7 +617,9 @@ def build_crs_recipient_group_totals(
         for region in regions_in
     }
     continents = get_attribute_total(
-        df.assign(**{_CONTINENT_COL: lambda d: d[CRS_REGION_COL].map(region_to_continent)}),
+        df.assign(
+            **{_CONTINENT_COL: lambda d: d[CRS_REGION_COL].map(region_to_continent)}
+        ),
         _CONTINENT_COL,
         group_cols,
     ).dropna(subset=["recipient_name"])
@@ -601,6 +637,20 @@ def build_crs_recipient_group_totals(
     ]
 
     return [overall, income, regions, continents, *lists]
+
+
+def with_crs_recipient_group_totals(
+    df: pd.DataFrame, group_cols: list[str], ldc_members: dict
+) -> pd.DataFrame:
+    """Append every recipient aggregate from build_crs_recipient_group_totals to a frame.
+
+    Run before the donor groups are summed, so every donor aggregate covers every recipient
+    group as well as every country.
+    """
+    return pd.concat(
+        [df, *build_crs_recipient_group_totals(df, group_cols, ldc_members)],
+        ignore_index=True,
+    )
 
 
 def build_donor_group_totals(
@@ -762,9 +812,7 @@ def add_share_of_reference_total(
     return merged.drop(columns=["total_oda"])
 
 
-def add_currencies_and_prices(
-    df: pd.DataFrame, base_year: int = BASE_TIME["base"]
-) -> pd.DataFrame:
+def add_currencies_and_prices(df: pd.DataFrame, *, base_year: int) -> pd.DataFrame:
     """Copy the data into every currency in CURRENCIES, at current and constant prices.
 
     Args:
@@ -781,7 +829,7 @@ def add_currencies_and_prices(
     converted = []
 
     for currency in CURRENCIES:
-        logger.info(f"Converting to {currency}")
+        logger.info("Converting to %s", currency)
         current = (
             df
             if currency == "USD"
@@ -910,7 +958,29 @@ def add_share_of_total_oda(df: pd.DataFrame) -> pd.DataFrame:
         The frame with pct_of_total_oda added.
     """
     return add_share_of_reference_total(
-        df, "indicator_name", "Total ODA", ["year", "donor_name"], "pct_of_total_oda"
+        df, "indicator_name", TOTAL_ODA, ["year", "donor_name"], "pct_of_total_oda"
+    )
+
+
+def add_donor_and_recipient_shares(df: pd.DataFrame) -> pd.DataFrame:
+    """Add each row's share of its donor's and its recipient's total.
+
+    pct_total_donor is over the donor's aid to ODA eligible countries, and pct_total_recipient
+    over the recipient's aid from all bilateral donors.
+    """
+    df = add_share_of_reference_total(
+        df,
+        filter_col="recipient_name",
+        filter_val=ODA_ELIGIBLE,
+        merge_cols=["year", "donor_name"],
+        pct_col="pct_total_donor",
+    )
+    return add_share_of_reference_total(
+        df,
+        filter_col="donor_name",
+        filter_val=ALL_BILATERAL_DONORS,
+        merge_cols=["year", "recipient_name"],
+        pct_col="pct_total_recipient",
     )
 
 
