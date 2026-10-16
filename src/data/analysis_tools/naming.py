@@ -24,7 +24,7 @@ def apply_name_overrides(df: pd.DataFrame, mapping: dict, column: str) -> pd.Dat
 
     Args:
         df: Frame with ``{column}_code`` and ``{column}_name`` columns.
-        mapping: ``{code: canonical name}``, e.g. ``AGGREGATE_DONORS``.
+        mapping: ``{code: canonical name}``, e.g. ``RECIPIENT_NAME_OVERRIDES``.
         column: Either "donor" or "recipient".
 
     Returns:

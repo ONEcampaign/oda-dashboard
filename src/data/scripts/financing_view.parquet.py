@@ -24,14 +24,13 @@ from src.data.analysis_tools.outputs import (
     parquet_to_stdout,
     generate_view_options,
 )
-from src.data.analysis_tools.naming import apply_name_overrides
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
     add_share_of_gni,
     add_share_of_total_oda,
     convert_values_to_units,
     widen_currency_price,
-    get_group_total,
+    build_donor_group_totals,
 )
 from src.data.config import (
     logger,
@@ -42,17 +41,22 @@ from src.data.config import (
     IN_DONOR_FINANCING_INDICATORS,
     ALL_FINANCING_INDICATORS,
     PREFERRED_FINANCING_CODES,
-    ALL_DONORS,
-    AGGREGATE_DONORS,
-    EU_INSTITUTIONS,
+    PROVIDERS,
+    DONOR_GROUPS,
+    EU27_EUI_LAST_YEAR,
     EU_TOTAL,
-    EU_COUNTRIES,
-    BILATERAL_DONORS,
     DONORS_ORDER,
     FINANCING_INDICATORS_ORDER,
 )
 
 set_cache_dir(oda_data=True, pydeflate=True)
+
+# The indicators derived from splitting Total ODA by whether it is a grant.
+GRANTS_SPLIT: tuple[str, ...] = ("Grants", "Non-grants")
+
+# A group's grants split is left out for a year when members that do not report it hold
+# more than this share of the group's Total ODA.
+MAX_MISSING_GRANTS_SHARE: float = 0.01
 
 
 def resolve_indicator_duplicates(
@@ -148,7 +152,7 @@ def get_dac1() -> pd.DataFrame:
     # in-donor indicators in net flows
     in_donor_raw = OECDClient(
         years=range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1),
-        providers=list(ALL_DONORS | EU_INSTITUTIONS),
+        providers=list(PROVIDERS),
         measure="net_disbursement",
         use_bulk_download=True,
     ).get_indicators(list(IN_DONOR_FINANCING_INDICATORS))
@@ -156,7 +160,7 @@ def get_dac1() -> pd.DataFrame:
     # other indicators in net flows up to 2017
     other_flow_raw = OECDClient(
         years=range(FINANCING_TIME["start"], GRANT_EQUIVALENT_START_YEAR),
-        providers=list(ALL_DONORS | EU_INSTITUTIONS),
+        providers=list(PROVIDERS),
         measure="net_disbursement",
         use_bulk_download=True,
     ).get_indicators(list(AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS))
@@ -164,7 +168,7 @@ def get_dac1() -> pd.DataFrame:
     # other indicators in grant equivalents after 2017
     other_ge_raw = OECDClient(
         years=range(GRANT_EQUIVALENT_START_YEAR, FINANCING_TIME["end"] + 1),
-        providers=list(ALL_DONORS | EU_INSTITUTIONS),
+        providers=list(PROVIDERS),
         measure="grant_equivalent",
         use_bulk_download=True,
     ).get_indicators(list(AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS))
@@ -188,8 +192,6 @@ def get_dac1() -> pd.DataFrame:
         .drop(columns=["one_indicator"])
     )
 
-    dac1 = apply_name_overrides(dac1, AGGREGATE_DONORS, "donor")
-
     return dac1
 
 
@@ -210,14 +212,14 @@ def get_grants() -> pd.DataFrame:
 
     grants_flow_raw = OECDClient(
         years=range(FINANCING_TIME["start"], GRANT_EQUIVALENT_START_YEAR),
-        providers=list(ALL_DONORS | EU_INSTITUTIONS),
+        providers=list(PROVIDERS),
         measure=["net_disbursement_grant", "net_disbursement"],
         use_bulk_download=True,
     ).get_indicators(["DAC1.10.1010"])
 
     grants_ge_raw = OECDClient(
         years=range(GRANT_EQUIVALENT_START_YEAR, FINANCING_TIME["end"] + 1),
-        providers=list(ALL_DONORS | EU_INSTITUTIONS),
+        providers=list(PROVIDERS),
         measure=["net_disbursement_grant", "grant_equivalent"],
         use_bulk_download=True,
     ).get_indicators(["DAC1.10.1010"])
@@ -245,8 +247,6 @@ def get_grants() -> pd.DataFrame:
             value_vars=["Grants", "Non-grants"],
         )
     )
-
-    grants = apply_name_overrides(grants, AGGREGATE_DONORS, "donor")
 
     return grants
 
@@ -398,6 +398,58 @@ def get_eui_eu27_grants() -> pd.DataFrame:
     return eui_eu27_grants
 
 
+def years_missing_grants(usd_current: pd.DataFrame, members: dict) -> dict[int, float]:
+    """Find the years in which members without a grants split hold too much of Total ODA.
+
+    Preliminary DAC1 data carry the grants measure for only a few donors, so a group's
+    Grants and Non-grants summed over the members that report them would fall far short of
+    the group's Total ODA. A few small donors never report the split, which a group can
+    absorb up to MAX_MISSING_GRANTS_SHARE of its Total ODA.
+
+    Args:
+        usd_current: Long frame of individual donors in current USD, with donor_code.
+        members: The group's donor codes.
+
+    Returns:
+        The years above the threshold, each with the share of Total ODA missing its split.
+    """
+    usd = usd_current.loc[lambda d: d["donor_code"].isin(members)]
+    total = (
+        usd.loc[lambda d: d["indicator_name"] == "Total ODA"]
+        .groupby(["year", "donor_code"])["value"]
+        .sum()
+    )
+    with_grants = usd.loc[
+        lambda d: (d["indicator_name"] == "Grants") & d["value"].notna()
+    ].set_index(["year", "donor_code"]).index
+
+    missing = total[~total.index.isin(with_grants)].groupby(level="year").sum()
+    share = (missing / total.groupby(level="year").sum()).dropna()
+
+    return share[share > MAX_MISSING_GRANTS_SHARE].to_dict()
+
+
+def drop_grants_split(group: pd.DataFrame, years: dict[int, float]) -> pd.DataFrame:
+    """Drop a group's Grants and Non-grants rows for the given years, logging which.
+
+    Args:
+        group: Long frame for one donor group.
+        years: Years whose grants split is incomplete, with the share of Total ODA missing it.
+
+    Returns:
+        The group without its grants split in those years.
+    """
+    incomplete = group["indicator_name"].isin(GRANTS_SPLIT) & group["year"].isin(years)
+    if incomplete.any():
+        logger.info(
+            "%s: grants split left out where members without it hold this share of "
+            "Total ODA: %s",
+            group["donor_name"].iloc[0],
+            {year: round(share, 3) for year, share in sorted(years.items())},
+        )
+    return group.loc[~incomplete]
+
+
 def get_financing_data() -> pd.DataFrame:
     """Assemble the financing view from its parts.
 
@@ -415,31 +467,27 @@ def get_financing_data() -> pd.DataFrame:
         non_eu_financing, base_year=FINANCING_TIME["base"]
     )
 
-    eu27_financing = get_group_total(
-        non_eu_financing,
-        EU_COUNTRIES,
-        group_cols=["year", "indicator_name", "currency", "price"],
-        group_name="EU27 countries",
+    usd_current = non_eu_financing.loc[
+        lambda d: (d["currency"] == "USD") & (d["price"] == "current")
+    ]
+    group_totals = build_donor_group_totals(
+        non_eu_financing, ["year", "indicator_name", "currency", "price"]
     )
-    all_bilateral_financing = get_group_total(
-        non_eu_financing,
-        BILATERAL_DONORS,
-        group_cols=["year", "indicator_name", "currency", "price"],
-        group_name="All bilateral donors",
-    )
+    donor_groups = [
+        drop_grants_split(total, years_missing_grants(usd_current, DONOR_GROUPS[name]))
+        for name, total in group_totals.items()
+    ]
 
-    eui_eu27_dac1 = get_eui_eu27_dac1()
-    eui_eu27_grants = get_eui_eu27_grants()
-
-    financing = pd.concat(
+    eui_eu27 = pd.concat(
         [
-            non_eu_financing,
-            eu27_financing,
-            all_bilateral_financing,
-            eui_eu27_dac1,
-            eui_eu27_grants,
+            get_eui_eu27_dac1(),
+            drop_grants_split(
+                get_eui_eu27_grants(), years_missing_grants(usd_current, EU_TOTAL)
+            ),
         ]
-    )
+    ).loc[lambda d: d["year"] <= EU27_EUI_LAST_YEAR]
+
+    financing = pd.concat([non_eu_financing, *donor_groups, eui_eu27])
 
     financing = financing.loc[lambda d: d["value"].notna() & (d["value"] != 0)]
 
@@ -483,5 +531,6 @@ if __name__ == "__main__":
         },
         base_year=FINANCING_TIME["base"],
         file_name="financing_view_options.json",
+        extra={"eu27_eui_last_year": EU27_EUI_LAST_YEAR},
     )
     parquet_to_stdout(df)

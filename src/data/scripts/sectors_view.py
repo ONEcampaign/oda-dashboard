@@ -34,7 +34,7 @@ from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
     add_recipient_classifications,
     add_share_of_reference_total,
-    build_crs_donor_group_totals,
+    build_donor_group_totals,
     build_crs_recipient_group_totals,
     convert_values_to_units,
     get_crs_recipient_classifications,
@@ -43,7 +43,7 @@ from src.data.analysis_tools.transformations import (
 from src.data.config import (
     logger,
     SECTORS_TIME,
-    CRS_PROVIDERS,
+    PROVIDERS,
     CRS_FLOW_CATEGORIES,
     CRS_RECIPIENTS,
     DONORS_ORDER,
@@ -147,7 +147,7 @@ def get_bilateral_by_sector() -> pd.DataFrame:
     raw_bilateral = CRSData(years=YEARS).read(
         using_bulk_download=True,
         additional_filters=[
-            ("donor_code", "in", list(CRS_PROVIDERS)),
+            ("donor_code", "in", list(PROVIDERS)),
             ("recipient_code", "in", list(CRS_RECIPIENTS)),
             ("category", "in", CRS_FLOW_CATEGORIES),
         ],
@@ -181,7 +181,7 @@ def get_imputed_multi_by_sector() -> pd.DataFrame:
     """Read imputed multilateral spending by sub-sector."""
     raw_multi = imputed_multilateral_by_purpose(
         years=YEARS,
-        providers=list(CRS_PROVIDERS),
+        providers=list(PROVIDERS),
         measure="gross_disbursement",
         currency="USD",
         base_year=None,
@@ -346,9 +346,9 @@ def combined_sectors() -> pd.DataFrame:
     sectors = pd.concat(
         [
             sectors,
-            # include_eu27_eui=False: a plain sum would double count member contributions
+            # No EU27 + institutions plain sum: it would double count member contributions
             # routed through the institutions, so the bloc is built from the corrected frame.
-            *build_crs_donor_group_totals(sectors, DONOR_GROUP_COLS, include_eu27_eui=False),
+            *build_donor_group_totals(sectors, DONOR_GROUP_COLS).values(),
             # The corrected frame needs the same recipient groups as everything else, or the
             # bloc would carry imputed multilateral for countries but not for regions,
             # income groups or the overall total.

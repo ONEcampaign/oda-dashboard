@@ -27,30 +27,20 @@ from src.data.config import (
     logger,
     BASE_TIME,
     CURRENCIES,
-    ALL_DONORS,
-    AGGREGATE_DONORS,
     BILATERAL_DONORS,
-    EU_COUNTRIES,
+    DONOR_GROUPS,
     PATHS,
-    CRS_PROVIDERS,
-    DAC_COUNTRIES,
-    G7_COUNTRIES,
-    NON_DAC_COUNTRIES,
     SAHEL_RECIPIENTS,
     FRANCE_PRIORITY_RECIPIENTS,
     CRS_INCOME_LABELS,
     CRS_REGION_ROLLUPS,
     CRS_UNCLASSIFIED_REGION,
     CRS_UNCLASSIFIED_INCOME,
-    EU_INSTITUTIONS,
     INT32_MAX,
     UNITS_PER_MILLION,
 )
 
-from src.data.analysis_tools.naming import (
-    apply_name_overrides,
-    normalize_unspecified_names,
-)
+from src.data.analysis_tools.naming import normalize_unspecified_names
 
 set_pydeflate_path(PATHS.PYDEFLATE)
 
@@ -114,7 +104,7 @@ def get_gni(start_year: int, end_year: int) -> pd.DataFrame:
 
     gni_raw = OECDClient(
         years=range(start_year, end_year + 1),
-        providers=list(ALL_DONORS),
+        providers=list(BILATERAL_DONORS),
         measure="net_disbursement",
         use_bulk_download=True,
     ).get_indicators("DAC1.40.1")[["donor_code", "donor_name", "year", "value"]]
@@ -122,24 +112,13 @@ def get_gni(start_year: int, end_year: int) -> pd.DataFrame:
     # Deduplicate - raw data may have duplicate rows with identical GNI values
     gni_df = gni_raw.drop_duplicates(subset=["donor_code", "year"])
 
-    gni_df = apply_name_overrides(gni_df, AGGREGATE_DONORS, "donor")
-
-    eu27_df = get_group_total(gni_df, EU_COUNTRIES, ["year"], group_name="EU27 countries")
-    # Label must match the donor_name used by the views, or the GNI merge silently
-    # yields NaN. EU institutions have no GNI of their own, so the denominator for
-    # the EU27 + institutions aggregate is the member states' combined GNI.
-    eu27_eui_df = get_group_total(
-        gni_df, EU_COUNTRIES, ["year"], group_name="EU27 & EU Institutions"
-    )
-    bilateral_df = get_group_total(
-        gni_df,
-        BILATERAL_DONORS,
-        ["year"],
-        group_name="All bilateral donors"
-    )
+    group_totals = build_donor_group_totals(gni_df, ["year"])
+    # EU institutions have no GNI of their own, so the EU27 + institutions denominator is
+    # the member states' combined GNI, under the donor_name the views use.
+    eu27_eui_df = group_totals["EU27 countries"].assign(donor_name="EU27 & EU Institutions")
 
     return (
-        pd.concat([gni_df, eu27_df, eu27_eui_df, bilateral_df])
+        pd.concat([gni_df, *group_totals.values(), eu27_eui_df])
         .rename(columns={"value": "gni"})
         .drop(columns="donor_code")
     )
@@ -493,43 +472,27 @@ def build_crs_recipient_group_totals(
     return [overall, income, regions, continents, *lists]
 
 
-def build_crs_donor_group_totals(
-    df: pd.DataFrame, group_cols: list[str], include_eu27_eui: bool = True
-) -> list[pd.DataFrame]:
-    """Build every donor aggregate by summing the providers that report to the CRS.
+def build_donor_group_totals(
+    df: pd.DataFrame, group_cols: list[str]
+) -> dict[str, pd.DataFrame]:
+    """Build every donor aggregate in DONOR_GROUPS by summing its members.
 
-    "All bilateral donors" includes EU Institutions in full. The CRS offers no equivalent of
-    the DAC1 weighting the other views use to strip out EU member contributions, so this
-    total does double count them; it is also the denominator for recipient-perspective shares.
-
-    "EU27 & EU Institutions" is a plain sum of the member states and the institutions, which is
-    correct only where the data has no imputed multilateral component — there is then no channel
-    through which members' core contributions could be counted twice. Views that do carry
-    imputed multilateral spending must pass include_eu27_eui=False and build the bloc
-    themselves, excluding members' contributions routed through EU institution channels.
+    Every view builds its aggregates here, so "All bilateral donors" is DAC countries plus
+    Non-DAC countries everywhere, and EU Institutions sits in no group. Each view builds the
+    EU27 + institutions bloc itself, since how to avoid counting member contributions twice
+    depends on the data it reads.
 
     Args:
         df: Frame with donor_code and a "value" column.
         group_cols: Columns identifying everything except the donor.
-        include_eu27_eui: Whether to add the EU27 + institutions bloc as a plain sum.
 
     Returns:
-        One frame per aggregate, each naming its group in donor_name.
+        One frame per group name, each naming its group in donor_name.
     """
-    groups = [
-        ("All bilateral donors", CRS_PROVIDERS),
-        ("DAC countries", DAC_COUNTRIES),
-        ("Non-DAC countries", NON_DAC_COUNTRIES),
-        ("G7 countries", G7_COUNTRIES),
-        ("EU27 countries", EU_COUNTRIES),
-    ]
-    if include_eu27_eui:
-        groups.append(("EU27 & EU Institutions", EU_COUNTRIES | EU_INSTITUTIONS))
-
-    return [
-        get_group_total(df, members, group_cols=group_cols, group_name=name)
-        for name, members in groups
-    ]
+    return {
+        name: get_group_total(df, members, group_cols=group_cols, group_name=name)
+        for name, members in DONOR_GROUPS.items()
+    }
 
 
 def add_share_of_group_total(

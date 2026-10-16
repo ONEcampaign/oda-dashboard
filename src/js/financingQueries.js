@@ -17,6 +17,8 @@ const financingData = financingTable.toArray();
 export const donorNames = viewOptions.donor_name;
 export const indicatorNames = viewOptions.indicator_name;
 export const yearOptions = viewOptions.year;
+// Last year the EU27 + institutions bloc is published for (see EU27_EUI_LAST_YEAR in config.py).
+export const eu27EuiLastYear = viewOptions.eu27_eui_last_year;
 
 const financingCache = new Map();
 

@@ -11,7 +11,7 @@ import {Header} from "npm:@one-data/observable-themes/ui"
 import {ONEVisual, AutoPlot, AutoTable} from "npm:@one-data/observable-themes/charts"
 import {getCurrencyLabel, formatString, resolveScale, isEmbedded} from "npm:@one-data/observable-themes/utils"
 import {setCustomColors} from "npm:@one-data/observable-themes/colors"
-import {financingQueries, transformTableData, donorNames, indicatorNames, yearOptions} from "./js/financingQueries.js"
+import {financingQueries, transformTableData, donorNames, indicatorNames, yearOptions, eu27EuiLastYear} from "./js/financingQueries.js"
 import {customPalette} from "./js/colors.js"
 import {columnChart} from "./js/columnChart.js"
 import {areaChart} from "./js/areaChart.js"
@@ -80,8 +80,8 @@ function App() {
     const coreOdaNote = indicator === CORE_ODA_CODE
         ? "Core ODA (ONE definition): Total ODA excluding in-donor spending."
         : ""
-    const eu27Note = donor === EU27_EUI_CODE && timeRange[1] === 2025
-        ? "2025 values do not include contributions by EU Institutions."
+    const eu27Note = donor === EU27_EUI_CODE && timeRange[1] > eu27EuiLastYear
+        ? `Shown up to ${eu27EuiLastYear}. Later data do not yet include EU members' contributions to the EU Institutions, which are needed to avoid counting them twice.`
         : ""
 
     const absoluteSubtitle = React.useMemo(() => {
