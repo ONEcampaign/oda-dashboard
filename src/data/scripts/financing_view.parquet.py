@@ -61,8 +61,9 @@ set_cache_dir(oda_data=True, pydeflate=True)
 def get_dac1() -> pd.DataFrame:
     """Read the DAC1 indicators, switching measure at the grant-equivalent boundary.
 
-    In-donor items stay in net flows throughout, because the DAC never restated them as grant
-    equivalents.
+    In-donor items stay in net flows throughout. Preliminary data for the latest year report
+    them only as flows, and for earlier years their grant equivalents equal their flows, since
+    they are grants.
 
     Returns:
         One row per year, donor and indicator name.
@@ -320,9 +321,12 @@ def get_financing_data() -> pd.DataFrame:
 
     financing = drop_empty_values(financing, "financing")
 
-    # Add type column
+    # Label each row by the measure it was read in: in-donor items are always flows.
+    in_donor = financing["indicator_name"].isin(IN_DONOR_FINANCING_INDICATORS.values())
     financing["type"] = np.where(
-        financing["year"] < GRANT_EQUIVALENT_START_YEAR, "Flows", "Grant equivalents"
+        (financing["year"] < GRANT_EQUIVALENT_START_YEAR) | in_donor,
+        "Flows",
+        "Grant equivalents",
     )
 
     # Pivot values to columns

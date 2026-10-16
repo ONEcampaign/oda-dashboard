@@ -10,7 +10,7 @@ from oda_data import (
 from oda_data.clean_data.channels import add_channel_names
 
 from src.data import config
-from src.data.config import PATHS
+from src.data.config import IMPUTATION_FLOW_TYPES, PATHS
 
 set_cache_root(config.PATHS.DATA)
 
@@ -163,6 +163,7 @@ def get_imputed_multilateral_disbursements_by_sector(
         years=range(start_year - 2, end_year + 1),
         currency=currency,
         base_year=base_year,
+        flow_types=IMPUTATION_FLOW_TYPES,
     )
 
     # Group the data by the requested level of aggregation, if "sector" or "broad_sector"
