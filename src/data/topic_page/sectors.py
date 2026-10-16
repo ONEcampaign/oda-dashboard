@@ -7,7 +7,7 @@ from src.data.analysis_tools.imputations import read_imputed_multilateral
 from src.data.analysis_tools.outputs import (
     set_cache_dir,
 )
-from src.data.config import UNALLOCATED_SUB_SECTOR
+from src.data.config import BILATERAL, IMPUTED_MULTILATERAL, UNALLOCATED_SUB_SECTOR
 
 DONOR_IDS = list(provider_groupings()["dac_countries"])
 
@@ -55,7 +55,7 @@ def get_bilateral_by_sector(years: list, broad: bool = False) -> pd.DataFrame:
         .sum()
         .reset_index()
         .rename(columns={"usd_disbursement": "value"})
-        .assign(indicator="Bilateral")
+        .assign(indicator=BILATERAL)
     )
 
     return sectors_bi[lambda d: d.value != 0]
@@ -76,7 +76,7 @@ def get_imputed_multi_by_sector(years: list, broad: bool = False) -> pd.DataFram
         )["value"]
         .sum()
         .reset_index()
-        .assign(indicator="Imputed multilateral")
+        .assign(indicator=IMPUTED_MULTILATERAL)
     )
 
     return sectors_multi[sectors_multi["value"] != 0]

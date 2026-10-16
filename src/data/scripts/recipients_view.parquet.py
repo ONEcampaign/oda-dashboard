@@ -31,7 +31,7 @@ from src.data.analysis_tools.recipients import (
 )
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
-    add_share_of_reference_total,
+    add_donor_and_recipient_shares,
     build_donor_group_totals,
     convert_values_to_units,
     drop_empty_values,
@@ -39,13 +39,11 @@ from src.data.analysis_tools.transformations import (
     widen_currency_price,
 )
 from src.data.config import (
-    ALL_BILATERAL_DONORS,
     BASE_TIME,
     DONORS_ORDER,
     EU27_EUI_NAME,
     EU_TOTAL,
     FRANCE_PRIORITY_RECIPIENTS,
-    ODA_ELIGIBLE,
     PROVIDERS,
     RECIPIENTS_INDICATORS,
     RECIPIENTS_ORDER,
@@ -224,20 +222,7 @@ def combined_recipients() -> tuple[pd.DataFrame, list[str]]:
         index_cols=("year", "donor_name", "recipient_name", "indicator_name"),
     )
 
-    recipients = add_share_of_reference_total(
-        recipients,
-        filter_col="donor_name",
-        filter_val=ALL_BILATERAL_DONORS,
-        merge_cols=["year", "recipient_name"],
-        pct_col="pct_total_recipient",
-    )
-    recipients = add_share_of_reference_total(
-        recipients,
-        filter_col="recipient_name",
-        filter_val=ODA_ELIGIBLE,
-        merge_cols=["year", "donor_name"],
-        pct_col="pct_total_donor",
-    )
+    recipients = add_donor_and_recipient_shares(recipients)
 
     recipients = convert_values_to_units(recipients)
 

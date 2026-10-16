@@ -25,11 +25,11 @@ from oda_data import OECDClient
 from pydeflate import oecd_dac_deflate, oecd_dac_exchange
 
 from src.data.analysis_tools.naming import (
-    apply_name_overrides,
+    canonical_recipient_names,
     normalize_crs_regions,
-    normalize_unspecified_names,
 )
 from src.data.config import (
+    ALL_BILATERAL_DONORS,
     BILATERAL_DONORS,
     CRS_NON_REGIONS,
     CRS_REGION_ROLLUPS,
@@ -48,8 +48,6 @@ from src.data.config import (
     TOTAL_ODA,
     UNALLOCATED_BY_INCOME,
     UNITS_PER_MILLION,
-    UNSPECIFIED_RECIPIENT_CODE,
-    UNSPECIFIED_RECIPIENT_NAME,
     WORLD_BANK_INCOME_GROUPS,
     WORLD_BANK_NOT_CLASSIFIED,
     logger,
@@ -449,10 +447,6 @@ def get_crs_recipient_classifications(
     if missing:
         raise ValueError(f"CRS did not return required columns: {missing}")
 
-    raw["recipient_name"] = normalize_unspecified_names(raw["recipient_name"])
-    raw = apply_name_overrides(
-        raw, {UNSPECIFIED_RECIPIENT_CODE: UNSPECIFIED_RECIPIENT_NAME}, "recipient"
-    )
     raw[CRS_REGION_COL] = normalize_crs_regions(raw[CRS_REGION_COL])
 
     attributes = ["recipient_name", _CRS_ISO3_COL, CRS_REGION_COL]
@@ -465,7 +459,8 @@ def get_crs_recipient_classifications(
     # and dropping duplicate rows can pick one of those and lose a value the data does have.
     # Where transactions genuinely disagree, the majority wins, so the result does not depend
     # on row order.
-    classified = grouped.agg(_modal_value).reset_index()
+    # Named after the reduction, which leaves one row per recipient-year to rename.
+    classified = canonical_recipient_names(grouped.agg(_modal_value).reset_index())
 
     conflicts = grouped.nunique(dropna=True)
     for col in attributes:
@@ -642,6 +637,20 @@ def build_crs_recipient_group_totals(
     ]
 
     return [overall, income, regions, continents, *lists]
+
+
+def with_crs_recipient_group_totals(
+    df: pd.DataFrame, group_cols: list[str], ldc_members: dict
+) -> pd.DataFrame:
+    """Append every recipient aggregate from build_crs_recipient_group_totals to a frame.
+
+    Run before the donor groups are summed, so every donor aggregate covers every recipient
+    group as well as every country.
+    """
+    return pd.concat(
+        [df, *build_crs_recipient_group_totals(df, group_cols, ldc_members)],
+        ignore_index=True,
+    )
 
 
 def build_donor_group_totals(
@@ -950,6 +959,28 @@ def add_share_of_total_oda(df: pd.DataFrame) -> pd.DataFrame:
     """
     return add_share_of_reference_total(
         df, "indicator_name", TOTAL_ODA, ["year", "donor_name"], "pct_of_total_oda"
+    )
+
+
+def add_donor_and_recipient_shares(df: pd.DataFrame) -> pd.DataFrame:
+    """Add each row's share of its donor's and its recipient's total.
+
+    pct_total_donor is over the donor's aid to ODA eligible countries, and pct_total_recipient
+    over the recipient's aid from all bilateral donors.
+    """
+    df = add_share_of_reference_total(
+        df,
+        filter_col="recipient_name",
+        filter_val=ODA_ELIGIBLE,
+        merge_cols=["year", "donor_name"],
+        pct_col="pct_total_donor",
+    )
+    return add_share_of_reference_total(
+        df,
+        filter_col="donor_name",
+        filter_val=ALL_BILATERAL_DONORS,
+        merge_cols=["year", "recipient_name"],
+        pct_col="pct_total_recipient",
     )
 
 

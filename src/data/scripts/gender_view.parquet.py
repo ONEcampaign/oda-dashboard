@@ -26,13 +26,13 @@ from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
     add_recipient_classifications,
     add_share_of_group_total,
-    build_crs_recipient_group_totals,
     build_donor_group_totals,
     convert_values_to_units,
     drop_empty_values,
     get_crs_recipient_classifications,
     get_group_total,
     widen_currency_price,
+    with_crs_recipient_group_totals,
 )
 from src.data.config import (
     BASE_TIME,
@@ -135,15 +135,7 @@ def combined_gender() -> pd.DataFrame:
     # Recipient groups must exist before the donor groups are summed, so that every donor
     # aggregate covers every recipient group as well as every country.
     logger.info("Building recipient and donor group totals...")
-    gender = pd.concat(
-        [
-            gender,
-            *build_crs_recipient_group_totals(
-                gender, RECIPIENT_GROUP_COLS, ldc_members
-            ),
-        ],
-        ignore_index=True,
-    )
+    gender = with_crs_recipient_group_totals(gender, RECIPIENT_GROUP_COLS, ldc_members)
     gender = pd.concat(
         [
             gender,

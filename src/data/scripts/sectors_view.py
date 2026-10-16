@@ -34,17 +34,16 @@ from src.data.analysis_tools.outputs import (
 from src.data.analysis_tools.transformations import (
     RECIPIENT_CLASSIFICATION_COLS,
     add_currencies_and_prices,
+    add_donor_and_recipient_shares,
     add_recipient_classifications,
-    add_share_of_reference_total,
-    build_crs_recipient_group_totals,
     build_donor_group_totals,
     convert_values_to_units,
     drop_empty_values,
     get_crs_recipient_classifications,
     widen_currency_price,
+    with_crs_recipient_group_totals,
 )
 from src.data.config import (
-    ALL_BILATERAL_DONORS,
     BILATERAL,
     CRS_FLOW_CATEGORIES,
     CRS_RECIPIENTS,
@@ -57,7 +56,6 @@ from src.data.config import (
     EUI_CHANNEL_CODES,
     IMPUTED_MULTILATERAL,
     LABEL_COLUMNS,
-    ODA_ELIGIBLE,
     PROVIDERS,
     SECTORS_TIME,
     UNALLOCATED_SUB_SECTOR,
@@ -188,49 +186,8 @@ def get_bilateral_by_sector() -> pd.DataFrame:
     return sectors_bi[sectors_bi["value"] != 0]
 
 
-def get_imputed_multi_by_sector() -> pd.DataFrame:
-    """Read imputed multilateral spending by sub-sector."""
-    raw_multi = _assign_sub_sector(read_imputed_multilateral(YEARS, list(PROVIDERS)))
-
-    sectors_multi = (
-        raw_multi.groupby(
-            ["year", "donor_code", "recipient_code", "sub_sector"],
-            dropna=False,
-            observed=True,
-        )["value"]
-        .sum()
-        .reset_index()
-        .assign(indicator_name=IMPUTED_MULTILATERAL)
-    )
-
-    return sectors_multi[sectors_multi["value"] != 0]
-
-
-def get_eu27_eui_imputed() -> pd.DataFrame:
-    """Imputed multilateral for the EU27 + institutions bloc, free of double counting.
-
-    EU member states' core contributions reach the EU institutions through the channels in
-    EUI_CHANNEL_CODES. Left in, those rows would be counted once as each member's imputed
-    multilateral and again as the institutions' own spending, so they are dropped. The
-    institutions' own imputed multilateral is kept in full: their contributions to non-EU
-    multilaterals do not overlap with their bilateral spending.
-
-    Read separately rather than by keeping channel_code in the main frame — channel adds a
-    dimension to every row, which the eight-fold currency expansion would then multiply.
-    """
-    raw = read_imputed_multilateral(YEARS, list(EU_TOTAL))
-
-    routed_via_eui = raw["donor_code"].isin(EU_COUNTRIES) & raw["channel_code"].isin(
-        EUI_CHANNEL_CODES
-    )
-    logger.info(
-        "EU27 & EU Institutions: excluding %s USD million of member contributions routed "
-        "through EU institution channels, to avoid double counting",
-        f"{raw.loc[routed_via_eui, 'value'].sum():,.1f}",
-    )
-    raw = raw[~routed_via_eui]
-    raw = _assign_sub_sector(raw)
-
+def _sum_imputed_by_sector(raw: pd.DataFrame) -> pd.DataFrame:
+    """Sum imputed multilateral rows to donor, recipient and sub-sector."""
     imputed = (
         raw.groupby(
             ["year", "donor_code", "recipient_code", "sub_sector"],
@@ -241,8 +198,67 @@ def get_eu27_eui_imputed() -> pd.DataFrame:
         .reset_index()
         .assign(indicator_name=IMPUTED_MULTILATERAL)
     )
-
     return imputed[imputed["value"] != 0]
+
+
+def get_eu27_eui_imputed(raw: pd.DataFrame) -> pd.DataFrame:
+    """Imputed multilateral for the EU27 + institutions bloc, free of double counting.
+
+    EU member states' core contributions reach the EU institutions through the channels in
+    EUI_CHANNEL_CODES. Left in, those rows would be counted once as each member's imputed
+    multilateral and again as the institutions' own spending, so they are dropped. The
+    institutions' own imputed multilateral is kept in full: their contributions to non-EU
+    multilaterals do not overlap with their bilateral spending.
+
+    Derived from the raw read, before channel_code is summed away. Channel adds a dimension
+    to every row, which the eight-fold currency expansion would then multiply.
+
+    Args:
+        raw: Imputed multilateral rows for every provider, with channel_code and sub_sector.
+
+    Returns:
+        The bloc's members and institutions, summed like the main imputed frame.
+    """
+    routed_via_eui = raw["donor_code"].isin(EU_COUNTRIES) & raw["channel_code"].isin(
+        EUI_CHANNEL_CODES
+    )
+    logger.info(
+        "EU27 & EU Institutions: excluding %s USD million of member contributions routed "
+        "through EU institution channels, to avoid double counting",
+        f"{raw.loc[routed_via_eui, 'value'].sum():,.1f}",
+    )
+    return _sum_imputed_by_sector(
+        raw[raw["donor_code"].isin(EU_TOTAL) & ~routed_via_eui]
+    )
+
+
+def _name_donors(df: pd.DataFrame, donor_names: pd.Series, label: str) -> pd.DataFrame:
+    """Name imputed donors from the CRS side, dropping any the CRS does not have.
+
+    The imputed frame has no donor_name of its own, so both halves are identified the same
+    way.
+    """
+    df = df.assign(donor_name=df["donor_code"].map(donor_names))
+    unnamed = df["donor_name"].isna()
+    if unnamed.any():
+        logger.warning(
+            "%s for providers absent from the CRS side, so unnamed, is dropped from the "
+            "view: %s USD million, donor codes %s",
+            label,
+            f"{df.loc[unnamed, 'value'].sum():,.1f}",
+            sorted(df.loc[unnamed, "donor_code"].unique()),
+        )
+    return df[~unnamed]
+
+
+def _convert(df: pd.DataFrame, label: str) -> pd.DataFrame:
+    """Add currencies and prices, then drop the rows left empty."""
+    # Categories before the eight-fold currency expansion: as objects these label columns cost
+    # ~8 bytes per row in pointers alone and make the pivot's MultiIndex far more expensive.
+    converted = add_currencies_and_prices(
+        _as_categoricals(df), base_year=SECTORS_TIME["base"]
+    )
+    return drop_empty_values(converted, label)
 
 
 def build_eu27_eui_total(
@@ -273,6 +289,25 @@ def build_eu27_eui_total(
     )
 
 
+def _add_sector_names(sectors: pd.DataFrame) -> pd.DataFrame:
+    """Name each sub-sector's broad sector, and drop the codes the totals no longer need."""
+    sectors = sectors.rename(columns={"sub_sector": "sub_sector_name"})
+    sectors["sector_name"] = (
+        sectors["sub_sector_name"]
+        .astype("object")
+        .map(sector_lists.get_broad_sector_groups())
+        .fillna(UNALLOCATED_SUB_SECTOR)
+    )
+
+    # The aggregates introduced new group names, which turns the concatenated label columns
+    # back into objects, so the categories are re-applied before the pivot.
+    sectors = sectors.drop(
+        columns=["donor_code", "recipient_code", *RECIPIENT_CLASSIFICATION_COLS],
+        errors="ignore",
+    )
+    return _as_categoricals(sectors)
+
+
 def combined_sectors() -> pd.DataFrame:
     """Assemble the sectors view from its parts.
 
@@ -282,74 +317,50 @@ def combined_sectors() -> pd.DataFrame:
     """
     logger.info("Fetching bilateral data...")
     sectors_bi = get_bilateral_by_sector()
-
     classified, ldc_members = get_crs_recipient_classifications(
         YEARS, list(CRS_RECIPIENTS)
     )
 
     logger.info("Fetching imputed multilateral data...")
-    sectors_multi = get_imputed_multi_by_sector()
-    eu_imputed = get_eu27_eui_imputed()
-
-    # The imputed frame has no donor_name of its own; take it from the CRS side so both
-    # halves are identified the same way.
+    raw_multi = _assign_sub_sector(read_imputed_multilateral(YEARS, list(PROVIDERS)))
     donor_names = (
         sectors_bi[["donor_code", "donor_name"]]
         .drop_duplicates("donor_code")
         .set_index("donor_code")["donor_name"]
     )
-    sectors_multi = sectors_multi.assign(
-        donor_name=lambda d: d["donor_code"].map(donor_names)
+    sectors_multi = _name_donors(
+        _sum_imputed_by_sector(raw_multi), donor_names, "Imputed multilateral"
     )
-    eu_imputed = eu_imputed.assign(
-        donor_name=lambda d: d["donor_code"].map(donor_names)
+    eu_imputed = _name_donors(
+        get_eu27_eui_imputed(raw_multi), donor_names, "EU27 & EU Institutions imputed"
     )
-    unnamed = sectors_multi["donor_name"].isna()
-    if unnamed.any():
-        logger.warning(
-            "Imputed multilateral for providers absent from the CRS side, so unnamed, is "
-            "dropped from the view: %s USD million, donor codes %s",
-            f"{sectors_multi.loc[unnamed, 'value'].sum():,.1f}",
-            sorted(sectors_multi.loc[unnamed, "donor_code"].unique()),
-        )
-        sectors_multi = sectors_multi[~unnamed]
+    del raw_multi
 
     # recipient_name comes from the shared classification table, so both halves are
     # identified the same way without either needing to carry it.
     logger.info("Attaching recipient classifications...")
-    sectors_bi = add_recipient_classifications(sectors_bi, classified, "bilateral")
-    sectors_multi = add_recipient_classifications(
-        sectors_multi, classified, "imputed multilateral"
+    sectors = pd.concat(
+        [
+            add_recipient_classifications(sectors_bi, classified, "bilateral"),
+            add_recipient_classifications(
+                sectors_multi, classified, "imputed multilateral"
+            ),
+        ],
+        ignore_index=True,
     )
     eu_imputed = add_recipient_classifications(
         eu_imputed, classified, "EU27 & EU Institutions imputed"
     )
-
-    sectors = pd.concat([sectors_bi, sectors_multi], ignore_index=True)
-    sectors = sectors[sectors["value"] != 0]
-
-    # Categories before the eight-fold currency expansion: as objects these label columns cost
-    # ~8 bytes per row in pointers alone and make the pivot's MultiIndex far more expensive.
-    sectors = _as_categoricals(sectors)
+    del sectors_bi, sectors_multi, classified
 
     logger.info("Adding currencies and prices...")
-    sectors = add_currencies_and_prices(sectors, base_year=SECTORS_TIME["base"])
-    sectors = drop_empty_values(sectors, "sectors")
+    sectors = _convert(sectors, "sectors")
     # Converted separately, since it is a differently corrected view of the same spending.
-    eu_imputed = _as_categoricals(
-        add_currencies_and_prices(eu_imputed, base_year=SECTORS_TIME["base"])
-    )
-    eu_imputed = drop_empty_values(eu_imputed, "EU27 & EU Institutions imputed")
+    eu_imputed = _convert(eu_imputed, "EU27 & EU Institutions imputed")
 
     logger.info("Building donor and recipient group totals...")
-    sectors = pd.concat(
-        [
-            sectors,
-            *build_crs_recipient_group_totals(
-                sectors, RECIPIENT_GROUP_COLS, ldc_members
-            ),
-        ],
-        ignore_index=True,
+    sectors = with_crs_recipient_group_totals(
+        sectors, RECIPIENT_GROUP_COLS, ldc_members
     )
     sectors = pd.concat(
         [
@@ -362,14 +373,8 @@ def combined_sectors() -> pd.DataFrame:
             # income groups or the overall total.
             build_eu27_eui_total(
                 sectors,
-                pd.concat(
-                    [
-                        eu_imputed,
-                        *build_crs_recipient_group_totals(
-                            eu_imputed, RECIPIENT_GROUP_COLS, ldc_members
-                        ),
-                    ],
-                    ignore_index=True,
+                with_crs_recipient_group_totals(
+                    eu_imputed, RECIPIENT_GROUP_COLS, ldc_members
                 ),
                 DONOR_GROUP_COLS,
             ),
@@ -379,22 +384,7 @@ def combined_sectors() -> pd.DataFrame:
     del eu_imputed
 
     logger.info("Adding sector names...")
-    sectors = sectors.rename(columns={"sub_sector": "sub_sector_name"})
-    sectors["sector_name"] = (
-        sectors["sub_sector_name"]
-        .astype("object")
-        .map(sector_lists.get_broad_sector_groups())
-        .fillna(UNALLOCATED_SUB_SECTOR)
-    )
-
-    # Codes and classifications have done their work in the group totals above, and the
-    # aggregates introduced new group names, which turns the concatenated label columns back
-    # into objects. Drop what is spent and re-apply the categories before the pivot.
-    sectors = sectors.drop(
-        columns=["donor_code", "recipient_code", *RECIPIENT_CLASSIFICATION_COLS],
-        errors="ignore",
-    )
-    sectors = _as_categoricals(sectors)
+    sectors = _add_sector_names(sectors)
 
     logger.info("Pivoting to wide format...")
     index_cols = (
@@ -408,24 +398,9 @@ def combined_sectors() -> pd.DataFrame:
     sectors = widen_currency_price(df=sectors, index_cols=index_cols)
 
     logger.info("Adding shares...")
-    sectors = add_share_of_reference_total(
-        sectors,
-        filter_col="recipient_name",
-        filter_val=ODA_ELIGIBLE,
-        merge_cols=["year", "donor_name"],
-        pct_col="pct_total_donor",
-    )
-    sectors = add_share_of_reference_total(
-        sectors,
-        filter_col="donor_name",
-        filter_val=ALL_BILATERAL_DONORS,
-        merge_cols=["year", "recipient_name"],
-        pct_col="pct_total_recipient",
-    )
+    sectors = add_donor_and_recipient_shares(sectors)
 
-    sectors = _add_partition_slugs(sectors)
-
-    return convert_values_to_units(sectors)
+    return convert_values_to_units(_add_partition_slugs(sectors))
 
 
 def _add_partition_slugs(sectors: pd.DataFrame) -> pd.DataFrame:

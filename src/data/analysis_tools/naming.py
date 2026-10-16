@@ -14,6 +14,8 @@ import unicodedata
 
 import pandas as pd
 
+from src.data.config import RECIPIENT_NAME_OVERRIDES
+
 
 def apply_name_overrides(df: pd.DataFrame, mapping: dict, column: str) -> pd.DataFrame:
     """Replace the name of any row whose code appears in a config mapping.
@@ -85,6 +87,22 @@ def normalize_unspecified_names(names: pd.Series) -> pd.Series:
         .str.replace(r",?\s+regional$", ", unspecified", regex=True)
         .str.replace(r"(?<!,)\s+unspecified$", ", unspecified", regex=True)
     )
+
+
+def canonical_recipient_names(df: pd.DataFrame) -> pd.DataFrame:
+    """Apply RECIPIENT_NAME_OVERRIDES, then normalise the unspecified labels.
+
+    Every view names recipients through this, so a code-keyed rename reaches them all.
+
+    Args:
+        df: Frame with recipient_code and recipient_name.
+
+    Returns:
+        The frame with canonical recipient names.
+    """
+    df = apply_name_overrides(df, RECIPIENT_NAME_OVERRIDES, "recipient")
+    df["recipient_name"] = normalize_unspecified_names(df["recipient_name"])
+    return df
 
 
 def normalize_crs_regions(regions: pd.Series) -> pd.Series:

@@ -57,7 +57,6 @@ class PATHS:
 
     # oda_data and pydeflate share one cache directory; see outputs.set_cache_dir.
     DATA = SRC / "data" / "cache"
-    PYDEFLATE = DATA
 
 
 # ---------------------------------------------------------------------------------------
@@ -359,16 +358,16 @@ LDC_LABEL: str = RECIPIENT_NAME_OVERRIDES[10_016]
 # Continent totals, rolled up from CRS regions. The regions themselves are read from the
 # data; this only records which regions make up each continent. Each list includes the
 # continent-level region value the CRS uses for aid it records against a whole continent
-# (e.g. "Africa, regional"), so a continent total covers its sub-regions plus that.
-# CRS region values that are not regions. "Regional and Unspecified" holds only code 9998, so a
-# region group for it would repeat that recipient value for value.
-CRS_NON_REGIONS: frozenset[str] = frozenset({"Regional and Unspecified"})
-
+# ("Africa, regional", read as "Africa"), so a continent total covers its sub-regions plus that.
 CRS_REGION_ROLLUPS: dict[str, list[str]] = {
     "Africa": ["North of Sahara", "South of Sahara", "Africa"],
     "Asia": ["South & Central Asia", "Far East Asia", "Middle East", "Asia"],
     "America": ["Caribbean & Central America", "South America", "America"],
 }
+
+# CRS region values that are not regions. "Regional and Unspecified" holds only code 9998, so a
+# region group for it would repeat that recipient value for value.
+CRS_NON_REGIONS: frozenset[str] = frozenset({"Regional and Unspecified"})
 
 # Sentinels for recipients the classification table never covers. Distinct from
 # UNALLOCATED_BY_INCOME, which is a real category for regional and unspecified recipients.
