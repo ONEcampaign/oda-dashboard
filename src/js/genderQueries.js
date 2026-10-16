@@ -61,10 +61,10 @@ export function genderQueries(
         donor: row.donor,
         recipient: row.recipient,
         indicator: row.indicator,
-        value: row.pct_of_total * 100,
-        unit: "% of all bilateral ODA",
+        value: row.pct_of_total != null ? row.pct_of_total * 100 : null,
+        unit: "% of bilateral allocable aid",
         source: "OECD CRS"
-    })), timeRange);
+    })), timeRange, null);
 
     // Return raw rows for table transformation
     return {absolute, relative, rawData: rows};
@@ -79,10 +79,10 @@ export function transformTableData(rows, unit, currency, prices) {
         indicator: row.indicator,
         value: unit === "value"
             ? row.value
-            : row.pct_of_total * 100,
+            : row.pct_of_total != null ? row.pct_of_total * 100 : null,
         unit: unit === "value"
             ? `${currency} ${prices} million`
-            : "% of all bilateral ODA",
+            : "% of bilateral allocable aid",
         source: "OECD CRS"
     }));
 }
@@ -101,14 +101,6 @@ function genderCacheKey({donor, recipient, indicator, currency, prices, timeRang
         prices,
         timeRange: timeRangeKey
     });
-}
-
-function ratioAsPct(numerator, denominator) {
-    if (numerator == null || denominator == null || denominator === 0) {
-        return null;
-    }
-
-    return (numerator / denominator) * 100;
 }
 
 function fetchGenderSeries(

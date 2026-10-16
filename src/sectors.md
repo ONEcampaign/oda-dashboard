@@ -264,19 +264,19 @@ function App() {
 
     const pricesNote = `${prices}${prices === "constant" ? ` ${timeRangeOptions.base}` : ""}`
     const sourceText = "OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases."
-    const chartNote = `ODA values in ${pricesNote} ${currencyLabel}.`
+    const chartNote = `ODA gross disbursements in ${pricesNote} ${currencyLabel}.`
 
     const treemapFilename = formatString(`${donorName} ${recipientName} by sector`, {fileMode: true})
     const columnFilename = formatString(`${donorName} ${recipientName} ${sector} ${effectiveBreakdown ? "breakdown" : "total"}`, {fileMode: true})
     const tableFilename = formatString(`${donorName} ${recipientName} ${sector} ${effectiveBreakdown ? "breakdown" : ""} ${unit}`, {fileMode: true})
 
     const tableNote = React.useMemo(() => {
-        if (unit === "value") return `ODA values in ${pricesNote} ${currencyLabel}.`
+        if (unit === "value") return `ODA gross disbursements in ${pricesNote} ${currencyLabel}.`
         if (unit === "pct_sector") return `ODA values as a share of ${sector} ODA received by ${recipientName} from ${donorName}.`
         if (unit === "pct_total_donor") return `ODA values as a share of all aid provided by ${donorName} to developing countries.`
         if (unit === "pct_total_recipient") return `ODA values as a share of all aid received by ${recipientName} from bilateral donors.`
         return `ODA values as a share of total aid received by ${recipientName} from ${donorName}.`
-    }, [unit, currencyLabel, sector, recipientName, donorName])
+    }, [unit, pricesNote, currencyLabel, sector, recipientName, donorName])
 
     return (
         <div className="mx-auto space-y-12 px-4 py-10 sm:px-8 sm:py-16 lg:px-12 lg:py-20">

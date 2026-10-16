@@ -77,9 +77,13 @@ function App() {
       const byYear = new Map()
       for (const row of tableData) {
         if (!byYear.has(row.year)) {
-          byYear.set(row.year, { ...row, indicator: "Bilateral + imputed multilateral ODA", value: 0 })
+          // Start null so a year where every value is missing stays missing, not 0
+          byYear.set(row.year, { ...row, indicator: "Bilateral + imputed multilateral ODA", value: null })
         }
-        byYear.get(row.year).value += row.value ?? 0
+        if (row.value != null) {
+          const entry = byYear.get(row.year)
+          entry.value = (entry.value ?? 0) + row.value
+        }
       }
       return [...byYear.values()]
     }
@@ -146,7 +150,7 @@ function App() {
   const tableFilename = formatString(`${donorName} ${recipientName} ${unit}`, {fileMode: true})
 
   const tableNote = unit === "value"
-    ? `ODA values in ${pricesNote} ${currencyLabel}.`
+    ? `ODA net disbursements in ${pricesNote} ${currencyLabel}.`
     : unit === "pct_total_recipient"
       ? `ODA values as a share of all aid from bilateral donors to ${recipientName}.`
       : `ODA values as a share of all aid provided by ${donorName} to developing countries.`
@@ -214,7 +218,7 @@ function App() {
                 subtitle={indicatorSubtitle}
                 subtitleIsHTML={true}
                 source="OECD DAC2A table."
-                note={`ODA values in ${pricesNote} ${currencyLabel}.`}
+                note={`ODA net disbursements in ${pricesNote} ${currencyLabel}.`}
                 empty={absoluteData.length === 0}
                 emptyMessage="No data available"
                 fileName={columnFilename}
@@ -245,7 +249,7 @@ function App() {
                   ? `ODA values as a share of all aid from bilateral donors to ${recipientName}.`
                   : `ODA values as a share of all aid provided by ${donorName} to developing countries.`
                 }
-                empty={relativeData.length === 0}
+                empty={relativeData.every(d => d.value == null)}
                 emptyMessage="No data available"
                 fileName={areaFilename}
                 data={relativeData}

@@ -468,11 +468,11 @@ function tableUnitLabel(unit, currency, prices, selectedSector) {
     }
 
     if (unit === "pct_total_donor") {
-        return "% of total ODA provided";
+        return "% of provided aid";
     }
 
     if (unit === "pct_total_recipient") {
-        return "% of total ODA received";
+        return "% of received aid";
     }
 
     return `${currency} ${prices} million`;
@@ -484,6 +484,12 @@ function ratioAsPct(numerator, denominator) {
     }
 
     return (numerator / denominator) * 100;
+}
+
+// Sum that ignores nulls but stays null until a real number is added.
+function addNullable(total, value) {
+    if (value == null) return total;
+    return (total ?? 0) + value;
 }
 
 // Export transformation functions for reactive UI updates
@@ -558,13 +564,14 @@ export function transformTableData(baseData, unit, breakdown) {
             indicator: row.indicator,
             convertedValue: 0,
             originalValue: 0,
-            pctTotalDonor: 0,
-            pctTotalRecipient: 0
+            // Shares start null so a year with no reported share stays missing, not 0%
+            pctTotalDonor: null,
+            pctTotalRecipient: null
         };
         entry.convertedValue += row.converted_value ?? 0;
         entry.originalValue += row.original_value ?? 0;
-        entry.pctTotalDonor += row.pct_total_donor ?? 0;
-        entry.pctTotalRecipient += row.pct_total_recipient ?? 0;
+        entry.pctTotalDonor = addNullable(entry.pctTotalDonor, row.pct_total_donor);
+        entry.pctTotalRecipient = addNullable(entry.pctTotalRecipient, row.pct_total_recipient);
         aggregatedByYear.set(row.year, entry);
     }
 

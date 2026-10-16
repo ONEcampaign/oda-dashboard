@@ -107,7 +107,7 @@ export function columnChart(data, currency, mode, width, {breakdown = false, sca
                         order: stackOrder,
                         format: {
                             x: d => d.getFullYear(),
-                            y: d => d.toFixed(1),
+                            y: d => d != null ? d.toFixed(1) : "—",
                             fill: true,
                         },
                         lineHeight: 1.25,

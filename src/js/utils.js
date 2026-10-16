@@ -7,16 +7,17 @@ export function plotHeight(width) {
 
 /**
  * For stacked area/bar charts, missing year-indicator rows cause visual distortion.
- * This fills any gap in (year × indicator) with value: 0, leaving all other fields
+ * This fills any gap in (year × indicator) with `fillValue`, leaving all other fields
  * copied from the first row (donor, recipient, unit, source, etc.).
  * Only indicators that already appear in the data are considered — it never invents
  * a series that has no data at all.
  *
  * @param {Array} rows - Already-mapped plot rows with at least {year, indicator, value}
  * @param {[number, number]} timeRange - [startYear, endYear] inclusive
- * @returns {Array} rows with zero-filled gaps, sorted by year then indicator
+ * @param {number|null} [fillValue=0] - value for gaps; pass null for shares, where a gap is missing data, not 0%
+ * @returns {Array} rows with gaps filled, sorted by year then indicator
  */
-export function fillMissingYearIndicators(rows, timeRange) {
+export function fillMissingYearIndicators(rows, timeRange, fillValue = 0) {
     if (rows.length === 0) return rows;
 
     const indicators = [...new Set(rows.map(r => r.indicator))];
@@ -27,7 +28,7 @@ export function fillMissingYearIndicators(rows, timeRange) {
     for (let year = timeRange[0]; year <= timeRange[1]; year++) {
         for (const indicator of indicators) {
             if (!existing.has(`${year}|${indicator}`)) {
-                extras.push({...template, year, indicator, value: 0});
+                extras.push({...template, year, indicator, value: fillValue});
             }
         }
     }

@@ -38,7 +38,7 @@ export function areaChart(data, mode, width,
     const customFormat = {
         stroke: true,
         x: (d) => formatYear(d),
-        custom: (d) => `${d.toFixed(2)}%`,
+        custom: (d) => d != null ? `${d.toFixed(2)}%` : "—",
         y: false
     }
 

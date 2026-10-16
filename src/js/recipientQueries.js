@@ -40,10 +40,10 @@ export function recipientsQueries(donor, recipient, indicator, currency, prices,
         donor: row.donor,
         recipient: row.recipient,
         indicator: row.indicator,
-        value: row.pct_total_recipient * 100,
-        unit: "% of total ODA",
+        value: row.pct_total_recipient != null ? row.pct_total_recipient * 100 : null,
+        unit: "% of received aid",
         source: "OECD DAC2A"
-    })), timeRange);
+    })), timeRange, null);
 
     const relativeDonor = fillMissingYearIndicators(rows.map((row) => ({
         year: row.year,
@@ -51,9 +51,9 @@ export function recipientsQueries(donor, recipient, indicator, currency, prices,
         recipient: row.recipient,
         indicator: row.indicator,
         value: row.pct_total_donor != null ? row.pct_total_donor * 100 : null,
-        unit: "% of total ODA provided",
+        unit: "% of provided aid",
         source: "OECD DAC2A"
-    })), timeRange);
+    })), timeRange, null);
 
     return {absolute, relative, relativeDonor, rawData: rows};
 }
