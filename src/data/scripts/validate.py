@@ -2,6 +2,8 @@
 Entry point for data validation.
 
 Usage:
+    PYTHONPATH=. uv run python src/data/scripts/validate.py <release> [--no-seek]
+
     from src.data.scripts.validate import run_validation
 
     report = run_validation(release="dec_2024")
@@ -9,6 +11,8 @@ Usage:
     report = run_validation(release="dec_2024", save_report=False)
     report = run_validation(release="dec_2024", include_seek=False)  # Skip SEEK validation
 """
+
+import argparse
 
 from validation import validate_all, save_report
 from src.data.config import logger
@@ -88,8 +92,13 @@ def run_validation(
 
 
 if __name__ == "__main__":
-    # Default execution for CI - validates current release
-    # CI should call this with appropriate release name
-    result = run_validation(release="january_2026")
+    parser = argparse.ArgumentParser(description="Validate the built dashboard data.")
+    parser.add_argument("release", help='Name to record this release under, e.g. "2026_10"')
+    parser.add_argument(
+        "--no-seek", action="store_true", help="Skip the SEEK sector validation"
+    )
+    args = parser.parse_args()
+
+    result = run_validation(release=args.release, include_seek=not args.no_seek)
     if not result["passed"]:
         raise SystemExit(1)

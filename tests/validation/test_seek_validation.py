@@ -302,16 +302,15 @@ class TestSeekManifest:
         # Should get april_2025 (most recent by timestamp)
         assert previous["latest_year"] == 2024
 
-    def test_get_previous_release_falls_back_to_name_sort(self):
-        # When no computed_at, falls back to release name sorting
+    def test_get_previous_release_falls_back_to_recording_order(self):
+        # Without computed_at, the release added last is the most recent, whatever its name
         manifest = {
             "releases": {
-                "2025-04": {"latest_year": 2024},
-                "2024-12": {"latest_year": 2023},
+                "may_2025": {"latest_year": 2023},
+                "january_2026": {"latest_year": 2024},
             }
         }
         previous = get_previous_seek_release(manifest)
-        # Should get 2025-04 (alphabetically last when sorted in reverse)
         assert previous["latest_year"] == 2024
 
     def test_get_previous_release_empty_manifest(self):

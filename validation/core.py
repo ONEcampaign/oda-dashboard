@@ -142,18 +142,11 @@ def validate_dataset(
 
 
 def _get_previous_release(manifest: dict, current_release: str) -> dict:
-    """Get the most recent release before the current one."""
+    """Get the most recently recorded release other than the current one."""
     releases = manifest.get("releases", {})
-    if not releases:
-        return {}
-
-    # Get releases sorted by name (assuming naming like dec_2024, jun_2024)
-    release_names = sorted(releases.keys(), reverse=True)
-
-    for name in release_names:
+    for name in manifest_module.releases_by_recording_order(releases):
         if name != current_release:
             return releases[name]
-
     return {}
 
 

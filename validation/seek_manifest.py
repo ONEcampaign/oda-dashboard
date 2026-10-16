@@ -10,7 +10,11 @@ from validation.config import (
     SEEK_HEALTH_PURPOSE_CODES,
     SEEK_AGRICULTURE_PURPOSE_CODES,
 )
-from validation.manifest import load_manifest, save_manifest
+from validation.manifest import (
+    load_manifest,
+    releases_by_recording_order,
+    save_manifest,
+)
 from validation.seek_data import compute_sector_aggregates
 
 
@@ -88,20 +92,8 @@ def get_previous_seek_release(manifest: dict) -> dict:
         Most recent release data dict, or empty dict if none
     """
     releases = manifest.get("releases", {})
-    if not releases:
-        return {}
-
-    # Sort by computed_at timestamp (most recent first)
-    # Fall back to release name if no timestamp
-    def sort_key(name):
-        release = releases[name]
-        return release.get("computed_at", name)
-
-    release_names = sorted(releases.keys(), key=sort_key, reverse=True)
-    if release_names:
-        return releases[release_names[0]]
-
-    return {}
+    ordered = releases_by_recording_order(releases)
+    return releases[ordered[0]] if ordered else {}
 
 
 def generate_release_name() -> str:

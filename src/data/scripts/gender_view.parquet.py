@@ -17,8 +17,10 @@ import pandas as pd
 
 from oda_data import bilateral_policy_marker
 
+from src.data.analysis_tools.gender import derive_not_screened
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
+    drop_empty_values,
     add_recipient_classifications,
     add_share_of_group_total,
     build_donor_group_totals,
@@ -32,7 +34,6 @@ from src.data.config import (
     logger,
     BASE_TIME,
     GENDER_INDICATORS,
-    GENDER_RESIDUAL_TOLERANCE,
     NOT_SCREENED_SCORE,
     TOTAL_ALLOCABLE_SCORE,
     PROVIDERS,
@@ -103,28 +104,8 @@ def get_gender_markers() -> pd.DataFrame:
         for score in GENDER_INDICATORS
         if score != NOT_SCREENED_SCORE
     }
-    allocable = read_marker_score(TOTAL_ALLOCABLE_SCORE)
-
-    screened = pd.concat(scores.values(), axis=1).sum(axis=1)
-    if not screened.index.difference(allocable.index).empty:
-        raise ValueError("Screened gender marker rows fall outside the allocable total")
-
-    # Can be negative: unscreened rows include negative disbursements (corrections).
-    not_screened = allocable.sub(screened, fill_value=0)
-    scores[NOT_SCREENED_SCORE] = not_screened.where(
-        not_screened.abs() > GENDER_RESIDUAL_TOLERANCE, 0
-    )
-
-    gender = pd.concat(
-        [
-            values.rename("value")
-            .reset_index()
-            .assign(indicator_name=GENDER_INDICATORS[score])
-            for score, values in scores.items()
-        ],
-        ignore_index=True,
-    )
-
+    gender = derive_not_screened(scores, read_marker_score(TOTAL_ALLOCABLE_SCORE))
+    # Zeros are dropped here, before the currency conversion multiplies the rows by eight.
     return gender[gender["value"] != 0]
 
 
@@ -144,7 +125,7 @@ def combined_gender() -> pd.DataFrame:
 
     logger.info("Adding currencies and prices...")
     gender = add_currencies_and_prices(gender, base_year=BASE_TIME["base"])
-    gender = gender[gender["value"].notna() & (gender["value"] != 0)]
+    gender = drop_empty_values(gender, "gender")
 
     # Recipient groups must exist before the donor groups are summed, so that every donor
     # aggregate covers every recipient group as well as every country.
