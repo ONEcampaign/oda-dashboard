@@ -17,37 +17,37 @@ import pandas as pd
 from oda_data import OECDClient
 from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_indicator
 
+from src.data.analysis_tools.naming import (
+    map_indicator_names,
+)
+from src.data.analysis_tools.outputs import (
+    generate_view_options,
+    parquet_to_stdout,
+    set_cache_dir,
+)
 from src.data.analysis_tools.recipients import (
     aggregate_recipient_names,
     canonical_recipients,
 )
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
-    drop_empty_values,
     add_share_of_reference_total,
     build_donor_group_totals,
     convert_values_to_units,
+    drop_empty_values,
     get_group_total,
     widen_currency_price,
 )
 from src.data.config import (
-    logger,
     BASE_TIME,
-    RECIPIENTS_INDICATORS,
-    PROVIDERS,
-    EU_TOTAL,
-    SAHEL_RECIPIENTS,
-    FRANCE_PRIORITY_RECIPIENTS,
     DONORS_ORDER,
+    EU_TOTAL,
+    FRANCE_PRIORITY_RECIPIENTS,
+    PROVIDERS,
+    RECIPIENTS_INDICATORS,
     RECIPIENTS_ORDER,
-)
-from src.data.analysis_tools.outputs import (
-    set_cache_dir,
-    parquet_to_stdout,
-    generate_view_options,
-)
-from src.data.analysis_tools.naming import (
-    map_indicator_names,
+    SAHEL_RECIPIENTS,
+    logger,
 )
 
 set_cache_dir(oda_data=True, pydeflate=True)

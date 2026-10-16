@@ -6,6 +6,25 @@ import pandas as pd
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 
+from validation import manifest as manifest_module
+from validation.anomalies import (
+    detect_indicator_coverage_gaps,
+    detect_missing_expected_data,
+    detect_new_or_removed_entities,
+    detect_release_drift,
+    detect_row_count_change,
+    detect_sector_drift,
+    detect_yoy_anomalies,
+)
+from validation.checks import (
+    check_critical_dimensions,
+    check_names_populated,
+    check_no_duplicate_keys,
+    check_not_empty,
+    check_schema,
+    check_value_bounds,
+    check_value_columns_populated,
+)
 from validation.config import (
     CACHE_DIR,
     CDN_FILES_DIR,
@@ -14,41 +33,22 @@ from validation.config import (
     MANIFESTS_DIR,
 )
 from validation.models import CheckResult, ValidationReport, Warning
-from validation.checks import (
-    check_schema,
-    check_not_empty,
-    check_no_duplicate_keys,
-    check_value_columns_populated,
-    check_value_bounds,
-    check_names_populated,
-    check_critical_dimensions,
-)
-from validation.anomalies import (
-    detect_yoy_anomalies,
-    detect_release_drift,
-    detect_missing_expected_data,
-    detect_new_or_removed_entities,
-    detect_row_count_change,
-    detect_indicator_coverage_gaps,
-    detect_sector_drift,
-)
-from validation import manifest as manifest_module
+from validation.seek_anomalies import run_seek_validation
 from validation.seek_data import fetch_seek_sectors_data, get_donor_names
 from validation.seek_manifest import (
+    get_previous_seek_release,
     get_seek_manifest_path,
     update_seek_manifest,
-    get_previous_seek_release,
 )
-from validation.seek_anomalies import run_seek_validation
 
 
 def validate_dataset(
     dataset_name: str,
     release: str,
-    cache_dir: Path = None,
-    cdn_files_dir: Path = None,
-    dataset_config: dict = None,
-    manifests_dir: Path = None,
+    cache_dir: Path | None = None,
+    cdn_files_dir: Path | None = None,
+    dataset_config: dict | None = None,
+    manifests_dir: Path | None = None,
     update_manifest: bool = True,
 ) -> ValidationReport:
     """
@@ -214,7 +214,9 @@ def _run_hard_gates(
         check_critical_dimensions(
             df,
             critical_donors=config.get("critical_donors", MAJOR_DONORS),
-            previous_latest_year=previous_year_range[1] if previous_year_range else None,
+            previous_latest_year=previous_year_range[1]
+            if previous_year_range
+            else None,
         ),
     )
 
@@ -281,7 +283,7 @@ def _run_anomaly_detection(
 
 def validate_seek_sectors(
     release: str,
-    manifests_dir: Path = None,
+    manifests_dir: Path | None = None,
     update_manifest: bool = True,
 ) -> ValidationReport:
     """
@@ -369,9 +371,9 @@ def validate_seek_sectors(
 
 def validate_all(
     release: str,
-    cache_dir: Path = None,
-    cdn_files_dir: Path = None,
-    manifests_dir: Path = None,
+    cache_dir: Path | None = None,
+    cdn_files_dir: Path | None = None,
+    manifests_dir: Path | None = None,
     update_manifests: bool = True,
     include_seek: bool = True,
 ) -> ValidationReport:

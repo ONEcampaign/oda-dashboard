@@ -5,8 +5,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from validation.core import _get_previous_release
-from validation.core import validate_dataset
+from validation.core import _get_previous_release, validate_dataset
 from validation.models import ValidationReport
 
 

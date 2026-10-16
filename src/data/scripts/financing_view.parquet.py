@@ -17,11 +17,6 @@ import pandas as pd
 from oda_data import OECDClient
 from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_indicator
 
-from src.data.analysis_tools.outputs import (
-    set_cache_dir,
-    parquet_to_stdout,
-    generate_view_options,
-)
 from src.data.analysis_tools.financing import (
     drop_grants_split,
     resolve_indicator_duplicates,
@@ -29,30 +24,35 @@ from src.data.analysis_tools.financing import (
     years_missing_grants,
 )
 from src.data.analysis_tools.naming import map_indicator_names
+from src.data.analysis_tools.outputs import (
+    generate_view_options,
+    parquet_to_stdout,
+    set_cache_dir,
+)
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
-    drop_empty_values,
     add_share_of_gni,
     add_share_of_total_oda,
+    build_donor_group_totals,
     convert_values_to_units,
+    drop_empty_values,
     get_member_gni,
     widen_currency_price,
-    build_donor_group_totals,
 )
 from src.data.config import (
-    logger,
-    FINANCING_TIME,
-    GRANT_EQUIVALENT_START_YEAR,
     AGGREGATE_FINANCING_INDICATORS,
-    PSI_FINANCING_INDICATORS,
-    IN_DONOR_FINANCING_INDICATORS,
     ALL_FINANCING_INDICATORS,
-    PROVIDERS,
     DONOR_GROUPS,
+    DONORS_ORDER,
     EU27_EUI_LAST_YEAR,
     EU_TOTAL,
-    DONORS_ORDER,
     FINANCING_INDICATORS_ORDER,
+    FINANCING_TIME,
+    GRANT_EQUIVALENT_START_YEAR,
+    IN_DONOR_FINANCING_INDICATORS,
+    PROVIDERS,
+    PSI_FINANCING_INDICATORS,
+    logger,
 )
 
 set_cache_dir(oda_data=True, pydeflate=True)
@@ -262,7 +262,9 @@ def get_eui_eu27_grants() -> pd.DataFrame:
     )
 
     eui_eu27_grants = (
-        split_grants(eui_eu27_grants_converted, ["year", "donor_code", "currency", "price"])
+        split_grants(
+            eui_eu27_grants_converted, ["year", "donor_code", "currency", "price"]
+        )
         .groupby(
             ["year", "indicator_name", "currency", "price"], dropna=False, observed=True
         )["value"]

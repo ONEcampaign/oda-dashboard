@@ -47,6 +47,7 @@ def generate_view_options(
         extra: Additional keys merged into the output, e.g. the name-to-slug maps the frontend
             needs to build partition paths, or a sector-to-sub-sector index.
     """
+
     def _ordered(values: list[str], order: list[str]) -> list[str]:
         pinned = [v for v in order if v in set(values)]
         rest = sorted(v for v in values if v not in set(order))
@@ -63,12 +64,14 @@ def generate_view_options(
             }
         else:
             unique_vals = [str(v) for v in df[col].dropna().unique()]
-            options[col] = _ordered(unique_vals, order) if order else sorted(unique_vals)
+            options[col] = (
+                _ordered(unique_vals, order) if order else sorted(unique_vals)
+            )
 
     if extra:
         options |= extra
 
-    logger.info(f"Saving view options to {PATHS.TOOLS}/{file_name}")
+    logger.info("Saving view options to %s/%s", PATHS.TOOLS, file_name)
     with open(PATHS.TOOLS / file_name, "w") as f:
         json.dump(options, f, indent=2)
 
@@ -88,7 +91,7 @@ def set_cache_dir(
         pydeflate: Whether to point pydeflate at it.
     """
     if not path.exists():
-        logger.info(f"Creating directory for cached data: {path}")
+        logger.info("Creating directory for cached data: %s", path)
         path.mkdir(parents=True, exist_ok=True)
 
     if oda_data:
@@ -245,7 +248,9 @@ def write_partitioned_dataset(
 
     # pyarrow's default ceiling is 1024 partitions per fragment; raise it to what the data
     # actually needs so a legitimate dataset is never silently capped.
-    n_partitions = optimized.groupby(partition_cols, observed=True, dropna=False).ngroups
+    n_partitions = optimized.groupby(
+        partition_cols, observed=True, dropna=False
+    ).ngroups
     logger.info("Writing %s partitions to %s", f"{n_partitions:,}", output_dir)
 
     # Write partitioned dataset

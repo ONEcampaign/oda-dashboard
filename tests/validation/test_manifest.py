@@ -11,13 +11,14 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+
 from validation.manifest import (
     compute_aggregates,
     compute_distribution,
+    compute_historical_variation,
     load_manifest,
     save_manifest,
     update_manifest,
-    compute_historical_variation,
 )
 
 

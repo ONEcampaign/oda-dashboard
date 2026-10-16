@@ -14,8 +14,8 @@ Usage:
 
 import argparse
 
-from validation import validate_all, save_report
 from src.data.config import logger
+from validation import save_report, validate_all
 
 
 def run_validation(
@@ -40,7 +40,7 @@ def run_validation(
         - report_path: Path to saved report (if saved)
         - summary: Dict with warning counts
     """
-    logger.info(f"Validating data for release: {release}")
+    logger.info("Validating data for release: %s", release)
 
     # Run validation
     report = validate_all(
@@ -53,7 +53,7 @@ def run_validation(
     report_path = None
     if save_report_file:
         report_path = save_report(report)
-        logger.info(f"Report saved to: {report_path}")
+        logger.info("Report saved to: %s", report_path)
 
     # Compute summary
     high_count = len(report.get_warnings_by_level("high"))
@@ -73,14 +73,17 @@ def run_validation(
             for check_name, result in checks.items():
                 if not result.passed:
                     for error in result.errors:
-                        logger.error(f"  {dataset}/{check_name}: {error}")
+                        logger.error("  %s/%s: %s", dataset, check_name, error)
     elif high_count > 0:
         logger.warning(
-            f"VALIDATION PASSED with warnings: {high_count} high, {medium_count} medium, {info_count} info"
+            "VALIDATION PASSED with warnings: %s high, %s medium, %s info",
+            high_count,
+            medium_count,
+            info_count,
         )
     else:
         logger.info(
-            f"VALIDATION PASSED: {medium_count} medium, {info_count} info warnings"
+            "VALIDATION PASSED: %s medium, %s info warnings", medium_count, info_count
         )
 
     return {
@@ -93,7 +96,9 @@ def run_validation(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Validate the built dashboard data.")
-    parser.add_argument("release", help='Name to record this release under, e.g. "2026_10"')
+    parser.add_argument(
+        "release", help='Name to record this release under, e.g. "2026_10"'
+    )
     parser.add_argument(
         "--no-seek", action="store_true", help="Skip the SEEK sector validation"
     )

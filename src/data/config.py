@@ -22,12 +22,13 @@ Sections, in order:
 import logging
 from pathlib import Path
 
+from oda_data import provider_groupings, recipient_groupings
+
 # Patches a requests-cache incompatibility that would otherwise fail the first time anything
 # reads or writes the OECD HTTP cache. What matters is that it runs before that first request,
 # not before the oda_data import; it sits here, above them, because importing config is the one
 # thing every module in the pipeline already does. See src/data/_compat.py.
 import src.data._compat  # noqa: F401
-from oda_data import provider_groupings, recipient_groupings
 
 # ---------------------------------------------------------------------------------------
 # 1. Environment

@@ -7,14 +7,15 @@ suite that only asserted "no false positives" passed while detection was dead.
 """
 
 import pandas as pd
+
 from validation.anomalies import (
-    detect_yoy_anomalies,
-    detect_release_drift,
+    detect_indicator_coverage_gaps,
     detect_missing_expected_data,
     detect_new_or_removed_entities,
+    detect_release_drift,
     detect_row_count_change,
-    detect_indicator_coverage_gaps,
     detect_sector_drift,
+    detect_yoy_anomalies,
 )
 
 
@@ -142,9 +143,7 @@ class TestDetectNewOrRemovedEntities:
         df = pd.DataFrame({"sector_name": ["Health"]})
         previous = {"sectors_present": ["Health", "Education"]}
         warnings = detect_new_or_removed_entities(df, previous)
-        assert any(
-            w.level == "high" and "Education" in w.message for w in warnings
-        )
+        assert any(w.level == "high" and "Education" in w.message for w in warnings)
 
     def test_removed_sub_sector_is_detected(self):
         df = pd.DataFrame({"sub_sector_name": ["Agriculture"]})
@@ -174,7 +173,9 @@ class TestDetectIndicatorCoverageGaps:
         )
         previous = {"indicators_present": ["Bilateral", "Grants"]}
         warnings = detect_indicator_coverage_gaps(df, previous, value_column="value")
-        assert any("Grants" in w.message and "zero" in w.message.lower() for w in warnings)
+        assert any(
+            "Grants" in w.message and "zero" in w.message.lower() for w in warnings
+        )
 
     def test_no_warnings_when_coverage_intact(self):
         df = pd.DataFrame(
@@ -208,9 +209,9 @@ class TestDetectSectorDrift:
             }
         }
         warnings = detect_sector_drift(df, previous, value_column="value")
-        assert not any(
-            "Sector 'Health'" in w.message for w in warnings
-        ), "the sector total is flat, so it must not flag"
+        assert not any("Sector 'Health'" in w.message for w in warnings), (
+            "the sector total is flat, so it must not flag"
+        )
         assert any("France" in w.message for w in warnings)
         assert any("Germany" in w.message for w in warnings)
 

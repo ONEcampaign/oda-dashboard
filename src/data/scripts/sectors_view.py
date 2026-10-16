@@ -21,43 +21,42 @@ import sys
 from functools import cache
 
 import pandas as pd
-
 from oda_data import CRSData
 from oda_data.tools import sector_lists
 
+from src.data.analysis_tools.imputations import read_imputed_multilateral
+from src.data.analysis_tools.naming import slugify
+from src.data.analysis_tools.outputs import (
+    generate_view_options,
+    set_cache_dir,
+    write_partitioned_dataset,
+)
 from src.data.analysis_tools.transformations import (
     RECIPIENT_CLASSIFICATION_COLS,
     add_currencies_and_prices,
-    drop_empty_values,
     add_recipient_classifications,
     add_share_of_reference_total,
-    build_donor_group_totals,
     build_crs_recipient_group_totals,
+    build_donor_group_totals,
     convert_values_to_units,
+    drop_empty_values,
     get_crs_recipient_classifications,
     widen_currency_price,
 )
 from src.data.config import (
-    logger,
-    SECTORS_TIME,
-    PROVIDERS,
     CRS_FLOW_CATEGORIES,
     CRS_RECIPIENTS,
-    DONORS_ORDER,
-    LABEL_COLUMNS,
     CRS_RECIPIENTS_ORDER,
+    DONORS_ORDER,
     EU_COUNTRIES,
     EU_INSTITUTIONS,
     EU_TOTAL,
     EUI_CHANNEL_CODES,
+    LABEL_COLUMNS,
+    PROVIDERS,
+    SECTORS_TIME,
+    logger,
 )
-from src.data.analysis_tools.imputations import read_imputed_multilateral
-from src.data.analysis_tools.outputs import (
-    set_cache_dir,
-    generate_view_options,
-    write_partitioned_dataset,
-)
-from src.data.analysis_tools.naming import slugify
 
 set_cache_dir(oda_data=True, pydeflate=True)
 
@@ -65,10 +64,21 @@ YEARS = range(SECTORS_TIME["start"], SECTORS_TIME["end"] + 1)
 
 # Everything identifying a row except the recipient, and except the donor, respectively.
 RECIPIENT_GROUP_COLS = [
-    "year", "donor_code", "donor_name", "indicator_name", "sub_sector", "currency", "price",
+    "year",
+    "donor_code",
+    "donor_name",
+    "indicator_name",
+    "sub_sector",
+    "currency",
+    "price",
 ]
 DONOR_GROUP_COLS = [
-    "year", "recipient_name", "indicator_name", "sub_sector", "currency", "price",
+    "year",
+    "recipient_name",
+    "indicator_name",
+    "sub_sector",
+    "currency",
+    "price",
 ]
 
 # oda_data's own name for the unallocated purpose codes, used for any code outside a group.
@@ -133,7 +143,8 @@ def _assign_sub_sector(df: pd.DataFrame) -> pd.DataFrame:
     if unmatched:
         logger.info(
             "%s rows have a purpose code outside the sector groups, labelled %r",
-            f"{unmatched:,}", UNALLOCATED_SUB_SECTOR,
+            f"{unmatched:,}",
+            UNALLOCATED_SUB_SECTOR,
         )
 
     df["sub_sector"] = sub_sector.fillna(UNALLOCATED_SUB_SECTOR)
@@ -271,7 +282,9 @@ def combined_sectors() -> pd.DataFrame:
     logger.info("Fetching bilateral data...")
     sectors_bi = get_bilateral_by_sector()
 
-    classified, ldc_members = get_crs_recipient_classifications(YEARS, list(CRS_RECIPIENTS))
+    classified, ldc_members = get_crs_recipient_classifications(
+        YEARS, list(CRS_RECIPIENTS)
+    )
 
     logger.info("Fetching imputed multilateral data...")
     sectors_multi = get_imputed_multi_by_sector()
@@ -280,13 +293,16 @@ def combined_sectors() -> pd.DataFrame:
     # The imputed frame has no donor_name of its own; take it from the CRS side so both
     # halves are identified the same way.
     donor_names = (
-        sectors_bi[["donor_code", "donor_name"]].drop_duplicates("donor_code")
+        sectors_bi[["donor_code", "donor_name"]]
+        .drop_duplicates("donor_code")
         .set_index("donor_code")["donor_name"]
     )
     sectors_multi = sectors_multi.assign(
         donor_name=lambda d: d["donor_code"].map(donor_names)
     )
-    eu_imputed = eu_imputed.assign(donor_name=lambda d: d["donor_code"].map(donor_names))
+    eu_imputed = eu_imputed.assign(
+        donor_name=lambda d: d["donor_code"].map(donor_names)
+    )
     unnamed = sectors_multi["donor_name"].isna()
     if unnamed.any():
         logger.warning(
@@ -326,8 +342,13 @@ def combined_sectors() -> pd.DataFrame:
 
     logger.info("Building donor and recipient group totals...")
     sectors = pd.concat(
-        [sectors, *build_crs_recipient_group_totals(sectors, RECIPIENT_GROUP_COLS, ldc_members)],
-        ignore_index=True
+        [
+            sectors,
+            *build_crs_recipient_group_totals(
+                sectors, RECIPIENT_GROUP_COLS, ldc_members
+            ),
+        ],
+        ignore_index=True,
     )
     sectors = pd.concat(
         [
@@ -415,7 +436,9 @@ def _add_partition_slugs(sectors: pd.DataFrame) -> pd.DataFrame:
         collisions = {}
         for name, slug in mapping.items():
             collisions.setdefault(slug, []).append(name)
-        clashing = {slug: names_ for slug, names_ in collisions.items() if len(names_) > 1}
+        clashing = {
+            slug: names_ for slug, names_ in collisions.items() if len(names_) > 1
+        }
         if clashing:
             raise ValueError(
                 f"{column} slugs are not unique, which would merge distinct entities into "

@@ -6,16 +6,16 @@ spending between releases for total, health, and agriculture sectors.
 
 import pandas as pd
 
-from validation.models import Warning
 from validation.config import (
-    SEEK_Z_SCORE_THRESHOLD,
-    SEEK_Z_SCORE_HIGH,
-    SEEK_PCT_CHANGE_THRESHOLD,
-    SEEK_PCT_CHANGE_HIGH,
-    SEEK_HEALTH_PURPOSE_CODES,
     SEEK_AGRICULTURE_PURPOSE_CODES,
     SEEK_CRITICAL_DONORS,
+    SEEK_HEALTH_PURPOSE_CODES,
+    SEEK_PCT_CHANGE_HIGH,
+    SEEK_PCT_CHANGE_THRESHOLD,
+    SEEK_Z_SCORE_HIGH,
+    SEEK_Z_SCORE_THRESHOLD,
 )
+from validation.models import Warning
 from validation.seek_data import compute_sector_aggregates
 
 

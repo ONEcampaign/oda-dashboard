@@ -35,7 +35,7 @@ def format_billions(series: pd.Series, decimals: int = 1) -> pd.Series:
 
 
 def add_change(
-    df: pd.DataFrame, grouper: list = None, as_formatted_str: bool = False
+    df: pd.DataFrame, grouper: list | None = None, as_formatted_str: bool = False
 ) -> pd.DataFrame:
     if grouper is None:
         grouper = ["donor_code", "indicator"]
@@ -45,7 +45,9 @@ def add_change(
     if not as_formatted_str:
         return df
 
-    df["pct_change"] = format_percentage(df["pct_change"], decimals=1).replace("nan%", "")
+    df["pct_change"] = format_percentage(df["pct_change"], decimals=1).replace(
+        "nan%", ""
+    )
 
     return df
 
@@ -82,15 +84,17 @@ def df_to_key_number(
         .filter(["indicator", id_column] + value_columns, axis=1)
         .groupby(["indicator"])
         .apply(
-            lambda x: x.set_index(id_column)[value_columns]
-            .astype(str)
-            .to_dict(orient="index")
+            lambda x: (
+                x.set_index(id_column)[value_columns]
+                .astype(str)
+                .to_dict(orient="index")
+            )
         )
         .to_dict()
     )
 
 
-def sort_dac_first(df: pd.DataFrame, keep_current_sorting=True):
+def sort_dac_first(df: pd.DataFrame, keep_current_sorting: bool = True) -> pd.DataFrame:
     if not keep_current_sorting:
         df = df.sort_values(["year", "name"], ascending=[True, False])
 
