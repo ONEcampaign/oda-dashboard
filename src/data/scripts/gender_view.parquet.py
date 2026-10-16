@@ -39,6 +39,7 @@ from src.data.config import (
     CRS_RECIPIENTS,
     CRS_RECIPIENTS_ORDER,
     DONORS_ORDER,
+    EU27_EUI_NAME,
     EU_COUNTRIES,
     EU_INSTITUTIONS,
     GENDER_INDICATORS,
@@ -47,8 +48,6 @@ from src.data.config import (
     TOTAL_ALLOCABLE_SCORE,
     logger,
 )
-
-set_cache_dir(oda_data=True, pydeflate=True)
 
 YEARS = range(BASE_TIME["start"], BASE_TIME["end"] + 1)
 
@@ -155,7 +154,7 @@ def combined_gender() -> pd.DataFrame:
                 gender,
                 EU_COUNTRIES | EU_INSTITUTIONS,
                 group_cols=DONOR_GROUP_COLS,
-                group_name="EU27 & EU Institutions",
+                group_name=EU27_EUI_NAME,
             ),
         ],
         ignore_index=True,
@@ -179,6 +178,7 @@ def combined_gender() -> pd.DataFrame:
 
 
 if __name__ == "__main__":
+    set_cache_dir(oda_data=True, pydeflate=True)
     logger.info("Generating gender view table...")
     df = combined_gender()
     generate_view_options(

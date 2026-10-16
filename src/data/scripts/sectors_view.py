@@ -44,21 +44,25 @@ from src.data.analysis_tools.transformations import (
     widen_currency_price,
 )
 from src.data.config import (
+    ALL_BILATERAL_DONORS,
+    BILATERAL,
     CRS_FLOW_CATEGORIES,
     CRS_RECIPIENTS,
     CRS_RECIPIENTS_ORDER,
     DONORS_ORDER,
+    EU27_EUI_NAME,
     EU_COUNTRIES,
     EU_INSTITUTIONS,
     EU_TOTAL,
     EUI_CHANNEL_CODES,
+    IMPUTED_MULTILATERAL,
     LABEL_COLUMNS,
+    ODA_ELIGIBLE,
     PROVIDERS,
     SECTORS_TIME,
+    UNALLOCATED_SUB_SECTOR,
     logger,
 )
-
-set_cache_dir(oda_data=True, pydeflate=True)
 
 YEARS = range(SECTORS_TIME["start"], SECTORS_TIME["end"] + 1)
 
@@ -80,9 +84,6 @@ DONOR_GROUP_COLS = [
     "currency",
     "price",
 ]
-
-# oda_data's own name for the unallocated purpose codes, used for any code outside a group.
-UNALLOCATED_SUB_SECTOR = "Unallocated/ Unspecified"
 
 CRS_COLUMNS: list[str] = [
     "year",
@@ -181,7 +182,7 @@ def get_bilateral_by_sector() -> pd.DataFrame:
         .sum()
         .reset_index()
         .rename(columns={"usd_disbursement": "value"})
-        .assign(indicator_name="Bilateral")
+        .assign(indicator_name=BILATERAL)
     )
 
     return sectors_bi[sectors_bi["value"] != 0]
@@ -199,7 +200,7 @@ def get_imputed_multi_by_sector() -> pd.DataFrame:
         )["value"]
         .sum()
         .reset_index()
-        .assign(indicator_name="Imputed multilateral")
+        .assign(indicator_name=IMPUTED_MULTILATERAL)
     )
 
     return sectors_multi[sectors_multi["value"] != 0]
@@ -238,7 +239,7 @@ def get_eu27_eui_imputed() -> pd.DataFrame:
         )["value"]
         .sum()
         .reset_index()
-        .assign(indicator_name="Imputed multilateral")
+        .assign(indicator_name=IMPUTED_MULTILATERAL)
     )
 
     return imputed[imputed["value"] != 0]
@@ -260,7 +261,7 @@ def build_eu27_eui_total(
     """
     bilateral = sectors.loc[
         sectors["donor_code"].isin(EU_COUNTRIES | EU_INSTITUTIONS)
-        & sectors["indicator_name"].astype("object").eq("Bilateral")
+        & sectors["indicator_name"].astype("object").eq(BILATERAL)
     ]
 
     return (
@@ -268,7 +269,7 @@ def build_eu27_eui_total(
         .groupby(group_cols, dropna=False, observed=True)["value"]
         .sum()
         .reset_index()
-        .assign(donor_name="EU27 & EU Institutions")
+        .assign(donor_name=EU27_EUI_NAME)
     )
 
 
@@ -410,14 +411,14 @@ def combined_sectors() -> pd.DataFrame:
     sectors = add_share_of_reference_total(
         sectors,
         filter_col="recipient_name",
-        filter_val="ODA eligible countries",
+        filter_val=ODA_ELIGIBLE,
         merge_cols=["year", "donor_name"],
         pct_col="pct_total_donor",
     )
     sectors = add_share_of_reference_total(
         sectors,
         filter_col="donor_name",
-        filter_val="All bilateral donors",
+        filter_val=ALL_BILATERAL_DONORS,
         merge_cols=["year", "recipient_name"],
         pct_col="pct_total_recipient",
     )
@@ -465,7 +466,9 @@ def _slug_map(sectors: pd.DataFrame, column: str) -> dict:
     )
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Build the sectors view, its dropdown options and the partitioned dataset."""
+    set_cache_dir(oda_data=True, pydeflate=True)
     logger.info("Generating sectors table...")
     df = combined_sectors()
 
@@ -501,6 +504,15 @@ if __name__ == "__main__":
     )
     logger.info("Sectors view completed")
 
+
+if __name__ == "__main__":
+    try:
+        main()
+        exit_code = 0
+    except Exception:
+        logger.exception("Sectors view failed")
+        exit_code = 1
+
     # pyarrow's global thread pool intermittently deadlocks in its static destructor after a
     # large partitioned write, leaving the process hung with all the work already done:
     #   exit -> __cxa_finalize_ranges -> arrow::internal::ThreadPool::~ThreadPool
@@ -509,4 +521,4 @@ if __name__ == "__main__":
     # skip interpreter teardown rather than let CI hang until its timeout.
     sys.stdout.flush()
     sys.stderr.flush()
-    os._exit(0)
+    os._exit(exit_code)

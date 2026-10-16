@@ -67,19 +67,25 @@ class PATHS:
 # Values are published as whole currency units rather than millions, because integers compress
 # far better in parquet. The frontend divides by this to get back to millions.
 #
-# A float, deliberately, and do not "tidy" it to 1_000_000. The sectors value columns are
-# float32 when they are scaled, and with the float literal the product comes out float64, so
-# the rounding sees every digit the source had. Written as an int the product stayed float32,
-# which by the hundreds of millions can only land on multiples of 16: that change moved 176,089
-# cells and shifted the sectors total by ~33,000 units. Measured in the pipeline, not in
-# isolation — a float32 Series times 1e6 is float32 on its own, so the promotion depends on
-# state the OECD libraries set up. Hence the warning rather than an explanation.
+# Values arrive here with float32 precision (widen_currency_price stores them as float32, at
+# about seven significant digits). convert_values_to_units widens them to float64 before
+# multiplying, so the scaling adds no further rounding of its own.
 UNITS_PER_MILLION: float = 1e6
 
 # Above this, a value column no longer fits in Int32 and has to be stored as Int64.
 INT32_MAX: int = 2_147_483_647
 
-CURRENCIES: list = ["USD", "EUR", "GBP", "CAD"]
+CURRENCIES: list[str] = ["USD", "EUR", "GBP", "CAD"]
+
+# Display names several views build or look up, defined once so a rename cannot leave one
+# view behind.
+ALL_BILATERAL_DONORS: str = "All bilateral donors"
+EU27_COUNTRIES_NAME: str = "EU27 countries"
+EU27_EUI_NAME: str = "EU27 & EU Institutions"
+ODA_ELIGIBLE: str = "ODA eligible countries"
+TOTAL_ODA: str = "Total ODA"
+BILATERAL: str = "Bilateral"
+IMPUTED_MULTILATERAL: str = "Imputed multilateral"
 
 # The label columns the views share. Dictionary-encoding them keeps the frames small enough to
 # pivot on a CI runner, and keeps the published parquet compact.
@@ -101,9 +107,9 @@ LABEL_COLUMNS: tuple[str, ...] = (
 # "base" is the price base year for constant-price conversions.
 # ---------------------------------------------------------------------------------------
 
-FINANCING_TIME: dict = {"start": 1990, "end": 2025, "base": 2025}
-BASE_TIME: dict = {"start": 1990, "end": 2024, "base": 2024}
-SECTORS_TIME: dict = {"start": 2013, "end": 2024, "base": 2024}
+FINANCING_TIME: dict[str, int] = {"start": 1990, "end": 2025, "base": 2025}
+BASE_TIME: dict[str, int] = {"start": 1990, "end": 2024, "base": 2024}
+SECTORS_TIME: dict[str, int] = {"start": 2013, "end": 2024, "base": 2024}
 
 # The DAC switched its headline ODA measure from net flows to grant equivalents in 2018, so
 # financing reads flows up to this year and grant equivalents from it onwards.
@@ -117,8 +123,8 @@ GRANT_EQUIVALENT_START_YEAR: int = 2018
 # Several codes map to one display name because the DAC renumbered them for grant equivalents.
 # ---------------------------------------------------------------------------------------
 
-AGGREGATE_FINANCING_INDICATORS: dict = {
-    "ONE.10.1010_11010": "Total ODA",
+AGGREGATE_FINANCING_INDICATORS: dict[str, str] = {
+    "ONE.10.1010_11010": TOTAL_ODA,
     "ONE.10.1010C": "Core ODA (ONE Definition)",
     "DAC1.10.1015": "Bilateral ODA",
     "DAC1.10.11015": "Bilateral ODA",
@@ -128,7 +134,7 @@ AGGREGATE_FINANCING_INDICATORS: dict = {
     "DAC1.10.11026": "Debt relief",
 }
 
-PSI_FINANCING_INDICATORS: dict = {
+PSI_FINANCING_INDICATORS: dict[str, str] = {
     "DAC1.60.11030": "Private sector instruments",
     "DAC1.60.11040": "Private sector instruments",
     "DAC1.60.11023": "Private sector instruments - institutional approach",
@@ -138,30 +144,30 @@ PSI_FINANCING_INDICATORS: dict = {
 # Code kept when aliases of one name disagree for a donor and year. 11030 and 11040 should
 # report the same PSI figure, but the October 2026 DAC1 has them differ for 2023-24 (reported
 # to the OECD). Until that is resolved the grant-equivalent figure is used.
-PREFERRED_FINANCING_CODES: dict = {
+PREFERRED_FINANCING_CODES: dict[str, str] = {
     "Private sector instruments": "DAC1.60.11040",
 }
 
-IN_DONOR_FINANCING_INDICATORS: dict = {
+IN_DONOR_FINANCING_INDICATORS: dict[str, str] = {
     "DAC1.10.1820": "Refugees in donor countries",
     "DAC1.10.1500": "Scholarships and student costs in donor countries",
     "DAC1.10.1510": "Scholarships/training in donor country",
     "DAC1.10.1520": "Imputed student costs",
 }
 
-ALL_FINANCING_INDICATORS: dict = (
+ALL_FINANCING_INDICATORS: dict[str, str] = (
     AGGREGATE_FINANCING_INDICATORS
     | PSI_FINANCING_INDICATORS
     | IN_DONOR_FINANCING_INDICATORS
 )
 
-RECIPIENTS_INDICATORS: dict = {
-    "DAC2A.10.206": "Bilateral",
-    "DAC2A.10.106": "Imputed multilateral",
+RECIPIENTS_INDICATORS: dict[str, str] = {
+    "DAC2A.10.206": BILATERAL,
+    "DAC2A.10.106": IMPUTED_MULTILATERAL,
 }
 
 # Gender marker scores, keyed by the value oda_data's bilateral_policy_marker expects.
-GENDER_INDICATORS: dict = {
+GENDER_INDICATORS: dict[str, str] = {
     "principal": "Main target",
     "significant": "Secondary target",
     "not_targeted": "Not targeted",
@@ -178,6 +184,10 @@ TOTAL_ALLOCABLE_SCORE: str = "total_allocable"
 # Differences below this many USD millions are subtraction residue, not unscreened aid.
 GENDER_RESIDUAL_TOLERANCE: float = 1e-6
 
+# oda_data's own name for the unallocated purpose codes, also used for any purpose code outside
+# the sector groups.
+UNALLOCATED_SUB_SECTOR: str = "Unallocated/ Unspecified"
+
 # CRS flow categories read by the sectors view: ODA (10) and private sector instruments (60),
 # which the CRS reports from 2023 and which count towards ODA. Other official flows (21) are
 # not ODA and stay out. The gender view gets the same scope from oda_data's oda_only filter.
@@ -188,9 +198,12 @@ CRS_FLOW_CATEGORIES: list[int] = [10, 60]
 # as IBRD otherwise have no pattern, and far more core funding is left unallocated.
 IMPUTATION_FLOW_TYPES: tuple[str, ...] = ("ODA", "OOF")
 
-# Where imputed multilateral money oda_data cannot assign to a recipient is recorded, as DAC2A
-# does: "Bilateral, unspecified", which the CRS calls developing countries, unspecified.
+# Aid to developing countries that cannot be attributed to a country or region, including the
+# imputed multilateral money oda_data cannot assign to a recipient. DAC2A calls it "Developing
+# countries, unspecified" and the CRS "Bilateral, unspecified"; every view uses one name, the
+# unspecified part of "ODA eligible countries", following the "<area>, unspecified" convention.
 UNSPECIFIED_RECIPIENT_CODE: int = 9998
+UNSPECIFIED_RECIPIENT_NAME: str = "ODA eligible countries, unspecified"
 
 # ---------------------------------------------------------------------------------------
 # 5. Donors
@@ -199,30 +212,34 @@ UNSPECIFIED_RECIPIENT_CODE: int = 9998
 # rather than requesting the OECD's own aggregate providers, so each aggregate is defined once.
 # ---------------------------------------------------------------------------------------
 
-BILATERAL_DONORS: dict = provider_groupings()["all_bilateral"]
-DAC_COUNTRIES: dict = provider_groupings()["dac_countries"]
-G7_COUNTRIES: dict = provider_groupings()["g7"]
-NON_DAC_COUNTRIES: dict = provider_groupings()["non_dac_countries"]
+# Read once: each oda_data groupings call parses its JSON file again.
+_PROVIDER_GROUPINGS: dict[str, dict] = provider_groupings()
+BILATERAL_DONORS: dict[int, str] = _PROVIDER_GROUPINGS["all_bilateral"]
+DAC_COUNTRIES: dict[int, str] = _PROVIDER_GROUPINGS["dac_countries"]
+G7_COUNTRIES: dict[int, str] = _PROVIDER_GROUPINGS["g7"]
+NON_DAC_COUNTRIES: dict[int, str] = _PROVIDER_GROUPINGS["non_dac_countries"]
 
-EU_TOTAL: dict = provider_groupings()["eu27_total"]
-EU_COUNTRIES: dict = provider_groupings()["eu27_countries"]
+EU_TOTAL: dict[int, str] = _PROVIDER_GROUPINGS["eu27_total"]
+EU_COUNTRIES: dict[int, str] = _PROVIDER_GROUPINGS["eu27_countries"]
 # Whatever eu27_total holds beyond the member states, i.e. {918: "EU Institutions"}
-EU_INSTITUTIONS: dict = {k: v for k, v in EU_TOTAL.items() if k not in EU_COUNTRIES}
+EU_INSTITUTIONS: dict[int, str] = {
+    k: v for k, v in EU_TOTAL.items() if k not in EU_COUNTRIES
+}
 
 # Every provider the views read: the bilateral donors, plus EU Institutions, which is shown on
 # its own but belongs to no donor group.
-PROVIDERS: dict = BILATERAL_DONORS | EU_INSTITUTIONS
+PROVIDERS: dict[int, str] = BILATERAL_DONORS | EU_INSTITUTIONS
 
 # Donor aggregates, each the sum of its members, built the same way in every view. "All
 # bilateral donors" is exactly DAC countries plus Non-DAC countries. EU Institutions is left
 # out of every group, as in the OECD's headline totals: much of its spending is funded by
 # donors' contributions, which their own totals already include.
 DONOR_GROUPS: dict[str, dict] = {
-    "All bilateral donors": BILATERAL_DONORS,
+    ALL_BILATERAL_DONORS: BILATERAL_DONORS,
     "DAC countries": DAC_COUNTRIES,
     "Non-DAC countries": NON_DAC_COUNTRIES,
     "G7 countries": G7_COUNTRIES,
-    "EU27 countries": EU_COUNTRIES,
+    EU27_COUNTRIES_NAME: EU_COUNTRIES,
 }
 if DAC_COUNTRIES.keys() & NON_DAC_COUNTRIES.keys() or (
     BILATERAL_DONORS.keys() != DAC_COUNTRIES.keys() | NON_DAC_COUNTRIES.keys()
@@ -257,8 +274,9 @@ DAC2A_AGGREGATE_CODE_MIN: int = 10_000
 
 # Display labels for DAC2A recipients, keyed by code. Labels only: what the view contains is
 # whatever DAC2A returns. Regions are renamed to match the sectors and gender views.
-RECIPIENT_NAME_OVERRIDES: dict = {
-    10_100: "ODA eligible countries",
+RECIPIENT_NAME_OVERRIDES: dict[int, str] = {
+    10_100: ODA_ELIGIBLE,
+    UNSPECIFIED_RECIPIENT_CODE: UNSPECIFIED_RECIPIENT_NAME,
     10_016: "Least Developed Countries (LDCs)",
     10_045: "Low Income Countries (LICs)",
     10_046: "Lower-Middle Income Countries (LMICs)",
@@ -281,7 +299,7 @@ RECIPIENT_NAME_OVERRIDES: dict = {
 # DAC2A recipients that come back without a code. The cause is upstream in oda_reader's area
 # code mapping: a correction overwrites EDF's code, and the other two are missing from it.
 # Remove once that is fixed. Codes as in recipient_groupings()["all_recipients"].
-DAC2A_MISSING_RECIPIENT_CODES: dict = {
+DAC2A_MISSING_RECIPIENT_CODES: dict[str, int] = {
     "East African Community": 237,
     "Indus Basin": 650,
     "European Development Fund [EDF]": 918,
@@ -298,16 +316,19 @@ EXCLUDED_DAC2A_RECIPIENTS: frozenset[int] = frozenset(
     {10_017, 10_018, 10_019, 10_024, 10_025, 10_150, 10_200, 816, *range(900, 990)}
 )
 
+# Read once: each oda_data groupings call parses its JSON file again.
+_RECIPIENT_GROUPINGS: dict[str, dict] = recipient_groupings()
+
 # The CRS records aid that cannot be allocated to a country against regional codes
-# ("Africa, regional") and "Developing countries, unspecified", which together are roughly
+# ("Africa, regional") and code 9998 (see UNSPECIFIED_RECIPIENT_CODE), which together are roughly
 # half of all bilateral flows, so the CRS views need the full recipient list. Safe to sum:
 # the CRS never reports the same money against both a country and a region, and it contains
 # no "X, Total" style aggregates.
-CRS_RECIPIENTS: dict = recipient_groupings()["all_recipients"]
+CRS_RECIPIENTS: dict[int, str] = _RECIPIENT_GROUPINGS["all_recipients"]
 
 # Country lists that no source publishes as an aggregate, so every view sums them.
-FRANCE_PRIORITY_RECIPIENTS: dict = recipient_groupings()["france_priority"]
-SAHEL_RECIPIENTS: dict = recipient_groupings()["sahel"]
+FRANCE_PRIORITY_RECIPIENTS: dict[int, str] = _RECIPIENT_GROUPINGS["france_priority"]
+SAHEL_RECIPIENTS: dict[int, str] = _RECIPIENT_GROUPINGS["sahel"]
 
 # ---------------------------------------------------------------------------------------
 # 7. CRS classifications
@@ -339,7 +360,11 @@ LDC_LABEL: str = RECIPIENT_NAME_OVERRIDES[10_016]
 # data; this only records which regions make up each continent. Each list includes the
 # continent-level region value the CRS uses for aid it records against a whole continent
 # (e.g. "Africa, regional"), so a continent total covers its sub-regions plus that.
-CRS_REGION_ROLLUPS: dict = {
+# CRS region values that are not regions. "Regional and Unspecified" holds only code 9998, so a
+# region group for it would repeat that recipient value for value.
+CRS_NON_REGIONS: frozenset[str] = frozenset({"Regional and Unspecified"})
+
+CRS_REGION_ROLLUPS: dict[str, list[str]] = {
     "Africa": ["North of Sahara", "South of Sahara", "Africa"],
     "Asia": ["South & Central Asia", "Far East Asia", "Middle East", "Asia"],
     "America": ["Caribbean & Central America", "South America", "America"],
@@ -361,11 +386,11 @@ CRS_UNCLASSIFIED_INCOME: str = "Income group not reported"
 DONORS_ORDER: list[str] = [
     "DAC countries",
     "Non-DAC countries",
-    "All bilateral donors",
+    ALL_BILATERAL_DONORS,
     "G7 countries",
-    "EU27 countries",
+    EU27_COUNTRIES_NAME,
     "EU Institutions",
-    "EU27 & EU Institutions",
+    EU27_EUI_NAME,
 ]
 
 FINANCING_INDICATORS_ORDER: list[str] = (
@@ -378,7 +403,7 @@ FINANCING_INDICATORS_ORDER: list[str] = (
 # Recipients view: the income and status groups. The script appends the remaining DAC2A groups
 # and the two summed country lists, read from the data.
 RECIPIENTS_ORDER: list[str] = [
-    "ODA eligible countries",
+    ODA_ELIGIBLE,
     "Least Developed Countries (LDCs)",
     "Low Income Countries (LICs)",
     "Lower-Middle Income Countries (LMICs)",
@@ -390,7 +415,7 @@ RECIPIENTS_ORDER: list[str] = [
 
 # CRS views: the overall total, then income groups, continents, CRS regions, country lists.
 CRS_RECIPIENTS_ORDER: list[str] = [
-    "ODA eligible countries",
+    ODA_ELIGIBLE,
     LDC_LABEL,
     *WORLD_BANK_INCOME_GROUPS.values(),
     WORLD_BANK_NOT_CLASSIFIED,

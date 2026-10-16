@@ -156,6 +156,15 @@ def optimize_dataframe_types(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+# Codec shared by the single-file and partitioned writers.
+PARQUET_CODEC: dict[str, str | int | bool] = {
+    "compression": "zstd",
+    "compression_level": 15,
+    "use_dictionary": True,
+    "write_statistics": True,
+}
+
+
 def get_parquet_write_options() -> dict:
     """Compression and encoding settings for the single-file parquet written to stdout.
 
@@ -164,10 +173,7 @@ def get_parquet_write_options() -> dict:
     from ds.write_dataset instead.
     """
     return {
-        "compression": "zstd",
-        "compression_level": 15,
-        "use_dictionary": True,
-        "write_statistics": True,
+        **PARQUET_CODEC,
         "data_page_size": 1_048_576,
         "row_group_size": 100_000,
     }
@@ -236,15 +242,9 @@ def write_partitioned_dataset(
         partition_fields.append(field)
     partition_schema = pa.schema(partition_fields)
 
-    # The same codec as get_parquet_write_options, but only the keys make_write_options
-    # accepts: row-group sizing is set on ds.write_dataset below instead.
+    # Row-group sizing is set on ds.write_dataset below.
     parquet_format = ds.ParquetFileFormat()
-    file_options = parquet_format.make_write_options(
-        compression="zstd",
-        compression_level=15,
-        use_dictionary=True,
-        write_statistics=True,
-    )
+    file_options = parquet_format.make_write_options(**PARQUET_CODEC)
 
     # pyarrow's default ceiling is 1024 partitions per fragment; raise it to what the data
     # actually needs so a legitimate dataset is never silently capped.

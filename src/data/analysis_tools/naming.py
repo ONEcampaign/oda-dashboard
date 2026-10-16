@@ -66,9 +66,10 @@ def map_indicator_names(codes: pd.Series, mapping: dict) -> pd.Series:
 def normalize_unspecified_names(names: pd.Series) -> pd.Series:
     """Standardise the labels for aid that is not allocated to a specific country.
 
-    The sources spell one concept three ways: the CRS says "Africa, regional", DAC2A says
-    "Caribbean unspecified", and some entries already say "Bilateral, unspecified". All become
-    "<area>, unspecified", so the views agree and "regional" never reaches a reader.
+    "<area>, unspecified" is aid to more than one country in an area that cannot be split
+    between them, and "<area>" is the area's full total including it. The sources spell it
+    "Africa, regional" (CRS) or "Caribbean unspecified" (DAC2A); all become "<area>,
+    unspecified", so the views agree and "regional" never reaches a reader.
 
     Matching is deliberately case sensitive and anchored to the end of the label, which leaves
     the CRS region value "Regional and Unspecified" alone.
@@ -84,6 +85,22 @@ def normalize_unspecified_names(names: pd.Series) -> pd.Series:
         .str.replace(r",?\s+regional$", ", unspecified", regex=True)
         .str.replace(r"(?<!,)\s+unspecified$", ", unspecified", regex=True)
     )
+
+
+def normalize_crs_regions(regions: pd.Series) -> pd.Series:
+    """Fold "<continent>, regional" CRS region values into "<continent>".
+
+    The CRS sometimes records a continent's own unspecified aid against "Africa, regional"
+    rather than "Africa". Both mean the same, and only the plain value rolls into the
+    continent total.
+
+    Args:
+        regions: CRS recipient_region values.
+
+    Returns:
+        The regions with the ", regional" suffix removed.
+    """
+    return regions.astype("string").str.removesuffix(", regional")
 
 
 def slugify(value: str) -> str:

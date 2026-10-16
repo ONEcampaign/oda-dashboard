@@ -22,31 +22,38 @@ Sections, in order:
 import pandas as pd
 import resolvekit as rk
 from oda_data import OECDClient
-from pydeflate import oecd_dac_deflate, oecd_dac_exchange, set_pydeflate_path
+from pydeflate import oecd_dac_deflate, oecd_dac_exchange
 
-from src.data.analysis_tools.naming import normalize_unspecified_names
+from src.data.analysis_tools.naming import (
+    apply_name_overrides,
+    normalize_crs_regions,
+    normalize_unspecified_names,
+)
 from src.data.config import (
-    BASE_TIME,
     BILATERAL_DONORS,
+    CRS_NON_REGIONS,
     CRS_REGION_ROLLUPS,
     CRS_UNCLASSIFIED_INCOME,
     CRS_UNCLASSIFIED_REGION,
     CURRENCIES,
     DONOR_GROUPS,
+    EU27_COUNTRIES_NAME,
+    EU27_EUI_NAME,
     FRANCE_PRIORITY_RECIPIENTS,
     INT32_MAX,
     LDC_GROUP,
     LDC_LABEL,
-    PATHS,
+    ODA_ELIGIBLE,
     SAHEL_RECIPIENTS,
+    TOTAL_ODA,
     UNALLOCATED_BY_INCOME,
     UNITS_PER_MILLION,
+    UNSPECIFIED_RECIPIENT_CODE,
+    UNSPECIFIED_RECIPIENT_NAME,
     WORLD_BANK_INCOME_GROUPS,
     WORLD_BANK_NOT_CLASSIFIED,
     logger,
 )
-
-set_pydeflate_path(PATHS.PYDEFLATE)
 
 
 def convert_values_to_units(df: pd.DataFrame) -> pd.DataFrame:
@@ -70,9 +77,8 @@ def convert_values_to_units(df: pd.DataFrame) -> pd.DataFrame:
     value_cols = [c for c in df.columns if c.startswith("value_")]
 
     for col in value_cols:
-        # UNITS_PER_MILLION is a float on purpose; an int multiplier silently coarsens the
-        # result to float32 precision. See the note on the constant before touching this line.
-        units = (df[col] * UNITS_PER_MILLION).round()
+        # Widen first: a float32 product would round again, to float32's coarser spacing.
+        units = (df[col].astype("float64") * UNITS_PER_MILLION).round()
         largest = units.abs().max()
 
         # Int32 tops out at ~2.1 billion units, i.e. ~2,147 million.
@@ -136,9 +142,7 @@ def add_group_gni(member_gni: pd.DataFrame) -> pd.DataFrame:
         One row per year and donor_name, with a gni column.
     """
     group_totals = build_donor_group_totals(member_gni, ["year"])
-    eu27_eui_df = group_totals["EU27 countries"].assign(
-        donor_name="EU27 & EU Institutions"
-    )
+    eu27_eui_df = group_totals[EU27_COUNTRIES_NAME].assign(donor_name=EU27_EUI_NAME)
 
     return (
         pd.concat([member_gni, *group_totals.values(), eu27_eui_df])
@@ -446,6 +450,10 @@ def get_crs_recipient_classifications(
         raise ValueError(f"CRS did not return required columns: {missing}")
 
     raw["recipient_name"] = normalize_unspecified_names(raw["recipient_name"])
+    raw = apply_name_overrides(
+        raw, {UNSPECIFIED_RECIPIENT_CODE: UNSPECIFIED_RECIPIENT_NAME}, "recipient"
+    )
+    raw[CRS_REGION_COL] = normalize_crs_regions(raw[CRS_REGION_COL])
 
     attributes = ["recipient_name", _CRS_ISO3_COL, CRS_REGION_COL]
     grouped = raw.groupby(["recipient_code", "year"], dropna=False, observed=True)[
@@ -487,6 +495,11 @@ def get_crs_recipient_classifications(
     )
 
     return classified, ldc_members
+
+
+# Float noise allowed when checking that the classification join kept the total.
+JOIN_TOTAL_ABS_TOLERANCE: float = 1e-6
+JOIN_TOTAL_REL_TOLERANCE: float = 1e-9
 
 
 def add_recipient_classifications(
@@ -557,7 +570,10 @@ def add_recipient_classifications(
             )
             merged[col] = merged[col].fillna(sentinel)
 
-    if abs(merged["value"].sum() - before_value) > max(1e-6, abs(before_value) * 1e-9):
+    tolerance = max(
+        JOIN_TOTAL_ABS_TOLERANCE, abs(before_value) * JOIN_TOTAL_REL_TOLERANCE
+    )
+    if abs(merged["value"].sum() - before_value) > tolerance:
         raise ValueError(
             f"{label}: classification join changed the total "
             f"({before_value:,.2f} -> {merged['value'].sum():,.2f})"
@@ -584,7 +600,7 @@ def build_crs_recipient_group_totals(
         df.groupby(group_cols, dropna=False, observed=True)["value"]
         .sum()
         .reset_index()
-        .assign(recipient_name="ODA eligible countries")
+        .assign(recipient_name=ODA_ELIGIBLE)
     )
 
     income = get_attribute_total(df, INCOME_GROUP_COL, group_cols)
@@ -594,7 +610,9 @@ def build_crs_recipient_group_totals(
     # emitting them as regions as well would produce two rows per continent, which the pivot
     # would silently merge.
     regions = get_attribute_total(
-        df.loc[~df[CRS_REGION_COL].isin(CRS_REGION_ROLLUPS)], CRS_REGION_COL, group_cols
+        df.loc[~df[CRS_REGION_COL].isin([*CRS_REGION_ROLLUPS, *CRS_NON_REGIONS])],
+        CRS_REGION_COL,
+        group_cols,
     )
 
     # Continents are rollups of the CRS regions, so they are summed from the same column.
@@ -785,9 +803,7 @@ def add_share_of_reference_total(
     return merged.drop(columns=["total_oda"])
 
 
-def add_currencies_and_prices(
-    df: pd.DataFrame, base_year: int = BASE_TIME["base"]
-) -> pd.DataFrame:
+def add_currencies_and_prices(df: pd.DataFrame, *, base_year: int) -> pd.DataFrame:
     """Copy the data into every currency in CURRENCIES, at current and constant prices.
 
     Args:
@@ -933,7 +949,7 @@ def add_share_of_total_oda(df: pd.DataFrame) -> pd.DataFrame:
         The frame with pct_of_total_oda added.
     """
     return add_share_of_reference_total(
-        df, "indicator_name", "Total ODA", ["year", "donor_name"], "pct_of_total_oda"
+        df, "indicator_name", TOTAL_ODA, ["year", "donor_name"], "pct_of_total_oda"
     )
 
 

@@ -39,18 +39,19 @@ from src.data.analysis_tools.transformations import (
     widen_currency_price,
 )
 from src.data.config import (
+    ALL_BILATERAL_DONORS,
     BASE_TIME,
     DONORS_ORDER,
+    EU27_EUI_NAME,
     EU_TOTAL,
     FRANCE_PRIORITY_RECIPIENTS,
+    ODA_ELIGIBLE,
     PROVIDERS,
     RECIPIENTS_INDICATORS,
     RECIPIENTS_ORDER,
     SAHEL_RECIPIENTS,
     logger,
 )
-
-set_cache_dir(oda_data=True, pydeflate=True)
 
 
 def get_dac2a() -> pd.DataFrame:
@@ -137,7 +138,7 @@ def get_dac2a_eui_eu27() -> pd.DataFrame:
     ]
 
     eui_eu27_dac2a = (
-        eui_eu27_dac2a_converted.assign(donor_name="EU27 & EU Institutions")
+        eui_eu27_dac2a_converted.assign(donor_name=EU27_EUI_NAME)
         .groupby(group_cols, dropna=False, observed=True)["value"]
         .sum()
         .reset_index()
@@ -226,14 +227,14 @@ def combined_recipients() -> tuple[pd.DataFrame, list[str]]:
     recipients = add_share_of_reference_total(
         recipients,
         filter_col="donor_name",
-        filter_val="All bilateral donors",
+        filter_val=ALL_BILATERAL_DONORS,
         merge_cols=["year", "recipient_name"],
         pct_col="pct_total_recipient",
     )
     recipients = add_share_of_reference_total(
         recipients,
         filter_col="recipient_name",
-        filter_val="ODA eligible countries",
+        filter_val=ODA_ELIGIBLE,
         merge_cols=["year", "donor_name"],
         pct_col="pct_total_donor",
     )
@@ -244,6 +245,7 @@ def combined_recipients() -> tuple[pd.DataFrame, list[str]]:
 
 
 if __name__ == "__main__":
+    set_cache_dir(oda_data=True, pydeflate=True)
     logger.info("Generating recipients table...")
     df, group_names = combined_recipients()
     recipients_order = [

@@ -45,6 +45,7 @@ from src.data.config import (
     DONOR_GROUPS,
     DONORS_ORDER,
     EU27_EUI_LAST_YEAR,
+    EU27_EUI_NAME,
     EU_TOTAL,
     FINANCING_INDICATORS_ORDER,
     FINANCING_TIME,
@@ -54,8 +55,6 @@ from src.data.config import (
     PSI_FINANCING_INDICATORS,
     logger,
 )
-
-set_cache_dir(oda_data=True, pydeflate=True)
 
 
 def get_dac1() -> pd.DataFrame:
@@ -207,7 +206,7 @@ def get_eui_eu27_dac1() -> pd.DataFrame:
             indicator_name=lambda d: map_indicator_names(
                 d["one_indicator"], ALL_FINANCING_INDICATORS
             ),
-            donor_name="EU27 & EU Institutions",
+            donor_name=EU27_EUI_NAME,
         )
         .groupby(
             ["year", "donor_name", "currency", "price", "indicator_name"],
@@ -270,7 +269,7 @@ def get_eui_eu27_grants() -> pd.DataFrame:
         )["value"]
         .sum()
         .reset_index()
-        .assign(donor_name="EU27 & EU Institutions")
+        .assign(donor_name=EU27_EUI_NAME)
     )
 
     return eui_eu27_grants
@@ -356,6 +355,7 @@ def get_financing_data() -> pd.DataFrame:
 
 
 if __name__ == "__main__":
+    set_cache_dir(oda_data=True, pydeflate=True)
     logger.info("Generating financing table...")
     df = get_financing_data()
     generate_view_options(

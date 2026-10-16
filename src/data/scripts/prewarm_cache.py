@@ -62,8 +62,8 @@ if __name__ == "__main__":
             prewarm_exchange_rates()
             logger.info("Pydeflate cache pre-warm successful")
             sys.exit(0)
-        except Exception as e:
-            logger.error("Attempt %s/%s failed: %s", attempt, MAX_RETRIES, e)
+        except Exception:
+            logger.warning("Attempt %s/%s failed", attempt, MAX_RETRIES, exc_info=True)
             if attempt < MAX_RETRIES:
                 logger.info("Waiting %ss before retry...", RETRY_DELAY)
                 time.sleep(RETRY_DELAY)

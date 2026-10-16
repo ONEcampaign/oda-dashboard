@@ -128,6 +128,13 @@ function App() {
                 build regions from the region the CRS records for each recipient.
               </p>
               <p>
+                "Africa, unspecified" and similar entries are aid to more than one country in an area that cannot be
+                split between them, which some OECD tables call "regional". "Africa" is the full total for the area,
+                including its unspecified aid. Aid to developing countries that cannot be attributed to any country or
+                region is "ODA eligible countries, unspecified", part of "ODA eligible countries". Country names follow
+                each source, so a few are spelled slightly differently between tabs.
+              </p>
+              <p>
                 Income groups follow the World Bank classification in every tab. The Sectors and Gender tabs use the July
                 2026 classification (fiscal year 2027) and apply it to every year, as the OECD's own groups in the
                 Recipients tab do. Least Developed Countries follow the UN list and overlap with the income groups.
@@ -142,8 +149,8 @@ function App() {
                 organisations, such as the World Bank's IBRD, report mostly non-concessional lending.
               </p>
               <p>
-                Contributions that cannot be traced to a recipient are shown under "Bilateral, unspecified", as the OECD
-                does in its DAC2A table, so the total matches the contributions made.
+                Contributions that cannot be traced to a recipient are shown under "ODA eligible countries, unspecified",
+                where the OECD's DAC2A table also records them, so the total matches the contributions made.
               </p>
               <h2 className="font-bold text-xl mt-8 mb-2">How is double counting with multilateral contributions avoided?</h2>
               <p>
