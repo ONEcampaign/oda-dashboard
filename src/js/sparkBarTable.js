@@ -100,8 +100,10 @@ export function sparkbarTable(data, mode, {breakdown, currency = null, scale = n
                     uniqueGroups.forEach(s => { acc[yearKey][s] = null; });
                 }
 
-                acc[yearKey][group] =
-                    (acc[yearKey][group] || 0) + (typeof value === "number" ? value : 0);
+                // Sum only real numbers; a cell with no numeric value stays null (shown as "—")
+                if (typeof value === "number" && !Number.isNaN(value)) {
+                    acc[yearKey][group] = (acc[yearKey][group] ?? 0) + value;
+                }
 
                 return acc;
             }, {})
@@ -110,12 +112,11 @@ export function sparkbarTable(data, mode, {breakdown, currency = null, scale = n
         columnsToShow = ["Year", ...contextColumns, ...uniqueGroups];
         valueColumns = uniqueGroups;
 
-        minValues = Math.min(...valueColumns
+        const numericValues = valueColumns
             .flatMap(column => tableData.map(d => d[column]))
-            .filter(v => v !== undefined));
-        maxValues = Math.max(...valueColumns
-            .flatMap(column => tableData.map(d => d[column]))
-            .filter(v => v !== undefined));
+            .filter(v => v != null);
+        minValues = Math.min(...numericValues);
+        maxValues = Math.max(...numericValues);
     }
 
     const isCurrencyUnit = CURRENCY_CODES.has(currency) && unit === "value";

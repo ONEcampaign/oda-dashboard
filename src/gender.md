@@ -62,7 +62,7 @@ function App() {
 
   const unitOptions = React.useMemo(() => [
     {label: getCurrencyLabel(currency, {currencyLong: true, currencyOnly: true}), value: "value"},
-    {label: "% of all bilateral ODA", value: "total"}
+    {label: "% of bilateral allocable aid", value: "total"}
   ], [currency])
 
   const data = React.useMemo(
@@ -98,7 +98,7 @@ function App() {
   )
 
   const lineSubtitle = React.useMemo(
-    () => buildGenderSubtitle(indicator, " as a share of all bilateral ODA"),
+    () => buildGenderSubtitle(indicator, " as a share of bilateral allocable aid"),
     [indicator]
   )
 
@@ -121,9 +121,9 @@ function App() {
   const lineFilename = formatString(`gender ODA ${donorName} ${recipientName} share`, {fileMode: true})
   const tableFilename = formatString(`gender ODA ${donorName} ${recipientName} ${unit}`, {fileMode: true})
 
-  const tableNote = unit === "value"
-    ? `ODA values in ${pricesNote} ${currencyLabel}.`
-    : `ODA values as a share of all bilateral ODA received by ${recipientName}.`
+  const valueNote = `ODA gross disbursements in ${pricesNote} ${currencyLabel}.`
+  const shareNote = `ODA values as a share of bilateral allocable aid from ${donorName} to ${recipientName}.`
+  const tableNote = unit === "value" ? valueNote : shareNote
 
   return (
       <div className="mx-auto space-y-12 px-4 py-10 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
@@ -183,7 +183,7 @@ function App() {
             subtitle={columnSubtitle}
             subtitleIsHTML={true}
             source="OECD Creditor Reporting System."
-            note={`ODA values in ${pricesNote} ${currencyLabel}.`}
+            note={valueNote}
             empty={absoluteData.length === 0}
             emptyMessage="No data available"
             fileName={columnFilename}
@@ -199,7 +199,8 @@ function App() {
             subtitle={lineSubtitle}
             subtitleIsHTML={true}
             source="OECD Creditor Reporting System."
-            empty={relativeData.length === 0}
+            note={shareNote}
+            empty={relativeData.every(d => d.value == null)}
             emptyMessage="No data available"
             fileName={lineFilename}
             data={relativeData}
@@ -222,7 +223,7 @@ function App() {
                   onChange={setUnit} 
               />
           }
-          source="OECD DAC Table Creditor Reporting System."
+          source="OECD Creditor Reporting System."
           note={tableNote}
           empty={tableData.length === 0}
           emptyMessage="No data available"

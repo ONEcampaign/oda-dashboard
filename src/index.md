@@ -11,7 +11,7 @@ import {Header} from "npm:@one-data/observable-themes/ui"
 import {ONEVisual, AutoPlot, AutoTable} from "npm:@one-data/observable-themes/charts"
 import {getCurrencyLabel, formatString, resolveScale, isEmbedded} from "npm:@one-data/observable-themes/utils"
 import {setCustomColors} from "npm:@one-data/observable-themes/colors"
-import {financingQueries, transformTableData, donorNames, indicatorNames, yearOptions, eu27EuiLastYear} from "./js/financingQueries.js"
+import {financingQueries, transformTableData, donorNames, indicatorNames, yearOptions, eu27EuiLastYear, donorsWithGni} from "./js/financingQueries.js"
 import {customPalette} from "./js/colors.js"
 import {columnChart} from "./js/columnChart.js"
 import {areaChart} from "./js/areaChart.js"
@@ -40,10 +40,15 @@ function App() {
     const [commitment, setCommitment] = React.useState(false)
 
     const isTotalODA = indicator === TOTAL_ODA_CODE
+    const hasGni = donorsWithGni.has(donor)
 
     React.useEffect(() => {
         if (isTotalODA && unit === "total_pct") setUnit("value")
     }, [isTotalODA])
+
+    React.useEffect(() => {
+        if (!hasGni && unit === "gni_pct") setUnit("value")
+    }, [hasGni])
 
     React.useEffect(() => {
         setCommitment(false)
@@ -51,9 +56,9 @@ function App() {
 
     const unitOptions = React.useMemo(() => [
         {label: getCurrencyLabel(currency, {currencyLong: true, currencyOnly: true}), value: "value"},
-        {label: "% of GNI", value: "gni_pct"},
+        {label: "% of GNI", value: "gni_pct", disabled: !hasGni},
         {label: "% of total ODA", value: "total_pct", disabled: isTotalODA},
-    ], [currency, isTotalODA])
+    ], [currency, isTotalODA, hasGni])
 
     const data = React.useMemo(
         () => financingQueries(donor, indicator, currency, prices, timeRange),
@@ -122,6 +127,14 @@ function App() {
 
     const chartNote = [
         `ODA values in ${pricesNote} ${currencyLabel}.`,
+        coreOdaNote,
+        eu27Note
+    ].filter(Boolean).join(" ")
+
+    const relativeNote = [
+        isTotalODA
+            ? `ODA values as a share of the GNI of ${donorName}.`
+            : `ODA values as a share of total contributions from ${donorName}.`,
         coreOdaNote,
         eu27Note
     ].filter(Boolean).join(" ")
@@ -215,8 +228,8 @@ function App() {
                         )
                     }
                     source="OECD DAC1 table."
-                    note={[`ODA values as a share of GNI of ${donorName}.`, coreOdaNote, eu27Note].filter(Boolean).join(" ")}
-                    empty={relativeData.length === 0}
+                    note={relativeNote}
+                    empty={relativeData.every(d => d.value == null)}
                     emptyMessage="No data available"
                     fileName={areaFilename}
                     data={relativeData}

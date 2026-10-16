@@ -20,7 +20,15 @@ export const yearOptions = viewOptions.year;
 // Last year the EU27 + institutions bloc is published for (see EU27_EUI_LAST_YEAR in config.py).
 export const eu27EuiLastYear = viewOptions.eu27_eui_last_year;
 
+// Donors with at least one non-null GNI share; others (e.g. EU Institutions) cannot show "% of GNI".
+export const donorsWithGni = new Set(
+    financingData.filter((row) => row.pct_of_gni != null).map((row) => row.donor_name)
+);
+
 const financingCache = new Map();
+
+// Ratio to percentage, keeping missing shares missing (null * 100 would give 0).
+const toPct = (ratio) => (ratio != null ? ratio * 100 : null);
 
 // FINANCING VIEW
 export function financingQueries(
@@ -48,8 +56,8 @@ export function financingQueries(
         indicator: row.indicator,
         type: row.type,
         value: indicator === "Total ODA"
-            ? row.pct_of_gni * 100
-            : row.pct_of_total_oda * 100,
+            ? toPct(row.pct_of_gni)
+            : toPct(row.pct_of_total_oda),
         unit: indicator === "Total ODA"
             ? "% of GNI"
             : "% of total ODA",
@@ -80,9 +88,9 @@ function financingCacheKey({donor, indicator, currency, prices, timeRange}) {
 function deriveTableValue(row, unit) {
     switch (unit) {
         case "gni_pct":
-            return row.pct_of_gni * 100;
+            return toPct(row.pct_of_gni);
         case "total_pct":
-            return row.pct_of_total_oda * 100;
+            return toPct(row.pct_of_total_oda);
         default:
             return row.value;
     }
