@@ -23,7 +23,8 @@ from oda_data.clean_data.common import clean_parquet_file_in_batches
 from oda_data.tools.cache import BulkCacheEntry
 
 # Private, but it is the extraction oda_reader runs on a downloaded MultiSystem zip, so the
-# seeded data matches a real download. oda-reader is pinned in pyproject.toml.
+# seeded data matches a real download. oda-reader and oda-data are pinned exactly in
+# pyproject.toml, since this script relies on internals of both.
 from oda_reader.download.download_tools import (
     _save_or_return_parquet_files_from_content,
 )
@@ -92,12 +93,23 @@ def seed(source: Source, source_file: Path) -> Path:
 
     # Same key and version oda_data builds in Source._fetch_from_bulk_cache, so its next
     # read finds this entry fresh.
-    entry = BulkCacheEntry(
-        key=f"{type(source).__name__}_bulk",
-        fetcher=make_fetcher(source_file),
-        version=source._get_package_version(),
+    key = f"{type(source).__name__}_bulk"
+    version = source._get_package_version()
+    path = source.bulk_cache.ensure(
+        BulkCacheEntry(key=key, fetcher=make_fetcher(source_file), version=version),
+        refresh=True,
     )
-    return source.bulk_cache.ensure(entry, refresh=True)
+
+    # Ask for the entry again with a fetcher that refuses to run: if oda_data would not see
+    # the seeded file as fresh, this fails here instead of downloading during the build.
+    def refuse(_: Path) -> None:
+        raise RuntimeError(
+            f"oda_data does not treat the seeded {key} as fresh and would download it; "
+            "check that the cache key and version still match oda_data's"
+        )
+
+    source.bulk_cache.ensure(BulkCacheEntry(key=key, fetcher=refuse, version=version))
+    return path
 
 
 def main(source_dir: Path) -> None:

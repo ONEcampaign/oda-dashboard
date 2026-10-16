@@ -1,6 +1,7 @@
 """Manifest loading, saving, and computation."""
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -222,6 +223,27 @@ def compute_historical_variation(df: pd.DataFrame, value_column: str) -> dict:
     }
 
 
+def releases_by_recording_order(releases: dict) -> list[str]:
+    """Order release names from most to least recently recorded.
+
+    Releases are ordered by computed_at. Releases recorded before it existed have no
+    timestamp, so those fall back to the order they were added, which JSON preserves.
+    Sorting by name would put "may_2025" after "january_2026".
+
+    Args:
+        releases: The manifest's releases, by name.
+
+    Returns:
+        Release names, newest first.
+    """
+
+    def recorded(item: tuple[int, str]) -> tuple[str, int]:
+        position, name = item
+        return releases[name].get("computed_at", ""), position
+
+    return [name for _, name in sorted(enumerate(releases), key=recorded, reverse=True)]
+
+
 def update_manifest(
     manifest: dict,
     release: str,
@@ -267,6 +289,9 @@ def update_manifest(
 
     # Compute release data
     release_data = {
+        # When the release was recorded, so the previous release is found by time rather
+        # than by its name.
+        "computed_at": datetime.now().isoformat(),
         "row_count": len(df),
         "year_range": [int(df["year"].min()), int(df["year"].max())]
         if "year" in df.columns

@@ -45,6 +45,9 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      - name: Run tests
+        run: uv run pytest -q
+
       - id: date
         run: |
           echo "week=$(TZ=America/Los_Angeles date +'%Y-%U')" >> $GITHUB_OUTPUT
@@ -73,8 +76,11 @@ jobs:
           uv run python src/data/scripts/seed_bulk_cache.py
         timeout-minutes: 30
 
-      # Observable compiled output — keyed on script/config content so a code
-      # change forces recompilation without also discarding the bulk data above.
+      # Observable compiled output — keyed on script/config content, the oda-reader patch and
+      # the locked dependencies, so a code or dependency change forces recompilation without
+      # also discarding the bulk data above. Framework reruns a data loader whose cached
+      # output is older than the loader file, and a fresh checkout gives every loader the
+      # checkout time, so in CI loaders rerun even on a cache hit.
       # restore-keys includes the script hash so a stale cache from a different
       # script version is never restored (avoids serving old parquet columns).
       # npm modules (_npm) are left out so unversioned `npm:` imports resolve to
@@ -85,9 +91,9 @@ jobs:
           path: |
             src/.observablehq/cache/*
             !src/.observablehq/cache/_npm
-          key: observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py') }}-${{ steps.date.outputs.week }}
+          key: observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py', 'src/data/_compat.py', 'pyproject.toml', 'uv.lock') }}-${{ steps.date.outputs.week }}
           restore-keys: |
-            observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py') }}-
+            observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py', 'src/data/_compat.py', 'pyproject.toml', 'uv.lock') }}-
 
       # Caches saved before the _npm exclusion still carry it.
       - name: Drop cached npm modules
@@ -118,6 +124,23 @@ jobs:
         run: |
           uv run python src/data/scripts/sectors_view.py
         timeout-minutes: 60
+
+      # Compares the built data with the previous release recorded in the manifests. Not
+      # blocking yet: the report is uploaded for review whatever the result.
+      - name: Validate built data
+        continue-on-error: true
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: uv run python src/data/scripts/validate.py ${{ steps.date.outputs.month }} --no-seek
+        timeout-minutes: 15
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: validation_data/reports/
+          if-no-files-found: ignore
 
       - name: Cache gcloud SDK
         uses: actions/cache@v4

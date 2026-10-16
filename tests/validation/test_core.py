@@ -5,6 +5,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
+from validation.core import _get_previous_release
 from validation.core import validate_dataset
 from validation.models import ValidationReport
 
@@ -83,3 +84,28 @@ class TestValidateDataset:
         )
 
         assert result.has_blocking_errors is True
+
+
+def test_previous_release_follows_recording_order_not_name():
+    manifest = {
+        "releases": {
+            "may_2025": {"row_count": 1},
+            "january_2026": {"row_count": 2},
+            "october_2026": {"row_count": 3},
+        }
+    }
+    assert _get_previous_release(manifest, "october_2026") == {"row_count": 2}
+
+
+def test_previous_release_prefers_timestamps():
+    manifest = {
+        "releases": {
+            "b": {"computed_at": "2026-10-01T00:00:00", "row_count": 2},
+            "a": {"computed_at": "2026-01-01T00:00:00", "row_count": 1},
+            "c": {"computed_at": "2026-12-01T00:00:00", "row_count": 3},
+        }
+    }
+    assert _get_previous_release(manifest, "c") == {
+        "computed_at": "2026-10-01T00:00:00",
+        "row_count": 2,
+    }
