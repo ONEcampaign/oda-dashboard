@@ -190,6 +190,3 @@ src/data/validation_data/reports/*.md
 /docs
 /validation_data/reports
 src/tailwind.generated.css
-
-# Built with the sectors data by sectors_view.py, before the Observable build
-/src/data/analysis_tools/sectors_view_options.json

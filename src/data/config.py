@@ -53,9 +53,6 @@ class PATHS:
     TOPIC_PAGE = SRC.parent / "topic_page"
     CDN_FILES = SRC.parent / "cdn_files"
 
-    # View options and other small artifacts the frontend loads as FileAttachments.
-    TOOLS = SRC / "data" / "analysis_tools"
-
     # oda_data and pydeflate share one cache directory; see outputs.set_cache_dir.
     DATA = SRC / "data" / "cache"
 

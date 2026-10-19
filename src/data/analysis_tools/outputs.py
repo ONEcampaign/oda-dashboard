@@ -2,8 +2,8 @@
 
 This module owns the boundary between a finished DataFrame and the artifacts the frontend
 consumes: each loader's archive on stdout (its data as parquet and its dropdown options), and
-for sectors the partitioned dataset on the CDN with its options JSON. It also points oda_data
-and pydeflate at the shared cache.
+for sectors the partitioned dataset and its options JSON, published together on the CDN. It
+also points oda_data and pydeflate at the shared cache.
 
 The rule for what belongs here: I/O, serialisation and environment setup. Anything that takes a
 DataFrame and returns a DataFrame belongs in ``transformations``; anything that decides how an
@@ -100,14 +100,14 @@ def build_view_options(
 
 
 def write_view_options(options: dict, file_name: str) -> None:
-    """Write a view's options to PATHS.TOOLS, for a view built outside Observable's loaders.
+    """Write a view's options to PATHS.CDN_FILES, to be published beside its CDN dataset.
 
     Args:
         options: From build_view_options.
         file_name: Output filename.
     """
-    logger.info("Saving view options to %s/%s", PATHS.TOOLS, file_name)
-    with open(PATHS.TOOLS / file_name, "w") as f:
+    logger.info("Saving view options to %s/%s", PATHS.CDN_FILES, file_name)
+    with open(PATHS.CDN_FILES / file_name, "w") as f:
         json.dump(options, f, indent=2)
 
 

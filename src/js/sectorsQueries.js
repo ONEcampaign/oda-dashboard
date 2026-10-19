@@ -1,5 +1,4 @@
 import {DuckDBClient} from "npm:@observablehq/duckdb";
-import {FileAttachment} from "observablehq:stdlib";
 import {COMBINED_INDICATOR_ODA} from "./config.js";
 
 /**
@@ -8,9 +7,17 @@ import {COMBINED_INDICATOR_ODA} from "./config.js";
  * This conversion is done in the DuckDB SQL queries below.
  */
 
-// Donors, recipients, indicators and sectors are all identified by name; the loader
-// publishes the option lists and the name-to-slug maps used to address partitions.
-const viewOptions = await FileAttachment("../data/analysis_tools/sectors_view_options.json").json();
+// The sectors data lives on the CDN, published by CI together with its options: the option
+// lists, the opening selections and the name-to-slug maps used to address partitions.
+const CDN_URL = "https://storage.googleapis.com/data-apps-one-data/sources";
+const PARQUET_DATASET_URL = `${CDN_URL}/sectors_view`;
+const OPTIONS_URL = `${CDN_URL}/sectors_view_options.json`;
+
+const optionsResponse = await fetch(OPTIONS_URL);
+if (!optionsResponse.ok) {
+    throw new Error(`Sectors options unavailable (${optionsResponse.status}): ${OPTIONS_URL}`);
+}
+const viewOptions = await optionsResponse.json();
 
 export const donorNames = viewOptions.donor_name;
 export const recipientNames = viewOptions.recipient_name;
@@ -23,9 +30,6 @@ export const subSectorsBySector = viewOptions.sub_sectors_by_sector;
 
 const donorSlugs = viewOptions.donor_slugs;
 const recipientSlugs = viewOptions.recipient_slugs;
-
-// Parquet dataset URL (partitioned by donor_slug and recipient_slug)
-const PARQUET_DATASET_URL = "https://storage.googleapis.com/data-apps-one-data/sources/sectors_view";
 
 // Lazy initialization: DuckDB instance is created on first query
 let dbPromise = null;

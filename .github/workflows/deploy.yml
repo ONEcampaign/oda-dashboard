@@ -111,14 +111,6 @@ jobs:
         run: uv run python src/data/scripts/prewarm_cache.py
         timeout-minutes: 15
 
-      # Before the build, so dist/ ships the sectors options generated with this run's data.
-      - name: individual-loaders
-        env:
-          PYTHONPATH: ${{ github.workspace }}
-        run: |
-          uv run python src/data/scripts/sectors_view.py
-        timeout-minutes: 60
-
       - name: Build Observable Framework app
         run: uv run npm run build
         timeout-minutes: 240
@@ -128,6 +120,13 @@ jobs:
         with:
           workload_identity_provider: 'projects/650536812276/locations/global/workloadIdentityPools/github/providers/github'
           service_account: 'github-deployer@one-data-commons.iam.gserviceaccount.com'
+
+      - name: individual-loaders
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          uv run python src/data/scripts/sectors_view.py
+        timeout-minutes: 60
 
       # Compares the built data with the previous release recorded in the manifests. Not
       # blocking yet: the report is uploaded for review whatever the result.
@@ -166,6 +165,9 @@ jobs:
             gsutil -m rm -r gs://${{ env.BUCKET }}/sources/sectors_view/** || true
             echo "Uploading sectors partitioned dataset to GCS..."
             gsutil -m rsync -r -d cdn_files/sectors_view gs://${{ env.BUCKET }}/sources/sectors_view
+            # After the dataset, so every slug it lists already resolves. no-cache so browsers pick
+            # up a new release's options at once.
+            gsutil -h "Cache-Control:no-cache" cp cdn_files/sectors_view_options.json gs://${{ env.BUCKET }}/sources/sectors_view_options.json
           else
             echo "Warning: cdn_files/sectors_view directory not found"
             exit 1

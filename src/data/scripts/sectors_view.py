@@ -484,7 +484,8 @@ def main() -> None:
     write_partitioned_dataset(
         df, "sectors_view", partition_cols=["donor_slug", "recipient_slug"]
     )
-    # Written after the dataset, so the options only exist alongside the data they describe.
+    # Written after the dataset, so the options only exist alongside the data they describe;
+    # CI publishes both to the CDN, where the page reads them.
     write_view_options(options, "sectors_view_options.json")
     logger.info("Sectors view completed")
 
