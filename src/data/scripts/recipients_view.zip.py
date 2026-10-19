@@ -8,7 +8,7 @@ Shape of the pipeline:
     3. recipient groups (Sahel, France priority) summed before the donor groups in
        DONOR_GROUPS, so every donor aggregate covers them
     4. shares from both perspectives: of what a recipient received, and of what a donor gave
-    5. one parquet on stdout for Observable, plus the dropdown options beside it
+    5. one zip on stdout for Observable: the data as parquet and its dropdown options
 
 Output is keyed by name: year, donor_name, recipient_name, indicator_name.
 """
@@ -21,9 +21,9 @@ from src.data.analysis_tools.naming import (
     map_config_values,
 )
 from src.data.analysis_tools.outputs import (
-    generate_view_options,
-    parquet_to_stdout,
+    build_view_options,
     set_cache_dir,
+    view_archive_to_stdout,
 )
 from src.data.analysis_tools.recipients import (
     aggregate_recipient_names,
@@ -243,7 +243,7 @@ if __name__ == "__main__":
         "France priority countries",
         "Sahel countries",
     ]
-    generate_view_options(
+    options = build_view_options(
         df=df,
         columns={
             "donor_name": DONORS_ORDER,
@@ -252,11 +252,10 @@ if __name__ == "__main__":
             "year": [],
         },
         base_year=BASE_TIME["base"],
-        file_name="recipients_view_options.json",
         defaults={
             "donor_name": DEFAULT_DONOR,
             "recipient_name": DEFAULT_RECIPIENT,
             "indicator_name": [BILATERAL, IMPUTED_MULTILATERAL],
         },
     )
-    parquet_to_stdout(df)
+    view_archive_to_stdout(df, options)

@@ -53,9 +53,6 @@ class PATHS:
     TOPIC_PAGE = SRC.parent / "topic_page"
     CDN_FILES = SRC.parent / "cdn_files"
 
-    # View options and other small artifacts the frontend loads as FileAttachments.
-    TOOLS = SRC / "data" / "analysis_tools"
-
     # oda_data and pydeflate share one cache directory; see outputs.set_cache_dir.
     DATA = SRC / "data" / "cache"
 
@@ -425,7 +422,7 @@ CRS_UNCLASSIFIED_INCOME: str = "Income group not reported"
 # ---------------------------------------------------------------------------------------
 # 8. Display orderings
 #
-# generate_view_options pins these first in the dropdowns, in this order; everything else
+# build_view_options pins these first in the dropdowns, in this order; everything else
 # follows alphabetically. Names absent from the data are skipped, so one donor ordering serves
 # all four views even though they do not all publish every aggregate.
 # ---------------------------------------------------------------------------------------

@@ -27,9 +27,10 @@ from oda_data.tools import sector_lists
 from src.data.analysis_tools.imputations import read_imputed_multilateral
 from src.data.analysis_tools.naming import slugify
 from src.data.analysis_tools.outputs import (
-    generate_view_options,
+    build_view_options,
     set_cache_dir,
     write_partitioned_dataset,
+    write_view_options,
 )
 from src.data.analysis_tools.transformations import (
     RECIPIENT_CLASSIFICATION_COLS,
@@ -457,7 +458,7 @@ def main() -> None:
         .to_dict()
     )
 
-    generate_view_options(
+    options = build_view_options(
         df=df,
         columns={
             "donor_name": DONORS_ORDER,
@@ -467,7 +468,6 @@ def main() -> None:
             "year": [],
         },
         base_year=SECTORS_TIME["base"],
-        file_name="sectors_view_options.json",
         defaults={
             "donor_name": DEFAULT_DONOR,
             "recipient_name": DEFAULT_RECIPIENT,
@@ -484,6 +484,9 @@ def main() -> None:
     write_partitioned_dataset(
         df, "sectors_view", partition_cols=["donor_slug", "recipient_slug"]
     )
+    # Written after the dataset, so the options only exist alongside the data they describe;
+    # CI publishes both to the CDN, where the page reads them.
+    write_view_options(options, "sectors_view_options.json")
     logger.info("Sectors view completed")
 
 

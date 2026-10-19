@@ -8,8 +8,8 @@ import { convertUnitsToMillions } from "npm:@one-data/observable-themes/utils"
  */
 
 const [viewOptions, financingTable] = await Promise.all([
-    FileAttachment("../data/analysis_tools/financing_view_options.json").json(),
-    FileAttachment("../data/scripts/financing_view.parquet").parquet()
+    FileAttachment("../data/scripts/financing_view/options.json").json(),
+    FileAttachment("../data/scripts/financing_view/data.parquet").parquet()
 ]);
 
 const financingData = financingTable.toArray();

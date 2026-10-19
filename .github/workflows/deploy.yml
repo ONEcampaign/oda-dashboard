@@ -161,10 +161,11 @@ jobs:
       - name: Upload sectors partitioned dataset
         run: |
           if [ -d "cdn_files/sectors_view" ]; then
-            echo "Clearing existing sectors dataset in GCS..."
-            gsutil -m rm -r gs://${{ env.BUCKET }}/sources/sectors_view/** || true
             echo "Uploading sectors partitioned dataset to GCS..."
             gsutil -m rsync -r -d cdn_files/sectors_view gs://${{ env.BUCKET }}/sources/sectors_view
+            # After the dataset, so every slug it lists already resolves. no-cache so browsers pick
+            # up a new release's options at once.
+            gsutil -h "Cache-Control:no-cache" cp cdn_files/sectors_view_options.json gs://${{ env.BUCKET }}/sources/sectors_view_options.json
           else
             echo "Warning: cdn_files/sectors_view directory not found"
             exit 1
