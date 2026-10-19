@@ -21,6 +21,7 @@ Sections, in order:
 
 import logging
 from pathlib import Path
+from typing import NamedTuple
 
 from oda_data import provider_groupings, recipient_groupings
 
@@ -355,19 +356,58 @@ UNALLOCATED_BY_INCOME: str = "Unallocated by income"
 LDC_GROUP: str = "Least Developed Countries"
 LDC_LABEL: str = RECIPIENT_NAME_OVERRIDES[10_016]
 
-# Continent totals, rolled up from CRS regions. The regions themselves are read from the
-# data; this only records which regions make up each continent. Each list includes the
-# continent-level region value the CRS uses for aid it records against a whole continent
-# ("Africa, regional", read as "Africa"), so a continent total covers its sub-regions plus that.
-CRS_REGION_ROLLUPS: dict[str, list[str]] = {
-    "Africa": ["North of Sahara", "South of Sahara", "Africa"],
-    "Asia": ["South & Central Asia", "Far East Asia", "Middle East", "Asia"],
-    "America": ["Caribbean & Central America", "South America", "America"],
+
+class CrsRegion(NamedTuple):
+    """A CRS region's continent rollup and whether it gets a region group."""
+
+    continent: str | None
+    is_region: bool
+
+
+# Every CRS region the pipeline accepts, by name. Membership is read from the data; this only
+# says what each region means. A value missing here fails the build, so a new OECD region is
+# classified on purpose instead of silently becoming a group of its own.
+#
+# The CRS records aid against a whole continent under the continent's name. That aid rolls into
+# the continent total, which covers its sub-regions plus that, and is not a region itself.
+# "Regional and Unspecified" holds only code 9998, so a region group for it would repeat that
+# recipient value for value. Europe and Oceania have no continent total.
+#
+# The order of first appearance sets the order of continents and regions in
+# CRS_RECIPIENTS_ORDER.
+CRS_REGIONS: dict[str, CrsRegion] = {
+    "Africa": CrsRegion("Africa", is_region=False),
+    "Asia": CrsRegion("Asia", is_region=False),
+    "America": CrsRegion("America", is_region=False),
+    "North of Sahara": CrsRegion("Africa", is_region=True),
+    "South of Sahara": CrsRegion("Africa", is_region=True),
+    "Caribbean & Central America": CrsRegion("America", is_region=True),
+    "South America": CrsRegion("America", is_region=True),
+    "South & Central Asia": CrsRegion("Asia", is_region=True),
+    "Far East Asia": CrsRegion("Asia", is_region=True),
+    "Middle East": CrsRegion("Asia", is_region=True),
+    "Europe": CrsRegion(None, is_region=True),
+    "Oceania": CrsRegion(None, is_region=True),
+    "Regional and Unspecified": CrsRegion(None, is_region=False),
 }
 
-# CRS region values that are not regions. "Regional and Unspecified" holds only code 9998, so a
-# region group for it would repeat that recipient value for value.
-CRS_NON_REGIONS: frozenset[str] = frozenset({"Regional and Unspecified"})
+# Raw CRS spellings of a region in CRS_REGIONS: the CRS sometimes records a continent's own aid
+# against "Africa, regional" rather than "Africa".
+CRS_REGION_ALIASES: dict[str, str] = {
+    "Africa, regional": "Africa",
+    "Asia, regional": "Asia",
+    "America, regional": "America",
+}
+
+# Raw CRS region value -> region name.
+CRS_REGION_NAMES: dict[str, str] = {
+    name: name for name in CRS_REGIONS
+} | CRS_REGION_ALIASES
+
+CRS_CONTINENTS: list[str] = list(
+    dict.fromkeys(r.continent for r in CRS_REGIONS.values() if r.continent)
+)
+CRS_REGION_GROUPS: list[str] = [name for name, r in CRS_REGIONS.items() if r.is_region]
 
 # Sentinels for recipients the classification table never covers. Distinct from
 # UNALLOCATED_BY_INCOME, which is a real category for regional and unspecified recipients.
@@ -419,16 +459,8 @@ CRS_RECIPIENTS_ORDER: list[str] = [
     *WORLD_BANK_INCOME_GROUPS.values(),
     WORLD_BANK_NOT_CLASSIFIED,
     UNALLOCATED_BY_INCOME,
-    *CRS_REGION_ROLLUPS,
-    "North of Sahara",
-    "South of Sahara",
-    "Caribbean & Central America",
-    "South America",
-    "South & Central Asia",
-    "Far East Asia",
-    "Middle East",
-    "Europe",
-    "Oceania",
+    *CRS_CONTINENTS,
+    *CRS_REGION_GROUPS,
     "Sahel countries",
     "France priority countries",
 ]
