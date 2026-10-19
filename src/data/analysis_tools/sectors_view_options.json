@@ -289,6 +289,14 @@
     "end": 2024,
     "base": 2024
   },
+  "defaults": {
+    "donor_name": "DAC countries",
+    "recipient_name": "ODA eligible countries",
+    "indicator_name": [
+      "Bilateral",
+      "Imputed multilateral"
+    ]
+  },
   "donor_slugs": {
     "All bilateral donors": "all-bilateral-donors",
     "Australia": "australia",

@@ -80,10 +80,12 @@ CURRENCIES: list[str] = ["USD", "EUR", "GBP", "CAD"]
 # Display names several views build or look up, defined once so a rename cannot leave one
 # view behind.
 ALL_BILATERAL_DONORS: str = "All bilateral donors"
+DAC_COUNTRIES_NAME: str = "DAC countries"
 EU27_COUNTRIES_NAME: str = "EU27 countries"
 EU27_EUI_NAME: str = "EU27 & EU Institutions"
 ODA_ELIGIBLE: str = "ODA eligible countries"
 TOTAL_ODA: str = "Total ODA"
+CORE_ODA: str = "Core ODA (ONE Definition)"
 BILATERAL: str = "Bilateral"
 IMPUTED_MULTILATERAL: str = "Imputed multilateral"
 
@@ -125,7 +127,7 @@ GRANT_EQUIVALENT_START_YEAR: int = 2018
 
 AGGREGATE_FINANCING_INDICATORS: dict[str, str] = {
     "ONE.10.1010_11010": TOTAL_ODA,
-    "ONE.10.1010C": "Core ODA (ONE Definition)",
+    "ONE.10.1010C": CORE_ODA,
     "DAC1.10.1015": "Bilateral ODA",
     "DAC1.10.11015": "Bilateral ODA",
     "DAC1.10.2000": "Multilateral ODA",
@@ -236,7 +238,7 @@ PROVIDERS: dict[int, str] = BILATERAL_DONORS | EU_INSTITUTIONS
 # donors' contributions, which their own totals already include.
 DONOR_GROUPS: dict[str, dict] = {
     ALL_BILATERAL_DONORS: BILATERAL_DONORS,
-    "DAC countries": DAC_COUNTRIES,
+    DAC_COUNTRIES_NAME: DAC_COUNTRIES,
     "Non-DAC countries": NON_DAC_COUNTRIES,
     "G7 countries": G7_COUNTRIES,
     EU27_COUNTRIES_NAME: EU_COUNTRIES,
@@ -423,7 +425,7 @@ CRS_UNCLASSIFIED_INCOME: str = "Income group not reported"
 # ---------------------------------------------------------------------------------------
 
 DONORS_ORDER: list[str] = [
-    "DAC countries",
+    DAC_COUNTRIES_NAME,
     "Non-DAC countries",
     ALL_BILATERAL_DONORS,
     "G7 countries",
@@ -431,6 +433,10 @@ DONORS_ORDER: list[str] = [
     "EU Institutions",
     EU27_EUI_NAME,
 ]
+
+# The donor and recipient every page opens on.
+DEFAULT_DONOR: str = DAC_COUNTRIES_NAME
+DEFAULT_RECIPIENT: str = ODA_ELIGIBLE
 
 FINANCING_INDICATORS_ORDER: list[str] = (
     list(dict.fromkeys(AGGREGATE_FINANCING_INDICATORS.values()))

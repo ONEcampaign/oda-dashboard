@@ -79,5 +79,14 @@
     "end": 2025,
     "base": 2025
   },
+  "defaults": {
+    "donor_name": "DAC countries",
+    "indicator_name": "Total ODA"
+  },
+  "names": {
+    "total_oda": "Total ODA",
+    "core_oda": "Core ODA (ONE Definition)",
+    "eu27_eui": "EU27 & EU Institutions"
+  },
   "eu27_eui_last_year": 2024
 }

@@ -32,6 +32,8 @@ def generate_view_options(
     base_year: int | None = None,
     file_name: str = "view_options.json",
     extra: dict | None = None,
+    defaults: dict[str, str | list[str]] | None = None,
+    names: dict[str, dict[str, str]] | None = None,
 ) -> None:
     """Write the JSON of dropdown values a view's frontend reads.
 
@@ -46,6 +48,13 @@ def generate_view_options(
         file_name: Output filename, written to PATHS.TOOLS.
         extra: Additional keys merged into the output, e.g. the name-to-slug maps the frontend
             needs to build partition paths, or a sector-to-sub-sector index.
+        defaults: The selection each dropdown opens on, by column; a list for a multi-select.
+        names: Option values the frontend refers to by key, grouped by column, e.g.
+            {"indicator_name": {"total_oda": "Total ODA"}}. Written as one flat key map.
+
+    Raises:
+        ValueError: If a default or a name is not among the options, so a rename fails the
+            build instead of leaving the frontend pointing at a value that no longer exists.
     """
 
     def _ordered(values: list[str], order: list[str]) -> list[str]:
@@ -68,12 +77,36 @@ def generate_view_options(
                 _ordered(unique_vals, order) if order else sorted(unique_vals)
             )
 
+    for col, value in (defaults or {}).items():
+        selected = [value] if isinstance(value, str) else value
+        _require_options(selected, options.get(col, []), f"{file_name} default {col}")
+    for col, keyed in (names or {}).items():
+        _require_options(
+            list(keyed.values()), options.get(col, []), f"{file_name} {col}"
+        )
+    if defaults:
+        options["defaults"] = defaults
+    if names:
+        keys = [k for keyed in names.values() for k in keyed]
+        if dupes := sorted({k for k in keys if keys.count(k) > 1}):
+            raise ValueError(
+                f"{file_name}: names keys used in more than one column: {dupes}"
+            )
+        options["names"] = {k: v for keyed in names.values() for k, v in keyed.items()}
+
     if extra:
         options |= extra
 
     logger.info("Saving view options to %s/%s", PATHS.TOOLS, file_name)
     with open(PATHS.TOOLS / file_name, "w") as f:
         json.dump(options, f, indent=2)
+
+
+def _require_options(values: list[str], options: list[str], label: str) -> None:
+    """Raise if any value is not among the options."""
+    missing = [v for v in values if v not in options]
+    if missing:
+        raise ValueError(f"{label} not among the options: {missing}")
 
 
 def set_cache_dir(

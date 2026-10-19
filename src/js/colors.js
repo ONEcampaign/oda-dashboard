@@ -1,4 +1,5 @@
 import {ONEColors} from "npm:@one-data/observable-themes/colors";
+import {COMBINED_INDICATOR_ODA} from "./config.js";
 
 export const customPalette = {
     ge: ONEColors.teal0,
@@ -32,7 +33,7 @@ export const paletteRecipients = {
     domain: [
         "Bilateral",
         "Imputed multilateral",
-        "Bilateral + imputed multilateral ODA"
+        COMBINED_INDICATOR_ODA
     ],
     range: [
         customPalette.bilateral,

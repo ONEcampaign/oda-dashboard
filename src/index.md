@@ -11,7 +11,7 @@ import {Header} from "npm:@one-data/observable-themes/ui"
 import {ONEVisual, AutoPlot, AutoTable} from "npm:@one-data/observable-themes/charts"
 import {getCurrencyLabel, formatString, resolveScale, isEmbedded} from "npm:@one-data/observable-themes/utils"
 import {setCustomColors} from "npm:@one-data/observable-themes/colors"
-import {financingQueries, transformTableData, donorNames, indicatorNames, yearOptions, eu27EuiLastYear, donorsWithGni} from "./js/financingQueries.js"
+import {financingQueries, transformTableData, donorNames, indicatorNames, yearOptions, eu27EuiLastYear, donorsWithGni, defaults, names} from "./js/financingQueries.js"
 import {customPalette} from "./js/colors.js"
 import {columnChart} from "./js/columnChart.js"
 import {areaChart} from "./js/areaChart.js"
@@ -23,23 +23,19 @@ setCustomColors(customPalette)
 const DONOR_OPTIONS = donorNames.map(n => ({label: n, value: n}))
 
 const INDICATOR_OPTIONS = indicatorNames.map(n => ({label: n, value: n}))
-
-const TOTAL_ODA_CODE = "Total ODA"
-const CORE_ODA_CODE = "Core ODA (ONE Definition)"
-const EU27_EUI_CODE = "EU27 & EU Institutions"
 ```
 
 ```jsx
 function App() {
-    const [donor, setDonor] = React.useState("DAC countries")
-    const [indicator, setIndicator] = React.useState(TOTAL_ODA_CODE)
+    const [donor, setDonor] = React.useState(defaults.donor_name)
+    const [indicator, setIndicator] = React.useState(defaults.indicator_name)
     const [currency, setCurrency] = React.useState("usd")
     const [prices, setPrices] = React.useState("constant")
     const [timeRange, setTimeRange] = React.useState([yearOptions.end - 20, yearOptions.end])
     const [unit, setUnit] = React.useState("value")
     const [commitment, setCommitment] = React.useState(false)
 
-    const isTotalODA = indicator === TOTAL_ODA_CODE
+    const isTotalODA = indicator === names.total_oda
     const hasGni = donorsWithGni.has(donor)
 
     React.useEffect(() => {
@@ -82,10 +78,10 @@ function App() {
     const indicatorName = indicator ?? ""
     const currencyLabel = getCurrencyLabel(currency, {currencyOnly: true, currencyLong: true})
     const pricesNote = `${prices}${prices === "constant" ? ` ${yearOptions.base}` : ""}`
-    const coreOdaNote = indicator === CORE_ODA_CODE
+    const coreOdaNote = indicator === names.core_oda
         ? "Core ODA (ONE definition): Total ODA excluding in-donor spending."
         : ""
-    const eu27Note = donor === EU27_EUI_CODE && timeRange[1] > eu27EuiLastYear
+    const eu27Note = donor === names.eu27_eui && timeRange[1] > eu27EuiLastYear
         ? `Shown up to ${eu27EuiLastYear}. Later data do not yet include EU members' contributions to the EU Institutions, which are needed to avoid counting them twice.`
         : ""
 

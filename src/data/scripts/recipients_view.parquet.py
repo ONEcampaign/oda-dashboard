@@ -40,10 +40,14 @@ from src.data.analysis_tools.transformations import (
 )
 from src.data.config import (
     BASE_TIME,
+    BILATERAL,
+    DEFAULT_DONOR,
+    DEFAULT_RECIPIENT,
     DONORS_ORDER,
     EU27_EUI_NAME,
     EU_TOTAL,
     FRANCE_PRIORITY_RECIPIENTS,
+    IMPUTED_MULTILATERAL,
     PROVIDERS,
     RECIPIENTS_INDICATORS,
     RECIPIENTS_ORDER,
@@ -249,5 +253,10 @@ if __name__ == "__main__":
         },
         base_year=BASE_TIME["base"],
         file_name="recipients_view_options.json",
+        defaults={
+            "donor_name": DEFAULT_DONOR,
+            "recipient_name": DEFAULT_RECIPIENT,
+            "indicator_name": [BILATERAL, IMPUTED_MULTILATERAL],
+        },
     )
     parquet_to_stdout(df)

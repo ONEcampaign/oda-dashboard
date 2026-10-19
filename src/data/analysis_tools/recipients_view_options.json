@@ -309,5 +309,13 @@
     "start": 1990,
     "end": 2024,
     "base": 2024
+  },
+  "defaults": {
+    "donor_name": "DAC countries",
+    "recipient_name": "ODA eligible countries",
+    "indicator_name": [
+      "Bilateral",
+      "Imputed multilateral"
+    ]
   }
 }

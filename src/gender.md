@@ -17,7 +17,8 @@ import {
     donorNames,
     recipientNames,
     indicatorNames,
-    yearOptions
+    yearOptions,
+    defaults
 } from "./js/genderQueries.js"
 import {customPalette, paletteGender} from "./js/colors.js"
 import {columnChart} from "./js/columnChart.js"
@@ -39,9 +40,6 @@ const GENDER_COLOR_MAP = new Map(
 ```
 
 ```jsx
-const MAIN_TARGET = "Main target"
-const SECONDARY_TARGET = "Secondary target"
-
 function buildGenderSubtitle(indicatorNamesSelected, suffix = "") {
   const parts = indicatorNamesSelected.map((name, i) => {
     const color = GENDER_COLOR_MAP.get(name) ?? "inherit"
@@ -52,9 +50,9 @@ function buildGenderSubtitle(indicatorNamesSelected, suffix = "") {
 }
 
 function App() {
-  const [donor, setDonor] = React.useState("DAC countries")
-  const [recipient, setRecipient] = React.useState("ODA eligible countries")
-  const [indicator, setIndicator] = React.useState([MAIN_TARGET, SECONDARY_TARGET])
+  const [donor, setDonor] = React.useState(defaults.donor_name)
+  const [recipient, setRecipient] = React.useState(defaults.recipient_name)
+  const [indicator, setIndicator] = React.useState(defaults.indicator_name)
   const [currency, setCurrency] = React.useState("usd")
   const [prices, setPrices] = React.useState("constant")
   const [timeRange, setTimeRange] = React.useState([timeRangeOptions.end - 10, timeRangeOptions.end])

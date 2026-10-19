@@ -1,5 +1,6 @@
 import {DuckDBClient} from "npm:@observablehq/duckdb";
 import {FileAttachment} from "observablehq:stdlib";
+import {COMBINED_INDICATOR_ODA} from "./config.js";
 
 /**
  * IMPORTANT: Value columns in the parquet file are stored as integers in UNITS (not millions).
@@ -16,6 +17,8 @@ export const recipientNames = viewOptions.recipient_name;
 export const indicatorNames = viewOptions.indicator_name;
 export const sectorNames = viewOptions.sector_name;
 export const yearOptions = viewOptions.year;
+// The selections the page opens on.
+export const defaults = viewOptions.defaults;
 export const subSectorsBySector = viewOptions.sub_sectors_by_sector;
 
 const donorSlugs = viewOptions.donor_slugs;
@@ -250,7 +253,7 @@ async function runSectorsQuery(db, {
                     sector_name,
                     sub_sector_name AS sub_sector,
                     ${combineIndicators
-                        ? "'Bilateral + Imputed multilateral ODA' AS indicator_label,"
+                        ? `'${COMBINED_INDICATOR_ODA}' AS indicator_label,`
                         : "indicator_name AS indicator_label,"
                     }
                     SUM(${valueColumn}) / 1e6 AS converted_value,

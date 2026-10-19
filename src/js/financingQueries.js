@@ -19,6 +19,9 @@ export const indicatorNames = viewOptions.indicator_name;
 export const yearOptions = viewOptions.year;
 // Last year the EU27 + institutions bloc is published for (see EU27_EUI_LAST_YEAR in config.py).
 export const eu27EuiLastYear = viewOptions.eu27_eui_last_year;
+// The selections the page opens on, and option values it refers to by key.
+export const defaults = viewOptions.defaults;
+export const names = viewOptions.names;
 
 // Donors with at least one non-null GNI share; others (e.g. EU Institutions) cannot show "% of GNI".
 export const donorsWithGni = new Set(
@@ -55,10 +58,10 @@ export function financingQueries(
         donor: row.donor,
         indicator: row.indicator,
         type: row.type,
-        value: indicator === "Total ODA"
+        value: indicator === names.total_oda
             ? toPct(row.pct_of_gni)
             : toPct(row.pct_of_total_oda),
-        unit: indicator === "Total ODA"
+        unit: indicator === names.total_oda
             ? "% of GNI"
             : "% of total ODA",
         source: "OECD DAC1"

@@ -23,6 +23,7 @@ import {
     recipientNames,
     indicatorNames,
     yearOptions,
+    defaults,
     subSectorsBySector,
     sectorsQueries,
     transformTableData,
@@ -32,7 +33,7 @@ import {treemapChart, selectSector} from "./js/treemapChart.js"
 import {customPalette, paletteSubsectors} from "./js/colors.js"
 import {columnChart} from "./js/columnChart.js"
 import {sparkbarTable} from "./js/sparkBarTable.js"
-import {APP_TITLE, APP_DESCRIPTION, NAV_ITEMS, CURRENCY_OPTIONS, PRICES_OPTIONS, SCALE} from "./js/config.js"
+import {APP_TITLE, APP_DESCRIPTION, NAV_ITEMS, CURRENCY_OPTIONS, PRICES_OPTIONS, SCALE, COMBINED_INDICATOR} from "./js/config.js"
 
 setCustomColors(customPalette)
 
@@ -89,7 +90,7 @@ function TreemapContainer({data, currency, sector, onSectorChange}) {
 
 function buildSectorColumnSubtitle(selectedData, effectiveBreakdown, breakdownIsDisabled, indicator) {
     const indicatorLabel = indicator.length > 1
-        ? "Bilateral + Imputed multilateral"
+        ? COMBINED_INDICATOR
         : (indicator[0] ?? "")
 
     if (effectiveBreakdown && !breakdownIsDisabled && selectedData.length > 0) {
@@ -109,9 +110,9 @@ function buildSectorColumnSubtitle(selectedData, effectiveBreakdown, breakdownIs
 
 function App() {
     // All state at the top
-    const [donor, setDonor] = React.useState("DAC countries")
-    const [recipient, setRecipient] = React.useState("ODA eligible countries")
-    const [indicator, setIndicator] = React.useState(["Bilateral", "Imputed multilateral"])
+    const [donor, setDonor] = React.useState(defaults.donor_name)
+    const [recipient, setRecipient] = React.useState(defaults.recipient_name)
+    const [indicator, setIndicator] = React.useState(defaults.indicator_name)
     const [currency, setCurrency] = React.useState("usd")
     const [prices, setPrices] = React.useState("constant")
     const [breakdown, setBreakdown] = React.useState(true)
@@ -220,7 +221,7 @@ function App() {
 
     const unitOptions = React.useMemo(() => {
         const indicatorLabel = indicator.length > 1
-            ? "Bilateral + Imputed multilateral"
+            ? COMBINED_INDICATOR
             : (indicator[0] ?? "")
         return [
             {label: getCurrencyLabel(currency, {currencyLong: true, currencyOnly: true}), value: "value"},
@@ -234,7 +235,7 @@ function App() {
     const recipientName = recipient ?? ""
     const currencyLabel = getCurrencyLabel(currency, {currencyOnly: true, currencyLong: true})
     const indicatorLabel = indicator.length > 1
-        ? "Bilateral + Imputed multilateral"
+        ? COMBINED_INDICATOR
         : (indicator[0] ?? "")
 
     const treemapSubtitle = `${indicatorLabel} ODA; ${year}`

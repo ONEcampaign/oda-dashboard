@@ -22,6 +22,8 @@ export const donorNames = viewOptions.donor_name;
 export const recipientNames = viewOptions.recipient_name;
 export const indicatorNames = viewOptions.indicator_name;
 export const yearOptions = viewOptions.year;
+// The selections the page opens on.
+export const defaults = viewOptions.defaults;
 
 const genderCache = new Map();
 
