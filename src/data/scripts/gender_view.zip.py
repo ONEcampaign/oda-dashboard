@@ -8,7 +8,7 @@ Shape of the pipeline:
     3. recipient groups then donor groups, summed locally because the CRS publishes neither
     4. each score as a share of the entity's bilateral allocable total, which the four scores
        make up together, so they sum to 100%
-    5. one parquet on stdout for Observable, plus the dropdown options beside it
+    5. one zip on stdout for Observable: the data as parquet and its dropdown options
 
 Output is keyed by name: year, donor_name, recipient_name, indicator_name.
 """
@@ -18,9 +18,9 @@ from oda_data import bilateral_policy_marker
 
 from src.data.analysis_tools.gender import derive_not_screened
 from src.data.analysis_tools.outputs import (
-    generate_view_options,
-    parquet_to_stdout,
+    build_view_options,
     set_cache_dir,
+    view_archive_to_stdout,
 )
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     set_cache_dir(oda_data=True, pydeflate=True)
     logger.info("Generating gender view table...")
     df = combined_gender()
-    generate_view_options(
+    options = build_view_options(
         df=df,
         columns={
             "donor_name": DONORS_ORDER,
@@ -184,7 +184,6 @@ if __name__ == "__main__":
             "year": [],
         },
         base_year=BASE_TIME["base"],
-        file_name="gender_view_options.json",
         defaults={
             "donor_name": DEFAULT_DONOR,
             "recipient_name": DEFAULT_RECIPIENT,
@@ -194,5 +193,4 @@ if __name__ == "__main__":
             ],
         },
     )
-    logger.info("Writing parquet to stdout...")
-    parquet_to_stdout(df)
+    view_archive_to_stdout(df, options)

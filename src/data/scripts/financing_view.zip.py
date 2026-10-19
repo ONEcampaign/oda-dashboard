@@ -7,7 +7,7 @@ Shape of the pipeline:
     3. the EU27 + institutions aggregate, which oda_data weights so that member states'
        contributions to the institutions are not counted twice
     4. donor aggregates summed locally, then shares of total ODA and of GNI
-    5. one parquet on stdout for Observable, plus the dropdown options beside it
+    5. one zip on stdout for Observable: the data as parquet and its dropdown options
 
 Output is keyed by name: year, donor_name, indicator_name, type.
 """
@@ -26,9 +26,9 @@ from src.data.analysis_tools.financing import (
 )
 from src.data.analysis_tools.naming import map_config_values
 from src.data.analysis_tools.outputs import (
-    generate_view_options,
-    parquet_to_stdout,
+    build_view_options,
     set_cache_dir,
+    view_archive_to_stdout,
 )
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
@@ -331,7 +331,7 @@ if __name__ == "__main__":
     set_cache_dir(oda_data=True, pydeflate=True)
     logger.info("Generating financing table...")
     df = get_financing_data()
-    generate_view_options(
+    options = build_view_options(
         df=df,
         columns={
             "donor_name": DONORS_ORDER,
@@ -339,7 +339,6 @@ if __name__ == "__main__":
             "year": [],
         },
         base_year=FINANCING_TIME["base"],
-        file_name="financing_view_options.json",
         extra={"eu27_eui_last_year": EU27_EUI_LAST_YEAR},
         defaults={"donor_name": DEFAULT_DONOR, "indicator_name": TOTAL_ODA},
         names={
@@ -347,4 +346,4 @@ if __name__ == "__main__":
             "donor_name": {"eu27_eui": EU27_EUI_NAME},
         },
     )
-    parquet_to_stdout(df)
+    view_archive_to_stdout(df, options)

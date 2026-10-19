@@ -425,7 +425,7 @@ CRS_UNCLASSIFIED_INCOME: str = "Income group not reported"
 # ---------------------------------------------------------------------------------------
 # 8. Display orderings
 #
-# generate_view_options pins these first in the dropdowns, in this order; everything else
+# build_view_options pins these first in the dropdowns, in this order; everything else
 # follows alphabetically. Names absent from the data are skipped, so one donor ordering serves
 # all four views even though they do not all publish every aggregate.
 # ---------------------------------------------------------------------------------------

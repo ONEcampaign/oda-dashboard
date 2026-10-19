@@ -9,8 +9,8 @@ import {fillMissingYearIndicators} from "./utils.js";
  */
 
 const [viewOptions, recipientsTable] = await Promise.all([
-    FileAttachment("../data/analysis_tools/recipients_view_options.json").json(),
-    FileAttachment("../data/scripts/recipients_view.parquet").parquet()
+    FileAttachment("../data/scripts/recipients_view/options.json").json(),
+    FileAttachment("../data/scripts/recipients_view/data.parquet").parquet()
 ]);
 
 const recipientsData = recipientsTable.toArray();

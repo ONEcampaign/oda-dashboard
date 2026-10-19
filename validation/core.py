@@ -57,7 +57,7 @@ def validate_dataset(
     Args:
         dataset_name: Name of dataset (e.g., "financing_view")
         release: Release name (e.g., "dec_2024")
-        cache_dir: Directory containing parquet files (default: CACHE_DIR)
+        cache_dir: Observable's loader cache, holding each view's data (default: CACHE_DIR)
         cdn_files_dir: Directory containing partitioned datasets (default: CDN_FILES_DIR)
         dataset_config: Dataset configuration (default: from DATASETS)
         manifests_dir: Directory for manifests (default: MANIFESTS_DIR)
@@ -382,7 +382,7 @@ def validate_all(
 
     Args:
         release: Release name (e.g., "dec_2024")
-        cache_dir: Directory containing parquet files
+        cache_dir: Observable's loader cache, holding each view's data
         cdn_files_dir: Directory containing partitioned datasets
         manifests_dir: Directory for manifests
         update_manifests: Whether to update manifests after validation

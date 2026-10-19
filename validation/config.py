@@ -6,7 +6,7 @@ from pathlib import Path
 VALIDATION_DIR = Path(__file__).parent
 PROJECT_ROOT = VALIDATION_DIR.parent
 
-# Where parquet files are cached by Observable Framework
+# Where Observable Framework caches loader output; each view archive is extracted to <view>/
 CACHE_DIR = PROJECT_ROOT / "src" / ".observablehq" / "cache" / "data" / "scripts"
 
 # Where partitioned datasets are stored (e.g., sectors_view)
@@ -48,7 +48,7 @@ CRITICAL_DONORS: list[str] = [
 # Dataset definitions
 DATASETS = {
     "financing_view": {
-        "file": "financing_view.parquet",
+        "file": "financing_view/data.parquet",
         "key_columns": [
             "year",
             "donor_name",
@@ -73,7 +73,7 @@ DATASETS = {
         "critical_donors": CRITICAL_DONORS,
     },
     "recipients_view": {
-        "file": "recipients_view.parquet",
+        "file": "recipients_view/data.parquet",
         "key_columns": [
             "year",
             "donor_name",
@@ -98,7 +98,7 @@ DATASETS = {
         "critical_donors": CRITICAL_DONORS,
     },
     "gender_view": {
-        "file": "gender_view.parquet",
+        "file": "gender_view/data.parquet",
         "key_columns": [
             "year",
             "donor_name",

@@ -11,8 +11,8 @@ import {fillMissingYearIndicators} from "./utils.js";
 // Donors, recipients and marker scores are all identified by name; the loader publishes
 // the option lists alongside the data.
 const [viewOptions, genderTable] = await Promise.all([
-    FileAttachment("../data/analysis_tools/gender_view_options.json").json(),
-    FileAttachment("../data/scripts/gender_view.parquet").parquet()
+    FileAttachment("../data/scripts/gender_view/options.json").json(),
+    FileAttachment("../data/scripts/gender_view/data.parquet").parquet()
 ]);
 
 // Convert Arrow table to JavaScript array for fast in-memory filtering

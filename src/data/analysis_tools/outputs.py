@@ -1,18 +1,20 @@
 """Everything the pipeline writes out, and the environment it writes into.
 
 This module owns the boundary between a finished DataFrame and the artifacts the frontend
-consumes: the parquet on stdout that Observable picks up, the partitioned dataset on the CDN,
-and the JSON of dropdown options beside them. It also points oda_data and pydeflate at the
-shared cache.
+consumes: each loader's archive on stdout (its data as parquet and its dropdown options), and
+for sectors the partitioned dataset on the CDN with its options JSON. It also points oda_data
+and pydeflate at the shared cache.
 
 The rule for what belongs here: I/O, serialisation and environment setup. Anything that takes a
 DataFrame and returns a DataFrame belongs in ``transformations``; anything that decides how an
 entity is labelled belongs in ``naming``.
 """
 
+import io
 import json
 import shutil
 import sys
+import zipfile
 from pathlib import Path
 
 import pandas as pd
@@ -25,17 +27,16 @@ from pydeflate import set_pydeflate_path
 from src.data.config import LABEL_COLUMNS, PATHS, logger
 
 
-def generate_view_options(
+def build_view_options(
     df: pd.DataFrame,
     columns: dict[str, list[str]],
     year_col: str = "year",
     base_year: int | None = None,
-    file_name: str = "view_options.json",
     extra: dict | None = None,
     defaults: dict[str, str | list[str]] | None = None,
     names: dict[str, dict[str, str]] | None = None,
-) -> None:
-    """Write the JSON of dropdown values a view's frontend reads.
+) -> dict:
+    """Build the dropdown values a view's frontend reads, from the data it ships with.
 
     The year column becomes ``{"start", "end", "base"}``; every other column becomes a list of
     its unique values.
@@ -45,12 +46,14 @@ def generate_view_options(
             in order. Pass an empty list for purely alphabetical ordering.
         year_col: Column to treat as a year range rather than a list.
         base_year: Value for the "base" key; defaults to the latest year in the data.
-        file_name: Output filename, written to PATHS.TOOLS.
         extra: Additional keys merged into the output, e.g. the name-to-slug maps the frontend
             needs to build partition paths, or a sector-to-sub-sector index.
         defaults: The selection each dropdown opens on, by column; a list for a multi-select.
         names: Option values the frontend refers to by key, grouped by column, e.g.
-            {"indicator_name": {"total_oda": "Total ODA"}}. Written as one flat key map.
+            {"indicator_name": {"total_oda": "Total ODA"}}. Returned as one flat key map.
+
+    Returns:
+        The options, ready to serialise as JSON.
 
     Raises:
         ValueError: If a default or a name is not among the options, so a rename fails the
@@ -79,24 +82,30 @@ def generate_view_options(
 
     for col, value in (defaults or {}).items():
         selected = [value] if isinstance(value, str) else value
-        _require_options(selected, options.get(col, []), f"{file_name} default {col}")
+        _require_options(selected, options.get(col, []), f"default {col}")
     for col, keyed in (names or {}).items():
-        _require_options(
-            list(keyed.values()), options.get(col, []), f"{file_name} {col}"
-        )
+        _require_options(list(keyed.values()), options.get(col, []), f"names {col}")
     if defaults:
         options["defaults"] = defaults
     if names:
         keys = [k for keyed in names.values() for k in keyed]
         if dupes := sorted({k for k in keys if keys.count(k) > 1}):
-            raise ValueError(
-                f"{file_name}: names keys used in more than one column: {dupes}"
-            )
+            raise ValueError(f"names keys used in more than one column: {dupes}")
         options["names"] = {k: v for keyed in names.values() for k, v in keyed.items()}
 
     if extra:
         options |= extra
 
+    return options
+
+
+def write_view_options(options: dict, file_name: str) -> None:
+    """Write a view's options to PATHS.TOOLS, for a view built outside Observable's loaders.
+
+    Args:
+        options: From build_view_options.
+        file_name: Output filename.
+    """
     logger.info("Saving view options to %s/%s", PATHS.TOOLS, file_name)
     with open(PATHS.TOOLS / file_name, "w") as f:
         json.dump(options, f, indent=2)
@@ -133,8 +142,30 @@ def set_cache_dir(
         set_pydeflate_path(path)
 
 
-def parquet_to_stdout(df: pd.DataFrame) -> None:
-    """Write the frame to stdout as parquet, which is how Observable loaders return data."""
+# Members of the archive a view's loader writes; the frontend reads them as
+# <view>_view/<member>.
+VIEW_DATA_MEMBER: str = "data.parquet"
+VIEW_OPTIONS_MEMBER: str = "options.json"
+
+
+def view_archive_to_stdout(df: pd.DataFrame, options: dict) -> None:
+    """Write a view's data and its options to stdout as one zip, Observable's archive loader.
+
+    Built in one run, the dropdowns cannot drift from the data they describe.
+
+    Args:
+        df: The view's wide frame.
+        options: From build_view_options.
+    """
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as archive:
+        archive.writestr(VIEW_DATA_MEMBER, dataframe_to_parquet_bytes(df))
+        archive.writestr(VIEW_OPTIONS_MEMBER, json.dumps(options, indent=2))
+    sys.stdout.buffer.write(buf.getvalue())
+
+
+def dataframe_to_parquet_bytes(df: pd.DataFrame) -> bytes:
+    """Serialise the frame as compressed parquet."""
     table, value_cols = dataframe_to_arrow_table(df)
 
     # Byte-stream-split reorders the bytes of each value so the compressor sees runs of similar
@@ -148,8 +179,7 @@ def parquet_to_stdout(df: pd.DataFrame) -> None:
         use_byte_stream_split=bss_cols,
         **get_parquet_write_options(),
     )
-
-    sys.stdout.buffer.write(buf.getvalue().to_pybytes())
+    return buf.getvalue().to_pybytes()
 
 
 # ============================================================================
@@ -199,7 +229,7 @@ PARQUET_CODEC: dict[str, str | int | bool] = {
 
 
 def get_parquet_write_options() -> dict:
-    """Compression and encoding settings for the single-file parquet written to stdout.
+    """Compression and encoding settings for the single-file parquet in a view's archive.
 
     write_partitioned_dataset deliberately does not reuse these: the paging and row-group keys
     below are arguments to pq.write_table, while the dataset writer takes its row-group sizing
