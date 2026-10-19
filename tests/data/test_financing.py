@@ -84,7 +84,7 @@ def test_split_grants_rejects_an_unknown_fund_flow():
             "value": [1.0],
         }
     )
-    with pytest.raises(ValueError, match="no display name"):
+    with pytest.raises(ValueError, match="Fund flows with no entry in config"):
         split_grants(raw, ["year", "donor_code"])
 
 

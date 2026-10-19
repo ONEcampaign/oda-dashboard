@@ -31,8 +31,8 @@ from src.data.analysis_tools.naming import (
 from src.data.config import (
     ALL_BILATERAL_DONORS,
     BILATERAL_DONORS,
-    CRS_NON_REGIONS,
-    CRS_REGION_ROLLUPS,
+    CRS_REGION_GROUPS,
+    CRS_REGIONS,
     CRS_UNCLASSIFIED_INCOME,
     CRS_UNCLASSIFIED_REGION,
     CURRENCIES,
@@ -600,22 +600,17 @@ def build_crs_recipient_group_totals(
 
     income = get_attribute_total(df, INCOME_GROUP_COL, group_cols)
 
-    # The CRS uses continent names as region values too, for aid recorded against a whole
-    # continent. Those rows belong to the continent rollup below, so they are excluded here:
-    # emitting them as regions as well would produce two rows per continent, which the pivot
-    # would silently merge.
+    # Only the regions CRS_REGIONS lists get a group. Continent-level values belong to the
+    # continent rollup below: emitting them as regions as well would produce two rows per
+    # continent, which the pivot would silently merge.
     regions = get_attribute_total(
-        df.loc[~df[CRS_REGION_COL].isin([*CRS_REGION_ROLLUPS, *CRS_NON_REGIONS])],
+        df.loc[df[CRS_REGION_COL].isin(CRS_REGION_GROUPS)],
         CRS_REGION_COL,
         group_cols,
     )
 
     # Continents are rollups of the CRS regions, so they are summed from the same column.
-    region_to_continent = {
-        region: continent
-        for continent, regions_in in CRS_REGION_ROLLUPS.items()
-        for region in regions_in
-    }
+    region_to_continent = {name: r.continent for name, r in CRS_REGIONS.items()}
     continents = get_attribute_total(
         df.assign(
             **{_CONTINENT_COL: lambda d: d[CRS_REGION_COL].map(region_to_continent)}

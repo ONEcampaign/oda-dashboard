@@ -25,7 +25,7 @@ from src.data.analysis_tools.financing import (
     split_grants,
     years_missing_grants,
 )
-from src.data.analysis_tools.naming import map_indicator_names
+from src.data.analysis_tools.naming import map_config_values
 from src.data.analysis_tools.outputs import (
     generate_view_options,
     parquet_to_stdout,
@@ -170,8 +170,8 @@ def get_dac1() -> pd.DataFrame:
         .sum()
         .reset_index()
         .assign(
-            indicator_name=lambda d: map_indicator_names(
-                d["one_indicator"], ALL_FINANCING_INDICATORS
+            indicator_name=lambda d: map_config_values(
+                d["one_indicator"], ALL_FINANCING_INDICATORS, what="Indicator codes"
             )
         )
         .drop(columns=["one_indicator"])
@@ -200,8 +200,8 @@ def get_eui_eu27_dac1() -> pd.DataFrame:
     )
     return (
         converted.assign(
-            indicator_name=lambda d: map_indicator_names(
-                d["one_indicator"], ALL_FINANCING_INDICATORS
+            indicator_name=lambda d: map_config_values(
+                d["one_indicator"], ALL_FINANCING_INDICATORS, what="Indicator codes"
             ),
             donor_name=EU27_EUI_NAME,
         )

@@ -4,7 +4,7 @@ from collections import Counter
 
 import pandas as pd
 
-from src.data.analysis_tools.naming import map_indicator_names
+from src.data.analysis_tools.naming import map_config_values
 from src.data.config import (
     ALL_FINANCING_INDICATORS,
     PREFERRED_FINANCING_CODES,
@@ -123,8 +123,8 @@ def split_grants(df: pd.DataFrame, index_cols: list[str]) -> pd.DataFrame:
     """
     return (
         df.assign(
-            indicator_name=lambda d: map_indicator_names(
-                d["fund_flows"], GRANTS_FUND_FLOWS
+            indicator_name=lambda d: map_config_values(
+                d["fund_flows"], GRANTS_FUND_FLOWS, what="Fund flows"
             )
         )
         .groupby([*index_cols, "indicator_name"], dropna=False, observed=True)["value"]

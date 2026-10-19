@@ -14,7 +14,7 @@ import unicodedata
 
 import pandas as pd
 
-from src.data.config import RECIPIENT_NAME_OVERRIDES
+from src.data.config import CRS_REGION_NAMES, RECIPIENT_NAME_OVERRIDES
 
 
 def apply_name_overrides(df: pd.DataFrame, mapping: dict, column: str) -> pd.DataFrame:
@@ -42,27 +42,28 @@ def apply_name_overrides(df: pd.DataFrame, mapping: dict, column: str) -> pd.Dat
     return df
 
 
-def map_indicator_names(codes: pd.Series, mapping: dict) -> pd.Series:
-    """Name each indicator code from a config mapping, failing on any code it does not know.
+def map_config_values(values: pd.Series, mapping: dict, *, what: str) -> pd.Series:
+    """Map each value through a config mapping, failing on any value it does not know.
 
-    A plain .map would turn an unknown code into a missing name, and the rows would then be
-    grouped under that missing name without warning.
+    A plain .map would turn an unknown value into a missing one, and the rows would then be
+    grouped under that missing value without warning.
 
     Args:
-        codes: Indicator codes, e.g. the one_indicator column.
-        mapping: ``{code: display name}`` from config.
+        values: Values to map, e.g. the one_indicator column.
+        mapping: ``{value: mapped value}`` from config.
+        what: What the values are, for the error message, e.g. "Indicator codes".
 
     Returns:
-        The display names, aligned with codes.
+        The mapped values, aligned with values; missing values stay missing.
 
     Raises:
-        ValueError: If a non-missing code has no entry in mapping.
+        ValueError: If a non-missing value has no entry in mapping.
     """
-    names = codes.map(mapping)
-    unknown = sorted(set(codes[names.isna() & codes.notna()]))
+    mapped = values.map(mapping)
+    unknown = sorted(set(values[mapped.isna() & values.notna()]))
     if unknown:
-        raise ValueError(f"Indicator codes with no display name in config: {unknown}")
-    return names
+        raise ValueError(f"{what} with no entry in config: {unknown}")
+    return mapped
 
 
 def normalize_unspecified_names(names: pd.Series) -> pd.Series:
@@ -106,19 +107,20 @@ def canonical_recipient_names(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def normalize_crs_regions(regions: pd.Series) -> pd.Series:
-    """Fold "<continent>, regional" CRS region values into "<continent>".
-
-    The CRS sometimes records a continent's own unspecified aid against "Africa, regional"
-    rather than "Africa". Both mean the same, and only the plain value rolls into the
-    continent total.
+    """Name each raw CRS region value from config, folding "Africa, regional" into "Africa".
 
     Args:
-        regions: CRS recipient_region values.
+        regions: Raw CRS recipient_region values.
 
     Returns:
-        The regions with the ", regional" suffix removed.
+        The region names, with missing values left missing.
+
+    Raises:
+        ValueError: If a value is not in config.CRS_REGION_NAMES.
     """
-    return regions.astype("string").str.removesuffix(", regional")
+    return map_config_values(
+        regions.astype("string"), CRS_REGION_NAMES, what="CRS region values"
+    ).astype("string")
 
 
 def slugify(value: str) -> str:

@@ -18,7 +18,7 @@ from oda_data import OECDClient
 from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_indicator
 
 from src.data.analysis_tools.naming import (
-    map_indicator_names,
+    map_config_values,
 )
 from src.data.analysis_tools.outputs import (
     generate_view_options,
@@ -82,8 +82,8 @@ def get_dac2a() -> pd.DataFrame:
         .sum()
         .reset_index()
         .assign(
-            indicator_name=lambda d: map_indicator_names(
-                d["one_indicator"], RECIPIENTS_INDICATORS
+            indicator_name=lambda d: map_config_values(
+                d["one_indicator"], RECIPIENTS_INDICATORS, what="Indicator codes"
             )
         )
         .drop(columns=["one_indicator"])
@@ -118,8 +118,8 @@ def get_dac2a_eui_eu27() -> pd.DataFrame:
     eui_eu27_dac2a_converted = add_currencies_and_prices(
         eui_eu27_dac2a_raw, base_year=BASE_TIME["base"]
     ).assign(
-        indicator_name=lambda d: map_indicator_names(
-            d["one_indicator"], RECIPIENTS_INDICATORS
+        indicator_name=lambda d: map_config_values(
+            d["one_indicator"], RECIPIENTS_INDICATORS, what="Indicator codes"
         )
     )
 

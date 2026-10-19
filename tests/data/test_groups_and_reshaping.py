@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from src.data.analysis_tools.naming import map_indicator_names
+from src.data.analysis_tools.naming import map_config_values
 from src.data.analysis_tools.transformations import (
     build_donor_group_totals,
     drop_empty_values,
@@ -73,7 +73,9 @@ def test_drop_empty_values_drops_missing_and_zero_only():
     assert drop_empty_values(df, "test")["value"].tolist() == [1.0, -2.0]
 
 
-def test_map_indicator_names_raises_on_an_unknown_code():
+def test_map_config_values_raises_on_an_unknown_code():
     codes = pd.Series(["A", "B"])
-    with pytest.raises(ValueError, match="no display name"):
-        map_indicator_names(codes, {"A": "Alpha"})
+    with pytest.raises(
+        ValueError, match=r"Indicator codes with no entry in config: \['B'\]"
+    ):
+        map_config_values(codes, {"A": "Alpha"}, what="Indicator codes")
