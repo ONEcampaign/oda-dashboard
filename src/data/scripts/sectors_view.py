@@ -48,6 +48,8 @@ from src.data.config import (
     CRS_FLOW_CATEGORIES,
     CRS_RECIPIENTS,
     CRS_RECIPIENTS_ORDER,
+    DEFAULT_DONOR,
+    DEFAULT_RECIPIENT,
     DONORS_ORDER,
     EU27_EUI_NAME,
     EU_COUNTRIES,
@@ -466,6 +468,11 @@ def main() -> None:
         },
         base_year=SECTORS_TIME["base"],
         file_name="sectors_view_options.json",
+        defaults={
+            "donor_name": DEFAULT_DONOR,
+            "recipient_name": DEFAULT_RECIPIENT,
+            "indicator_name": [BILATERAL, IMPUTED_MULTILATERAL],
+        },
         extra={
             "donor_slugs": _slug_map(df, "donor"),
             "recipient_slugs": _slug_map(df, "recipient"),

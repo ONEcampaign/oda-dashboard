@@ -23,3 +23,7 @@ export const PRICES_OPTIONS = [
 ]
 
 export const SCALE = 6 // Raw data is in million units
+
+// Label for Bilateral and Imputed multilateral shown together, which the pipeline does not publish.
+export const COMBINED_INDICATOR = "Bilateral + imputed multilateral"
+export const COMBINED_INDICATOR_ODA = `${COMBINED_INDICATOR} ODA`

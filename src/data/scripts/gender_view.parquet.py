@@ -38,6 +38,8 @@ from src.data.config import (
     BASE_TIME,
     CRS_RECIPIENTS,
     CRS_RECIPIENTS_ORDER,
+    DEFAULT_DONOR,
+    DEFAULT_RECIPIENT,
     DONORS_ORDER,
     EU27_EUI_NAME,
     EU_COUNTRIES,
@@ -183,6 +185,14 @@ if __name__ == "__main__":
         },
         base_year=BASE_TIME["base"],
         file_name="gender_view_options.json",
+        defaults={
+            "donor_name": DEFAULT_DONOR,
+            "recipient_name": DEFAULT_RECIPIENT,
+            "indicator_name": [
+                GENDER_INDICATORS["principal"],
+                GENDER_INDICATORS["significant"],
+            ],
+        },
     )
     logger.info("Writing parquet to stdout...")
     parquet_to_stdout(df)

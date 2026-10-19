@@ -44,6 +44,8 @@ from src.data.analysis_tools.transformations import (
 from src.data.config import (
     AGGREGATE_FINANCING_INDICATORS,
     ALL_FINANCING_INDICATORS,
+    CORE_ODA,
+    DEFAULT_DONOR,
     DONOR_GROUPS,
     DONORS_ORDER,
     EU27_EUI_LAST_YEAR,
@@ -55,6 +57,7 @@ from src.data.config import (
     IN_DONOR_FINANCING_INDICATORS,
     PROVIDERS,
     PSI_FINANCING_INDICATORS,
+    TOTAL_ODA,
     logger,
 )
 
@@ -328,5 +331,10 @@ if __name__ == "__main__":
         base_year=FINANCING_TIME["base"],
         file_name="financing_view_options.json",
         extra={"eu27_eui_last_year": EU27_EUI_LAST_YEAR},
+        defaults={"donor_name": DEFAULT_DONOR, "indicator_name": TOTAL_ODA},
+        names={
+            "indicator_name": {"total_oda": TOTAL_ODA, "core_oda": CORE_ODA},
+            "donor_name": {"eu27_eui": EU27_EUI_NAME},
+        },
     )
     parquet_to_stdout(df)

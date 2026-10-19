@@ -16,6 +16,7 @@ import {
     recipientNames,
     indicatorNames,
     yearOptions,
+    defaults,
     recipientsQueries,
     transformTableData
 } from "./js/recipientQueries.js"
@@ -23,7 +24,7 @@ import {customPalette} from "./js/colors.js"
 import {columnChart} from "./js/columnChart.js"
 import {areaChart} from "./js/areaChart.js"
 import {sparkbarTable} from "./js/sparkBarTable.js"
-import {APP_TITLE, APP_DESCRIPTION, NAV_ITEMS, CURRENCY_OPTIONS, PRICES_OPTIONS, SCALE} from "./js/config.js"
+import {APP_TITLE, APP_DESCRIPTION, NAV_ITEMS, CURRENCY_OPTIONS, PRICES_OPTIONS, SCALE, COMBINED_INDICATOR, COMBINED_INDICATOR_ODA} from "./js/config.js"
 
 setCustomColors(customPalette)
 
@@ -34,9 +35,9 @@ const INDICATOR_OPTIONS = indicatorNames.map(n => ({label: n, value: n}))
 
 ```jsx
 function App() {
-  const [donor, setDonor] = React.useState("DAC countries")
-  const [recipient, setRecipient] = React.useState("ODA eligible countries")
-  const [indicator, setIndicator] = React.useState(["Bilateral", "Imputed multilateral"])
+  const [donor, setDonor] = React.useState(defaults.donor_name)
+  const [recipient, setRecipient] = React.useState(defaults.recipient_name)
+  const [indicator, setIndicator] = React.useState(defaults.indicator_name)
   const [currency, setCurrency] = React.useState("usd")
   const [prices, setPrices] = React.useState("constant")
   const [timeRange, setTimeRange] = React.useState([yearOptions.end - 20, yearOptions.end])
@@ -78,7 +79,7 @@ function App() {
       for (const row of tableData) {
         if (!byYear.has(row.year)) {
           // Start null so a year where every value is missing stays missing, not 0
-          byYear.set(row.year, { ...row, indicator: "Bilateral + imputed multilateral ODA", value: null })
+          byYear.set(row.year, { ...row, indicator: COMBINED_INDICATOR_ODA, value: null })
         }
         if (row.value != null) {
           const entry = byYear.get(row.year)
@@ -125,14 +126,14 @@ function App() {
   const tableSubtitle = React.useMemo(() => {
     if (unit === "value") {
       return tableView === "total" && indicator.length > 1
-        ? `<span style="color:${customPalette.total}; font-weight:600">Bilateral + imputed multilateral</span> ODA`
+        ? `<span style="color:${customPalette.total}; font-weight:600">${COMBINED_INDICATOR}</span> ODA`
         : indicatorSubtitle
     }
     const shareText = unit === "pct_total_recipient"
       ? `as a share of aid received by ${recipientName}`
       : `as a share of aid provided by ${donorName}`
     if (tableView === "total" && indicator.length > 1) {
-      return `<span style="color:${customPalette.total}; font-weight:600">Bilateral + imputed multilateral</span> ${shareText}`
+      return `<span style="color:${customPalette.total}; font-weight:600">${COMBINED_INDICATOR}</span> ${shareText}`
     }
     if (indicator.length > 1) {
       return `<span style="color:${customPalette.bilateral}; font-weight:600">Bilateral</span> and <span style="color:${customPalette.multilateral}; font-weight:600">imputed multilateral</span> ${shareText}`
