@@ -111,6 +111,14 @@ jobs:
         run: uv run python src/data/scripts/prewarm_cache.py
         timeout-minutes: 15
 
+      # Before the build, so dist/ ships the sectors options generated with this run's data.
+      - name: individual-loaders
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          uv run python src/data/scripts/sectors_view.py
+        timeout-minutes: 60
+
       - name: Build Observable Framework app
         run: uv run npm run build
         timeout-minutes: 240
