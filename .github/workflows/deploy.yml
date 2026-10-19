@@ -161,8 +161,6 @@ jobs:
       - name: Upload sectors partitioned dataset
         run: |
           if [ -d "cdn_files/sectors_view" ]; then
-            echo "Clearing existing sectors dataset in GCS..."
-            gsutil -m rm -r gs://${{ env.BUCKET }}/sources/sectors_view/** || true
             echo "Uploading sectors partitioned dataset to GCS..."
             gsutil -m rsync -r -d cdn_files/sectors_view gs://${{ env.BUCKET }}/sources/sectors_view
             # After the dataset, so every slug it lists already resolves. no-cache so browsers pick
