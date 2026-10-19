@@ -14,7 +14,6 @@ Output is keyed by name: year, donor_name, indicator_name, type.
 
 from collections.abc import Callable
 
-import numpy as np
 import pandas as pd
 from oda_data import OECDClient
 from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_indicator
@@ -53,6 +52,7 @@ from src.data.config import (
     EU_TOTAL,
     FINANCING_INDICATORS_ORDER,
     FINANCING_TIME,
+    FINANCING_TYPES,
     GRANT_EQUIVALENT_START_YEAR,
     IN_DONOR_FINANCING_INDICATORS,
     PROVIDERS,
@@ -94,11 +94,15 @@ def _read(
     measure: str | list[str],
     indicators: list[str],
 ) -> pd.DataFrame:
-    """Build a bulk-download client and read indicators through it."""
+    """Build a bulk-download client, read indicators through it and label their type.
+
+    The type follows the headline measure, the first when several are read together.
+    """
     client = OECDClient(
         years=years, providers=list(providers), measure=measure, use_bulk_download=True
     )
-    return read(client, indicators)
+    headline = measure if isinstance(measure, str) else measure[0]
+    return read(client, indicators).assign(type=FINANCING_TYPES[headline])
 
 
 def read_dac1(read: Reader, providers: dict[int, str]) -> pd.DataFrame:
@@ -166,7 +170,7 @@ def get_dac1() -> pd.DataFrame:
     return (
         read_dac1(read_indicators, PROVIDERS)
         .groupby(
-            ["year", "donor_code", "donor_name", "one_indicator"],
+            ["year", "donor_code", "donor_name", "type", "one_indicator"],
             dropna=False,
             observed=True,
         )["value"]
@@ -188,7 +192,8 @@ def get_grants() -> pd.DataFrame:
         Long-form rows for the two derived indicator names.
     """
     return split_grants(
-        read_grants(read_indicators, PROVIDERS), ["year", "donor_code", "donor_name"]
+        read_grants(read_indicators, PROVIDERS),
+        ["year", "donor_code", "donor_name", "type"],
     )
 
 
@@ -209,7 +214,7 @@ def get_eui_eu27_dac1() -> pd.DataFrame:
             donor_name=EU27_EUI_NAME,
         )
         .groupby(
-            ["year", "donor_name", "currency", "price", "indicator_name"],
+            ["year", "donor_name", "type", "currency", "price", "indicator_name"],
             dropna=False,
             observed=True,
         )["value"]
@@ -228,9 +233,11 @@ def get_eui_eu27_grants() -> pd.DataFrame:
         read_grants(read_eui_eu27, EU_TOTAL), base_year=FINANCING_TIME["base"]
     )
     return (
-        split_grants(converted, ["year", "donor_code", "currency", "price"])
+        split_grants(converted, ["year", "donor_code", "type", "currency", "price"])
         .groupby(
-            ["year", "indicator_name", "currency", "price"], dropna=False, observed=True
+            ["year", "indicator_name", "type", "currency", "price"],
+            dropna=False,
+            observed=True,
         )["value"]
         .sum()
         .reset_index()
@@ -259,7 +266,7 @@ def get_financing_data() -> pd.DataFrame:
         lambda d: (d["currency"] == "USD") & (d["price"] == "current")
     ]
     group_totals = build_donor_group_totals(
-        non_eu_financing, ["year", "indicator_name", "currency", "price"]
+        non_eu_financing, ["year", "indicator_name", "type", "currency", "price"]
     )
     donor_groups = [
         drop_grants_split(total, years_missing_grants(usd_current, DONOR_GROUPS[name]))
@@ -285,13 +292,16 @@ def get_financing_data() -> pd.DataFrame:
 
     financing = drop_empty_values(financing, "financing")
 
-    # Label each row by the measure it was read in: in-donor items are always flows.
-    in_donor = financing["indicator_name"].isin(IN_DONOR_FINANCING_INDICATORS.values())
-    financing["type"] = np.where(
-        (financing["year"] < GRANT_EQUIVALENT_START_YEAR) | in_donor,
-        "Flows",
-        "Grant equivalents",
-    )
+    # Every row needs the type it was read in, and one per year: two would split a series.
+    if financing["type"].isna().any():
+        raise ValueError("Financing rows without a type: a part skipped _read's label")
+    types_per_series = financing.groupby(
+        ["year", "donor_name", "indicator_name"], observed=True
+    )["type"].nunique()
+    if not (clashes := types_per_series[types_per_series > 1]).empty:
+        raise ValueError(
+            f"Financing series read in more than one measure: {clashes.index.tolist()[:10]}"
+        )
 
     # Pivot values to columns
     financing = widen_currency_price(
