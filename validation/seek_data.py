@@ -3,8 +3,8 @@
 import pandas as pd
 
 from validation.config import (
-    SEEK_HEALTH_PURPOSE_CODES,
     SEEK_AGRICULTURE_PURPOSE_CODES,
+    SEEK_HEALTH_PURPOSE_CODES,
 )
 
 
@@ -31,8 +31,12 @@ def fetch_seek_sectors_data(
     """
     # Import here to avoid circular imports and ensure fresh data
     from src.data.partners.seek.sectors import (
-        START_YEAR as SEEK_START_YEAR,
         END_YEAR as SEEK_END_YEAR,
+    )
+    from src.data.partners.seek.sectors import (
+        START_YEAR as SEEK_START_YEAR,
+    )
+    from src.data.partners.seek.sectors import (
         get_bilateral_disbursements_by_sector,
         get_imputed_multilateral_disbursements_by_sector,
     )

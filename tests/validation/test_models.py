@@ -1,7 +1,6 @@
 """Tests for validation data models."""
 
-import pytest
-from validation.models import CheckResult, Warning, ValidationReport
+from validation.models import CheckResult, ValidationReport, Warning
 
 
 class TestCheckResult:

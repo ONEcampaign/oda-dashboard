@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from validation.models import ValidationReport
 from validation.config import REPORTS_DIR
+from validation.models import ValidationReport
 
 
 def generate_report_markdown(report: ValidationReport) -> str:
@@ -132,7 +132,7 @@ def _add_warnings_by_dataset(lines: list[str], warnings: list) -> None:
         lines.append("")
 
 
-def save_report(report: ValidationReport, output_dir: Path = None) -> Path:
+def save_report(report: ValidationReport, output_dir: Path | None = None) -> Path:
     """
     Save report to a markdown file.
 

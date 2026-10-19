@@ -117,7 +117,7 @@ def main(source_dir: Path) -> None:
     set_cache_dir(oda_data=True)
     for source_cls, file_name in SOURCE_FILES.items():
         path = seed(source_cls(), source_dir / file_name)
-        logger.info(f"Seeded {source_cls.__name__} from {file_name} into {path}")
+        logger.info("Seeded %s from %s into %s", source_cls.__name__, file_name, path)
 
 
 if __name__ == "__main__":

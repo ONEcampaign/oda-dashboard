@@ -1,17 +1,10 @@
 """Tests for SEEK-style sector validation."""
 
 import pandas as pd
-import pytest
+
 from validation.config import (
-    SEEK_HEALTH_PURPOSE_CODES,
     SEEK_AGRICULTURE_PURPOSE_CODES,
-)
-from validation.seek_data import (
-    filter_by_purpose_codes,
-    aggregate_by_donor,
-    get_latest_year_data,
-    get_donor_names,
-    compute_sector_aggregates,
+    SEEK_HEALTH_PURPOSE_CODES,
 )
 from validation.seek_anomalies import (
     detect_seek_donor_drift,
@@ -19,9 +12,16 @@ from validation.seek_anomalies import (
     detect_seek_new_donors,
     run_seek_validation,
 )
+from validation.seek_data import (
+    aggregate_by_donor,
+    compute_sector_aggregates,
+    filter_by_purpose_codes,
+    get_donor_names,
+    get_latest_year_data,
+)
 from validation.seek_manifest import (
-    update_seek_manifest,
     get_previous_seek_release,
+    update_seek_manifest,
 )
 
 

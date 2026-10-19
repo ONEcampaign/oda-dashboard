@@ -1,8 +1,8 @@
 """Data validation module for ODA dashboard."""
 
 from validation.core import validate_all, validate_dataset, validate_seek_sectors
-from validation.models import ValidationReport, CheckResult, Warning
-from validation.report import save_report, generate_report_markdown
+from validation.models import CheckResult, ValidationReport, Warning
+from validation.report import generate_report_markdown, save_report
 
 __all__ = [
     "validate_all",

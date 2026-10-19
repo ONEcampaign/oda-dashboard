@@ -1,8 +1,9 @@
 """Anomaly detection for data validation (warnings, not hard gates)."""
 
 import pandas as pd
+
+from validation.config import ANOMALY_Z_SCORE_HIGH, ANOMALY_Z_SCORE_THRESHOLD
 from validation.models import Warning
-from validation.config import ANOMALY_Z_SCORE_THRESHOLD, ANOMALY_Z_SCORE_HIGH
 
 # Dimensions whose membership is compared release to release: the manifest key holding the
 # previous values, the column holding the current ones, a label for the message, and how

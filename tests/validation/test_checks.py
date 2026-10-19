@@ -1,14 +1,15 @@
 """Tests for hard gate validation checks."""
 
 import pandas as pd
+
 from validation.checks import (
-    check_schema,
-    check_not_empty,
-    check_no_duplicate_keys,
-    check_value_columns_populated,
-    check_value_bounds,
-    check_names_populated,
     check_critical_dimensions,
+    check_names_populated,
+    check_no_duplicate_keys,
+    check_not_empty,
+    check_schema,
+    check_value_bounds,
+    check_value_columns_populated,
 )
 
 

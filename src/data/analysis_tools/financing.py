@@ -8,6 +8,7 @@ from src.data.analysis_tools.naming import map_indicator_names
 from src.data.config import (
     ALL_FINANCING_INDICATORS,
     PREFERRED_FINANCING_CODES,
+    TOTAL_ODA,
     logger,
 )
 
@@ -17,8 +18,8 @@ GRANTS_SPLIT: tuple[str, ...] = ("Grants", "Non-grants")
 # The DAC1 fund flows read for the split, by the indicator they become. The headline measure
 # is net flows before 2018 and grant equivalents from then on.
 GRANTS_FUND_FLOWS: dict[str, str] = {
-    "Disbursements, net": "Total ODA",
-    "Grant equivalents": "Total ODA",
+    "Disbursements, net": TOTAL_ODA,
+    "Grant equivalents": TOTAL_ODA,
     "Disbursements, grants": "Grants",
 }
 
@@ -40,8 +41,8 @@ def resolve_indicator_duplicates(dac1_raw: pd.DataFrame) -> pd.DataFrame:
         dac1_raw: Raw DAC1 rows, with a one_indicator column.
 
     Returns:
-        The rows with duplicates removed, keeping the first of each set, or the preferred code's
-        row where the values disagree.
+        The rows with duplicates removed. Each set keeps a row with a value, the preferred
+        code's row where there is one.
 
     Raises:
         ValueError: If two codes for one name disagree and no preferred code applies, since
@@ -67,19 +68,23 @@ def resolve_indicator_duplicates(dac1_raw: pd.DataFrame) -> pd.DataFrame:
     ):
         if len(group) <= 1:
             continue
-        if group["value"].dropna().nunique() <= 1:
-            drop_indices.extend(group.index[1:].tolist())
-            continue
 
-        keep = group.index[
-            group["one_indicator"] == PREFERRED_FINANCING_CODES.get(indicator)
-        ]
-        if len(keep):
+        # Rows with a value first, then the preferred code, so the row kept is never a
+        # missing copy of a figure another code reports.
+        is_preferred = group["one_indicator"] == PREFERRED_FINANCING_CODES.get(
+            indicator
+        )
+        ranked = group.assign(
+            _has_value=group["value"].notna(), _preferred=is_preferred
+        ).sort_values(["_has_value", "_preferred"], ascending=False, kind="stable")
+        drop_indices.extend(ranked.index[1:].tolist())
+
+        if group["value"].dropna().nunique() <= 1:
+            continue
+        if is_preferred.any():
             preferred.append((year, donor_code, indicator))
-            drop_indices.extend(group.index.difference(keep[:1]).tolist())
         else:
             conflicts.append((year, donor_code, indicator))
-            drop_indices.extend(group.index[1:].tolist())
 
     if preferred:
         logger.warning(
@@ -127,7 +132,7 @@ def split_grants(df: pd.DataFrame, index_cols: list[str]) -> pd.DataFrame:
         .reset_index()
         .pivot(index=index_cols, columns="indicator_name", values="value")
         .reset_index()
-        .assign(**{"Non-grants": lambda d: d["Total ODA"] - d["Grants"]})
+        .assign(**{"Non-grants": lambda d: d[TOTAL_ODA] - d["Grants"]})
         .melt(id_vars=index_cols, value_vars=list(GRANTS_SPLIT))
     )
 
@@ -149,7 +154,7 @@ def years_missing_grants(usd_current: pd.DataFrame, members: dict) -> dict[int, 
     """
     usd = usd_current.loc[lambda d: d["donor_code"].isin(members)]
     total = (
-        usd.loc[lambda d: d["indicator_name"] == "Total ODA"]
+        usd.loc[lambda d: d["indicator_name"] == TOTAL_ODA]
         .groupby(["year", "donor_code"])["value"]
         .sum()
     )

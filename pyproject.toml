@@ -19,3 +19,8 @@ dev = [
     "pytest>=8.0.0",
     "ruff>=0.14.8",
 ]
+
+[tool.ruff.lint]
+# Sorted imports, explicit Optional, and %-style logging (the project logger is config.logger).
+extend-select = ["I", "RUF013", "G004"]
+logger-objects = ["src.data.config.logger"]

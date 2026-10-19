@@ -1,20 +1,18 @@
 import pandas as pd
-
-from src.data.analysis_tools.outputs import set_cache_dir
-
 from oda_data import OECDClient, provider_groupings
 
+from src.data.analysis_tools.outputs import set_cache_dir
 from src.data.config import PATHS, logger
 from src.data.topic_page.common import (
-    LATEST_YEAR_AGG,
     CONSTANT_YEAR,
-    update_key_number,
-    add_change,
-    START_YEAR,
+    LATEST_YEAR_AGG,
     LATEST_YEAR_DETAIL,
+    START_YEAR,
+    add_change,
     df_to_key_number,
     format_billions,
     format_percentage,
+    update_key_number,
 )
 from src.data.topic_page.sectors import total_sectors
 
@@ -47,7 +45,7 @@ def total_aid_key_number() -> None:
     )
 
     data.to_csv(PATHS.TOPIC_PAGE / "sm_total_oda.csv", index=False)
-    logger.info(f"Saved chart version of sm_total_oda.csv for {LATEST_YEAR_AGG}")
+    logger.info("Saved chart version of sm_total_oda.csv for %s", LATEST_YEAR_AGG)
 
     kn = {
         "total_oda": f"{data['value'].item() / 1e9:,.1f} billion",
@@ -85,7 +83,7 @@ def aid_gni_key_number() -> None:
 
     # Save chart version
     data.to_csv(PATHS.TOPIC_PAGE / "oda_gni_sm.csv", index=False)
-    logger.info(f"Saved chart version of oda_gni_sm.csv for {LATEST_YEAR_AGG}")
+    logger.info("Saved chart version of oda_gni_sm.csv for %s", LATEST_YEAR_AGG)
 
     # Save dynamic text version
     kn = {
@@ -148,7 +146,7 @@ def aid_to_africa_ts() -> None:
     )
     _p = PATHS.TOPIC_PAGE / "aid_to_africa_ts.csv"
     _p.write_text(_p.read_text().replace('"""', '"'))
-    logger.info(f"Saved chart version of aid_to_africa_ts.csv for {LATEST_YEAR_AGG}")
+    logger.info("Saved chart version of aid_to_africa_ts.csv for %s", LATEST_YEAR_AGG)
 
     # Dynamic text version
     kn = {
@@ -159,7 +157,7 @@ def aid_to_africa_ts() -> None:
     logger.info("Updated dynamic text ODA topic page oda_key_numbers.json")
 
 
-def aid_to_incomes_latest():
+def aid_to_incomes_latest() -> None:
     recipients = {
         10024: "Not classified by income",
         10045: "Low income",

@@ -1,8 +1,9 @@
 """Hard gate validation checks that block deployment on failure."""
 
 import pandas as pd
-from validation.models import CheckResult
+
 from validation.config import MAX_SANE_VALUE
+from validation.models import CheckResult
 
 
 def check_schema(df: pd.DataFrame, expected: dict) -> CheckResult:
@@ -170,8 +171,13 @@ def check_names_populated(df: pd.DataFrame) -> CheckResult:
     """
     errors = []
 
-    for column in ("donor_name", "recipient_name", "indicator_name", "sector_name",
-                   "sub_sector_name"):
+    for column in (
+        "donor_name",
+        "recipient_name",
+        "indicator_name",
+        "sector_name",
+        "sub_sector_name",
+    ):
         if column not in df.columns:
             continue
         null_count = int(df[column].isna().sum())
