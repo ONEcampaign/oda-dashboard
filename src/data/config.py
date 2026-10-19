@@ -117,6 +117,12 @@ SECTORS_TIME: dict[str, int] = {"start": 2013, "end": 2024, "base": 2024}
 # financing reads flows up to this year and grant equivalents from it onwards.
 GRANT_EQUIVALENT_START_YEAR: int = 2018
 
+# Financing type label for each headline measure the financing view reads.
+FINANCING_TYPES: dict[str, str] = {
+    "net_disbursement": "Flows",
+    "grant_equivalent": "Grant equivalents",
+}
+
 # ---------------------------------------------------------------------------------------
 # 4. Indicators, per view
 #
