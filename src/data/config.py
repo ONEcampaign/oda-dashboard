@@ -140,12 +140,22 @@ AGGREGATE_FINANCING_INDICATORS: dict[str, str] = {
     "DAC1.10.11026": "Debt relief",
 }
 
-PSI_FINANCING_INDICATORS: dict[str, str] = {
+# Total PSI, which changes basis with the revised methods (see SUMMED_FINANCING_NAMES).
+PSI_TOTAL_INDICATORS: dict[str, str] = {
     "DAC1.60.11030": PSI,
     "DAC1.60.11040": PSI,
+}
+
+# The split of PSI under the provisional methods into its two approaches. It only ever covers
+# 11030, so it is in net flows throughout.
+PSI_APPROACH_INDICATORS: dict[str, str] = {
     "DAC1.60.11023": "Private sector instruments - institutional approach",
     "DAC1.60.11024": "Private sector instruments - instrument approach",
 }
+
+PSI_FINANCING_INDICATORS: dict[str, str] = (
+    PSI_TOTAL_INDICATORS | PSI_APPROACH_INDICATORS
+)
 
 # Names whose codes are separate parts of one figure, so they are summed rather than treated as
 # renumbered duplicates. The DAC's revised PSI methods (2023) came with a transition of up to two
@@ -155,7 +165,12 @@ PSI_FINANCING_INDICATORS: dict[str, str] = {
 # and only 11040 from 2025. 11023 and 11024 split 11030 only, so in 2023-24 they cover just the
 # provisional-method part.
 SUMMED_FINANCING_NAMES: frozenset[str] = frozenset({PSI})
+
+# Total PSI is in net flows up to 2022, when all of it was reported under the provisional
+# methods, and shown as grant equivalents from 2023. In the transition years it mixes the two,
+# which the financing page notes.
 PSI_TRANSITION_YEARS: list[int] = [2023, 2024]
+PSI_GRANT_EQUIVALENT_START_YEAR: int = PSI_TRANSITION_YEARS[0]
 
 IN_DONOR_FINANCING_INDICATORS: dict[str, str] = {
     "DAC1.10.1820": "Refugees in donor countries",

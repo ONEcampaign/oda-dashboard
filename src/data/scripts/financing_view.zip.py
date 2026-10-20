@@ -57,7 +57,9 @@ from src.data.config import (
     IN_DONOR_FINANCING_INDICATORS,
     PROVIDERS,
     PSI,
-    PSI_FINANCING_INDICATORS,
+    PSI_APPROACH_INDICATORS,
+    PSI_GRANT_EQUIVALENT_START_YEAR,
+    PSI_TOTAL_INDICATORS,
     PSI_TRANSITION_YEARS,
     TOTAL_ODA,
     logger,
@@ -66,8 +68,11 @@ from src.data.config import (
 FLOW_YEARS: range = range(FINANCING_TIME["start"], GRANT_EQUIVALENT_START_YEAR)
 GE_YEARS: range = range(GRANT_EQUIVALENT_START_YEAR, FINANCING_TIME["end"] + 1)
 ALL_YEARS: range = range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1)
-SWITCHING_INDICATORS: list[str] = list(
-    AGGREGATE_FINANCING_INDICATORS | PSI_FINANCING_INDICATORS
+PSI_FLOW_YEARS: range = range(FINANCING_TIME["start"], PSI_GRANT_EQUIVALENT_START_YEAR)
+PSI_GE_YEARS: range = range(PSI_GRANT_EQUIVALENT_START_YEAR, FINANCING_TIME["end"] + 1)
+# Read as net flows in every year.
+NET_FLOW_INDICATORS: list[str] = list(
+    IN_DONOR_FINANCING_INDICATORS | PSI_APPROACH_INDICATORS
 )
 GRANTS_INDICATOR: list[str] = ["DAC1.10.1010"]
 
@@ -108,11 +113,14 @@ def _read(
 
 
 def read_dac1(read: Reader, providers: dict[int, str]) -> pd.DataFrame:
-    """Read the DAC1 indicators, switching measure at the grant-equivalent boundary.
+    """Read each DAC1 indicator in the measure it is reported in, which sets its type.
 
-    In-donor items stay in net flows throughout. Preliminary data for the latest year report
-    them only as flows, and for earlier years their grant equivalents equal their flows, since
-    they are grants.
+    The aggregates switch to grant equivalents at GRANT_EQUIVALENT_START_YEAR. In-donor items
+    stay in net flows throughout: preliminary data for the latest year report them only as
+    flows, and for earlier years their grant equivalents equal their flows, since they are
+    grants. Total PSI was reported under the provisional methods, as net flows, until the
+    revised methods began in PSI_GRANT_EQUIVALENT_START_YEAR, and its split by approach only
+    ever covers those provisional-method amounts.
 
     Args:
         read: How to read each client.
@@ -121,11 +129,14 @@ def read_dac1(read: Reader, providers: dict[int, str]) -> pd.DataFrame:
     Returns:
         Raw rows, with duplicates from renumbered indicator codes removed.
     """
-    in_donor = list(IN_DONOR_FINANCING_INDICATORS)
+    aggregates = list(AGGREGATE_FINANCING_INDICATORS)
+    psi_total = list(PSI_TOTAL_INDICATORS)
     parts = [
-        _read(read, providers, ALL_YEARS, "net_disbursement", in_donor),
-        _read(read, providers, FLOW_YEARS, "net_disbursement", SWITCHING_INDICATORS),
-        _read(read, providers, GE_YEARS, "grant_equivalent", SWITCHING_INDICATORS),
+        _read(read, providers, ALL_YEARS, "net_disbursement", NET_FLOW_INDICATORS),
+        _read(read, providers, FLOW_YEARS, "net_disbursement", aggregates),
+        _read(read, providers, GE_YEARS, "grant_equivalent", aggregates),
+        _read(read, providers, PSI_FLOW_YEARS, "net_disbursement", psi_total),
+        _read(read, providers, PSI_GE_YEARS, "grant_equivalent", psi_total),
     ]
     return resolve_indicator_duplicates(pd.concat(parts, ignore_index=True))
 

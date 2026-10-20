@@ -89,7 +89,7 @@ function App() {
               </p>
               <h2 className="font-bold text-xl mt-8 mb-2">Which measure does each tab use?</h2>
               <ul className="list-disc pl-6 text-base text-slate-700 space-y-1">
-                <li><strong>Financing</strong>: net flows up to 2017 and grant equivalents from 2018, the OECD's headline measure.</li>
+                <li><strong>Financing</strong>: net flows up to 2017 and grant equivalents from 2018, the OECD's headline measure. In-donor costs are in net flows throughout, which for these grants equal their grant equivalents, and private sector instruments are in net flows until 2022, as explained below. The charts colour each year by its measure.</li>
                 <li><strong>Recipients</strong>: net disbursements, from the OECD's DAC2A table.</li>
                 <li><strong>Sectors</strong> and <strong>Gender</strong>: gross disbursements, from the Creditor Reporting System (CRS).</li>
               </ul>
@@ -171,13 +171,14 @@ function App() {
                 Institutions is shown up to 2024, as explained above.
               </p>
               <p>
-                The DAC adopted revised methods for private sector instruments in 2023, with a transition of up to
-                two years. In 2023 and 2024 a donor can report some instruments under the provisional methods, as net
+                From 2018 to 2022 private sector instruments were reported under provisional methods, as net flows, and
+                the dashboard shows them as net flows. The DAC adopted revised methods in 2023, with a transition of up
+                to two years. In 2023 and 2024 a donor can report some instruments under the provisional methods, as net
                 flows, and others under the revised methods, as grant equivalents. The dashboard's total for private
                 sector instruments adds the two, as the OECD does, and shows the total as grant equivalents, following
-                the OECD's headline figures. The charts note this for those years. In 2023 and 2024 the split into the
-                institutional and instrument approaches covers only the instruments still reported under the provisional
-                methods. From 2025 all private sector instruments are reported as grant equivalents.
+                the OECD's headline figures. The charts note this for those years. The split into the institutional and
+                instrument approaches only ever covers instruments reported under the provisional methods, so it is in
+                net flows throughout. From 2025 all private sector instruments are reported as grant equivalents.
               </p>
               <h2 className="font-bold text-xl mt-8 mb-2">How is the gender marker used?</h2>
               <p>
