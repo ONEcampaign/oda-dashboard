@@ -86,7 +86,7 @@ function App() {
         : ""
     const psiNote = indicator === names.psi
         && psiTransitionYears.some(year => year >= timeRange[0] && year <= timeRange[1])
-        ? `In ${psiTransitionYears.join(" and ")}, the OECD's transition to new methods for private sector instruments, the total adds instruments still reported as net flows to those reported as grant equivalents.`
+        ? `${psiTransitionYears[0]}–${psiTransitionYears.at(-1)} PSI values include both grant equivalents and net flows due to the OECD's transition to new reporting methods.`
         : ""
 
     const absoluteSubtitle = React.useMemo(() => {
