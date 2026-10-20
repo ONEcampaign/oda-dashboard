@@ -56,7 +56,9 @@ from src.data.config import (
     GRANT_EQUIVALENT_START_YEAR,
     IN_DONOR_FINANCING_INDICATORS,
     PROVIDERS,
+    PSI,
     PSI_FINANCING_INDICATORS,
+    PSI_TRANSITION_YEARS,
     TOTAL_ODA,
     logger,
 )
@@ -164,24 +166,26 @@ def read_grants(read: Reader, providers: dict[int, str]) -> pd.DataFrame:
 def get_dac1() -> pd.DataFrame:
     """Read the DAC1 indicators for each provider.
 
+    Summing by name adds up the codes that are parts of one figure (SUMMED_FINANCING_NAMES);
+    every other name has one code per donor and year once duplicates are resolved.
+
     Returns:
         One row per year, donor and indicator name.
     """
     return (
         read_dac1(read_indicators, PROVIDERS)
-        .groupby(
-            ["year", "donor_code", "donor_name", "type", "one_indicator"],
-            dropna=False,
-            observed=True,
-        )["value"]
-        .sum()
-        .reset_index()
         .assign(
             indicator_name=lambda d: map_config_values(
                 d["one_indicator"], ALL_FINANCING_INDICATORS, what="Indicator codes"
             )
         )
-        .drop(columns=["one_indicator"])
+        .groupby(
+            ["year", "donor_code", "donor_name", "type", "indicator_name"],
+            dropna=False,
+            observed=True,
+        )["value"]
+        .sum()
+        .reset_index()
     )
 
 
@@ -339,10 +343,17 @@ if __name__ == "__main__":
             "year": [],
         },
         base_year=FINANCING_TIME["base"],
-        extra={"eu27_eui_last_year": EU27_EUI_LAST_YEAR},
+        extra={
+            "eu27_eui_last_year": EU27_EUI_LAST_YEAR,
+            "psi_transition_years": PSI_TRANSITION_YEARS,
+        },
         defaults={"donor_name": DEFAULT_DONOR, "indicator_name": TOTAL_ODA},
         names={
-            "indicator_name": {"total_oda": TOTAL_ODA, "core_oda": CORE_ODA},
+            "indicator_name": {
+                "total_oda": TOTAL_ODA,
+                "core_oda": CORE_ODA,
+                "psi": PSI,
+            },
             "donor_name": {"eu27_eui": EU27_EUI_NAME},
         },
     )

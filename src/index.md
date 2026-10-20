@@ -11,7 +11,7 @@ import {Header} from "npm:@one-data/observable-themes/ui"
 import {ONEVisual, AutoPlot, AutoTable} from "npm:@one-data/observable-themes/charts"
 import {getCurrencyLabel, formatString, resolveScale, isEmbedded} from "npm:@one-data/observable-themes/utils"
 import {setCustomColors} from "npm:@one-data/observable-themes/colors"
-import {financingQueries, transformTableData, donorNames, indicatorNames, yearOptions, eu27EuiLastYear, donorsWithGni, defaults, names} from "./js/financingQueries.js"
+import {financingQueries, transformTableData, donorNames, indicatorNames, yearOptions, eu27EuiLastYear, psiTransitionYears, donorsWithGni, defaults, names} from "./js/financingQueries.js"
 import {customPalette} from "./js/colors.js"
 import {columnChart} from "./js/columnChart.js"
 import {areaChart} from "./js/areaChart.js"
@@ -84,6 +84,10 @@ function App() {
     const eu27Note = donor === names.eu27_eui && timeRange[1] > eu27EuiLastYear
         ? `Shown up to ${eu27EuiLastYear}. Later data do not yet include EU members' contributions to the EU Institutions, which are needed to avoid counting them twice.`
         : ""
+    const psiNote = indicator === names.psi
+        && psiTransitionYears.some(year => year >= timeRange[0] && year <= timeRange[1])
+        ? `${psiTransitionYears[0]}–${psiTransitionYears.at(-1)} PSI values include both grant equivalents and net flows due to the OECD's transition to new reporting methods.`
+        : ""
 
     const absoluteSubtitle = React.useMemo(() => {
         const types = [...new Set(absoluteData.map(d => d.type))]
@@ -124,6 +128,7 @@ function App() {
     const chartNote = [
         `ODA values in ${pricesNote} ${currencyLabel}.`,
         coreOdaNote,
+        psiNote,
         eu27Note
     ].filter(Boolean).join(" ")
 
@@ -132,6 +137,7 @@ function App() {
             ? `ODA values as a share of the GNI of ${donorName}.`
             : `ODA values as a share of total contributions from ${donorName}.`,
         coreOdaNote,
+        psiNote,
         eu27Note
     ].filter(Boolean).join(" ")
 
@@ -141,8 +147,8 @@ function App() {
             : unit === "gni_pct"
                 ? `ODA values as a share of the GNI of ${donorName}.`
                 : `ODA values as a share of total contributions from ${donorName}.`
-        return [base, coreOdaNote, unit !== "total_pct" ? eu27Note : ""].filter(Boolean).join(" ")
-    }, [unit, pricesNote, currencyLabel, donorName, coreOdaNote, eu27Note])
+        return [base, coreOdaNote, psiNote, unit !== "total_pct" ? eu27Note : ""].filter(Boolean).join(" ")
+    }, [unit, pricesNote, currencyLabel, donorName, coreOdaNote, psiNote, eu27Note])
 
     return (
         <div className="mx-auto space-y-12 px-4 py-10 sm:px-8 sm:py-16 lg:px-12 lg:py-20">

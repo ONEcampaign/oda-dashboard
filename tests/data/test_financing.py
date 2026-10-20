@@ -35,22 +35,17 @@ def test_a_missing_alias_never_replaces_a_real_value():
     assert resolve_indicator_duplicates(raw)["value"].tolist() == [5.0]
 
 
-def test_equal_psi_values_keep_the_preferred_code():
-    raw = dac1_rows([(2023, "DAC1.60.11030", 4.0), (2023, "DAC1.60.11040", 4.0)])
-    kept = resolve_indicator_duplicates(raw)
-    assert kept["one_indicator"].tolist() == ["DAC1.60.11040"]
-
-
 def test_disagreeing_aliases_raise():
     raw = dac1_rows([(2020, "DAC1.10.1015", 10.0), (2020, "DAC1.10.11015", 12.0)])
     with pytest.raises(ValueError, match="Conflicting values"):
         resolve_indicator_duplicates(raw)
 
 
-def test_disagreeing_psi_keeps_the_preferred_code():
+def test_psi_transition_parts_are_both_kept():
+    # 2023-24: 11030 holds PSI under the provisional methods, 11040 under the revised ones.
     raw = dac1_rows([(2023, "DAC1.60.11030", 260.0), (2023, "DAC1.60.11040", 416.0)])
     kept = resolve_indicator_duplicates(raw)
-    assert kept["one_indicator"].tolist() == ["DAC1.60.11040"]
+    assert sorted(kept["one_indicator"]) == ["DAC1.60.11030", "DAC1.60.11040"]
 
 
 def test_split_grants_derives_non_grants():

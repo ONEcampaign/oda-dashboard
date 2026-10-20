@@ -83,6 +83,7 @@ EU27_EUI_NAME: str = "EU27 & EU Institutions"
 ODA_ELIGIBLE: str = "ODA eligible countries"
 TOTAL_ODA: str = "Total ODA"
 CORE_ODA: str = "Core ODA (ONE Definition)"
+PSI: str = "Private sector instruments"
 BILATERAL: str = "Bilateral"
 IMPUTED_MULTILATERAL: str = "Imputed multilateral"
 
@@ -140,18 +141,21 @@ AGGREGATE_FINANCING_INDICATORS: dict[str, str] = {
 }
 
 PSI_FINANCING_INDICATORS: dict[str, str] = {
-    "DAC1.60.11030": "Private sector instruments",
-    "DAC1.60.11040": "Private sector instruments",
+    "DAC1.60.11030": PSI,
+    "DAC1.60.11040": PSI,
     "DAC1.60.11023": "Private sector instruments - institutional approach",
     "DAC1.60.11024": "Private sector instruments - instrument approach",
 }
 
-# Code kept when aliases of one name disagree for a donor and year. 11030 and 11040 should
-# report the same PSI figure, but the October 2026 DAC1 has them differ for 2023-24 (reported
-# to the OECD). Until that is resolved the grant-equivalent figure is used.
-PREFERRED_FINANCING_CODES: dict[str, str] = {
-    "Private sector instruments": "DAC1.60.11040",
-}
+# Names whose codes are separate parts of one figure, so they are summed rather than treated as
+# renumbered duplicates. The DAC's revised PSI methods (2023) came with a transition of up to two
+# years: PSI still reported under the provisional methods, as net flows, are in 11030, and PSI
+# under the revised methods, as grant equivalents, in 11040. A donor can report both in one year,
+# and total PSI is their sum (confirmed by the OECD, October 2026). Only 11030 exists before 2023
+# and only 11040 from 2025. 11023 and 11024 split 11030 only, so in 2023-24 they cover just the
+# provisional-method part.
+SUMMED_FINANCING_NAMES: frozenset[str] = frozenset({PSI})
+PSI_TRANSITION_YEARS: list[int] = [2023, 2024]
 
 IN_DONOR_FINANCING_INDICATORS: dict[str, str] = {
     "DAC1.10.1820": "Refugees in donor countries",

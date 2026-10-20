@@ -7,7 +7,7 @@ import pandas as pd
 from src.data.analysis_tools.naming import map_config_values
 from src.data.config import (
     ALL_FINANCING_INDICATORS,
-    PREFERRED_FINANCING_CODES,
+    SUMMED_FINANCING_NAMES,
     TOTAL_ODA,
     logger,
 )
@@ -33,25 +33,23 @@ def resolve_indicator_duplicates(dac1_raw: pd.DataFrame) -> pd.DataFrame:
 
     The DAC renumbered several indicators when it moved to grant equivalents, so two codes can
     map to one name (1015 and 11015 are both "Bilateral ODA"). Where both are present for the
-    same donor and year they report the same figure, and keeping both would double it. Where they
-    disagree and the name has an entry in PREFERRED_FINANCING_CODES, that code's row is kept and
-    the conflict is logged.
+    same donor and year they report the same figure, and keeping both would double it. Names in
+    SUMMED_FINANCING_NAMES are left alone: their codes are parts of one figure, to be added up.
 
     Args:
         dac1_raw: Raw DAC1 rows, with a one_indicator column.
 
     Returns:
-        The rows with duplicates removed. Each set keeps a row with a value, the preferred
-        code's row where there is one.
+        The rows with duplicates removed. Each set keeps a row with a value.
 
     Raises:
-        ValueError: If two codes for one name disagree and no preferred code applies, since
-            the two codes are then not interchangeable after all.
+        ValueError: If two codes for one name disagree, since the two codes are then not
+            interchangeable after all.
     """
     multi_code_names = {
         name
         for name, count in Counter(ALL_FINANCING_INDICATORS.values()).items()
-        if count > 1
+        if count > 1 and name not in SUMMED_FINANCING_NAMES
     }
 
     annotated = dac1_raw.assign(
@@ -60,7 +58,6 @@ def resolve_indicator_duplicates(dac1_raw: pd.DataFrame) -> pd.DataFrame:
     shared = annotated[annotated["_indicator"].isin(multi_code_names)]
 
     conflicts = []
-    preferred = []
     drop_indices = []
 
     for (year, donor_code, indicator), group in shared.groupby(
@@ -69,29 +66,15 @@ def resolve_indicator_duplicates(dac1_raw: pd.DataFrame) -> pd.DataFrame:
         if len(group) <= 1:
             continue
 
-        # Rows with a value first, then the preferred code, so the row kept is never a
-        # missing copy of a figure another code reports.
-        is_preferred = group["one_indicator"] == PREFERRED_FINANCING_CODES.get(
-            indicator
+        # Rows with a value first, so the row kept is never a missing copy of a figure another
+        # code reports.
+        ranked = group.sort_values(
+            "value", key=lambda v: v.isna(), ascending=True, kind="stable"
         )
-        ranked = group.assign(
-            _has_value=group["value"].notna(), _preferred=is_preferred
-        ).sort_values(["_has_value", "_preferred"], ascending=False, kind="stable")
         drop_indices.extend(ranked.index[1:].tolist())
 
-        if group["value"].dropna().nunique() <= 1:
-            continue
-        if is_preferred.any():
-            preferred.append((year, donor_code, indicator))
-        else:
+        if group["value"].dropna().nunique() > 1:
             conflicts.append((year, donor_code, indicator))
-
-    if preferred:
-        logger.warning(
-            "Shared indicator codes disagree; kept the preferred code for %s year-donor pairs: %s",
-            len(preferred),
-            ", ".join(f"{ind} {y} donor {d}" for y, d, ind in preferred),
-        )
 
     if conflicts:
         lines = [
