@@ -19,6 +19,8 @@ export const indicatorNames = viewOptions.indicator_name;
 export const yearOptions = viewOptions.year;
 // Last year the EU27 + institutions bloc is published for (see EU27_EUI_LAST_YEAR in config.py).
 export const eu27EuiLastYear = viewOptions.eu27_eui_last_year;
+// Years in which PSI mixes net flows and grant equivalents (see PSI_TRANSITION_YEARS in config.py).
+export const psiTransitionYears = viewOptions.psi_transition_years;
 // The selections the page opens on, and option values it refers to by key.
 export const defaults = viewOptions.defaults;
 export const names = viewOptions.names;
