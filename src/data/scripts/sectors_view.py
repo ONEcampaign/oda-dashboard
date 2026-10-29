@@ -1,13 +1,16 @@
 """Builds the sectors view: ODA by sector and sub-sector, bilateral and imputed multilateral.
 
 Shape of the pipeline:
-    1. CRS bilateral disbursements by purpose code, mapped to sub-sectors
-    2. imputed multilateral spending by purpose, plus a channel-corrected second read used
-       only for the EU27 + institutions aggregate
+    1. oecd.crs.bilateral_oda gross disbursements by purpose code, mapped to sub-sectors
+       and sectors through oda.sectors. From CRS_PSI_START_YEAR it leaves out private
+       sector instruments (CRS category 60)
+    2. one.crs.imputed_multilateral_oda by purpose and channel, read one year at a time,
+       plus a channel-corrected copy used only for the EU27 + institutions aggregate
     3. recipient names, regions and income groups from the shared CRS classification table
     4. recipient groups then donor groups, summed locally because the CRS publishes neither
     5. shares from both perspectives, then values as integer units
-    6. a partitioned dataset under cdn_files, addressed by donor and recipient slug
+    6. a partitioned dataset addressed by donor and recipient slug, plus its options, under
+       cdn_files (or --output-dir)
 
 This is the largest view by far, so the frame is kept dictionary-encoded and stripped of spent
 columns before the pivot; see _as_categoricals and the drop before widen_currency_price.
@@ -16,19 +19,26 @@ Output is keyed by name: year, donor_name, recipient_name, indicator_name, secto
 sub_sector_name, with donor_slug and recipient_slug as the partition keys.
 """
 
+import argparse
 import os
 import sys
 from functools import cache
+from pathlib import Path
 
+import oda_data as oda
 import pandas as pd
-from oda_data import CRSData
-from oda_data.tools import sector_lists
 
-from src.data.analysis_tools.imputations import read_imputed_multilateral
+from src.data.analysis_tools.imputations import iter_imputed_multilateral
 from src.data.analysis_tools.naming import slugify
+from src.data.analysis_tools.oda import (
+    ProvenanceLog,
+    open_context,
+    run_query,
+    scan_table,
+    scanned_release,
+)
 from src.data.analysis_tools.outputs import (
     build_view_options,
-    set_cache_dir,
     write_partitioned_dataset,
     write_view_options,
 )
@@ -39,6 +49,7 @@ from src.data.analysis_tools.transformations import (
     add_recipient_classifications,
     build_donor_group_totals,
     convert_values_to_units,
+    drop_empty_series,
     drop_empty_values,
     get_crs_recipient_classifications,
     widen_currency_price,
@@ -46,7 +57,8 @@ from src.data.analysis_tools.transformations import (
 )
 from src.data.config import (
     BILATERAL,
-    CRS_FLOW_CATEGORIES,
+    BROAD_ONLY_SUB_SECTORS,
+    CRS_PSI_START_YEAR,
     CRS_RECIPIENTS,
     CRS_RECIPIENTS_ORDER,
     DEFAULT_DONOR,
@@ -59,16 +71,32 @@ from src.data.config import (
     EUI_CHANNEL_CODES,
     IMPUTED_MULTILATERAL,
     LABEL_COLUMNS,
+    PATHS,
     PROVIDERS,
     SECTORS_TIME,
     UNALLOCATED_SUB_SECTOR,
     logger,
 )
 
-YEARS = range(SECTORS_TIME["start"], SECTORS_TIME["end"] + 1)
+YEARS: range = range(SECTORS_TIME["start"], SECTORS_TIME["end"] + 1)
+BILATERAL_ODA: str = "oecd.crs.bilateral_oda"
+# The CRS headline measure, which oecd.crs.bilateral_oda also defaults to.
+CRS_BASIS: str = "gross_disbursement"
+CRS: str = "crs"
 
+DATASET_DIR: str = "sectors_view"
+OPTIONS_FILE: str = "sectors_view_options.json"
+
+VIEW_KEYS: list[str] = [
+    "year",
+    "donor_name",
+    "recipient_name",
+    "indicator_name",
+    "sector_name",
+    "sub_sector_name",
+]
 # Everything identifying a row except the recipient, and except the donor, respectively.
-RECIPIENT_GROUP_COLS = [
+RECIPIENT_GROUP_COLS: list[str] = [
     "year",
     "donor_code",
     "donor_name",
@@ -77,22 +105,13 @@ RECIPIENT_GROUP_COLS = [
     "currency",
     "price",
 ]
-DONOR_GROUP_COLS = [
+DONOR_GROUP_COLS: list[str] = [
     "year",
     "recipient_name",
     "indicator_name",
     "sub_sector",
     "currency",
     "price",
-]
-
-CRS_COLUMNS: list[str] = [
-    "year",
-    "donor_code",
-    "donor_name",
-    "recipient_code",
-    "purpose_code",
-    "usd_disbursement",
 ]
 
 
@@ -108,25 +127,62 @@ def _as_categoricals(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _member_code(member: int | oda.ReportedAt) -> int:
+    """A sector group member's purpose code; a heading-level member carries its heading."""
+    return member if isinstance(member, int) else member.code
+
+
 @cache
-def _purpose_to_sub_sector() -> dict[int, str]:
-    """Build the purpose code to sub-sector lookup once per run.
+def _sector_lookup() -> tuple[dict[int, str], dict[str, str]]:
+    """Build the purpose code to sub-sector, and sub-sector to sector, lookups once per run.
 
-    oda_data expresses the mapping the other way round, as 70 groups each listing its purpose
-    codes. Inverting it once turns sub-sector assignment into a single map, where scanning the
-    frame per group meant 70 passes over millions of rows every time.
-
-    Three purpose codes appear in more than one group. Building the dict in group order means
-    the last group wins, which is what the original sequence of overwriting assignments did.
+    oda.sectors holds the broad sectors and their sub-sectors as one flat set of nested
+    groups: a purpose code belongs to its sub-sector's group (the smallest that holds it)
+    and its sector's group (the largest). Where the two are one group, the sector has a
+    single sub-sector of the same name. Codes in a broad sector's group but in none of its
+    sub-sectors' are named by BROAD_ONLY_SUB_SECTORS where the dashboard names them apart.
 
     Returns:
-        ``{purpose_code: sub-sector name}``.
-    """
-    mapping: dict[int, str] = {}
-    for name, codes in sector_lists.get_sector_groups().items():
-        mapping.update({int(code): name for code in codes})
+        ``({purpose_code: sub-sector}, {sub-sector: sector})``.
 
-    return mapping
+    Raises:
+        ValueError: If a code's groups do not nest, or two groups of one size hold it, so
+            its sub-sector or sector would be ambiguous.
+    """
+    groups = {
+        group.label: {_member_code(m) for m in group.members}
+        for group in oda.sectors.values()
+    }
+    holding: dict[int, list[str]] = {}
+    for label, codes in groups.items():
+        for code in codes:
+            holding.setdefault(code, []).append(label)
+
+    sub_sectors: dict[int, str] = {}
+    sectors: dict[str, str] = {}
+    for code, labels in holding.items():
+        labels.sort(key=lambda label: len(groups[label]))
+        narrowest, widest = labels[0], labels[-1]
+        sizes = [len(groups[label]) for label in labels]
+        if len(set(sizes)) != len(sizes) or any(
+            not groups[label] <= groups[widest] for label in labels
+        ):
+            raise ValueError(
+                f"oda.sectors groups holding purpose code {code} do not nest: {labels}"
+            )
+        sub_sector = (
+            BROAD_ONLY_SUB_SECTORS.get(narrowest, narrowest)
+            if narrowest == widest
+            else narrowest
+        )
+        if sectors.setdefault(sub_sector, widest) != widest:
+            raise ValueError(
+                f"Sub-sector {sub_sector!r} falls in two sectors: "
+                f"{sectors[sub_sector]!r} and {widest!r}"
+            )
+        sub_sectors[code] = sub_sector
+
+    return sub_sectors, sectors
 
 
 def _assign_sub_sector(df: pd.DataFrame) -> pd.DataFrame:
@@ -136,16 +192,20 @@ def _assign_sub_sector(df: pd.DataFrame) -> pd.DataFrame:
         df: Frame with a purpose_code column.
 
     Returns:
-        The frame with a sub_sector column, never null: purpose codes outside every group are
-        labelled explicitly, since a null here would become a null grouping key downstream.
+        The frame with a sub_sector column, never null: null purpose codes (unallocated
+        core funding) and codes outside every group are labelled explicitly, since a null
+        here would become a null grouping key downstream.
     """
-    sub_sector = df["purpose_code"].map(_purpose_to_sub_sector())
+    purpose_to_sub_sector, _ = _sector_lookup()
+    sub_sector = df["purpose_code"].map(purpose_to_sub_sector)
 
-    unmatched = int(sub_sector.isna().sum())
-    if unmatched:
+    unmatched = sub_sector.isna()
+    if unmatched.any():
         logger.info(
-            "%s rows have a purpose code outside the sector groups, labelled %r",
-            f"{unmatched:,}",
+            "%s rows (%s USD million) have no purpose code or one outside the sector "
+            "groups, labelled %r",
+            f"{int(unmatched.sum()):,}",
+            f"{df.loc[unmatched, 'value'].sum():,.1f}",
             UNALLOCATED_SUB_SECTOR,
         )
 
@@ -154,35 +214,38 @@ def _assign_sub_sector(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def get_bilateral_by_sector() -> pd.DataFrame:
-    """Read bilateral CRS disbursements by sub-sector."""
-    raw_bilateral = CRSData(years=YEARS).read(
-        using_bulk_download=True,
-        additional_filters=[
-            ("donor_code", "in", list(PROVIDERS)),
-            ("recipient_code", "in", list(CRS_RECIPIENTS)),
-            ("category", "in", CRS_FLOW_CATEGORIES),
-        ],
-        columns=CRS_COLUMNS,
+def get_bilateral_by_sector(
+    ctx: oda.Context, provenance: ProvenanceLog
+) -> pd.DataFrame:
+    """Read bilateral CRS gross disbursements by donor, recipient and sub-sector.
+
+    Args:
+        ctx: From open_context.
+        provenance: Log to record the CRS release in.
+
+    Returns:
+        One row per year, donor, recipient and sub-sector, zero rows dropped, in current USD
+        millions.
+    """
+    raw = run_query(
+        ctx,
+        BILATERAL_ODA,
+        years=YEARS,
+        providers=list(PROVIDERS),
+        recipients=list(CRS_RECIPIENTS),
+        by=["provider", "recipient", "sector", "year"],
+        basis=CRS_BASIS,
+        provenance=provenance,
     )
-
-    # CRSData.read silently drops requested columns that do not exist, which would quietly
-    # empty the classifications, so check rather than trust.
-    missing = [col for col in CRS_COLUMNS if col not in raw_bilateral.columns]
-    if missing:
-        raise ValueError(f"CRS did not return required columns: {missing}")
-
-    raw_bilateral = _assign_sub_sector(raw_bilateral)
-
     sectors_bi = (
-        raw_bilateral.groupby(
+        _assign_sub_sector(raw)
+        .groupby(
             ["year", "donor_code", "donor_name", "recipient_code", "sub_sector"],
             dropna=False,
             observed=True,
-        )["usd_disbursement"]
+        )["value"]
         .sum()
         .reset_index()
-        .rename(columns={"usd_disbursement": "value"})
         .assign(indicator_name=BILATERAL)
     )
 
@@ -235,6 +298,36 @@ def get_eu27_eui_imputed(raw: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def get_imputed_by_sector(
+    ctx: oda.Context, provenance: ProvenanceLog
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Read imputed multilateral by sub-sector, and the bloc's channel-corrected copy.
+
+    Each year is summed as soon as it is read, so only one year of the raw read, with its
+    channel dimension, is ever held.
+
+    Args:
+        ctx: From open_context.
+        provenance: Log to record the MultiSystem and CRS releases in.
+
+    Returns:
+        (imputed multilateral by year, donor, recipient and sub-sector; the EU27 +
+        institutions copy from get_eu27_eui_imputed), both in current USD millions.
+    """
+    imputed, eu_imputed = [], []
+    for raw in iter_imputed_multilateral(
+        ctx, years=YEARS, providers=PROVIDERS, provenance=provenance
+    ):
+        raw = _assign_sub_sector(raw)
+        imputed.append(_sum_imputed_by_sector(raw))
+        eu_imputed.append(get_eu27_eui_imputed(raw))
+
+    return (
+        pd.concat(imputed, ignore_index=True),
+        pd.concat(eu_imputed, ignore_index=True),
+    )
+
+
 def _name_donors(df: pd.DataFrame, donor_names: pd.Series, label: str) -> pd.DataFrame:
     """Name imputed donors from the CRS side, dropping any the CRS does not have.
 
@@ -254,12 +347,12 @@ def _name_donors(df: pd.DataFrame, donor_names: pd.Series, label: str) -> pd.Dat
     return df[~unnamed]
 
 
-def _convert(df: pd.DataFrame, label: str) -> pd.DataFrame:
+def _convert(df: pd.DataFrame, label: str, provenance: ProvenanceLog) -> pd.DataFrame:
     """Add currencies and prices, then drop the rows left empty."""
     # Categories before the eight-fold currency expansion: as objects these label columns cost
     # ~8 bytes per row in pointers alone and make the pivot's MultiIndex far more expensive.
     converted = add_currencies_and_prices(
-        _as_categoricals(df), base_year=SECTORS_TIME["base"]
+        _as_categoricals(df), base_year=SECTORS_TIME["base"], provenance=provenance
     )
     return drop_empty_values(converted, label)
 
@@ -294,11 +387,12 @@ def build_eu27_eui_total(
 
 def _add_sector_names(sectors: pd.DataFrame) -> pd.DataFrame:
     """Name each sub-sector's broad sector, and drop the codes the totals no longer need."""
+    _, sub_sector_to_sector = _sector_lookup()
     sectors = sectors.rename(columns={"sub_sector": "sub_sector_name"})
     sectors["sector_name"] = (
         sectors["sub_sector_name"]
         .astype("object")
-        .map(sector_lists.get_broad_sector_groups())
+        .map(sub_sector_to_sector)
         .fillna(UNALLOCATED_SUB_SECTOR)
     )
 
@@ -311,33 +405,34 @@ def _add_sector_names(sectors: pd.DataFrame) -> pd.DataFrame:
     return _as_categoricals(sectors)
 
 
-def combined_sectors() -> pd.DataFrame:
+def combined_sectors(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataFrame:
     """Assemble the sectors view from its parts.
+
+    Args:
+        ctx: From open_context.
+        provenance: Log to record every read and the conversion factors in.
 
     Returns:
         Wide frame keyed by year, donor_name, recipient_name, indicator_name, sector_name and
         sub_sector_name, with the partition slugs and the two share columns.
     """
     logger.info("Fetching bilateral data...")
-    sectors_bi = get_bilateral_by_sector()
+    sectors_bi = get_bilateral_by_sector(ctx, provenance)
     classified, ldc_members = get_crs_recipient_classifications(
         YEARS, list(CRS_RECIPIENTS)
     )
+    # The classification scans the same CRS file; recording it checks the release matches.
+    provenance.record_table(CRS, scanned_release(scan_table(CRS)))
 
     logger.info("Fetching imputed multilateral data...")
-    raw_multi = _assign_sub_sector(read_imputed_multilateral(YEARS, list(PROVIDERS)))
+    sectors_multi, eu_imputed = get_imputed_by_sector(ctx, provenance)
     donor_names = (
         sectors_bi[["donor_code", "donor_name"]]
         .drop_duplicates("donor_code")
         .set_index("donor_code")["donor_name"]
     )
-    sectors_multi = _name_donors(
-        _sum_imputed_by_sector(raw_multi), donor_names, "Imputed multilateral"
-    )
-    eu_imputed = _name_donors(
-        get_eu27_eui_imputed(raw_multi), donor_names, "EU27 & EU Institutions imputed"
-    )
-    del raw_multi
+    sectors_multi = _name_donors(sectors_multi, donor_names, "Imputed multilateral")
+    eu_imputed = _name_donors(eu_imputed, donor_names, "EU27 & EU Institutions imputed")
 
     # recipient_name comes from the shared classification table, so both halves are
     # identified the same way without either needing to carry it.
@@ -357,9 +452,9 @@ def combined_sectors() -> pd.DataFrame:
     del sectors_bi, sectors_multi, classified
 
     logger.info("Adding currencies and prices...")
-    sectors = _convert(sectors, "sectors")
+    sectors = _convert(sectors, "sectors", provenance)
     # Converted separately, since it is a differently corrected view of the same spending.
-    eu_imputed = _convert(eu_imputed, "EU27 & EU Institutions imputed")
+    eu_imputed = _convert(eu_imputed, "EU27 & EU Institutions imputed", provenance)
 
     logger.info("Building donor and recipient group totals...")
     sectors = with_crs_recipient_group_totals(
@@ -388,17 +483,14 @@ def combined_sectors() -> pd.DataFrame:
 
     logger.info("Adding sector names...")
     sectors = _add_sector_names(sectors)
+    # A group sum that cancels to zero in USD current can leave float residue in the
+    # converted copies; drop such series in every currency, not row by row.
+    sectors = drop_empty_series(
+        sectors[[*VIEW_KEYS, "currency", "price", "value"]], VIEW_KEYS, "sectors"
+    )
 
     logger.info("Pivoting to wide format...")
-    index_cols = (
-        "year",
-        "donor_name",
-        "recipient_name",
-        "indicator_name",
-        "sector_name",
-        "sub_sector_name",
-    )
-    sectors = widen_currency_price(df=sectors, index_cols=index_cols)
+    sectors = widen_currency_price(df=sectors, index_cols=tuple(VIEW_KEYS))
 
     logger.info("Adding shares...")
     sectors = add_donor_and_recipient_shares(sectors)
@@ -444,16 +536,22 @@ def _slug_map(sectors: pd.DataFrame, column: str) -> dict:
     )
 
 
-def main() -> None:
-    """Build the sectors view, its dropdown options and the partitioned dataset."""
-    set_cache_dir(oda_data=True, pydeflate=True)
+def main(output_dir: Path) -> None:
+    """Build the sectors view, its dropdown options and the partitioned dataset.
+
+    Args:
+        output_dir: Directory to write the dataset and its options into. CI publishes
+            PATHS.CDN_FILES; a scratch directory keeps a trial build away from it.
+    """
     logger.info("Generating sectors table...")
-    df = combined_sectors()
+    provenance = ProvenanceLog()
+    with open_context() as ctx:
+        df = combined_sectors(ctx, provenance)
 
     sub_sectors_by_sector = (
         df[["sector_name", "sub_sector_name"]]
         .drop_duplicates()
-        .groupby("sector_name")["sub_sector_name"]
+        .groupby("sector_name", observed=True)["sub_sector_name"]
         .apply(lambda s: sorted(s))
         .to_dict()
     )
@@ -477,22 +575,41 @@ def main() -> None:
             "donor_slugs": _slug_map(df, "donor"),
             "recipient_slugs": _slug_map(df, "recipient"),
             "sub_sectors_by_sector": sub_sectors_by_sector,
+            "psi_excluded_from": CRS_PSI_START_YEAR,
+            "provenance": provenance.to_dict(),
         },
     )
 
+    output_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Writing partitioned dataset...")
     write_partitioned_dataset(
-        df, "sectors_view", partition_cols=["donor_slug", "recipient_slug"]
+        df,
+        DATASET_DIR,
+        partition_cols=["donor_slug", "recipient_slug"],
+        root=output_dir,
     )
     # Written after the dataset, so the options only exist alongside the data they describe;
     # CI publishes both to the CDN, where the page reads them.
-    write_view_options(options, "sectors_view_options.json")
+    write_view_options(options, OPTIONS_FILE, root=output_dir)
     logger.info("Sectors view completed")
 
 
+def _parse_args() -> argparse.Namespace:
+    """Read the command line: only the output directory, which defaults to the CDN files."""
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=PATHS.CDN_FILES,
+        help=f"Where to write {DATASET_DIR}/ and {OPTIONS_FILE} (default: cdn_files).",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = _parse_args()
     try:
-        main()
+        main(args.output_dir)
         exit_code = 0
     except Exception:
         logger.exception("Sectors view failed")

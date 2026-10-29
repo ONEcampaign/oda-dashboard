@@ -487,6 +487,59 @@ def test_max_abs_entry_explains_small_absolute_deltas(make_view: MakeView) -> No
     assert _details(by_severity[Severity.ERROR])["donor_name"].tolist() == ["Germany"]
 
 
+@pytest.mark.parametrize(
+    ("baseline_eur", "candidate_eur", "explained"),
+    [
+        (np.nan, 0.0, True),  # null vs 0: |0| within max_abs
+        (np.nan, 100.0, True),  # null vs 100: at the bound
+        (101.0, np.nan, False),  # number vs null: |101| beyond the bound
+    ],
+)
+def test_max_abs_bounds_null_against_number(
+    make_view: MakeView,
+    baseline_eur: float,
+    candidate_eur: float,
+    explained: bool,
+) -> None:
+    """A null against a number is matched as |number| (null read as 0) by max_abs."""
+    base = make_view(VIEW, [_row()])
+    cand = make_view(VIEW, [_row()], options=base.options)
+    base.data["value_eur_current"] = baseline_eur
+    cand.data["value_eur_current"] = candidate_eur
+    expected = [
+        ExpectedDelta(
+            view=VIEW,
+            reason="null vs near zero",
+            columns=frozenset({"value_eur_current"}),
+            max_abs=100,
+        )
+    ]
+
+    failure = _only_failure(compare_views(cand, base, expected), "parity.other_values")
+
+    assert (failure.severity is Severity.INFO) is explained
+
+
+def test_max_rel_cannot_explain_null_against_number(make_view: MakeView) -> None:
+    """A null against a number has no relative difference for max_rel to bound."""
+    base = make_view(VIEW, [_row()])
+    cand = make_view(VIEW, [_row()], options=base.options)
+    base.data["value_eur_current"] = np.nan
+    cand.data["value_eur_current"] = 0.0
+    expected = [
+        ExpectedDelta(
+            view=VIEW,
+            reason="relative only",
+            columns=frozenset({"value_eur_current"}),
+            max_rel=1.0,
+        )
+    ]
+
+    failure = _only_failure(compare_views(cand, base, expected), "parity.other_values")
+
+    assert failure.severity is Severity.ERROR
+
+
 def test_options_provenance_is_not_compared(make_view: MakeView) -> None:
     """The root provenance key is build metadata, so parity leaves it out."""
     base = make_view(VIEW, [_row()])
