@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from src.data.validation.cross_view import VIEW as CROSS_VIEW
 from src.data.validation.expected import (
     DEFAULT_EXPECTED_DELTAS_PATH,
     DeltaKind,
@@ -11,6 +12,7 @@ from src.data.validation.expected import (
     find_explanation,
     load_expected_deltas,
 )
+from src.data.validation.views import VIEWS
 
 FULL_ENTRY = """
 [[delta]]
@@ -31,9 +33,11 @@ def _write(tmp_path: Path, text: str) -> Path:
     return path
 
 
-def test_shipped_file_is_empty() -> None:
-    """The shipped skeleton parses and holds no entries."""
-    assert load_expected_deltas(DEFAULT_EXPECTED_DELTAS_PATH) == []
+def test_shipped_file_parses_with_known_views() -> None:
+    """The shipped file parses, and every entry names a view or cross_view."""
+    known = {*VIEWS, CROSS_VIEW}
+    for entry in load_expected_deltas(DEFAULT_EXPECTED_DELTAS_PATH):
+        assert entry.view in known, entry
 
 
 def test_load_full_entry(tmp_path: Path) -> None:
@@ -80,6 +84,12 @@ def test_missing_file(tmp_path: Path) -> None:
         ('[[delta]]\nview = "v"\nreason = "r"\ndonors = "France"\n', "donors"),
         ('[[delta]]\nview = "v"\nreason = "r"\nmax_rel = -1\n', "max_rel"),
         ('[[delta]]\nview = "v"\nreason = "r"\nmax_rel = "a"\n', "max_rel"),
+        ('[[delta]]\nview = "v"\nreason = "r"\nmax_abs = -1\n', "max_abs"),
+        ('[[delta]]\nview = "v"\nreason = "r"\ncolumns = "pct_of_gni"\n', "columns"),
+        (
+            '[[delta]]\nview = "v"\nreason = "r"\nkind = "new_in_candidate"\nmax_abs = 1\n',
+            "only to kind",
+        ),
         (
             '[[delta]]\nview = "v"\nreason = "r"\nkind = "new_in_candidate"\nmax_rel = 0.1\n',
             "only to kind",
@@ -136,3 +146,50 @@ def test_find_explanation() -> None:
         is catch_all
     )
     assert find_explanation([ENTRY], view="gender_view", kind="value") is None
+
+
+ROUNDING = ExpectedDelta(
+    view="financing_view",
+    reason="rounding",
+    columns=frozenset({"value_usd_current"}),
+    max_rel=0.001,
+    max_abs=100.0,
+)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "matched"),
+    [
+        ({"rel_diff": 0.5, "abs_diff": 50.0}, True),  # within max_abs only
+        ({"rel_diff": 0.0005, "abs_diff": 5_000.0}, True),  # within max_rel only
+        ({"rel_diff": 0.5, "abs_diff": 5_000.0}, False),  # within neither
+        ({"rel_diff": None, "abs_diff": -50.0}, True),  # sign ignored, no rel needed
+        ({"rel_diff": 0.5, "abs_diff": None}, False),
+    ],
+)
+def test_max_abs_or_max_rel(kwargs: dict, matched: bool) -> None:
+    """With both bounds set, a delta within either is explained."""
+    assert (
+        ROUNDING.matches(
+            view="financing_view", kind="value", column="value_usd_current", **kwargs
+        )
+        is matched
+    )
+
+
+def test_columns_filter() -> None:
+    """A columns filter needs the delta's column, and that column in the filter."""
+    kwargs = {"view": "financing_view", "kind": "value", "abs_diff": 1.0}
+    assert not ROUNDING.matches(column="pct_of_gni", **kwargs)
+    assert not ROUNDING.matches(**kwargs)
+
+
+def test_load_max_abs_and_columns(tmp_path: Path) -> None:
+    """max_abs and columns are read from the file."""
+    text = (
+        '[[delta]]\nview = "financing_view"\nreason = "r"\nmax_abs = 11000\n'
+        'columns = ["value_usd_current"]\n'
+    )
+    [entry] = load_expected_deltas(_write(tmp_path, text))
+    assert entry.max_abs == 11_000.0
+    assert entry.columns == frozenset({"value_usd_current"})

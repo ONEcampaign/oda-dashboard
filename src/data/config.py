@@ -158,46 +158,53 @@ FINANCING_TYPES: dict[str, str] = {
 # ---------------------------------------------------------------------------------------
 # 4. Indicators, per view
 #
-# Financing indicators are grouped by how they are requested: the aggregates and the private
-# sector instruments switch measure at GRANT_EQUIVALENT_START_YEAR, the in-donor items do not.
-# Several codes map to one display name because the DAC renumbered them for grant equivalents.
+# Financing indicators are grouped by how they are requested: the aggregates switch from net
+# flows to grant equivalents at GRANT_EQUIVALENT_START_YEAR (oda-data's headline basis), total
+# private sector instruments at PSI_GRANT_EQUIVALENT_START_YEAR, and the in-donor items and
+# the PSI split by approach stay in net flows.
 # ---------------------------------------------------------------------------------------
 
-AGGREGATE_FINANCING_INDICATORS: dict[str, str] = {
-    "ONE.10.1010_11010": TOTAL_ODA,
-    "ONE.10.1010C": CORE_ODA,
-    "DAC1.10.1015": "Bilateral ODA",
-    "DAC1.10.11015": "Bilateral ODA",
-    "DAC1.10.2000": "Multilateral ODA",
-    "DAC1.10.12000": "Multilateral ODA",
-    "DAC1.10.1600": "Debt relief",
-    "DAC1.10.11026": "Debt relief",
+# oda-data indicators read on their headline basis, by display name.
+HEADLINE_FINANCING_INDICATORS: dict[str, str] = {
+    "oecd.dac1.total_oda": TOTAL_ODA,
+    "one.dac1.core_oda": CORE_ODA,
+    "oecd.dac1.bilateral_oda": "Bilateral ODA",
+    "oecd.dac1.multilateral_oda": "Multilateral ODA",
+    "oecd.dac1.debt_relief": "Debt relief",
 }
 
-# Total PSI, which changes basis with the revised methods (see SUMMED_FINANCING_NAMES).
-PSI_TOTAL_INDICATORS: dict[str, str] = {
-    "DAC1.60.11030": PSI,
-    "DAC1.60.11040": PSI,
-}
+# Indicators that are null for every provider in the partial latest year unless oda-data is
+# told to sum the parts that have been reported (allow_partial).
+PARTIAL_YEAR_FINANCING_INDICATORS: frozenset[str] = frozenset({"one.dac1.core_oda"})
+
+# Total PSI under the provisional methods, read in net flows before
+# PSI_GRANT_EQUIVALENT_START_YEAR.
+PSI_FLOW_INDICATOR: str = "oecd.dac1.private_sector_instruments"
+
+# Total PSI from PSI_GRANT_EQUIVALENT_START_YEAR, in grant equivalents: DAC1 line 11030 holds
+# PSI reported under the provisional methods and 11040 PSI under the revised methods.
+PSI_GRANT_EQUIVALENT_LINES: tuple[int, ...] = (11030, 11040)
 
 # The split of PSI under the provisional methods into its two approaches. It only ever covers
 # 11030, so it is in net flows throughout.
-PSI_APPROACH_INDICATORS: dict[str, str] = {
-    "DAC1.60.11023": "Private sector instruments - institutional approach",
-    "DAC1.60.11024": "Private sector instruments - instrument approach",
+PSI_APPROACH_LINES: dict[int, str] = {
+    11023: "Private sector instruments - institutional approach",
+    11024: "Private sector instruments - instrument approach",
 }
 
-PSI_FINANCING_INDICATORS: dict[str, str] = (
-    PSI_TOTAL_INDICATORS | PSI_APPROACH_INDICATORS
-)
+IN_DONOR_FINANCING_LINES: dict[int, str] = {
+    1820: "Refugees in donor countries",
+    1500: "Scholarships and student costs in donor countries",
+    1510: "Scholarships/training in donor country",
+    1520: "Imputed student costs",
+}
 
-# Names whose codes are separate parts of one figure, so they are summed rather than treated as
-# renumbered duplicates. The DAC's revised PSI methods (2023) came with a transition of up to two
-# years: PSI still reported under the provisional methods, as net flows, are in 11030, and PSI
-# under the revised methods, as grant equivalents, in 11040. A donor can report both in one year,
-# and total PSI is their sum (confirmed by the OECD, October 2026). Only 11030 exists before 2023
-# and only 11040 from 2025. 11023 and 11024 split 11030 only, so in 2023-24 they cover just the
-# provisional-method part.
+# Names read in more than one part, which are summed into one figure. Every other financing
+# name has one row per donor, year and type. The DAC's revised PSI methods (2023) came with a
+# transition of up to two years: a donor can report PSI under both methods in one year (lines
+# 11030 and 11040), and total PSI is their sum. Only
+# 11030 exists before 2023 and only 11040 from 2025. 11023 and 11024 split 11030 only, so in
+# 2023-24 they cover just the provisional-method part.
 SUMMED_FINANCING_NAMES: frozenset[str] = frozenset({PSI})
 
 # Total PSI is in net flows up to 2022, when all of it was reported under the provisional
@@ -206,18 +213,10 @@ SUMMED_FINANCING_NAMES: frozenset[str] = frozenset({PSI})
 PSI_TRANSITION_YEARS: list[int] = [2023, 2024]
 PSI_GRANT_EQUIVALENT_START_YEAR: int = PSI_TRANSITION_YEARS[0]
 
-IN_DONOR_FINANCING_INDICATORS: dict[str, str] = {
-    "DAC1.10.1820": "Refugees in donor countries",
-    "DAC1.10.1500": "Scholarships and student costs in donor countries",
-    "DAC1.10.1510": "Scholarships/training in donor country",
-    "DAC1.10.1520": "Imputed student costs",
-}
-
-ALL_FINANCING_INDICATORS: dict[str, str] = (
-    AGGREGATE_FINANCING_INDICATORS
-    | PSI_FINANCING_INDICATORS
-    | IN_DONOR_FINANCING_INDICATORS
-)
+# Total ODA's grants, the DAC1 flow the financing view splits Total ODA by. Read as gross
+# disbursements, which for grants equal their net flows and grant equivalents.
+GRANTS_FLOW: int = 1121
+GRANTS_BASIS: str = "gross_disbursement"
 
 RECIPIENTS_INDICATORS: dict[str, str] = {
     "DAC2A.10.206": BILATERAL,
@@ -313,8 +312,8 @@ NON_DAC_COUNTRIES: dict[int, str] = _group_members(oda.groups.non_dac_countries)
 
 EU_COUNTRIES: dict[int, str] = _group_members(oda.groups.eu27)
 # The EU Institutions' provider code, which belongs to no oda_data provider group.
-_EU_INSTITUTIONS_CODE: int = 918
-EU_INSTITUTIONS: dict[int, str] = _named_codes("provider", [_EU_INSTITUTIONS_CODE])
+EU_INSTITUTIONS_CODE: int = 918
+EU_INSTITUTIONS: dict[int, str] = _named_codes("provider", [EU_INSTITUTIONS_CODE])
 EU_TOTAL: dict[int, str] = EU_COUNTRIES | EU_INSTITUTIONS
 
 # Every provider the views read: the bilateral donors, plus EU Institutions, which is shown on
@@ -525,12 +524,14 @@ DONORS_ORDER: list[str] = [
 DEFAULT_DONOR: str = DAC_COUNTRIES_NAME
 DEFAULT_RECIPIENT: str = ODA_ELIGIBLE
 
-FINANCING_INDICATORS_ORDER: list[str] = (
-    list(dict.fromkeys(AGGREGATE_FINANCING_INDICATORS.values()))
-    + ["Grants", "Non-grants"]
-    + list(dict.fromkeys(IN_DONOR_FINANCING_INDICATORS.values()))
-    + list(dict.fromkeys(PSI_FINANCING_INDICATORS.values()))
-)
+FINANCING_INDICATORS_ORDER: list[str] = [
+    *HEADLINE_FINANCING_INDICATORS.values(),
+    "Grants",
+    "Non-grants",
+    *IN_DONOR_FINANCING_LINES.values(),
+    PSI,
+    *PSI_APPROACH_LINES.values(),
+]
 
 # Recipients view: the income and status groups. The script appends the remaining DAC2A groups
 # and the two summed country lists, read from the data.

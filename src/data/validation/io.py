@@ -89,7 +89,7 @@ def _is_hive_dir(path: Path) -> bool:
     return path.is_dir() and any(p.is_dir() and "=" in p.name for p in path.iterdir())
 
 
-def _resolve_source(name: str, source: Path) -> tuple[Path, Path]:
+def resolve_source(name: str, source: Path) -> tuple[Path, Path]:
     """Find a view's data path and options path under a source directory.
 
     Returns:
@@ -184,7 +184,7 @@ def read_hive_files(path: Path, files: list[Path], spec: ViewSpec) -> pd.DataFra
     return _table_to_frame(dataset.to_table(columns=_data_columns(dataset)), spec)
 
 
-def _read_options(path: Path) -> dict:
+def read_options(path: Path) -> dict:
     """Parse an options.json file, which must hold a JSON object."""
     options = json.loads(path.read_text())
     if not isinstance(options, dict):
@@ -209,7 +209,7 @@ def load_view(name: str, source: Path) -> LoadedView:
         FileNotFoundError: No data or options under ``source``.
     """
     spec = get_spec(name)
-    data_path, options_path = _resolve_source(name, source)
+    data_path, options_path = resolve_source(name, source)
     if data_path.is_file():
         table = pq.read_table(data_path)
         table = table.drop_columns(
@@ -221,7 +221,7 @@ def load_view(name: str, source: Path) -> LoadedView:
     return LoadedView(
         spec=spec,
         data=_table_to_frame(table, spec),
-        options=_read_options(options_path),
+        options=read_options(options_path),
         source=source,
     )
 
@@ -254,8 +254,8 @@ def iter_partitions(
     if by not in PARTITION_COLUMNS:
         raise ValueError(f"by must be one of {PARTITION_COLUMNS}, got {by!r}")
     spec = get_spec(name)
-    data_path, options_path = _resolve_source(name, source)
-    options = _read_options(options_path)
+    data_path, options_path = resolve_source(name, source)
+    options = read_options(options_path)
 
     if data_path.is_file():
         yield "all", load_view(name, source)
