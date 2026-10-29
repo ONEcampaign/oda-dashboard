@@ -34,10 +34,13 @@ from src.data.config import (
     GRANT_EQUIVALENT_START_YEAR,
     IMPUTED_MULTILATERAL,
     IN_DONOR_FINANCING_LINES,
+    MILLIONS_PER_BILLION,
     ODA_ELIGIBLE,
+    PERCENT,
     RECIPIENT_NAME_OVERRIDES,
     SECTORS_TIME,
     TOTAL_ODA,
+    UNITS_PER_MILLION,
 )
 from src.data.validation.expected import DeltaKind, ExpectedDelta, find_explanation
 from src.data.validation.io import (
@@ -58,10 +61,6 @@ KEY_COLUMNS: tuple[str, ...] = ("year", "donor", "recipient", "indicator")
 VALUE: str = "value"
 TOPIC: str = "topic"
 CANDIDATE: str = "view"
-
-UNITS_PER_MILLION: float = 1e6
-MILLIONS_PER_BILLION: float = 1e3
-PERCENT: float = 100.0
 
 # Amount floor for the billions-rounded topic series: half of 0.1bn rounding, doubled.
 BILLIONS_ROUNDING_FLOOR: float = 0.05 * MILLIONS_PER_BILLION

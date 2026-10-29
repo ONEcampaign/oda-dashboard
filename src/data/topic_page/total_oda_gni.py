@@ -12,7 +12,9 @@ from src.data.config import (
     DAC_COUNTRIES,
     EU_INSTITUTIONS,
     EU_INSTITUTIONS_CODE,
+    MILLIONS_PER_BILLION,
     PATHS,
+    PERCENT,
     logger,
 )
 from src.data.topic_page.common import (
@@ -25,8 +27,6 @@ from src.data.topic_page.common import (
 )
 
 YEARS: range = range(LONG_START_YEAR, LATEST_YEAR_AGG + 1)
-PERCENT: float = 100.0
-MILLIONS_PER_BILLION: float = 1e3
 EU_INSTITUTIONS_NAME: str = EU_INSTITUTIONS[EU_INSTITUTIONS_CODE]
 # Row order of oda_gni_ts within a year: DAC members by code, EU Institutions last.
 DONOR_ORDER: dict[str, int] = {

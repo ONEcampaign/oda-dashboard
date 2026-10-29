@@ -6,31 +6,12 @@ supplies the DAC members' codes, so the series do not depend on the library vers
 
 import pandas as pd
 
-from src.data.config import DAC_COUNTRIES, PATHS
+from src.data.config import DAC_COUNTRIES, DAC_COUNTRIES_NAME, PATHS
 
 # DAC member name -> code, for the static files, which carry names only.
 DAC_MEMBER_CODES: dict[str, int] = {name: code for code, name in DAC_COUNTRIES.items()}
-
-
-def health_excluding_covid_dac() -> pd.DataFrame:
-    """Health ODA excluding COVID-19 per DAC member and year, plus the DAC total."""
-    df = pd.read_csv(
-        PATHS.TOPIC_PAGE / "bi_plus_multi_health_spending_covid_non_covid.csv"
-    )
-
-    df["donor_code"] = df["donor_name"].map(DAC_MEMBER_CODES)
-
-    total = (
-        df.groupby(["year"], as_index=False)["Health ODA"]
-        .sum()
-        .assign(donor_name="DAC countries", donor_code=20001)
-    )
-
-    df = pd.concat([df, total], ignore_index=True).rename(
-        columns={"Health ODA": "value"}
-    )
-
-    return df
+# The OECD's provider code for the DAC countries total.
+DAC_COUNTRIES_CODE: int = 20001
 
 
 def covid_bi_multi_dac() -> pd.DataFrame:
@@ -38,17 +19,14 @@ def covid_bi_multi_dac() -> pd.DataFrame:
     df = pd.read_csv(
         PATHS.TOPIC_PAGE / "bi_plus_multi_health_spending_multiple_donors.csv"
     )
-
     df["donor_code"] = df["donor_name"].map(DAC_MEMBER_CODES)
 
     total = (
         df.groupby(["year"], as_index=False)["covid_oda"]
         .sum()
-        .assign(donor_name="DAC countries", donor_code=20001)
+        .assign(donor_name=DAC_COUNTRIES_NAME, donor_code=DAC_COUNTRIES_CODE)
     )
 
-    df = pd.concat([df, total], ignore_index=True).rename(
+    return pd.concat([df, total], ignore_index=True).rename(
         columns={"covid_oda": "value"}
     )
-
-    return df

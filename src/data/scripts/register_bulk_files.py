@@ -123,7 +123,7 @@ def register_all(directory: Path, *, versions: Mapping[str, str]) -> None:
     """Register every bulk file in ``directory`` with oda_reader, each at its own version.
 
     oda_reader reuses a derived parquet by token, so a re-upload of a file must carry a new
-    token or a restored cache would serve the old data.
+    token or an existing cache would serve the old data.
 
     Args:
         directory: Folder holding the four files.
