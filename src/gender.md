@@ -18,6 +18,7 @@ import {
     recipientNames,
     indicatorNames,
     yearOptions,
+    psiExcludedFrom,
     defaults
 } from "./js/genderQueries.js"
 import {customPalette, paletteGender} from "./js/colors.js"
@@ -119,8 +120,11 @@ function App() {
   const lineFilename = formatString(`gender ODA ${donorName} ${recipientName} share`, {fileMode: true})
   const tableFilename = formatString(`gender ODA ${donorName} ${recipientName} ${unit}`, {fileMode: true})
 
-  const valueNote = `ODA gross disbursements in ${pricesNote} ${currencyLabel}.`
-  const shareNote = `ODA values as a share of bilateral allocable aid from ${donorName} to ${recipientName}.`
+  const psiNote = timeRange[1] >= psiExcludedFrom
+    ? `From ${psiExcludedFrom}, figures leave out private sector instruments, which the CRS reports in a category of their own from that year.`
+    : ""
+  const valueNote = [`ODA gross disbursements in ${pricesNote} ${currencyLabel}.`, psiNote].filter(Boolean).join(" ")
+  const shareNote = [`ODA values as a share of bilateral allocable aid from ${donorName} to ${recipientName}.`, psiNote].filter(Boolean).join(" ")
   const tableNote = unit === "value" ? valueNote : shareNote
 
   return (

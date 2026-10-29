@@ -144,6 +144,13 @@ LABEL_COLUMNS: tuple[str, ...] = (
 FINANCING_TIME: dict[str, int] = {"start": 1990, "end": 2025, "base": 2025}
 BASE_TIME: dict[str, int] = {"start": 1990, "end": 2024, "base": 2024}
 SECTORS_TIME: dict[str, int] = {"start": 2013, "end": 2024, "base": 2024}
+# oecd.crs.gender_marker starts in 2010 and refuses earlier years.
+MARKERS_START_YEAR: int = 2010
+GENDER_TIME: dict[str, int] = {
+    "start": MARKERS_START_YEAR,
+    "end": BASE_TIME["end"],
+    "base": BASE_TIME["base"],
+}
 
 # The DAC switched its headline ODA measure from net flows to grant equivalents in 2018, so
 # financing reads flows up to this year and grant equivalents from it onwards.
@@ -225,7 +232,8 @@ RECIPIENTS_LINES: dict[int, str] = {
     106: IMPUTED_MULTILATERAL,
 }
 
-# Gender marker scores, keyed by the value oda_data's bilateral_policy_marker expects.
+# Gender marker scores, keyed by the score oecd.crs.gender_marker returns: 2 (principal),
+# 1 (significant), 0 (screened, not targeted) and blank (not screened).
 GENDER_INDICATORS: dict[str, str] = {
     "principal": "Main target",
     "significant": "Secondary target",
@@ -233,15 +241,10 @@ GENDER_INDICATORS: dict[str, str] = {
     "not_screened": "Not screened",
 }
 
-# The OECD scores the gender marker 0 (screened, not targeted), 1 (significant) or 2
-# (principal) and leaves it blank for activities not screened. oda_data's not_screened read
-# returns all allocable aid, so the gender view derives it as the total allocable read minus
-# the three screened scores, which is exactly the blank rows.
-NOT_SCREENED_SCORE: str = "not_screened"
-TOTAL_ALLOCABLE_SCORE: str = "total_allocable"
-
-# Differences below this many USD millions are subtraction residue, not unscreened aid.
-GENDER_RESIDUAL_TOLERANCE: float = 1e-6
+# The first year the CRS reports private sector instruments in a category of their own (60).
+# oecd.crs.gender_marker leaves that category out, so gender figures from this year exclude
+# them, which the Gender page notes.
+CRS_PSI_START_YEAR: int = 2023
 
 # oda_data's own name for the unallocated purpose codes, also used for any purpose code outside
 # the sector groups.
@@ -249,7 +252,7 @@ UNALLOCATED_SUB_SECTOR: str = "Unallocated/ Unspecified"
 
 # CRS flow categories read by the sectors view: ODA (10) and private sector instruments (60),
 # which the CRS reports from 2023 and which count towards ODA. Other official flows (21) are
-# not ODA and stay out. The gender view gets the same scope from oda_data's oda_only filter.
+# not ODA and stay out. The gender view leaves category 60 out (see CRS_PSI_START_YEAR).
 CRS_FLOW_CATEGORIES: list[int] = [10, 60]
 
 # Spending whose sector pattern multilaterals' core funding is imputed by, in oda_data's terms.

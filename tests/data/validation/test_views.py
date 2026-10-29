@@ -63,6 +63,7 @@ def test_time_windows() -> None:
     """Each view carries its config window."""
     assert VIEWS["financing_view"].time["base"] == 2025
     assert VIEWS["sectors_view"].time["start"] == 2013
+    assert VIEWS["gender_view"].time["start"] == 2010
 
 
 def test_get_spec_unknown() -> None:

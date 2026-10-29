@@ -193,3 +193,28 @@ def test_load_max_abs_and_columns(tmp_path: Path) -> None:
     [entry] = load_expected_deltas(_write(tmp_path, text))
     assert entry.max_abs == 11_000.0
     assert entry.columns == frozenset({"value_usd_current"})
+
+
+def test_load_paths(tmp_path: Path) -> None:
+    """paths is read as a set of dotted options paths."""
+    text = '[[delta]]\nview = "gender_view"\nreason = "r"\npaths = ["year.start"]\n'
+    [entry] = load_expected_deltas(_write(tmp_path, text))
+    assert entry.paths == frozenset({"year.start"})
+
+
+@pytest.mark.parametrize(
+    "extra", ['paths = "year.start"', 'paths = ["year.start"]\nmax_abs = 1']
+)
+def test_invalid_paths(tmp_path: Path, extra: str) -> None:
+    """paths must be a list of strings and takes no bounds."""
+    text = f'[[delta]]\nview = "v"\nreason = "r"\n{extra}\n'
+    with pytest.raises(ValueError, match="paths"):
+        load_expected_deltas(_write(tmp_path, text))
+
+
+def test_paths_filter() -> None:
+    """An entry with paths matches only a delta at one of those paths."""
+    entry = ExpectedDelta(view="v", reason="r", paths=frozenset({"year.start"}))
+    assert entry.matches(view="v", kind="value", path="year.start")
+    assert not entry.matches(view="v", kind="value", path="year.end")
+    assert not entry.matches(view="v", kind="value", year=2024)

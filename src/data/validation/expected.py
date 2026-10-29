@@ -14,9 +14,16 @@ Parity and cross-view checks report a delta that matches an entry as INFO "expla
     columns = ["value_usd_current"]  # optional: the value or share columns it covers
     max_rel = 0.05                   # optional, "value" only: explains |rel diff| <= this
     max_abs = 11000                  # optional, "value" only: explains |diff| <= this
+    paths = ["year.start"]           # optional: options.json paths, see below
 
 With both max_rel and max_abs set, a delta within either is explained. max_abs is in the
 column's unit: currency units for value columns, a fraction for share columns.
+
+``paths`` explains options.json differences by dotted path: a changed scalar (kind
+"value", e.g. "year.start") or a key added or removed (kind "new_in_candidate" or
+"missing_in_candidate", e.g. "psi_excluded_from"). An entry with paths explains only
+options deltas, and cannot carry max_rel or max_abs. Donor, recipient and indicator list
+items in the options are matched by the donors, recipients and indicators filters instead.
 """
 
 import tomllib
@@ -34,6 +41,7 @@ _FILTER_FIELDS: tuple[str, ...] = (
     "indicators",
     "recipients",
     "columns",
+    "paths",
 )
 _BOUND_FIELDS: tuple[str, ...] = ("max_rel", "max_abs")
 _ALLOWED_FIELDS: frozenset[str] = frozenset(
@@ -59,6 +67,7 @@ class ExpectedDelta:
         kind: The sort of difference.
         years, donors, indicators, recipients, columns: Filters. None means any value
             matches.
+        paths: Dotted options.json paths the entry explains (options deltas only).
         max_rel: For kind "value", the largest |relative difference| explained.
         max_abs: For kind "value", the largest |difference| explained, in the column's
             unit. With neither bound set, a delta of any size matches; with both, a delta
@@ -73,6 +82,7 @@ class ExpectedDelta:
     indicators: frozenset[str] | None = None
     recipients: frozenset[str] | None = None
     columns: frozenset[str] | None = None
+    paths: frozenset[str] | None = None
     max_rel: float | None = None
     max_abs: float | None = None
 
@@ -86,6 +96,7 @@ class ExpectedDelta:
         indicator: str | None = None,
         recipient: str | None = None,
         column: str | None = None,
+        path: str | None = None,
         rel_diff: float | None = None,
         abs_diff: float | None = None,
     ) -> bool:
@@ -100,6 +111,7 @@ class ExpectedDelta:
             kind: The delta's kind.
             year, donor, indicator, recipient, column: The delta's coordinates; None if
                 the delta has no such dimension (e.g. no recipient in financing_view).
+            path: For an options delta, its dotted options.json path.
             rel_diff: (candidate - baseline) / |baseline| for a value delta.
             abs_diff: |candidate - baseline| for a value delta, in the column's unit.
         """
@@ -111,6 +123,7 @@ class ExpectedDelta:
             (self.indicators, indicator),
             (self.recipients, recipient),
             (self.columns, column),
+            (self.paths, path),
         ):
             if allowed is not None and (value is None or value not in allowed):
                 return False
@@ -139,6 +152,7 @@ def find_explanation(
     indicator: str | None = None,
     recipient: str | None = None,
     column: str | None = None,
+    path: str | None = None,
     rel_diff: float | None = None,
     abs_diff: float | None = None,
 ) -> ExpectedDelta | None:
@@ -155,6 +169,7 @@ def find_explanation(
             indicator=indicator,
             recipient=recipient,
             column=column,
+            path=path,
             rel_diff=rel_diff,
             abs_diff=abs_diff,
         ):
@@ -208,6 +223,9 @@ def _parse_entry(raw: object, where: str) -> ExpectedDelta:
         raise ValueError(f"{where}: kind must be one of {allowed}") from None
 
     max_rel, max_abs = (_bound(raw, name, kind, where) for name in _BOUND_FIELDS)
+    paths = _filter_set(raw, "paths", str, where)
+    if paths is not None and (max_rel is not None or max_abs is not None):
+        raise ValueError(f"{where}: paths cannot be combined with max_rel or max_abs")
 
     return ExpectedDelta(
         view=raw["view"],
@@ -218,6 +236,7 @@ def _parse_entry(raw: object, where: str) -> ExpectedDelta:
         indicators=_filter_set(raw, "indicators", str, where),
         recipients=_filter_set(raw, "recipients", str, where),
         columns=_filter_set(raw, "columns", str, where),
+        paths=paths,
         max_rel=max_rel,
         max_abs=max_abs,
     )
