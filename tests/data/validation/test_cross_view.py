@@ -356,7 +356,7 @@ def test_sector_shares_and_amounts(tmp_path: Path, make_view: MakeView) -> None:
         "key_sector_shares": pd.DataFrame(
             {
                 "Year": [2010, 2024],
-                "name": ["DAC Countries, Total"] * 2,
+                "name": [DAC] * 2,
                 "Humanitarian": ["", ""],
                 "Education": [0.5, 0.7],
                 "Health": [0.5, 0.3],
@@ -367,7 +367,7 @@ def test_sector_shares_and_amounts(tmp_path: Path, make_view: MakeView) -> None:
         "aid_to_health_ts": pd.DataFrame(
             {
                 "Year": [2012, 2024],
-                "Donor": ["DAC Countries, Total"] * 2,
+                "Donor": [DAC] * 2,
                 "Recipient": ["All Developing Countries"] * 2,
                 "Sector": ["Health"] * 2,
                 "Total aid to health": ["99.0", "0.0"],
@@ -422,7 +422,7 @@ def test_africa_share_and_income_groups(tmp_path: Path, make_view: MakeView) -> 
         "aid_to_africa_ts": pd.DataFrame(
             {
                 "Year": [2024],
-                "Donor": ["DAC Countries, Total"],
+                "Donor": [DAC],
                 "Aid to Africa": ["0.0"],
                 "Share of total ODA": ['"25.0%"'],
                 "Annual change": [""],
@@ -431,7 +431,7 @@ def test_africa_share_and_income_groups(tmp_path: Path, make_view: MakeView) -> 
         "aid_to_income_latest": pd.DataFrame(
             {
                 "Year": [2024, 2024],
-                "Donor": ["DAC Countries, Total"] * 2,
+                "Donor": [DAC] * 2,
                 "Recipient": ["Low income", "Not classified by income"],
                 "ODA": ["US$27.0 billion", "US$88.3 billion"],
                 "Share of total ODA": [12.9, 42.2],
@@ -448,6 +448,98 @@ def test_africa_share_and_income_groups(tmp_path: Path, make_view: MakeView) -> 
     )
     assert all(r.passed for r in results), [r.message for r in results]
     assert {r.check for r in results} == names | {cross_view.PROVENANCE_CHECK}
+
+
+FRANCE, GERMANY = "France", "Germany"
+
+
+def _member_financing_rows() -> list[dict]:
+    """2017 Total ODA (flows) and refugee costs for two DAC members, constant = 2x current
+    for France and 4x for Germany."""
+    rows = []
+    for donor, ratio in [(FRANCE, 2), (GERMANY, 4)]:
+        for indicator, current in [
+            ("Total ODA", 100),
+            ("Refugees in donor countries", 10),
+        ]:
+            rows.append(
+                {
+                    "year": 2017,
+                    "donor_name": donor,
+                    "indicator_name": indicator,
+                    "type": "Flows",
+                    "value_usd_current": current * MILLION,
+                    "value_usd_constant": current * ratio * MILLION,
+                    "pct_of_gni": 0.003,
+                }
+            )
+    return rows
+
+
+def _ukraine_rows() -> list[dict]:
+    """France's ODA to Ukraine in 2017, current 3 = 2 + 1 across the two indicators;
+    Germany has none. Constant prices on another base, which the check must not use."""
+    return [
+        {
+            "year": 2017,
+            "donor_name": FRANCE,
+            "recipient_name": "Ukraine",
+            "indicator_name": indicator,
+            "value_usd_current": value * MILLION,
+            "value_usd_constant": 999 * MILLION,
+        }
+        for indicator, value in [("Bilateral", 2), ("Imputed multilateral", 1)]
+    ]
+
+
+def test_oda_covid_total_idrc_and_ukraine(tmp_path: Path, make_view: MakeView) -> None:
+    """oda_covid columns against financing, and Ukraine rebased per member; 2018 ignored."""
+    write_flat(make_view("financing_view", _member_financing_rows()), tmp_path / "fin")
+    write_flat(make_view("recipients_view", _ukraine_rows()), tmp_path / "rec")
+    topic = {
+        "oda_covid": pd.DataFrame(
+            {
+                "Year": [2017, 2017, 2017, 2018],
+                "Donor": [DAC, FRANCE, GERMANY, FRANCE],
+                "COVID ODA": [0.0] * 4,
+                # France 3 x 2 = 6; Germany nothing; DAC their sum. 2018 is out of scope.
+                "ODA to Ukraine": [6.0, 6.0, 0.0, 1_000.0],
+                "IDRC": [0.0, 20.0, 40.0, 0.0],
+                "Total ODA": ["", 200.0, 400.0, ""],
+            }
+        ),
+    }
+    names = {"cross_view.total_oda_covid", "cross_view.idrc", "cross_view.ukraine"}
+    results = run_cross_view(
+        {"financing_view": tmp_path / "fin", "recipients_view": tmp_path / "rec"},
+        [],
+        checks=tuple(c for c in CROSS_CHECKS if c.check in names),
+        read_topic=_topic_reader(topic),
+    )
+    by_check = {r.check: r for r in results}
+    assert all(by_check[name].passed for name in names), [r.message for r in results]
+    assert "3 values" in by_check["cross_view.ukraine"].message
+    # The DAC row's zero refugee costs mean nothing reported, so it is not compared.
+    assert "2 values" in by_check["cross_view.idrc"].message
+
+
+def test_ukraine_mismatch_is_reported(tmp_path: Path, make_view: MakeView) -> None:
+    """A topic Ukraine value not matching the rebased view is an error."""
+    write_flat(make_view("financing_view", _member_financing_rows()), tmp_path / "fin")
+    write_flat(make_view("recipients_view", _ukraine_rows()), tmp_path / "rec")
+    topic = {
+        "oda_covid": pd.DataFrame(
+            {"Year": [2017], "Donor": [FRANCE], "ODA to Ukraine": [3.0]}
+        ),
+    }
+    results = run_cross_view(
+        {"financing_view": tmp_path / "fin", "recipients_view": tmp_path / "rec"},
+        [],
+        checks=tuple(c for c in CROSS_CHECKS if c.check == "cross_view.ukraine"),
+        read_topic=_topic_reader(topic),
+    )
+    assert not results[0].passed
+    assert results[0].severity is Severity.ERROR
 
 
 def test_views_are_loaded_once(

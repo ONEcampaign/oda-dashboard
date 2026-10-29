@@ -7,26 +7,23 @@ import pandas as pd
 import pyarrow as pa
 import pytest
 
+from src.data.analysis_tools import sectors
 from src.data.analysis_tools.imputations import iter_imputed_multilateral
 from src.data.analysis_tools.oda import ProvenanceLog
+from src.data.analysis_tools.sectors import assign_sub_sector, sector_lookup
 from src.data.config import (
     EUI_CHANNEL_CODES,
     UNALLOCATED_SUB_SECTOR,
     UNSPECIFIED_RECIPIENT_CODE,
 )
-from src.data.scripts import sectors_view
-from src.data.scripts.sectors_view import (
-    _assign_sub_sector,
-    _sector_lookup,
-    get_eu27_eui_imputed,
-)
+from src.data.scripts.sectors_view import get_eu27_eui_imputed
 
 FRANCE, GERMANY, NORWAY, EU_INSTITUTIONS = 4, 5, 8, 918
 KENYA = 248
 
 
 def test_lookup_names_the_dashboards_seventy_sub_sectors():
-    purpose_to_sub_sector, sub_sector_to_sector = _sector_lookup()
+    purpose_to_sub_sector, sub_sector_to_sector = sector_lookup()
     assert len(set(purpose_to_sub_sector.values())) == 70
     assert set(purpose_to_sub_sector.values()) == set(sub_sector_to_sector)
 
@@ -44,7 +41,7 @@ def test_lookup_names_the_dashboards_seventy_sub_sectors():
     ],
 )
 def test_lookup_maps_purpose_codes_to_sub_sector_and_sector(code, sub_sector, sector):
-    purpose_to_sub_sector, sub_sector_to_sector = _sector_lookup()
+    purpose_to_sub_sector, sub_sector_to_sector = sector_lookup()
     assert purpose_to_sub_sector[code] == sub_sector
     assert sub_sector_to_sector[sub_sector] == sector
 
@@ -60,20 +57,20 @@ def test_lookup_refuses_groups_that_do_not_nest(monkeypatch):
         def values():
             return groups.values()
 
-    _sector_lookup.cache_clear()
-    monkeypatch.setattr(sectors_view.oda, "sectors", Namespace())
+    sector_lookup.cache_clear()
+    monkeypatch.setattr(sectors.oda, "sectors", Namespace())
     try:
         with pytest.raises(ValueError, match="do not nest"):
-            _sector_lookup()
+            sector_lookup()
     finally:
-        _sector_lookup.cache_clear()
+        sector_lookup.cache_clear()
 
 
 def test_missing_or_unknown_purpose_codes_are_unallocated():
     df = pd.DataFrame(
         {"purpose_code": pd.array([11220, None, 1], dtype="Int64"), "value": 1.0}
     )
-    assert _assign_sub_sector(df)["sub_sector"].tolist() == [
+    assert assign_sub_sector(df)["sub_sector"].tolist() == [
         "Basic Education",
         UNALLOCATED_SUB_SECTOR,
         UNALLOCATED_SUB_SECTOR,
