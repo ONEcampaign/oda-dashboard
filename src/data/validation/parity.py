@@ -164,10 +164,17 @@ def _explain(
 
 
 def _summarise(deltas: pd.DataFrame) -> pd.DataFrame:
-    """Aggregate delta rows by reason, column, year, donor and indicator."""
-    with_abs = deltas.assign(
-        abs_diff=deltas["diff"].abs(), abs_rel=deltas["rel_diff"].abs()
+    """Aggregate delta rows by reason, column, year, donor and indicator.
+
+    A null against a number counts as |number| in max_abs_diff, as in _abs_diff.
+    """
+    # diff is null only where one side is; the other side's |value| fills it.
+    abs_diff = (
+        deltas["diff"]
+        .abs()
+        .fillna(deltas["baseline"].abs().fillna(deltas["candidate"].abs()))
     )
+    with_abs = deltas.assign(abs_diff=abs_diff, abs_rel=deltas["rel_diff"].abs())
     return (
         with_abs.groupby(_SUMMARY_KEYS, observed=True, dropna=False)
         .agg(

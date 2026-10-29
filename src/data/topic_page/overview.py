@@ -12,17 +12,20 @@ from src.data.analysis_tools.recipients import read_dac2a_part_i
 from src.data.config import (
     DAC_COUNTRIES,
     DAC_COUNTRIES_NAME,
+    MILLIONS_PER_BILLION,
     PATHS,
+    PERCENT,
     RECIPIENTS_LINES,
+    UNITS_PER_MILLION,
     logger,
 )
 from src.data.topic_page.common import (
+    BILLION,
     CONSTANT_YEAR,
     LATEST_YEAR_AGG,
     LATEST_YEAR_DETAIL,
     SECTORS_START_YEAR,
     START_YEAR,
-    UNITS_PER_MILLION,
     add_change,
     df_to_key_number,
     format_billions,
@@ -35,7 +38,6 @@ from src.data.topic_page.common import (
 from src.data.topic_page.sectors import sector_totals
 
 KEY_NUMBERS: str = "oda_key_numbers.json"
-PERCENT: float = 100.0
 
 AFRICA_CODE: int = 10_001
 DEVELOPING_COUNTRIES_CODE: int = 10_100
@@ -104,7 +106,7 @@ def total_aid_key_number(dac: pd.DataFrame) -> None:
 
     _update_key_numbers(
         {
-            "total_oda": f"{data['value'].item() / 1e9:,.1f} billion",
+            "total_oda": f"{data['value'].item() / BILLION:,.1f} billion",
             "total_oda_change": f"{float(data['pct_change'].item()):.1f} %",
             "latest_year": str(year),
         }
@@ -137,7 +139,7 @@ def aid_gni_key_number(dac: pd.DataFrame) -> None:
     _update_key_numbers(
         {
             "oda_gni": f"{PERCENT * data['oda_gni'].item():,.2f}%",
-            "oda_gni_distance": f"{data['distance'].item() / 1e3:,.0f} billion",
+            "oda_gni_distance": f"{data['distance'].item() / MILLIONS_PER_BILLION:,.0f} billion",
         }
     )
 
