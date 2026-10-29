@@ -242,23 +242,19 @@ GENDER_INDICATORS: dict[str, str] = {
 }
 
 # The first year the CRS reports private sector instruments in a category of their own (60).
-# oecd.crs.gender_marker leaves that category out, so gender figures from this year exclude
-# them, which the Gender page notes.
+# oecd.crs.gender_marker and oecd.crs.bilateral_oda leave that category out, so gender and
+# sectors "Bilateral" figures from this year exclude them, which both pages note.
 CRS_PSI_START_YEAR: int = 2023
 
-# oda_data's own name for the unallocated purpose codes, also used for any purpose code outside
-# the sector groups.
+# oda.sectors' name for the unallocated purpose codes, also used for a missing purpose code
+# (unallocated imputed core funding) and any purpose code outside the sector groups.
 UNALLOCATED_SUB_SECTOR: str = "Unallocated/ Unspecified"
 
-# CRS flow categories read by the sectors view: ODA (10) and private sector instruments (60),
-# which the CRS reports from 2023 and which count towards ODA. Other official flows (21) are
-# not ODA and stay out. The gender view leaves category 60 out (see CRS_PSI_START_YEAR).
-CRS_FLOW_CATEGORIES: list[int] = [10, 60]
-
-# Spending whose sector pattern multilaterals' core funding is imputed by, in oda_data's terms.
-# ODA and OOF together, oda_data's default and the former OECD method: OOF-only channels such
-# as IBRD otherwise have no pattern, and far more core funding is left unallocated.
-IMPUTATION_FLOW_TYPES: tuple[str, ...] = ("ODA", "OOF")
+# Sub-sector names for purpose codes that oda.sectors places in a broad sector but in none of
+# its sub-sectors, where the dashboard names that sub-sector apart from the sector. Other
+# such codes take the sector's own name (e.g. "Energy"). Multi-sector aid (43010, and rows
+# reported at heading 430) is the dashboard's "Multi-Sector" sub-sector.
+BROAD_ONLY_SUB_SECTORS: dict[str, str] = {"Multi-sector": "Multi-Sector"}
 
 # Aid to developing countries that cannot be attributed to a country or region, including the
 # imputed multilateral money oda_data cannot assign to a recipient. DAC2A calls it "Developing

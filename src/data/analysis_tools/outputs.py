@@ -15,6 +15,7 @@ import json
 import shutil
 import sys
 import zipfile
+from pathlib import Path
 
 import pandas as pd
 import pyarrow as pa
@@ -98,15 +99,19 @@ def build_view_options(
     return options
 
 
-def write_view_options(options: dict, file_name: str) -> None:
-    """Write a view's options to PATHS.CDN_FILES, to be published beside its CDN dataset.
+def write_view_options(
+    options: dict, file_name: str, *, root: Path = PATHS.CDN_FILES
+) -> None:
+    """Write a view's options, to be published beside its CDN dataset.
 
     Args:
         options: From build_view_options.
         file_name: Output filename.
+        root: Directory to write into; CI publishes PATHS.CDN_FILES.
     """
-    logger.info("Saving view options to %s/%s", PATHS.CDN_FILES, file_name)
-    with open(PATHS.CDN_FILES / file_name, "w") as f:
+    path = root / file_name
+    logger.info("Saving view options to %s", path)
+    with open(path, "w") as f:
         json.dump(options, f, indent=2)
 
 
@@ -258,14 +263,17 @@ def write_partitioned_dataset(
     df: pd.DataFrame,
     base_dir: str,
     partition_cols: list[str],
+    *,
+    root: Path = PATHS.CDN_FILES,
 ) -> None:
     """Write the frame as a Hive-partitioned parquet dataset, for views too big for one file.
 
     Args:
         df: Wide frame ready to be written.
-        base_dir: Directory name, created under PATHS.CDN_FILES.
+        base_dir: Directory name, created under root.
         partition_cols: Columns to partition by, e.g. the donor and recipient slugs. The
             frontend addresses partitions by these values, so they have to be URL-safe.
+        root: Directory to write into; CI publishes PATHS.CDN_FILES.
     """
     missing = [col for col in partition_cols if col not in df.columns]
     if missing:
@@ -280,7 +288,7 @@ def write_partitioned_dataset(
 
     table = pa.Table.from_pandas(optimized, preserve_index=False)
 
-    output_dir = PATHS.CDN_FILES / base_dir
+    output_dir = root / base_dir
     if output_dir.exists():
         logger.info("Clearing existing partitioned dataset at %s", output_dir)
         shutil.rmtree(output_dir)

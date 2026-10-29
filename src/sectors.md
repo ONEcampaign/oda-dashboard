@@ -23,6 +23,7 @@ import {
     recipientNames,
     indicatorNames,
     yearOptions,
+    psiExcludedFrom,
     defaults,
     subSectorsBySector,
     sectorsQueries,
@@ -44,6 +45,10 @@ const RECIPIENT_OPTIONS = recipientNames.map(name => ({label: name, value: name}
 const INDICATOR_OPTIONS = indicatorNames.map(name => ({label: name, value: name}))
 
 const SECTORS_MIN_YEAR = yearOptions.start
+// The indicator whose figures leave out private sector instruments from psiExcludedFrom.
+const PSI_EXCLUDED_INDICATOR = "Bilateral"
+// Table units whose denominators are donor or recipient totals, which include Bilateral.
+const SHARE_OF_TOTAL_UNITS = ["pct_total_donor", "pct_total_recipient"]
 ```
 
 ```jsx
@@ -266,18 +271,31 @@ function App() {
     const pricesNote = `${prices}${prices === "constant" ? ` ${timeRangeOptions.base}` : ""}`
     const sourceText = "OECD DAC Creditor Reporting System, Provider's total use of the multilateral system databases."
     const chartNote = `ODA gross disbursements in ${pricesNote} ${currencyLabel}.`
+    // Shown when a chart includes Bilateral and reaches the first year without PSI.
+    const withPsiNote = (note, lastYear) => indicator.includes(PSI_EXCLUDED_INDICATOR) && lastYear >= psiExcludedFrom
+        ? `${note} From ${psiExcludedFrom}, ${PSI_EXCLUDED_INDICATOR} figures leave out private sector instruments, which the CRS reports in a category of their own from that year.`
+        : note
+    const treemapNote = withPsiNote(chartNote, year)
+    const columnNote = withPsiNote(chartNote, yearRange[1])
 
     const treemapFilename = formatString(`${donorName} ${recipientName} by sector`, {fileMode: true})
     const columnFilename = formatString(`${donorName} ${recipientName} ${sector} ${effectiveBreakdown ? "breakdown" : "total"}`, {fileMode: true})
     const tableFilename = formatString(`${donorName} ${recipientName} ${sector} ${effectiveBreakdown ? "breakdown" : ""} ${unit}`, {fileMode: true})
 
     const tableNote = React.useMemo(() => {
-        if (unit === "value") return `ODA gross disbursements in ${pricesNote} ${currencyLabel}.`
-        if (unit === "pct_sector") return `ODA values as a share of ${sector} ODA received by ${recipientName} from ${donorName}.`
-        if (unit === "pct_total_donor") return `ODA values as a share of all aid provided by ${donorName} to developing countries.`
-        if (unit === "pct_total_recipient") return `ODA values as a share of all aid received by ${recipientName} from bilateral donors.`
-        return `ODA values as a share of total aid received by ${recipientName} from ${donorName}.`
-    }, [unit, pricesNote, currencyLabel, sector, recipientName, donorName])
+        const unitNote = (() => {
+            if (unit === "value") return `ODA gross disbursements in ${pricesNote} ${currencyLabel}.`
+            if (unit === "pct_sector") return `ODA values as a share of ${sector} ODA received by ${recipientName} from ${donorName}.`
+            if (unit === "pct_total_donor") return `ODA values as a share of all aid provided by ${donorName} to developing countries.`
+            if (unit === "pct_total_recipient") return `ODA values as a share of all aid received by ${recipientName} from bilateral donors.`
+            return `ODA values as a share of total aid received by ${recipientName} from ${donorName}.`
+        })()
+        // Donor and recipient totals behind these shares include Bilateral, whatever the indicator.
+        if (SHARE_OF_TOTAL_UNITS.includes(unit) && yearRange[1] >= psiExcludedFrom) {
+            return `${unitNote} Shares are of totals that leave out private sector instruments from ${psiExcludedFrom}, which the CRS reports in a category of their own from that year.`
+        }
+        return withPsiNote(unitNote, yearRange[1])
+    }, [unit, pricesNote, currencyLabel, sector, recipientName, donorName, indicator, yearRange])
 
     return (
         <div className="mx-auto space-y-12 px-4 py-10 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
@@ -354,7 +372,7 @@ function App() {
                                 />
                             }
                             source={sourceText}
-                            note={chartNote}
+                            note={treemapNote}
                             loading={loading}
                             error={error}
                             empty={!loading && !error && treemapData.length === 0}
@@ -403,7 +421,7 @@ function App() {
                                             </div>
                                         )}
                                     source={sourceText}
-                                    note={chartNote}
+                                    note={columnNote}
                                     loading={loading}
                                     error={error}
                                     empty={!loading && !error && selectedData.length === 0}
