@@ -36,10 +36,10 @@ SHARE_DTYPE: str = "float32"
 SAHEL_NAME: str = "Sahel countries"
 FRANCE_PRIORITY_NAME: str = "France priority countries"
 
-# DAC2A recipient groups in the recipients view. The pipeline reads these from the data
-# (aggregate_recipient_names: codes >= 10000 that are not "<area>, unspecified"), so no config
-# list exists. Snapshot of the 2024 release; a new DAC2A group missing here would be treated as
-# a country by the recipient-sum check and show up there as an overshoot.
+# DAC2A recipient groups in the recipients view: config.DAC2A_RECIPIENT_AGGREGATES minus
+# RECIPIENTS_ORDER, kept as names here so validation reads the published view without the
+# pipeline's codes (a test checks the two agree). A group missing here would be treated as a
+# country by the recipient-sum check and show up there as an overshoot.
 DAC2A_RECIPIENT_GROUPS: frozenset[str] = frozenset(
     {
         "ACP",
