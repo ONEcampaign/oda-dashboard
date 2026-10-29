@@ -13,6 +13,10 @@ ERROR. The ``indicator`` coordinate given to the matcher is the comparison's own
 sector name, an indicator, or the CrossCheck name when it has no such dimension).
 
 Units: amounts are USD millions, shares are fractions.
+
+``cross_view.provenance_consistency`` is the one check that does not involve the topic page:
+every view whose options.json carries ``provenance`` (written by the oda-data 3 loaders) must
+have read each table it shares with another view at the same release token.
 """
 
 from collections.abc import Callable
@@ -39,6 +43,8 @@ from src.data.validation.io import (
     load_view,
     parse_amount,
     read_hive_files,
+    read_options,
+    resolve_source,
 )
 from src.data.validation.models import CheckResult, Severity
 from src.data.validation.views import get_spec
@@ -775,6 +781,126 @@ def run_check(
     return _results_for(spec, compared, expected)
 
 
+PROVENANCE_KEY: str = "provenance"
+PROVENANCE_CHECK: str = f"{CHECK_PREFIX}.provenance_consistency"
+
+
+def _provenance_result(
+    *,
+    passed: bool,
+    severity: Severity,
+    message: str,
+    details: pd.DataFrame | None = None,
+) -> CheckResult:
+    """A non-blocking provenance_consistency CheckResult."""
+    return CheckResult(
+        check=PROVENANCE_CHECK,
+        view=VIEW,
+        passed=passed,
+        severity=severity,
+        message=message,
+        details=details,
+        blocking=False,
+    )
+
+
+def _table_tokens(provenance: object) -> dict[str, str]:
+    """Table -> release token from one view's provenance block.
+
+    Raises:
+        ValueError: The block is not shaped like ProvenanceLog.to_dict().
+    """
+    tables = provenance.get("tables") if isinstance(provenance, dict) else None
+    if not isinstance(tables, dict):
+        raise ValueError("provenance has no 'tables' object")
+    tokens = {}
+    for table, release in tables.items():
+        token = release.get("token") if isinstance(release, dict) else None
+        if not isinstance(token, str):
+            raise ValueError(f"provenance table {table!r} has no token")
+        tokens[table] = token
+    return tokens
+
+
+def check_provenance_consistency(sources: dict[str, Path]) -> list[CheckResult]:
+    """Check that every view with provenance read each shared table at one release.
+
+    Args:
+        sources: View name -> source directory.
+
+    Returns:
+        Non-blocking results: an ERROR for each view whose options cannot be read or whose
+        provenance is malformed, a passed INFO naming views without provenance (skipped), and
+        a pass or an ERROR listing the tables read at more than one token. Nothing when
+        there are no sources.
+    """
+    if not sources:
+        return []
+    results: list[CheckResult] = []
+    tokens: dict[str, dict[str, str]] = {}
+    skipped: list[str] = []
+    for name, source in sorted(sources.items()):
+        try:
+            _, options_path = resolve_source(name, source)
+            provenance = read_options(options_path).get(PROVENANCE_KEY)
+            if provenance is None:
+                skipped.append(name)
+                continue
+            tokens[name] = _table_tokens(provenance)
+        except (FileNotFoundError, ValueError) as e:
+            results.append(
+                _provenance_result(
+                    passed=False,
+                    severity=Severity.ERROR,
+                    message=f"{name}: could not read provenance: {e}",
+                )
+            )
+
+    if skipped:
+        results.append(
+            _provenance_result(
+                passed=True,
+                severity=Severity.INFO,
+                message=f"skipped, no provenance in options.json: {', '.join(skipped)}",
+            )
+        )
+
+    rows = pd.DataFrame(
+        [
+            {"table": table, "view": view, "token": token}
+            for view, view_tokens in tokens.items()
+            for table, token in view_tokens.items()
+        ],
+        columns=["table", "view", "token"],
+    )
+    per_table = rows.groupby("table")["token"].nunique()
+    clashing = sorted(per_table[per_table > 1].index)
+    if clashing:
+        results.append(
+            _provenance_result(
+                passed=False,
+                severity=Severity.ERROR,
+                message=f"tables read at more than one release: {', '.join(clashing)}",
+                details=rows[rows["table"].isin(clashing)].reset_index(drop=True),
+            )
+        )
+    elif tokens:
+        listed = ", ".join(
+            f"{table} {token}"
+            for table, token in rows.drop_duplicates("table")[["table", "token"]]
+            .sort_values("table")
+            .itertuples(index=False)
+        )
+        results.append(
+            _provenance_result(
+                passed=True,
+                severity=Severity.ERROR,
+                message=f"{len(tokens)} views agree on every shared table: {listed}",
+            )
+        )
+    return results
+
+
 def run_cross_view(
     sources: dict[str, Path],
     expected: list[ExpectedDelta],
@@ -792,11 +918,12 @@ def run_cross_view(
 
     Returns:
         Non-blocking results, at least one per comparison: a pass, INFO for explained
-        mismatches (grouped by reason), and one ERROR for the unexplained ones.
+        mismatches (grouped by reason), and one ERROR for the unexplained ones. Then the
+        provenance_consistency results.
     """
     views = ViewReader(sources)
     return [
         result
         for spec in checks
         for result in run_check(spec, views, expected, read_topic)
-    ]
+    ] + check_provenance_consistency(sources)

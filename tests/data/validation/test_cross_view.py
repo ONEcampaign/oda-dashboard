@@ -278,7 +278,7 @@ def test_total_oda_and_oda_gni_use_the_headline_measure(
         checks=tuple(c for c in CROSS_CHECKS if c.check in names),
         read_topic=_topic_reader(topic),
     )
-    assert {r.check for r in results} == names
+    assert {r.check for r in results} == names | {cross_view.PROVENANCE_CHECK}
     assert all(r.passed for r in results), [r.message for r in results]
 
 
@@ -447,7 +447,7 @@ def test_africa_share_and_income_groups(tmp_path: Path, make_view: MakeView) -> 
         read_topic=_topic_reader(topic),
     )
     assert all(r.passed for r in results), [r.message for r in results]
-    assert {r.check for r in results} == names
+    assert {r.check for r in results} == names | {cross_view.PROVENANCE_CHECK}
 
 
 def test_views_are_loaded_once(
@@ -467,3 +467,62 @@ def test_views_are_loaded_once(
     reader.data("financing_view")
     reader.data("financing_view")
     assert calls == ["financing_view"]
+
+
+def _view_with_provenance(
+    make_view: MakeView, directory: Path, tokens: dict[str, str] | None
+) -> Path:
+    """Write a financing_view whose options carry the given table tokens (None: none)."""
+    view = make_view("financing_view", _financing_rows())
+    if tokens is not None:
+        view.options[cross_view.PROVENANCE_KEY] = {
+            "tables": {t: {"token": tok} for t, tok in tokens.items()}
+        }
+    return write_flat(view, directory)
+
+
+def test_provenance_agrees_across_views(tmp_path: Path, make_view: MakeView) -> None:
+    """Views that read a shared table at one token pass; views without it are skipped."""
+    sources = {
+        "financing_view": _view_with_provenance(
+            make_view, tmp_path / "fin", {"dac1": "r1"}
+        ),
+        "recipients_view": _view_with_provenance(
+            make_view, tmp_path / "rec", {"dac1": "r1", "dac2a": "r2"}
+        ),
+        "gender_view": _view_with_provenance(make_view, tmp_path / "gen", None),
+    }
+    results = cross_view.check_provenance_consistency(sources)
+    assert all(r.passed for r in results), [r.message for r in results]
+    assert all(r.check == cross_view.PROVENANCE_CHECK for r in results)
+    assert any("gender_view" in r.message for r in results)
+    assert all(not r.blocking for r in results)
+
+
+def test_provenance_mismatch_is_an_error(tmp_path: Path, make_view: MakeView) -> None:
+    """A table read at two tokens is a non-blocking ERROR naming the table."""
+    sources = {
+        "financing_view": _view_with_provenance(
+            make_view, tmp_path / "fin", {"dac1": "r1"}
+        ),
+        "recipients_view": _view_with_provenance(
+            make_view, tmp_path / "rec", {"dac1": "r2"}
+        ),
+    }
+    [failure] = [
+        r for r in cross_view.check_provenance_consistency(sources) if not r.passed
+    ]
+    assert failure.severity is Severity.ERROR
+    assert "dac1" in failure.message
+    assert failure.details is not None
+    assert set(failure.details["token"]) == {"r1", "r2"}
+
+
+def test_malformed_provenance_is_an_error(tmp_path: Path, make_view: MakeView) -> None:
+    """A provenance block without tables is reported, not skipped."""
+    view = make_view("financing_view", _financing_rows())
+    view.options[cross_view.PROVENANCE_KEY] = {"libraries": {}}
+    sources = {"financing_view": write_flat(view, tmp_path / "fin")}
+    [failure] = cross_view.check_provenance_consistency(sources)
+    assert not failure.passed
+    assert "no 'tables'" in failure.message
