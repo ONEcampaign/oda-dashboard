@@ -37,7 +37,7 @@ from src.data.analysis_tools.transformations import (
     add_share_of_total_oda,
     build_donor_group_totals,
     convert_values_to_units,
-    drop_empty_values,
+    drop_empty_series,
     get_group_total,
     get_member_gni,
     widen_currency_price,
@@ -81,6 +81,7 @@ EU27_EUI_YEARS: dict[str, range] = {
     NET: range(FINANCING_TIME["start"], EU27_EUI_LAST_YEAR + 1),
     GRANT_EQUIVALENT: range(GRANT_EQUIVALENT_START_YEAR, EU27_EUI_LAST_YEAR + 1),
 }
+VIEW_KEYS: tuple[str, ...] = ("year", "donor_name", "indicator_name", "type")
 NET_FLOW_LINES: dict[int, str] = IN_DONOR_FINANCING_LINES | PSI_APPROACH_LINES
 
 # Every row of the view is labelled by basis, and the EU weight must use the same one.
@@ -273,14 +274,12 @@ def get_financing_data(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataFr
         years_missing_grants(total_oda, grants, EU_TOTAL),
     )
 
-    financing = drop_empty_values(
-        pd.concat([converted, *donor_groups, eu27_eui]), "financing"
+    financing = drop_empty_series(
+        pd.concat([converted, *donor_groups, eu27_eui]), list(VIEW_KEYS), "financing"
     )
     check_one_type_per_series(financing)
 
-    financing = widen_currency_price(
-        df=financing, index_cols=("year", "donor_name", "indicator_name", "type")
-    )
+    financing = widen_currency_price(df=financing, index_cols=VIEW_KEYS)
     financing = add_share_of_total_oda(financing)
 
     member_gni = get_member_gni(

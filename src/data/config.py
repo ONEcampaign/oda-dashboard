@@ -218,9 +218,11 @@ PSI_GRANT_EQUIVALENT_START_YEAR: int = PSI_TRANSITION_YEARS[0]
 GRANTS_FLOW: int = 1121
 GRANTS_BASIS: str = "gross_disbursement"
 
-RECIPIENTS_INDICATORS: dict[str, str] = {
-    "DAC2A.10.206": BILATERAL,
-    "DAC2A.10.106": IMPUTED_MULTILATERAL,
+# DAC2A lines the recipients view reads, both in net disbursements: total net ODA (206) and
+# imputed multilateral ODA (106).
+RECIPIENTS_LINES: dict[int, str] = {
+    206: BILATERAL,
+    106: IMPUTED_MULTILATERAL,
 }
 
 # Gender marker scores, keyed by the value oda_data's bilateral_policy_marker expects.
@@ -257,7 +259,7 @@ IMPUTATION_FLOW_TYPES: tuple[str, ...] = ("ODA", "OOF")
 
 # Aid to developing countries that cannot be attributed to a country or region, including the
 # imputed multilateral money oda_data cannot assign to a recipient. DAC2A calls it "Developing
-# countries, unspecified" and the CRS "Bilateral, unspecified"; every view uses one name, the
+# countries, unspecified" and the CRS "Bilateral, unspecified". Every view uses one name, the
 # unspecified part of "ODA eligible countries", following the "<area>, unspecified" convention.
 UNSPECIFIED_RECIPIENT_CODE: int = 9998
 UNSPECIFIED_RECIPIENT_NAME: str = "ODA eligible countries, unspecified"
@@ -353,17 +355,14 @@ EUI_CHANNEL_CODES: frozenset[int] = frozenset({42000, 42001, 42003, 42004, 42999
 # ---------------------------------------------------------------------------------------
 # 6. Recipients
 #
-# The recipients view takes every recipient DAC2A reports, countries and published groups
-# alike. The CRS publishes no groups, so the sectors and gender views build them from the
+# The recipients view reads DAC2A for a pinned list of recipients: every country and
+# "<area>, unspecified" code, plus the groups DAC2A publishes (continents, regions, income).
+# The CRS publishes no groups, so the sectors and gender views build them from the
 # classifications in section 7 instead.
 # ---------------------------------------------------------------------------------------
 
-# DAC2A recipient codes from here up are groups (continents, regions, income groups), except
-# a few "<area> unspecified" codes, which are recognised by name instead.
-DAC2A_AGGREGATE_CODE_MIN: int = 10_000
-
-# Display labels for DAC2A recipients, keyed by code. Labels only: what the view contains is
-# whatever DAC2A returns. Regions are renamed to match the sectors and gender views.
+# Display labels for recipients in every view, keyed by code. Regions are renamed to match
+# across the DAC2A and CRS views.
 RECIPIENT_NAME_OVERRIDES: dict[int, str] = {
     10_100: ODA_ELIGIBLE,
     UNSPECIFIED_RECIPIENT_CODE: UNSPECIFIED_RECIPIENT_NAME,
@@ -386,16 +385,7 @@ RECIPIENT_NAME_OVERRIDES: dict[int, str] = {
     10_058: "Micronesia (region)",
 }
 
-# DAC2A recipients that come back without a code. The cause is upstream in oda_reader's area
-# code mapping: a correction overwrites EDF's code, and the other two are missing from it.
-# Remove once that is fixed.
-DAC2A_MISSING_RECIPIENT_CODES: dict[str, int] = {
-    "East African Community": 237,
-    "Indus Basin": 650,
-    "European Development Fund [EDF]": 918,
-}
-
-# DAC2A recipients the recipients view drops:
+# DAC2A recipients the recipients view must not read, checked against DAC2A_RECIPIENTS:
 # - the DAC-list income groups (Other LICs, LMICs, UMICs, unallocated by income, MADCTs),
 #   since the view uses the World Bank classification and both have an "LMICs" and "UMICs";
 # - multilateral agencies reported as recipients (IDA, UNDP, ...), and their totals "All
@@ -417,6 +407,80 @@ CRS_RECIPIENTS: dict[int, str] = _group_members(oda.groups.all_recipients)
 # Country lists that no source publishes as an aggregate, so every view sums them.
 FRANCE_PRIORITY_RECIPIENTS: dict[int, str] = _group_members(oda.groups.france_priority)
 SAHEL_RECIPIENTS: dict[int, str] = _group_members(oda.groups.sahel)
+
+# DAC2A codes from here up are groups; below it are countries and unspecified codes.
+_DAC2A_GROUP_CODE_MIN: int = 10_000
+# DAC2A's Least Developed Countries group. The recipients view does not read it and sums
+# resolvekit's UN LDC members instead, as the CRS views do.
+DAC2A_LDC_CODE: int = 10_016
+
+# The DAC2A groups the recipients view reads, by code, with their display names. The bulk
+# file spells most of them "<group>, Total"; the view shows these names.
+DAC2A_RECIPIENT_AGGREGATES: dict[int, str] = {
+    10_001: "Africa",
+    10_004: "America",
+    10_006: "South America",
+    10_007: "Asia",
+    10_008: "Far East Asia",
+    10_010: "Europe",
+    10_011: "Middle East",
+    10_012: "Oceania",
+    10_040: "ACP",
+    10_049: "Countries not classified by the World Bank",
+    10_050: "Eastern Africa",
+    10_051: "Middle Africa",
+    10_052: "Southern Africa",
+    10_053: "Western Africa",
+    10_054: "Caribbean",
+    10_055: "Central America",
+    10_056: "Northern America",
+    10_057: "Melanesia",
+    10_059: "Polynesia",
+    10_201: "Land locked developing countries",
+    10_202: "Small island developing states",
+    # Groups every view names the same way.
+    **{
+        code: name
+        for code, name in RECIPIENT_NAME_OVERRIDES.items()
+        if code >= _DAC2A_GROUP_CODE_MIN and code != DAC2A_LDC_CODE
+    },
+}
+
+# Countries and unspecified codes whose DAC2A bulk name differs from the name the recipients
+# view shows. Recipients view only: the CRS views keep their own spellings.
+DAC2A_RECIPIENT_NAMES: dict[int, str] = {
+    88: "States ex-Yugoslavia, unspecified",
+    247: "C\u00f4te d\u2019Ivoire",
+    361: "Sint Maarten",
+    550: "Palestinian Authority or West Bank and Gaza Strip",
+    679: "Southern Asia, unspecified",
+    730: "China (People\u2019s Republic of)",
+    740: "Democratic People\u2019s Republic of Korea",
+    745: "Lao People\u2019s Democratic Republic",
+}
+
+# Unspecified codes the OECD API used and the DAC2A bulk file does not: the bulk file holds
+# the same money under the code each maps to, which the view shows under the API's name.
+DAC2A_API_ONLY_RECIPIENTS: dict[int, int] = {
+    10_280: 1028,  # Middle Africa, unspecified
+    10_330: 1033,  # Melanesia, unspecified
+    10_350: 1035,  # Polynesia, unspecified
+    8600: 1034,  # Micronesia, unspecified
+    6790: 679,  # Southern Asia, unspecified
+}
+
+# Every recipient the recipients view reads from DAC2A.
+DAC2A_RECIPIENTS: frozenset[int] = frozenset(
+    (CRS_RECIPIENTS.keys() - DAC2A_API_ONLY_RECIPIENTS.keys())
+    | DAC2A_RECIPIENT_AGGREGATES.keys()
+)
+if DAC2A_RECIPIENTS & EXCLUDED_DAC2A_RECIPIENTS:
+    raise ValueError(
+        "DAC2A_RECIPIENTS includes recipients the view excludes: "
+        f"{sorted(DAC2A_RECIPIENTS & EXCLUDED_DAC2A_RECIPIENTS)}"
+    )
+if not set(DAC2A_API_ONLY_RECIPIENTS.values()) <= DAC2A_RECIPIENTS:
+    raise ValueError("oda_data's all_recipients lacks a DAC2A bulk unspecified code.")
 
 # ---------------------------------------------------------------------------------------
 # 7. CRS classifications
