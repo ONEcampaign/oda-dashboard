@@ -3,7 +3,7 @@
 This module owns the boundary between a finished DataFrame and the artifacts the frontend
 consumes: each loader's archive on stdout (its data as parquet and its dropdown options), and
 for sectors the partitioned dataset and its options JSON, published together on the CDN. It
-also points oda_data and pydeflate at the shared cache.
+also points oda-reader and pydeflate at the shared cache.
 
 The rule for what belongs here: I/O, serialisation and environment setup. Anything that takes a
 DataFrame and returns a DataFrame belongs in ``transformations``; anything that decides how an
@@ -15,15 +15,14 @@ import json
 import shutil
 import sys
 import zipfile
-from pathlib import Path
 
 import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
-from oda_data import set_cache_root
 from pydeflate import set_pydeflate_path
 
+from src.data.analysis_tools.oda import use_cache_dir
 from src.data.config import LABEL_COLUMNS, PATHS, logger
 
 
@@ -118,28 +117,25 @@ def _require_options(values: list[str], options: list[str], label: str) -> None:
         raise ValueError(f"{label} not among the options: {missing}")
 
 
-def set_cache_dir(
-    path: Path = PATHS.DATA, oda_data: bool = False, pydeflate: bool = False
-) -> None:
-    """Point the data libraries at the shared cache directory, creating it if needed.
+def set_cache_dir(oda_data: bool = False, pydeflate: bool = False) -> None:
+    """Point the data libraries at the shared cache, creating it if needed.
 
-    Every loader calls this before fetching: without it each library caches somewhere of its
-    own, and CI restores one directory.
+    Every loader calls this before fetching, so the libraries share one cache directory
+    and CI restores that one directory.
 
     Args:
-        path: Cache directory.
-        oda_data: Whether to point oda_data at it. oda_data chains the same root to
-            oda_reader and keeps its own files under ``path / "oda-data"``.
-        pydeflate: Whether to point pydeflate at it.
+        oda_data: Whether to point oda-reader, and so oda-data, at ``oda.ODA_CACHE_DIR``.
+            This sets ``ODA_READER_CACHE_DIR``, so it must run before any oda-reader access.
+        pydeflate: Whether to point pydeflate's own data cache at ``PATHS.DATA``. The topic
+            page scripts convert through pydeflate's cache. The views read factors from DAC1
+            (``oda.conversion_factors``).
     """
-    if not path.exists():
-        logger.info("Creating directory for cached data: %s", path)
-        path.mkdir(parents=True, exist_ok=True)
-
+    # TODO(miguel): drop the pydeflate flag in PR7, once no script needs pydeflate's cache.
     if oda_data:
-        set_cache_root(path)
+        use_cache_dir()
     if pydeflate:
-        set_pydeflate_path(path)
+        PATHS.DATA.mkdir(parents=True, exist_ok=True)
+        set_pydeflate_path(PATHS.DATA)
 
 
 # Members of the archive a view's loader writes; the frontend reads them as
