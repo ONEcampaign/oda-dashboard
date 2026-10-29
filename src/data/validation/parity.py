@@ -16,7 +16,8 @@ Checks, each reported per reason (unexplained, or one result per explaining reas
 - ``parity.shares``: share columns, beyond 1e-4 absolute.
 - ``parity.donor_totals``: per (donor, year) totals of value_usd_current, within
   invariants' sum tolerance for the number of rows summed.
-- ``parity.options``: options.json differences.
+- ``parity.options``: options.json differences, root metadata keys
+  (OPTIONS_METADATA_KEYS: provenance) left out.
 
 Nulls: null against null is equal; null against a number is a delta.
 """
@@ -77,6 +78,10 @@ _OPTION_DIMENSIONS: dict[str, str] = {
     "recipient_slugs": "recipient",
     "indicator_name": "indicator",
 }
+# Root options.json keys that describe how a build was made rather than what it shows.
+# They differ between any two builds from different releases, so parity skips them;
+# cross_view.provenance_consistency checks provenance across views instead.
+OPTIONS_METADATA_KEYS: frozenset[str] = frozenset({"provenance"})
 _AMOUNT_UNITS: tuple[tuple[float, str], ...] = ((1e9, "bn"), (1e6, "mn"))
 
 
@@ -100,19 +105,22 @@ def _explain(
 ) -> pd.Series:
     """The reason each delta row is expected, or UNEXPLAINED.
 
-    Rows carry the SUMMARY_DIMENSIONS columns, optionally recipient_name and rel_diff.
+    Rows carry the SUMMARY_DIMENSIONS columns, optionally recipient_name, column,
+    rel_diff and diff (whose absolute value is matched against max_abs).
     """
     relevant = [e for e in expected if e.view == view and e.kind == kind]
     if not relevant or deltas.empty:
         return pd.Series(UNEXPLAINED, index=deltas.index, dtype=object)
 
     reasons = []
-    for year, donor, indicator, recipient, rel_diff in zip(
+    for year, donor, indicator, recipient, column, rel_diff, diff in zip(
         _nullable_values(deltas, "year"),
         _nullable_values(deltas, "donor_name"),
         _nullable_values(deltas, "indicator_name"),
         _nullable_values(deltas, "recipient_name"),
+        _nullable_values(deltas, "column"),
         _nullable_values(deltas, "rel_diff"),
+        _nullable_values(deltas, "diff"),
         strict=True,
     ):
         entry = find_explanation(
@@ -123,7 +131,9 @@ def _explain(
             donor=donor,
             indicator=indicator,
             recipient=recipient,
+            column=column,
             rel_diff=rel_diff,
+            abs_diff=None if diff is None else abs(diff),
         )
         reasons.append(UNEXPLAINED if entry is None else entry.reason)
     return pd.Series(reasons, index=deltas.index, dtype=object)
@@ -772,11 +782,16 @@ def _explain_option(delta: dict, view: str, expected: Sequence[ExpectedDelta]) -
     return UNEXPLAINED if entry is None else entry.reason
 
 
+def _without_metadata(options: dict) -> dict:
+    """options.json without its root OPTIONS_METADATA_KEYS."""
+    return {k: v for k, v in options.items() if k not in OPTIONS_METADATA_KEYS}
+
+
 def _options_results(
     view: str, candidate: dict, baseline: dict, expected: Sequence[ExpectedDelta]
 ) -> list[CheckResult]:
-    """Compare two options.json dicts; one result per reason."""
-    deltas = _options_deltas(candidate, baseline)
+    """Compare two options.json dicts, without OPTIONS_METADATA_KEYS; one per reason."""
+    deltas = _options_deltas(_without_metadata(candidate), _without_metadata(baseline))
     if not deltas:
         return [_passed("parity.options", view, "options.json identical")]
     table = pd.DataFrame(deltas)

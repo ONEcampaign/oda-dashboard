@@ -407,3 +407,40 @@ def test_run_parity_layout_mismatch(
 
     with pytest.raises(ValueError, match="single-file source"):
         run_parity("sectors_view", flat, hive, [])
+
+
+def test_max_abs_entry_explains_small_absolute_deltas(make_view: MakeView) -> None:
+    """max_abs is matched against the delta's |diff| in the column's unit."""
+    base = make_view(VIEW, [_row(value=1_000_000), _row("Germany", value=1_000_000)])
+    cand = make_view(
+        VIEW,
+        [_row(value=1_005_000), _row("Germany", value=1_020_000)],
+        options=base.options,
+    )
+    expected = [
+        ExpectedDelta(
+            view=VIEW,
+            reason="rounding",
+            columns=frozenset({"value_usd_current"}),
+            max_abs=11_000,
+        )
+    ]
+
+    failures = _failures(
+        compare_views(cand, base, expected), "parity.value_usd_current"
+    )
+
+    by_severity = {r.severity: r for r in failures}
+    assert _details(by_severity[Severity.INFO])["donor_name"].tolist() == ["France"]
+    assert _details(by_severity[Severity.ERROR])["donor_name"].tolist() == ["Germany"]
+
+
+def test_options_provenance_is_not_compared(make_view: MakeView) -> None:
+    """The root provenance key is build metadata, so parity leaves it out."""
+    base = make_view(VIEW, [_row()])
+    cand = make_view(
+        VIEW,
+        [_row()],
+        options={**base.options, "provenance": {"tables": {"dac1": {"token": "x"}}}},
+    )
+    assert not _failures(compare_views(cand, base, []), "parity.options")
