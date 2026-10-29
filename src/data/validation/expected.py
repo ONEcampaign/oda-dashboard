@@ -17,7 +17,9 @@ Parity and cross-view checks report a delta that matches an entry as INFO "expla
     paths = ["year.start"]           # optional: options.json paths, see below
 
 With both max_rel and max_abs set, a delta within either is explained. max_abs is in the
-column's unit: currency units for value columns, a fraction for share columns.
+column's unit: currency units for value columns, a fraction for share columns. A null
+against a number counts as a difference of |number| (no relative difference), so only
+max_abs can explain it.
 
 ``paths`` explains options.json differences by dotted path: a changed scalar (kind
 "value", e.g. "year.start") or a key added or removed (kind "new_in_candidate" or

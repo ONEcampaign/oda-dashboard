@@ -95,10 +95,10 @@ function App() {
               </ul>
               <p>
                 Totals for the same donor and year therefore differ between tabs. All four tabs cover ODA only. From
-                2023 that includes private sector instruments, which the CRS reports in a category of their own from that
-                year, so Sectors figures rise in 2023 partly for that reason. The gender marker data the Gender tab uses
-                leave that category out, so Gender figures from 2023 do not include private sector instruments. Other
-                official flows, which are not ODA, are left out.
+                2023 the CRS reports private sector instruments in a category of their own. The CRS data the Sectors
+                and Gender tabs use leave that category out, so their figures from 2023 do not include private sector
+                instruments (in Sectors, the Bilateral figures and the shares based on them). Financing and
+                Recipients include them. Other official flows, which are not ODA, are left out.
               </p>
               <h2 className="font-bold text-xl mt-8 mb-2">How are donor groups defined?</h2>
               <p>
