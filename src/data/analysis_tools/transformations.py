@@ -19,14 +19,20 @@ Sections, in order:
     7. Shares
 """
 
+import duckdb
+import oda_data as oda
 import pandas as pd
 import resolvekit as rk
-from oda_data import OECDClient
-from pydeflate import oecd_dac_deflate, oecd_dac_exchange
 
 from src.data.analysis_tools.naming import (
     canonical_recipient_names,
     normalize_crs_regions,
+)
+from src.data.analysis_tools.oda import (
+    ProvenanceLog,
+    conversion_factors,
+    run_query,
+    scan_table,
 )
 from src.data.config import (
     ALL_BILATERAL_DONORS,
@@ -35,7 +41,6 @@ from src.data.config import (
     CRS_REGIONS,
     CRS_UNCLASSIFIED_INCOME,
     CRS_UNCLASSIFIED_REGION,
-    CURRENCIES,
     DONOR_GROUPS,
     EU27_COUNTRIES_NAME,
     EU27_EUI_NAME,
@@ -95,36 +100,46 @@ def convert_values_to_units(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def get_member_gni(start_year: int, end_year: int) -> pd.DataFrame:
-    """Read each bilateral donor's GNI.
+def get_member_gni(
+    ctx: oda.Context,
+    start_year: int,
+    end_year: int,
+    *,
+    provenance: ProvenanceLog | None = None,
+) -> pd.DataFrame:
+    """Read each bilateral donor's GNI from DAC1.
 
     A fetch rather than a transformation, kept here because add_share_of_gni is its only
     consumer and the two are easier to follow together.
 
     Args:
+        ctx: From oda.open_context.
         start_year: First year to read.
         end_year: Last year to read.
+        provenance: Log to record the DAC1 release in.
 
     Returns:
         One row per donor_code and year, with donor_name and value (GNI, USD millions).
 
     Raises:
-        ValueError: If the OECD returns two different GNI values for one donor and year.
+        ValueError: If DAC1 returns more than one GNI row for a donor and year.
     """
-    gni_raw = OECDClient(
+    gni = run_query(
+        ctx,
+        "oecd.dac1.gni",
+        provenance=provenance,
         years=range(start_year, end_year + 1),
         providers=list(BILATERAL_DONORS),
-        measure="net_disbursement",
-        use_bulk_download=True,
-    ).get_indicators("DAC1.40.1")[["donor_code", "donor_name", "year", "value"]]
+        basis="net_disbursement",
+    )[["donor_code", "donor_name", "year", "value"]]
 
-    key = ["donor_code", "year"]
-    conflicting = gni_raw.groupby(key, observed=True)["value"].nunique() > 1
-    if conflicting.any():
+    duplicated = gni.duplicated(["donor_code", "year"], keep=False)
+    if duplicated.any():
+        repeated = gni.loc[duplicated, ["donor_code", "year"]].drop_duplicates()
         raise ValueError(
-            f"Conflicting GNI values for donor-years: {conflicting[conflicting].index.tolist()}"
+            f"More than one GNI row for donor-years: {repeated.values.tolist()}"
         )
-    return gni_raw.drop_duplicates(subset=key)
+    return gni
 
 
 def add_group_gni(member_gni: pd.DataFrame) -> pd.DataFrame:
@@ -331,13 +346,15 @@ RECIPIENT_CLASSIFICATION_COLS: tuple[str, ...] = (CRS_REGION_COL, INCOME_GROUP_C
 _CRS_ISO3_COL = "de_recipientcode"
 _CONTINENT_COL = "_continent"
 
-_CRS_CLASSIFICATION_COLUMNS = [
-    "year",
-    "recipient_code",
-    "recipient_name",
-    _CRS_ISO3_COL,
-    CRS_REGION_COL,
-]
+# The raw CRS key, and each attribute classified per key: raw column -> output column. The
+# bulk file names the region column region_name; the views have always called it
+# recipient_region.
+_CRS_KEY: list[str] = ["recipient_code", "year"]
+_CRS_ATTRIBUTES: dict[str, str] = {
+    "recipient_name": "recipient_name",
+    _CRS_ISO3_COL: _CRS_ISO3_COL,
+    "region_name": CRS_REGION_COL,
+}
 
 
 def _resolve_iso3(codes: pd.Series, known: set[str]) -> dict[str, str | None]:
@@ -407,12 +424,68 @@ def classify_income(iso_codes: pd.Series) -> tuple[pd.Series, pd.Series]:
     return income, iso3.isin(ldcs)
 
 
-def _modal_value(series: pd.Series) -> object:
-    """Return the most common non-null value, ties broken by sort order for determinism."""
-    present = series.dropna()
-    if present.empty:
-        return pd.NA
-    return present.mode().sort_values().iloc[0]
+def _crs_counts(
+    con: duckdb.DuckDBPyConnection,
+    where: str,
+    params: dict[str, object],
+    column: str,
+) -> pd.DataFrame:
+    """Count the CRS rows per recipient_code, year and non-null value of one column."""
+    return con.execute(
+        f"""
+        SELECT recipient_code, year, "{column}" AS value, count(*) AS n
+        FROM read_parquet($path)
+        WHERE {where} AND "{column}" IS NOT NULL
+        GROUP BY ALL
+        """,
+        params,
+    ).df()
+
+
+def _modal_values(counts: pd.DataFrame, column: str) -> pd.DataFrame:
+    """Reduce per-value counts to each recipient-year's most common value.
+
+    Ties go to the value that sorts first, so the result never depends on row order. Logs
+    how many recipient-years report more than one value.
+
+    Args:
+        counts: recipient_code, year, value and n, from _crs_counts.
+        column: Name of the output column, for the result and the log.
+
+    Returns:
+        One row per recipient-year that has any value, with the value in column.
+    """
+    values_per_key = counts.groupby(_CRS_KEY).size()
+    disagreeing = values_per_key.index[values_per_key > 1]
+    if len(disagreeing):
+        logger.warning(
+            "%s (recipient_code, year) combinations report more than one %s; taking the "
+            "most common. Recipient codes: %s",
+            len(disagreeing),
+            column,
+            sorted({int(code) for code, _ in disagreeing})[:10],
+        )
+
+    return (
+        counts.sort_values(
+            [*_CRS_KEY, "n", "value"], ascending=[True, True, False, True]
+        )
+        .drop_duplicates(_CRS_KEY)[[*_CRS_KEY, "value"]]
+        .rename(columns={"value": column})
+    )
+
+
+def _crs_filter(
+    years: range | list | int, recipients: list | None
+) -> tuple[str, dict[str, object]]:
+    """Build the WHERE clause and parameters selecting the CRS years and recipients."""
+    years_list = [years] if isinstance(years, int) else [int(y) for y in years]
+    where = "list_contains($years, year)"
+    params: dict[str, object] = {"years": years_list}
+    if recipients is not None:
+        where += " AND list_contains($recipients, recipient_code)"
+        params["recipients"] = [int(code) for code in recipients]
+    return where, params
 
 
 def get_crs_recipient_classifications(
@@ -427,6 +500,9 @@ def get_crs_recipient_classifications(
     recipient's region or income group. Building one table here and joining it to every frame
     keeps them consistent: grouping one frame on a column another lacks is what double counts.
 
+    Reads the cached CRS bulk file with DuckDB, which counts each attribute's values per
+    recipient-year without loading the file.
+
     Args:
         years: Years to cover.
         recipients: Recipient codes to restrict to, or None for all.
@@ -434,45 +510,44 @@ def get_crs_recipient_classifications(
     Returns:
         (one row per recipient_code and year with recipient name, region and income group;
         the Least Developed Countries among the recipients, as {recipient_code: name}).
+
+    Raises:
+        ValueError: If the CRS file lacks a column the table needs.
     """
-    from oda_data import CRSData
-
-    raw = CRSData(years=years, recipients=recipients).read(
-        using_bulk_download=True, columns=_CRS_CLASSIFICATION_COLUMNS
-    )
-
-    # CRSData.read silently drops requested columns that do not exist, which would quietly
-    # empty the classifications, so check rather than trust.
-    missing = [c for c in _CRS_CLASSIFICATION_COLUMNS if c not in raw.columns]
+    crs = scan_table("crs")
+    missing = [c for c in [*_CRS_KEY, *_CRS_ATTRIBUTES] if c not in crs.columns]
     if missing:
-        raise ValueError(f"CRS did not return required columns: {missing}")
+        raise ValueError(f"The CRS bulk file has no columns {missing}")
 
-    raw[CRS_REGION_COL] = normalize_crs_regions(raw[CRS_REGION_COL])
-
-    attributes = ["recipient_name", _CRS_ISO3_COL, CRS_REGION_COL]
-    grouped = raw.groupby(["recipient_code", "year"], dropna=False, observed=True)[
-        attributes
-    ]
+    where, params = _crs_filter(years, recipients)
+    params["path"] = str(crs.path)
 
     # Reduce each column to its most common non-null value, rather than deduplicating whole
-    # rows. A recipient-year often has some transactions with a blank region,
-    # and dropping duplicate rows can pick one of those and lose a value the data does have.
-    # Where transactions genuinely disagree, the majority wins, so the result does not depend
-    # on row order.
-    # Named after the reduction, which leaves one row per recipient-year to rename.
-    classified = canonical_recipient_names(grouped.agg(_modal_value).reset_index())
-
-    conflicts = grouped.nunique(dropna=True)
-    for col in attributes:
-        disagreeing = conflicts.index[conflicts[col] > 1]
-        if len(disagreeing):
-            logger.warning(
-                "%s (recipient_code, year) combinations report more than one %s; taking the "
-                "most common. Recipient codes: %s",
-                len(disagreeing),
-                col,
-                sorted({int(code) for code, _ in disagreeing})[:10],
+    # rows. A recipient-year often has some transactions with a blank region, and keeping
+    # one whole row could pick one of those and lose a value the data does have.
+    with duckdb.connect() as con:
+        classified = con.execute(
+            f"SELECT DISTINCT recipient_code, year FROM read_parquet($path) WHERE {where}",
+            params,
+        ).df()
+        for raw_col, column in _CRS_ATTRIBUTES.items():
+            counts = _crs_counts(con, where, params, raw_col)
+            if column == CRS_REGION_COL:
+                # Normalise first: raw values that name the same region count together.
+                counts = (
+                    counts.assign(value=normalize_crs_regions(counts["value"]))
+                    .groupby([*_CRS_KEY, "value"], as_index=False)["n"]
+                    .sum()
+                )
+            classified = classified.merge(
+                _modal_values(counts, column), on=_CRS_KEY, how="left", validate="1:1"
             )
+
+    classified = canonical_recipient_names(
+        classified.astype({"recipient_code": "int64", "year": "int64"}).sort_values(
+            _CRS_KEY, ignore_index=True
+        )
+    )
 
     income, is_ldc = classify_income(classified[_CRS_ISO3_COL])
     ldc_members = (
@@ -807,64 +882,67 @@ def add_share_of_reference_total(
     return merged.drop(columns=["total_oda"])
 
 
-def add_currencies_and_prices(df: pd.DataFrame, *, base_year: int) -> pd.DataFrame:
+def add_currencies_and_prices(
+    df: pd.DataFrame,
+    *,
+    base_year: int,
+    provenance: ProvenanceLog | None = None,
+) -> pd.DataFrame:
     """Copy the data into every currency in CURRENCIES, at current and constant prices.
+
+    Each copy is the current USD value times its donor-year factor from
+    oda.conversion_factors, read once for the donors and years the frame holds. Every row
+    needs a donor_code, so convert individual donors first and sum name-only aggregates after.
 
     Args:
         df: Long frame in current USD, with donor_code, year and value.
         base_year: Base year for constant prices.
+        provenance: Log to record the DAC1 release of the factors in.
 
     Returns:
-        One copy per currency and price, labelled in currency and price columns.
+        One copy per currency and price, labelled in currency and price columns, USD current
+        first.
 
     Raises:
-        ValueError: If the conversions do not return one row per input row.
+        ValueError: If the frame lacks a column, a conversion changes the number of rows, or
+            a row with a value has no factor.
     """
+    missing = [c for c in ("donor_code", "year", "value") if c not in df.columns]
+    if missing:
+        raise ValueError(f"add_currencies_and_prices needs columns {missing}")
+
     df = df.assign(currency="USD", price="current")
-    converted = []
-
-    for currency in CURRENCIES:
-        logger.info("Converting to %s", currency)
-        current = (
-            df
-            if currency == "USD"
-            else oecd_dac_exchange(
-                data=df.copy(),
-                source_currency="USA",
-                target_currency=currency,
-                id_column="donor_code",
-                use_source_codes=True,
-            )
-        )
-        constant = oecd_dac_deflate(
-            data=df.copy(),
-            base_year=base_year,
-            source_currency="USA",
-            target_currency=currency,
-            id_column="donor_code",
-            use_source_codes=True,
-        )
-        converted += [
-            current.assign(currency=currency, price="current"),
-            constant.assign(currency=currency, price="constant"),
-        ]
-
-    if any(len(frame) != len(df) for frame in converted):
-        raise ValueError("A currency or price conversion changed the number of rows")
-
-    # Values present in USD but lost in conversion mean a missing exchange rate or deflator.
+    factors = conversion_factors(
+        entities=df["donor_code"].dropna().astype(int),
+        years=df["year"].dropna().astype(int),
+        base_year=base_year,
+        provenance=provenance,
+    )
     had_value = df["value"].notna().to_numpy()
-    for frame in converted:
-        lost = had_value & frame["value"].isna().to_numpy()
+    converted = [df]
+
+    for (currency, price), unit_factors in factors.groupby(
+        ["currency", "price"], sort=False
+    ):
+        logger.info("Converting to %s %s", currency, price)
+        merged = df.drop(columns=["currency", "price"]).merge(
+            unit_factors, on=["donor_code", "year"], how="left", validate="m:1"
+        )
+        if len(merged) != len(df):
+            raise ValueError(f"The {currency} {price} conversion changed the row count")
+
+        # A NaN factor on a row with a value would drop that value from this currency and
+        # from every group total built on it.
+        lost = had_value & merged["factor"].isna().to_numpy()
         if lost.any():
-            logger.warning(
-                "No %s %s conversion for %s rows, so they and any group totals that "
-                "include them are short in that currency (donor codes %s)",
-                frame["currency"].iat[0],
-                frame["price"].iat[0],
-                f"{lost.sum():,}",
-                sorted(frame.loc[lost, "donor_code"].dropna().unique().tolist())[:10],
+            unconverted = merged.loc[lost, ["donor_code", "year"]].drop_duplicates()
+            raise ValueError(
+                f"No {currency} {price} factor for {lost.sum():,} rows with a value "
+                f"(donor-years {unconverted.values.tolist()[:10]})"
             )
+
+        merged["value"] = merged["value"] * merged["factor"]
+        converted.append(merged.drop(columns="factor")[df.columns])
 
     return pd.concat(converted, ignore_index=True)
 
@@ -872,8 +950,8 @@ def add_currencies_and_prices(df: pd.DataFrame, *, base_year: int) -> pd.DataFra
 def drop_empty_values(df: pd.DataFrame, label: str) -> pd.DataFrame:
     """Drop rows whose value is missing or zero, logging how many of each go.
 
-    Zero rows carry no information. Missing values after a currency conversion are the
-    rows add_currencies_and_prices already warned about.
+    Zero rows carry no information. Missing values are rows that had none in current USD
+    either, since add_currencies_and_prices raises rather than lose one.
 
     Args:
         df: Long frame with a value column.

@@ -1,48 +1,82 @@
 """Constants shared by every data loader, plus the process setup they all depend on.
 
-Section 1 is the exception to the rule: it configures the logger and applies the compatibility
-patch, because every module needs both and importing config is what every module already does.
-Sections 2 onwards hold values, not logic — paths, time windows, the indicator codes each view
+Section 1 is the exception to the rule: it configures logging, for the pipeline and for the
+libraries it calls, because every module needs it and importing config is what every module
+already does.
+Sections 2 onwards hold values and no logic: paths, time windows, the indicator codes each view
 requests, which providers and recipients make up each aggregate, and the labels and orderings
 the frontend displays. If something takes a DataFrame and returns one, it belongs in
 ``analysis_tools.transformations``; if it writes a file, ``analysis_tools.outputs``; if it
 decides how an entity is labelled, ``analysis_tools.naming``.
 
 Sections, in order:
-    1. Environment — the compatibility patch, the logger, paths
+    1. Environment (logging, paths)
     2. Units and shared columns
     3. Time windows
     4. Indicators, per view
-    5. Donors — memberships and aggregates
-    6. Recipients — memberships and aggregates
-    7. CRS classifications — regions, income groups, sentinels
+    5. Donors (memberships and aggregates)
+    6. Recipients (memberships and aggregates)
+    7. CRS classifications (regions, income groups, sentinels)
     8. Display orderings
 """
 
 import logging
+from collections.abc import Iterable
 from pathlib import Path
 from typing import NamedTuple
 
-from oda_data import provider_groupings, recipient_groupings
-
-# Patches a requests-cache incompatibility that would otherwise fail the first time anything
-# reads or writes the OECD HTTP cache. What matters is that it runs before that first request,
-# not before the oda_data import; it sits here, above them, because importing config is the one
-# thing every module in the pipeline already does. See src/data/_compat.py.
-import src.data._compat  # noqa: F401
+import oda_data as oda
+import pandas as pd
 
 # ---------------------------------------------------------------------------------------
 # 1. Environment
 # ---------------------------------------------------------------------------------------
 
-logger = logging.getLogger(__name__)
-_handler = logging.StreamHandler()
-_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-logger.addHandler(_handler)
-logger.setLevel(logging.INFO)
-# Without this every record is emitted twice: once by the handler above and again by the root
-# handler that oda_data installs, in a different format. oda_data does the same for its logger.
-logger.propagate = False
+_LOG_FORMAT: str = "%(asctime)s - %(levelname)s - %(message)s"
+
+# Libraries whose INFO records (what was read, from which release, any fallbacks) belong in
+# the pipeline log. They propagate to the root handler.
+_LIBRARY_LOGGERS: tuple[str, ...] = ("oda_data", "oda_reader", "pydeflate")
+
+
+def _configure_logging() -> logging.Logger:
+    """Set up the pipeline logger, warning capture and library logging, once per process.
+
+    The pipeline logger and ``py.warnings`` share one handler and do not propagate, so
+    each record is emitted once. ``captureWarnings`` turns warnings such as oda_data's
+    ``OdaDataWarning`` (partial years, missing lines) into log records instead of bare
+    stderr output. The library loggers propagate to a root handler, added only when the
+    root has none, so an application or test runner that configured logging first keeps
+    its own.
+
+    Returns:
+        The pipeline logger.
+    """
+    pipeline_logger = logging.getLogger(__name__)
+    if pipeline_logger.handlers:
+        return pipeline_logger
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(_LOG_FORMAT))
+    pipeline_logger.addHandler(handler)
+    pipeline_logger.setLevel(logging.INFO)
+    pipeline_logger.propagate = False
+
+    logging.captureWarnings(True)
+    warnings_logger = logging.getLogger("py.warnings")
+    warnings_logger.addHandler(handler)
+    warnings_logger.propagate = False
+
+    root = logging.getLogger()
+    if not root.handlers:
+        root.addHandler(handler)
+    for name in _LIBRARY_LOGGERS:
+        logging.getLogger(name).setLevel(logging.INFO)
+
+    return pipeline_logger
+
+
+logger = _configure_logging()
 
 
 class PATHS:
@@ -53,7 +87,7 @@ class PATHS:
     TOPIC_PAGE = SRC.parent / "topic_page"
     CDN_FILES = SRC.parent / "cdn_files"
 
-    # oda_data and pydeflate share one cache directory; see outputs.set_cache_dir.
+    # oda_reader and pydeflate share one cache directory; see outputs.set_cache_dir.
     DATA = SRC / "data" / "cache"
 
 
@@ -232,23 +266,56 @@ UNSPECIFIED_RECIPIENT_NAME: str = "ODA eligible countries, unspecified"
 # ---------------------------------------------------------------------------------------
 # 5. Donors
 #
-# Every view reads individual providers and sums the memberships below into donor aggregates,
-# rather than requesting the OECD's own aggregate providers, so each aggregate is defined once.
+# Every view reads individual providers and sums the memberships below into donor aggregates.
+# None requests the OECD's own aggregate providers, so each aggregate is defined once.
 # ---------------------------------------------------------------------------------------
 
-# Read once: each oda_data groupings call parses its JSON file again.
-_PROVIDER_GROUPINGS: dict[str, dict] = provider_groupings()
-BILATERAL_DONORS: dict[int, str] = _PROVIDER_GROUPINGS["all_bilateral"]
-DAC_COUNTRIES: dict[int, str] = _PROVIDER_GROUPINGS["dac_countries"]
-G7_COUNTRIES: dict[int, str] = _PROVIDER_GROUPINGS["g7"]
-NON_DAC_COUNTRIES: dict[int, str] = _PROVIDER_GROUPINGS["non_dac_countries"]
 
-EU_TOTAL: dict[int, str] = _PROVIDER_GROUPINGS["eu27_total"]
-EU_COUNTRIES: dict[int, str] = _PROVIDER_GROUPINGS["eu27_countries"]
-# Whatever eu27_total holds beyond the member states, i.e. {918: "EU Institutions"}
-EU_INSTITUTIONS: dict[int, str] = {
-    k: v for k, v in EU_TOTAL.items() if k not in EU_COUNTRIES
-}
+def _named_codes(dimension: str, codes: Iterable[int]) -> dict[int, str]:
+    """Map provider or recipient codes to the names oda_data's results carry.
+
+    Args:
+        dimension: ``"provider"`` or ``"recipient"``.
+        codes: The codes to name.
+
+    Returns:
+        Each code and its name, in the order given.
+
+    Raises:
+        ValueError: If oda_data has no name for a code.
+    """
+    named = oda.add_names(pd.DataFrame({dimension: list(codes)}))
+    name_column = f"{dimension}_name"
+    unnamed = named.loc[named[name_column].isna(), dimension].tolist()
+    if unnamed:
+        raise ValueError(f"oda_data has no {dimension} name for codes {unnamed}.")
+    return dict(
+        zip(named[dimension].astype(int).tolist(), named[name_column], strict=True)
+    )
+
+
+def _group_members(group: oda.Group) -> dict[int, str]:
+    """Map an oda_data built-in group's member codes to their names."""
+    if group.dimension is None:
+        raise ValueError(f"oda_data group {group.name!r} has no dimension to name.")
+    codes = [code for code in group.members if isinstance(code, int)]
+    if len(codes) != len(group.members):
+        raise ValueError(
+            f"oda_data group {group.name!r} has members that are not codes."
+        )
+    return _named_codes(group.dimension, codes)
+
+
+BILATERAL_DONORS: dict[int, str] = _group_members(oda.groups.all_bilateral)
+DAC_COUNTRIES: dict[int, str] = _group_members(oda.groups.dac_countries)
+G7_COUNTRIES: dict[int, str] = _group_members(oda.groups.g7)
+NON_DAC_COUNTRIES: dict[int, str] = _group_members(oda.groups.non_dac_countries)
+
+EU_COUNTRIES: dict[int, str] = _group_members(oda.groups.eu27)
+# The EU Institutions' provider code, which belongs to no oda_data provider group.
+_EU_INSTITUTIONS_CODE: int = 918
+EU_INSTITUTIONS: dict[int, str] = _named_codes("provider", [_EU_INSTITUTIONS_CODE])
+EU_TOTAL: dict[int, str] = EU_COUNTRIES | EU_INSTITUTIONS
 
 # Every provider the views read: the bilateral donors, plus EU Institutions, which is shown on
 # its own but belongs to no donor group.
@@ -269,7 +336,7 @@ if DAC_COUNTRIES.keys() & NON_DAC_COUNTRIES.keys() or (
     BILATERAL_DONORS.keys() != DAC_COUNTRIES.keys() | NON_DAC_COUNTRIES.keys()
 ):
     raise ValueError(
-        "oda_data's all_bilateral grouping no longer splits into dac_countries and "
+        "oda_data's all_bilateral group no longer splits into dac_countries and "
         "non_dac_countries, so All bilateral donors would not equal DAC + Non-DAC."
     )
 
@@ -322,7 +389,7 @@ RECIPIENT_NAME_OVERRIDES: dict[int, str] = {
 
 # DAC2A recipients that come back without a code. The cause is upstream in oda_reader's area
 # code mapping: a correction overwrites EDF's code, and the other two are missing from it.
-# Remove once that is fixed. Codes as in recipient_groupings()["all_recipients"].
+# Remove once that is fixed.
 DAC2A_MISSING_RECIPIENT_CODES: dict[str, int] = {
     "East African Community": 237,
     "Indus Basin": 650,
@@ -340,25 +407,23 @@ EXCLUDED_DAC2A_RECIPIENTS: frozenset[int] = frozenset(
     {10_017, 10_018, 10_019, 10_024, 10_025, 10_150, 10_200, 816, *range(900, 990)}
 )
 
-# Read once: each oda_data groupings call parses its JSON file again.
-_RECIPIENT_GROUPINGS: dict[str, dict] = recipient_groupings()
-
 # The CRS records aid that cannot be allocated to a country against regional codes
 # ("Africa, regional") and code 9998 (see UNSPECIFIED_RECIPIENT_CODE), which together are roughly
 # half of all bilateral flows, so the CRS views need the full recipient list. Safe to sum:
 # the CRS never reports the same money against both a country and a region, and it contains
-# no "X, Total" style aggregates.
-CRS_RECIPIENTS: dict[int, str] = _RECIPIENT_GROUPINGS["all_recipients"]
+# no "X, Total" style aggregates. oda_data's all_recipients leaves out the DAC2A aggregates and
+# the multilateral agencies, neither of which the CRS uses as a recipient.
+CRS_RECIPIENTS: dict[int, str] = _group_members(oda.groups.all_recipients)
 
 # Country lists that no source publishes as an aggregate, so every view sums them.
-FRANCE_PRIORITY_RECIPIENTS: dict[int, str] = _RECIPIENT_GROUPINGS["france_priority"]
-SAHEL_RECIPIENTS: dict[int, str] = _RECIPIENT_GROUPINGS["sahel"]
+FRANCE_PRIORITY_RECIPIENTS: dict[int, str] = _group_members(oda.groups.france_priority)
+SAHEL_RECIPIENTS: dict[int, str] = _group_members(oda.groups.sahel)
 
 # ---------------------------------------------------------------------------------------
 # 7. CRS classifications
 #
 # The CRS carries a region on every transaction, which is how the sectors and gender views
-# build region groups: membership is read from the data, never maintained here. Income groups
+# build region groups: membership is read from the data. Income groups
 # follow the World Bank classification instead, as in the recipients view, using resolvekit's
 # data (pinned in pyproject.toml, so the classification changes only when resolvekit does).
 # ---------------------------------------------------------------------------------------

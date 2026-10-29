@@ -1,72 +1,36 @@
-"""Pre-warm the pydeflate exchange rate cache before the main build.
+"""Resolve the four registered OECD bulk files before the main build.
 
-This script runs before observable build to ensure exchange rate and deflator
-data is downloaded and cached. Without it, the first data loader that calls
-add_currencies_and_prices() downloads from the OECD API inline, and transient
-API failures (common with the OECD SDMX endpoint) crash the entire build.
+Run after ``register_bulk_files.py``. The first offline scan of a zip converts it to
+parquet (DAC1 under a second, MultiSystem about 3 s, DAC2A about 5 s). Without this step the
+loaders, which run in parallel during ``observable build``, would each start that
+conversion on the same file. Scanning here runs the conversions one after another, so
+every loader afterwards reads a ready parquet file.
 
-Exits 0 on success, 1 if all retries fail.
+Everything is offline. A dataset that is not registered fails here, before any loader runs.
+
+Exits 0 on success. An unregistered dataset raises and exits non-zero.
 """
 
-import sys
 import time
 
-import pandas as pd
-from pydeflate import oecd_dac_deflate, oecd_dac_exchange
-
-from src.data.analysis_tools.outputs import set_cache_dir
-
-# config applies the requests-cache compatibility patch on import, which has to happen before
-# pydeflate makes its first request. See src/data/_compat.py.
-from src.data.config import BASE_TIME, logger
-
-MAX_RETRIES = 3
-RETRY_DELAY = 30  # seconds between retries
+from src.data.analysis_tools import oda
+from src.data.config import logger
+from src.data.scripts.register_bulk_files import BULK_FILES
 
 
-def prewarm_exchange_rates() -> None:
-    """Trigger pydeflate to download and cache exchange rate + deflator data."""
-    set_cache_dir(oda_data=False, pydeflate=True)
-
-    # Minimal DataFrame: a single USA row is enough to trigger the full download.
-    # pydeflate fetches all-country tables regardless of which donor is requested.
-    test_df = pd.DataFrame(
-        {"donor_code": [302], "year": [BASE_TIME["base"]], "value": [1.0]}
-    )
-
-    logger.info("Downloading exchange rate data (USD → EUR)...")
-    oecd_dac_exchange(
-        data=test_df.copy(),
-        source_currency="USA",
-        target_currency="EUR",
-        id_column="donor_code",
-        use_source_codes=True,
-    )
-
-    logger.info("Downloading deflator data (USD constant prices)...")
-    oecd_dac_deflate(
-        data=test_df.copy(),
-        base_year=BASE_TIME["base"],
-        source_currency="USA",
-        target_currency="USD",
-        id_column="donor_code",
-        use_source_codes=True,
-    )
+def prewarm_bulk_files() -> None:
+    """Scan every registered bulk dataset offline, converting zips to parquet once."""
+    for spec in BULK_FILES:
+        start = time.perf_counter()
+        table = oda.scan_table(spec.dataset)
+        logger.info(
+            "Resolved %s in %.1fs: %s (release %s)",
+            spec.dataset,
+            time.perf_counter() - start,
+            table.path,
+            table.release,
+        )
 
 
 if __name__ == "__main__":
-    logger.info("Pre-warming pydeflate cache...")
-
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            prewarm_exchange_rates()
-            logger.info("Pydeflate cache pre-warm successful")
-            sys.exit(0)
-        except Exception:
-            logger.warning("Attempt %s/%s failed", attempt, MAX_RETRIES, exc_info=True)
-            if attempt < MAX_RETRIES:
-                logger.info("Waiting %ss before retry...", RETRY_DELAY)
-                time.sleep(RETRY_DELAY)
-
-    logger.error("Failed to pre-warm pydeflate cache after all retries")
-    sys.exit(1)
+    prewarm_bulk_files()
