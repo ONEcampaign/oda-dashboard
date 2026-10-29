@@ -1,17 +1,24 @@
-import pandas as pd
-from oda_data import provider_groupings
+"""COVID-19 and health ODA by DAC member, from static inputs no code in this repo generates.
 
-from src.data.config import PATHS
+The series come from bi_plus_multi_health_spending_*.csv in topic_page/. oda-data only
+supplies the DAC members' codes, so the series do not depend on the library version.
+"""
+
+import pandas as pd
+
+from src.data.config import DAC_COUNTRIES, PATHS
+
+# DAC member name -> code, for the static files, which carry names only.
+DAC_MEMBER_CODES: dict[str, int] = {name: code for code, name in DAC_COUNTRIES.items()}
 
 
 def health_excluding_covid_dac() -> pd.DataFrame:
+    """Health ODA excluding COVID-19 per DAC member and year, plus the DAC total."""
     df = pd.read_csv(
         PATHS.TOPIC_PAGE / "bi_plus_multi_health_spending_covid_non_covid.csv"
     )
 
-    codes = {v: k for k, v in provider_groupings()["dac_members"].items()}
-
-    df["donor_code"] = df["donor_name"].map(codes)
+    df["donor_code"] = df["donor_name"].map(DAC_MEMBER_CODES)
 
     total = (
         df.groupby(["year"], as_index=False)["Health ODA"]
@@ -27,13 +34,12 @@ def health_excluding_covid_dac() -> pd.DataFrame:
 
 
 def covid_bi_multi_dac() -> pd.DataFrame:
+    """COVID-19 ODA per DAC member and year, plus the DAC total, as the static file has it."""
     df = pd.read_csv(
         PATHS.TOPIC_PAGE / "bi_plus_multi_health_spending_multiple_donors.csv"
     )
 
-    codes = {v: k for k, v in provider_groupings()["dac_members"].items()}
-
-    df["donor_code"] = df["donor_name"].map(codes)
+    df["donor_code"] = df["donor_name"].map(DAC_MEMBER_CODES)
 
     total = (
         df.groupby(["year"], as_index=False)["covid_oda"]

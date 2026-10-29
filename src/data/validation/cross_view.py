@@ -29,9 +29,11 @@ import pandas as pd
 from src.data.analysis_tools.naming import slugify
 from src.data.config import (
     BILATERAL,
+    DAC_COUNTRIES,
     DAC_COUNTRIES_NAME,
     GRANT_EQUIVALENT_START_YEAR,
     IMPUTED_MULTILATERAL,
+    IN_DONOR_FINANCING_LINES,
     ODA_ELIGIBLE,
     RECIPIENT_NAME_OVERRIDES,
     SECTORS_TIME,
@@ -61,8 +63,6 @@ UNITS_PER_MILLION: float = 1e6
 MILLIONS_PER_BILLION: float = 1e3
 PERCENT: float = 100.0
 
-# The topic page names the DAC aggregate differently in its sector and DAC2A outputs.
-TOPIC_DAC_TOTAL: str = "DAC Countries, Total"
 # Amount floor for the billions-rounded topic series: half of 0.1bn rounding, doubled.
 BILLIONS_ROUNDING_FLOOR: float = 0.05 * MILLIONS_PER_BILLION
 
@@ -75,6 +75,10 @@ TOPIC_INCOME_GROUPS: dict[str, str] = {
     "Upper-middle income": RECIPIENT_NAME_OVERRIDES[10_047],
     "High income": RECIPIENT_NAME_OVERRIDES[10_048],
 }
+UKRAINE: str = "Ukraine"
+# The financing view's in-donor refugee costs (DAC1 line 1820), the topic page's "IDRC".
+REFUGEES_IN_DONOR_COUNTRIES: str = IN_DONOR_FINANCING_LINES[1820]
+FLOWS: str = "Flows"
 SECTOR_SHARE_COLUMNS: tuple[str, ...] = (
     "Humanitarian",
     "Education",
@@ -298,8 +302,7 @@ def topic_oda_gni_latest(read: TopicReader) -> pd.DataFrame:
 def topic_sector_shares(read: TopicReader) -> pd.DataFrame:
     """key_sector_shares: key sectors' shares of bilateral + imputed multilateral ODA.
 
-    Long by (year, donor, sector), from SECTORS_TIME's start year (the view starts there),
-    with the DAC total renamed to the views' name.
+    Long by (year, donor, sector), from SECTORS_TIME's start year (the view starts there).
     """
     df = read("key_sector_shares")
     _require_columns(df, ["Year", "name", *SECTOR_SHARE_COLUMNS], "key_sector_shares")
@@ -312,7 +315,7 @@ def topic_sector_shares(read: TopicReader) -> pd.DataFrame:
     long = pd.DataFrame(
         {
             "year": long["Year"].astype(int),
-            "donor": long["name"].replace({TOPIC_DAC_TOTAL: DAC_COUNTRIES_NAME}),
+            "donor": long["name"],
             "indicator": long["indicator"],
             VALUE: _numbers(long[VALUE]),
         }
@@ -335,7 +338,7 @@ def _topic_sector_amount(
         long = pd.DataFrame(
             {
                 "year": df["Year"].astype(int),
-                "donor": df["Donor"].replace({TOPIC_DAC_TOTAL: DAC_COUNTRIES_NAME}),
+                "donor": df["Donor"],
                 "indicator": df["Sector"],
                 VALUE: _numbers(df[value_column]) * MILLIONS_PER_BILLION,
             }
@@ -353,7 +356,7 @@ def topic_africa_share(read: TopicReader) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "year": df["Year"].astype(int),
-            "donor": df["Donor"].replace({TOPIC_DAC_TOTAL: DAC_COUNTRIES_NAME}),
+            "donor": df["Donor"],
             "recipient": AFRICA,
             VALUE: _percent_strings(df["Share of total ODA"]),
         }
@@ -372,11 +375,48 @@ def topic_income_groups(read: TopicReader) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "year": df["Year"].astype(int),
-            "donor": df["Donor"].replace({TOPIC_DAC_TOTAL: DAC_COUNTRIES_NAME}),
+            "donor": df["Donor"],
             "recipient": df["Recipient"].map(TOPIC_INCOME_GROUPS),
             VALUE: df["ODA"].map(parse_amount),
         }
     )
+
+
+def _topic_oda_covid_amount(
+    column: str, *, drop_zeros: bool = False
+) -> Callable[[TopicReader], pd.DataFrame]:
+    """Build an extractor for an oda_covid amount column: USD mn, constant 2025.
+
+    Args:
+        column: The column to read.
+        drop_zeros: Leave out zeros. The topic writes 0 where a donor reported nothing,
+            and the view has no row there.
+    """
+
+    def extract(read: TopicReader) -> pd.DataFrame:
+        df = read("oda_covid")
+        _require_columns(df, ["Year", "Donor", column], "oda_covid")
+        long = pd.DataFrame(
+            {
+                "year": df["Year"].astype(int),
+                "donor": df["Donor"],
+                VALUE: _numbers(df[column]),
+            }
+        ).dropna(subset=[VALUE])
+        return long[long[VALUE] != 0] if drop_zeros else long
+
+    extract.__doc__ = f"oda_covid {column!r}, USD mn constant 2025."
+    return extract
+
+
+def topic_ukraine(read: TopicReader) -> pd.DataFrame:
+    """oda_covid "ODA to Ukraine" before GRANT_EQUIVALENT_START_YEAR, USD mn constant 2025.
+
+    Only those years: from then on the topic's bilateral part is CRS grant equivalents,
+    which the recipients view (DAC2A net flows) does not publish.
+    """
+    df = _topic_oda_covid_amount("ODA to Ukraine")(read)
+    return df[df["year"] < GRANT_EQUIVALENT_START_YEAR].assign(recipient=UKRAINE)
 
 
 # ---------------------------------------------------------------------------------------
@@ -387,8 +427,8 @@ def topic_income_groups(read: TopicReader) -> pd.DataFrame:
 def _financing_total_oda(views: ViewReader) -> pd.DataFrame:
     """financing Total ODA rows under the DAC's headline measure for each year.
 
-    Flows before GRANT_EQUIVALENT_START_YEAR, grant equivalents from it, as the topic's
-    ONE.10.1010_11010 reads.
+    Flows before GRANT_EQUIVALENT_START_YEAR, grant equivalents from it, as the topic page
+    reads oecd.dac1.total_oda.
     """
     df = views.data("financing_view")
     headline_type = (df["year"] >= GRANT_EQUIVALENT_START_YEAR).map(
@@ -499,6 +539,53 @@ def view_income_groups(views: ViewReader) -> pd.DataFrame:
     return df.assign(**{VALUE: df[VALUE] / UNITS_PER_MILLION})
 
 
+def view_refugees(views: ViewReader) -> pd.DataFrame:
+    """financing "Refugees in donor countries" Flows value_usd_constant, USD mn."""
+    df = views.data("financing_view")
+    df = df[
+        (df["indicator_name"] == REFUGEES_IN_DONOR_COUNTRIES) & (df["type"] == FLOWS)
+    ]
+    return pd.DataFrame(
+        {
+            "year": df["year"].astype(int),
+            "donor": df["donor_name"].astype(str),
+            VALUE: df["value_usd_constant"] / UNITS_PER_MILLION,
+        }
+    )
+
+
+def view_ukraine(views: ViewReader) -> pd.DataFrame:
+    """recipients view Ukraine for each DAC member, rebased to constant 2025, plus the DAC sum.
+
+    The recipients view's constant prices are base 2024 and the topic's base 2025, and a
+    group has no single deflator, so each member's current USD is converted with its own
+    constant/current ratio of Total ODA in the financing view (base 2025), and DAC countries
+    is the sum of the members. A member-year with no Ukraine row received nothing.
+    """
+    financing = _financing_total_oda(views)
+    ratios = pd.DataFrame(
+        {
+            "year": financing["year"].astype(int),
+            "donor": financing["donor_name"].astype(str),
+            "ratio": financing["value_usd_constant"] / financing["value_usd_current"],
+        }
+    )
+    members = ratios[ratios["donor"].isin(DAC_COUNTRIES.values())]
+    ukraine = _recipients_both_indicators(views, [UKRAINE], "value_usd_current")
+    rebased = members.merge(
+        ukraine[["year", "donor", VALUE]], on=["year", "donor"], how="left"
+    ).fillna({VALUE: 0.0})
+    rebased[VALUE] = rebased[VALUE] * rebased["ratio"] / UNITS_PER_MILLION
+    dac = (
+        rebased.groupby("year", as_index=False)[VALUE]
+        .sum()
+        .assign(donor=DAC_COUNTRIES_NAME)
+    )
+    return pd.concat([rebased.drop(columns="ratio"), dac], ignore_index=True).assign(
+        recipient=UKRAINE
+    )
+
+
 # ---------------------------------------------------------------------------------------
 # The comparisons
 # ---------------------------------------------------------------------------------------
@@ -546,12 +633,7 @@ CROSS_CHECKS: tuple[CrossCheck, ...] = (
         keys=("year", "donor", "indicator"),
         tolerance=Tolerance(absolute=0.002),
         note="key_sector_shares vs sectors view at ODA eligible countries: sector / all "
-        "sectors, bilateral + imputed multilateral, constant 2024 USD. Known cause of the "
-        "~1.24x gap: key_sector_shares.csv was written 2026-06-16 with oda-data 2.5.0, "
-        "whose CRSData kept bi_multi == 2 rows (DAC members' core contributions to "
-        "multilaterals, all at recipient 9998), so its all-sectors denominator also counts "
-        "them (DAC 2023: 314bn vs the view's 255bn; those rows sum to 63bn, 2013: 43bn vs "
-        "a 38bn gap). Sector amounts agree; regenerating the topic CSVs clears it.",
+        "sectors, bilateral + imputed multilateral, constant 2024 USD.",
         unit="share",
     ),
     CrossCheck(
@@ -589,10 +671,37 @@ CROSS_CHECKS: tuple[CrossCheck, ...] = (
         keys=("year", "donor", "recipient"),
         tolerance=Tolerance(absolute=BILLIONS_ROUNDING_FLOOR, relative=0.02),
         note="aid_to_income_latest (latest year) vs recipients view income "
-        "groups, DAC countries, both indicators, constant 2024 USD mn. Known cause of the "
-        "Low income gap (topic 27.0bn vs view 31.3bn, 2024): the topic CSV was written "
-        "2026-06-17 from an earlier DAC2A release; today's DAC2A query for provider 20001 "
-        "returns 31.25bn, so the view is current and the topic CSV is stale.",
+        "groups, DAC countries, both indicators, constant 2024 USD mn.",
+    ),
+    CrossCheck(
+        name="total_oda_covid",
+        topic=_topic_oda_covid_amount("Total ODA"),
+        view=view_total_oda,
+        keys=("year", "donor"),
+        tolerance=Tolerance(relative=0.005),
+        note="oda_covid Total ODA vs financing Total ODA, constant 2025 USD mn; flows "
+        "before 2018, grant equivalents from 2018.",
+    ),
+    CrossCheck(
+        name="idrc",
+        topic=_topic_oda_covid_amount("IDRC", drop_zeros=True),
+        view=view_refugees,
+        keys=("year", "donor"),
+        tolerance=Tolerance(absolute=0.01, relative=0.005),
+        note="oda_covid IDRC vs financing Refugees in donor countries (flows), constant "
+        "2025 USD mn; the topic's zeros (nothing reported) are left out.",
+    ),
+    CrossCheck(
+        name="ukraine",
+        topic=topic_ukraine,
+        view=view_ukraine,
+        keys=("year", "donor", "recipient"),
+        tolerance=Tolerance(absolute=0.01, relative=0.005),
+        note="oda_covid ODA to Ukraine vs recipients view Ukraine, bilateral + imputed "
+        "multilateral, DAC members and their sum, before 2018 only (the topic's bilateral "
+        "is CRS grant equivalents from 2018; the view's is DAC2A net flows). The view is "
+        "rebased from current USD to constant 2025 per member with the financing view's "
+        "constant/current ratio of Total ODA.",
     ),
 )
 
