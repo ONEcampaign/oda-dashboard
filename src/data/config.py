@@ -87,7 +87,7 @@ class PATHS:
     TOPIC_PAGE = SRC.parent / "topic_page"
     CDN_FILES = SRC.parent / "cdn_files"
 
-    # oda_reader and pydeflate share one cache directory; see outputs.set_cache_dir.
+    # oda-reader's cache root unless ODA_READER_CACHE_DIR is set; see oda.ODA_CACHE_DIR.
     DATA = SRC / "data" / "cache"
 
 
@@ -102,6 +102,8 @@ class PATHS:
 # about seven significant digits). convert_values_to_units widens them to float64 before
 # multiplying, so the scaling adds no further rounding of its own.
 UNITS_PER_MILLION: float = 1e6
+MILLIONS_PER_BILLION: float = 1e3
+PERCENT: float = 100.0
 
 # Above this, a value column no longer fits in Int32 and has to be stored as Int64.
 INT32_MAX: int = 2_147_483_647
