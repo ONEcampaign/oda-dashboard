@@ -14,6 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
+    # One absolute cache path for oda_reader (and oda_data, which follows it), so the
+    # directory restored by the cache step below is the one every script reads.
+    env:
+      ODA_READER_CACHE_DIR: ${{ github.workspace }}/src/data/cache/oda-reader
+
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -56,30 +61,39 @@ jobs:
           echo "week=$(TZ=America/Los_Angeles date +'%Y-%U')" >> $GITHUB_OUTPUT
           echo "month=$(TZ=America/Los_Angeles date +'%Y-%m')" >> $GITHUB_OUTPUT
 
-      # Bulk ODA data (CRS ~1.1 GB, DAC1/DAC2A) — refresh monthly.
-      # restore-keys allows reusing last month's cache when a new month starts,
-      # avoiding a full re-download on the very first build of the month.
+      # Bulk ODA data (CRS ~1.1 GB, DAC1/DAC2A), refreshed monthly.
+      # The cache path holds the oda-reader version (v1/oda-reader/<version>/), so the key
+      # carries uv.lock: a dependency bump starts a cold cache instead of restoring a
+      # directory the new version never reads. restore-keys reuses last month's cache when a
+      # new month starts, but only for the same lock file.
+      # TODO(PR7): delete this cache step. The bulk files are registered from the release on every run.
       - name: Cache ODA bulk data
         uses: actions/cache@v4
         with:
           path: src/data/cache
-          key: oda-bulk-${{ steps.date.outputs.month }}
+          key: oda-bulk-v3-${{ hashFiles('uv.lock') }}-${{ steps.date.outputs.month }}
           restore-keys: |
-            oda-bulk-
+            oda-bulk-v3-${{ hashFiles('uv.lock') }}-
 
-      # The OECD file server puts a browser challenge in front of the CRS and MultiSystem bulk
-      # files (ONEcampaign/oda_reader#50), so CI loads browser-downloaded copies kept as assets
-      # on the oecd-bulk-data release instead of downloading them.
+      # The OECD file server puts a browser challenge in front of the bulk files
+      # (ONEcampaign/oda_reader#50), so CI loads browser-downloaded copies kept as assets
+      # on the oecd-bulk-data release instead of downloading them. The release must carry
+      # CRS.parquet, MultiSystem.zip, Table1_Data.zip (DAC1) and Table2a_Data.zip (DAC2A).
+      # All four are uploaded by hand.
+      # Each file is registered with its own token, the release tag plus that asset's full
+      # updatedAt timestamp. oda-reader reuses a derived parquet by token, so a same-day
+      # re-upload under a date-only token would serve stale data from the restored cache.
       - name: Seed OECD bulk cache
         env:
           GH_TOKEN: ${{ github.token }}
           PYTHONPATH: ${{ github.workspace }}
         run: |
           gh release download oecd-bulk-data --dir src/data/raw_data/oecd_bulk --clobber
-          uv run python src/data/scripts/seed_bulk_cache.py
+          versions=$(gh release view oecd-bulk-data --json assets --jq '[.assets[] | {(.name): .updatedAt}] | add')
+          uv run python src/data/scripts/register_bulk_files.py --dir src/data/raw_data/oecd_bulk --versions "$versions"
         timeout-minutes: 30
 
-      # Observable compiled output — keyed on script/config content, the oda-reader patch and
+      # Observable compiled output — keyed on script/config content and
       # the locked dependencies, so a code or dependency change forces recompilation without
       # also discarding the bulk data above. Framework reruns a data loader whose cached
       # output is older than the loader file, and a fresh checkout gives every loader the
@@ -94,18 +108,17 @@ jobs:
           path: |
             src/.observablehq/cache/*
             !src/.observablehq/cache/_npm
-          key: observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py', 'src/data/_compat.py', 'pyproject.toml', 'uv.lock') }}-${{ steps.date.outputs.week }}
+          key: observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py', 'pyproject.toml', 'uv.lock') }}-${{ steps.date.outputs.week }}
           restore-keys: |
-            observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py', 'src/data/_compat.py', 'pyproject.toml', 'uv.lock') }}-
+            observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py', 'pyproject.toml', 'uv.lock') }}-
 
       # Caches saved before the _npm exclusion still carry it.
       - name: Drop cached npm modules
         run: rm -rf src/.observablehq/cache/_npm
 
-      # Download pydeflate exchange-rate + deflator data before the build so
-      # every data loader finds it already cached.  Retries handle transient
-      # OECD API failures (the root cause of the previous build timeout).
-      - name: Pre-warm exchange rate cache
+      # Resolve the four registered bulk files offline before the build, so the zip to parquet
+      # conversions run once, in sequence, instead of inside parallel data loaders.
+      - name: Pre-warm bulk data cache
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: uv run python src/data/scripts/prewarm_cache.py
@@ -129,8 +142,9 @@ jobs:
         timeout-minutes: 60
 
       # Checks the built views (contracts, invariants, anomalies) and compares them with
-      # topic_page. A failure does not stop the deploy yet. PR7 makes contract and invariant
-      # failures stop it. The report is uploaded whatever the result.
+      # topic_page. A failure does not stop the deploy. The report is uploaded whatever the
+      # result.
+      # TODO(PR7): make contract and invariant failures stop the deploy.
       - name: Validate built data
         continue-on-error: true
         env:
@@ -164,8 +178,8 @@ jobs:
           if [ -d "cdn_files/sectors_view" ]; then
             echo "Uploading sectors partitioned dataset to GCS..."
             gsutil -m rsync -r -d cdn_files/sectors_view gs://${{ env.BUCKET }}/sources/sectors_view
-            # After the dataset, so every slug it lists already resolves. no-cache so browsers pick
-            # up a new release's options at once.
+            # Upload after the dataset so every slug it lists already resolves. no-cache makes
+            # browsers pick up a new release's options at once.
             gsutil -h "Cache-Control:no-cache" cp cdn_files/sectors_view_options.json gs://${{ env.BUCKET }}/sources/sectors_view_options.json
           else
             echo "Warning: cdn_files/sectors_view directory not found"
