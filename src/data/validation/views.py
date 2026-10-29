@@ -13,6 +13,7 @@ from src.data.config import (
     DONOR_GROUPS,
     EU27_EUI_NAME,
     FINANCING_TIME,
+    GENDER_TIME,
     RECIPIENTS_ORDER,
     SECTORS_TIME,
 )
@@ -188,7 +189,7 @@ VIEWS: dict[str, ViewSpec] = {
             "gender_view",
             keys=_RECIPIENT_KEYS,
             share_columns=("pct_of_total_oda",),
-            time=BASE_TIME,
+            time=GENDER_TIME,
         ),
         _make_spec(
             "sectors_view",

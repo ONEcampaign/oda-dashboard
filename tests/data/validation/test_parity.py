@@ -297,6 +297,58 @@ def test_options_differences(make_view: MakeView) -> None:
     assert severities == {Severity.INFO, Severity.ERROR}
 
 
+@pytest.mark.parametrize(
+    ("kind", "path", "edit"),
+    [
+        (DeltaKind.VALUE, "year.start", lambda o: o["year"].update(start=1900)),
+        (DeltaKind.NEW_IN_CANDIDATE, "note_year", lambda o: o.update(note_year=2023)),
+        (DeltaKind.MISSING_IN_CANDIDATE, "year.base", lambda o: o["year"].pop("base")),
+    ],
+)
+def test_options_paths_explain_changes_and_keys(
+    make_view: MakeView, kind: DeltaKind, path: str, edit
+) -> None:
+    """A changed scalar, a new key and a removed key are explained by an entry's path."""
+    base = make_view(VIEW, [_row()])
+    options = {**base.options, "year": dict(base.options["year"])}
+    edit(options)
+    cand = make_view(VIEW, [_row()], options=options)
+    assert _only_failure(compare_views(cand, base, []), "parity.options").severity is (
+        Severity.ERROR
+    )
+
+    wrong = ExpectedDelta(view=VIEW, reason="r", kind=kind, paths=frozenset({"other"}))
+    right = ExpectedDelta(view=VIEW, reason="ok", kind=kind, paths=frozenset({path}))
+    unpathed = ExpectedDelta(view=VIEW, reason="any", kind=kind)
+    assert (
+        _only_failure(
+            compare_views(cand, base, [wrong, unpathed]), "parity.options"
+        ).severity
+        is Severity.ERROR
+    )
+    result = _only_failure(compare_views(cand, base, [right]), "parity.options")
+    assert result.severity is Severity.INFO
+    assert result.message.startswith("explained (ok)")
+
+
+def test_options_list_items_still_match_by_dimension(make_view: MakeView) -> None:
+    """A donor list item is explained by donors, not by a path entry."""
+    base = make_view(VIEW, [_row()])
+    cand = make_view(
+        VIEW, [_row()], options={**base.options, "donor_name": ["France", "Italy"]}
+    )
+    by_path = ExpectedDelta(
+        view=VIEW,
+        reason="r",
+        kind=DeltaKind.NEW_IN_CANDIDATE,
+        paths=frozenset({"donor_name.Italy"}),
+    )
+    assert (
+        _only_failure(compare_views(cand, base, [by_path]), "parity.options").severity
+        is Severity.ERROR
+    )
+
+
 def test_details_capped_largest_first(make_view: MakeView) -> None:
     """Details hold at most MAX_DETAIL_ROWS example rows, largest delta first."""
     n = MAX_DETAIL_ROWS + 10
