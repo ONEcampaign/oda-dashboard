@@ -427,3 +427,132 @@ recipients = [
 ]
 columns = ["value_usd_current"]
 max_abs = 107
+
+# --- gender_view: oda-data 3.0 migration -------------------------------------------------
+#
+# The view reads oecd.crs.gender_marker (one query, all four scores). From 2010 to 2022 it
+# matches the 2.x reads exactly at recipient level. The deltas below are the two causes the
+# migration accepted, plus storage rounding.
+
+# oecd.crs.gender_marker starts in 2010 (MARKERS_START_YEAR) and refuses earlier years, so
+# the view does too. Production carried 45,747 rows for 1990-2009.
+[[delta]]
+view = "gender_view"
+kind = "missing_in_candidate"
+reason = "oecd.crs.gender_marker starts in 2010; production carried CRS marker rows for 1990–2009"
+years = [
+  1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
+  2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
+]
+
+# Recipients whose last gender marker row in production is before 2010 (Korea 1994, Israel
+# 1995, Bahrain 2004, Saudi Arabia and Turks and Caicos Islands 2007), so they leave the
+# recipient dropdown.
+[[delta]]
+view = "gender_view"
+kind = "missing_in_candidate"
+reason = "oecd.crs.gender_marker starts in 2010; production carried CRS marker rows for 1990–2009"
+recipients = ["Bahrain", "Israel", "Korea", "Saudi Arabia", "Turks and Caicos Islands"]
+
+# oecd.crs.gender_marker leaves out CRS category 60 (private sector instruments), which the
+# CRS reports from 2023. Production counted it. The gap equals the category-60 allocable
+# disbursements cell by cell (2023 -10,600.7m, -6.3%; 2024 -12,758.8m, -7.5%). Every value
+# moves down, by up to 99.9845% where a cell was almost all PSI; the 21 donors are those
+# that report PSI, plus the groups they belong to.
+[[delta]]
+view = "gender_view"
+kind = "value"
+reason = "oecd.crs.gender_marker leaves out CRS private sector instruments (category 60), 2023-2024 (accepted, noted on the page)"
+years = [2023, 2024]
+donors = [
+  "Australia", "Austria", "Belgium", "Canada", "Chinese Taipei", "Denmark",
+  "EU Institutions", "Finland", "France", "Germany", "Italy", "Japan", "Korea",
+  "Netherlands", "Norway", "Portugal", "Spain", "Sweden", "Switzerland",
+  "United Kingdom", "United States", "All bilateral donors", "DAC countries",
+  "Non-DAC countries", "G7 countries", "EU27 countries", "EU27 & EU Institutions",
+]
+columns = [
+  "value_usd_current", "value_usd_constant", "value_eur_current", "value_eur_constant",
+  "value_gbp_current", "value_gbp_constant", "value_cad_current", "value_cad_constant",
+]
+max_rel = 0.99985
+
+# The same exclusion moves the score shares of every entity it touches (largest +0.9941,
+# where the remaining aid is a single score).
+[[delta]]
+view = "gender_view"
+kind = "value"
+reason = "oecd.crs.gender_marker leaves out CRS private sector instruments (category 60), 2023-2024 (accepted, noted on the page)"
+years = [2023, 2024]
+donors = [
+  "Australia", "Austria", "Belgium", "Canada", "Chinese Taipei", "Denmark",
+  "EU Institutions", "Finland", "France", "Germany", "Italy", "Japan", "Korea",
+  "Netherlands", "Norway", "Portugal", "Spain", "Sweden", "Switzerland",
+  "United Kingdom", "United States", "All bilateral donors", "DAC countries",
+  "Non-DAC countries", "G7 countries", "EU27 countries", "EU27 & EU Institutions",
+]
+columns = ["pct_of_total_oda"]
+max_abs = 0.9941
+
+# 111 cells that were entirely PSI, 16 donors and groups.
+[[delta]]
+view = "gender_view"
+kind = "missing_in_candidate"
+reason = "oecd.crs.gender_marker leaves out CRS private sector instruments (category 60), 2023-2024: cells that were all PSI"
+years = [2023, 2024]
+donors = [
+  "Austria", "Canada", "Chinese Taipei", "Denmark", "EU Institutions", "Finland",
+  "France", "G7 countries", "Japan", "Netherlands", "Norway", "Spain", "Sweden",
+  "Switzerland", "United Kingdom", "United States",
+]
+
+# Values are rounded to 4 decimals of a million (100 units) before they are stored. 2,703
+# USD current cells sit exactly on a 50-unit midpoint, so float noise in the sum decides the
+# side: 2.x derived "Not screened" by subtraction and summed in another order. 34 cells in
+# 2010-2022 land one step apart (101 to 107 units with the baseline's float32 noise); every
+# one was checked to sit on a midpoint (fraction 0.5 +/- 4e-10). Two more in 2023 (+101,
+# All bilateral donors to Guinea, United States to Sierra Leone) fall under the PSI entry
+# above, which comes first.
+[[delta]]
+view = "gender_view"
+kind = "value"
+reason = "one 100-unit rounding step: value on a 50-unit midpoint, rounded on a different side of it"
+years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022]
+donors = [
+  "All bilateral donors", "Austria", "Canada", "DAC countries", "EU Institutions",
+  "EU27 & EU Institutions", "EU27 countries", "G7 countries", "Ireland", "Netherlands",
+  "Norway", "Portugal", "Sweden", "Switzerland", "United Arab Emirates", "United States",
+]
+columns = ["value_usd_current"]
+max_abs = 107
+
+# Shares are computed from the rounded values, so the same step moves the shares of small
+# entities (largest 0.000756, Australia to Grenada 2014, total 130,800 units). Each of the
+# nine entities has a cell on a midpoint.
+[[delta]]
+view = "gender_view"
+kind = "value"
+reason = "one 100-unit rounding step on a small entity total moves its shares"
+years = [2014, 2016, 2018, 2020, 2022]
+donors = ["Australia", "Italy", "Japan", "Korea", "Slovak Republic"]
+recipients = [
+  "Afghanistan", "Grenada", "Honduras", "Kosovo", "Lesotho", "Malaysia", "Nicaragua",
+  "North Macedonia", "South & Central Asia",
+]
+columns = ["pct_of_total_oda"]
+max_abs = 0.00076
+
+
+# options.json: the year range follows the data, and the page reads the first year of the
+# PSI exclusion from the options to show its note.
+[[delta]]
+view = "gender_view"
+kind = "value"
+reason = "oecd.crs.gender_marker starts in 2010; production carried CRS marker rows for 1990–2009"
+paths = ["year.start"]
+
+[[delta]]
+view = "gender_view"
+kind = "new_in_candidate"
+reason = "page note metadata: the first year of the 2023 PSI exclusion"
+paths = ["psi_excluded_from"]
