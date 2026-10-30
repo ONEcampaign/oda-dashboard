@@ -47,8 +47,8 @@ jobs:
 
       - name: Run tests
         run: |
-          uv run ruff check src/data tests validation
-          uv run ruff format --check src/data tests validation
+          uv run ruff check src/data tests
+          uv run ruff format --check src/data tests
           uv run pytest -q
 
       - id: date
@@ -128,13 +128,14 @@ jobs:
           uv run python src/data/scripts/sectors_view.py
         timeout-minutes: 60
 
-      # Compares the built data with the previous release recorded in the manifests. Not
-      # blocking yet: the report is uploaded for review whatever the result.
+      # Checks the built views (contracts, invariants, anomalies) and compares them with
+      # topic_page. A failure does not stop the deploy yet. PR7 makes contract and invariant
+      # failures stop it. The report is uploaded whatever the result.
       - name: Validate built data
         continue-on-error: true
         env:
           PYTHONPATH: ${{ github.workspace }}
-        run: uv run python src/data/scripts/validate.py ${{ steps.date.outputs.month }} --no-seek
+        run: uv run python src/data/scripts/validate.py
         timeout-minutes: 15
 
       - name: Upload validation report

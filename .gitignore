@@ -184,9 +184,8 @@ src/data/cache/*.csv
 /cdn_files/sectors_view/
 /cdn_files
 
-# Validation reports (generated, saved as CI artifacts)
-src/data/validation_data/reports/*.md
 /.raw_data
 /docs
 /validation_data/reports
+validation_data/baseline/
 src/tailwind.generated.css

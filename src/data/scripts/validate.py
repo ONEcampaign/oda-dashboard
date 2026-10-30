@@ -1,109 +1,132 @@
 """
-Entry point for data validation.
+Entry point for data validation of the dashboard views.
 
 Usage:
-    PYTHONPATH=. uv run python src/data/scripts/validate.py <release> [--no-seek]
+    PYTHONPATH=. uv run python src/data/scripts/validate.py [--views VIEW ...]
+        [--source-dir DIR] [--baseline DIR] [--expected PATH] [--no-cross-view]
+        [--strict] [--report-dir DIR]
 
-    from src.data.scripts.validate import run_validation
-
-    report = run_validation(release="dec_2024")
-    report = run_validation(release="dec_2024", update_manifests=False)
-    report = run_validation(release="dec_2024", save_report=False)
-    report = run_validation(release="dec_2024", include_seek=False)  # Skip SEEK validation
+Contracts, invariants and anomalies always run. Parity runs when --baseline is given;
+cross-view comparison with topic_page runs unless --no-cross-view. A source or baseline DIR
+holds one directory per view (DIR/<view>). Exits 1 on blocking failures.
 """
 
 import argparse
+from collections.abc import Sequence
+from pathlib import Path
 
 from src.data.config import logger
-from validation import save_report, validate_all
+from src.data.validation.expected import (
+    DEFAULT_EXPECTED_DELTAS_PATH,
+    load_expected_deltas,
+)
+from src.data.validation.io import default_sources
+from src.data.validation.models import CheckResult
+from src.data.validation.report import (
+    REPORT_DIR,
+    Outcome,
+    count_outcomes,
+    is_blocking,
+    render_markdown,
+    write_report,
+)
+from src.data.validation.runner import run_validation, source_roots
+from src.data.validation.views import VIEWS
+
+REPORT_TITLE: str = "Dashboard data validation"
 
 
-def run_validation(
-    release: str,
-    update_manifests: bool = True,
-    save_report_file: bool = True,
-    include_seek: bool = True,
-) -> dict:
-    """
-    Run data validation for a release.
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    """Parse the command line."""
+    parser = argparse.ArgumentParser(description="Validate the built dashboard data.")
+    parser.add_argument(
+        "--views",
+        nargs="+",
+        choices=sorted(VIEWS),
+        default=list(VIEWS),
+        help="Views to check (default: all). Cross-view still reads every view.",
+    )
+    parser.add_argument(
+        "--source-dir",
+        type=Path,
+        help="Directory with one subdirectory per view (default: the local build).",
+    )
+    parser.add_argument(
+        "--baseline",
+        type=Path,
+        help="Baseline directory with one subdirectory per view; enables parity.",
+    )
+    parser.add_argument(
+        "--expected",
+        type=Path,
+        default=DEFAULT_EXPECTED_DELTAS_PATH,
+        help="TOML file of expected deltas.",
+    )
+    parser.add_argument(
+        "--no-cross-view",
+        action="store_true",
+        help="Skip the comparison with topic_page.",
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Every ERROR blocks, including parity and cross-view ones.",
+    )
+    parser.add_argument(
+        "--report-dir", type=Path, default=REPORT_DIR, help="Where to write the report."
+    )
+    return parser.parse_args(argv)
 
-    Args:
-        release: Release name (e.g., "dec_2024")
-        update_manifests: Whether to update manifests after validation
-        save_report_file: Whether to save report to file
-        include_seek: Whether to include SEEK sector validation (default: True)
 
-    Returns:
-        Dict with validation results:
-        - passed: bool
-        - report: ValidationReport object
-        - report_path: Path to saved report (if saved)
-        - summary: Dict with warning counts
-    """
-    logger.info("Validating data for release: %s", release)
+def log_summary(results: list[CheckResult], *, strict: bool) -> list[CheckResult]:
+    """Log the outcome counts and each blocking failure; returns the blocking failures."""
+    outcomes = count_outcomes(results)
+    logger.info(
+        "Results: %s",
+        ", ".join(f"{outcomes[o]} {o.value}" for o in Outcome),
+    )
+    blocking = [r for r in results if is_blocking(r, strict=strict)]
+    for r in blocking:
+        logger.error("BLOCKING %s (%s): %s", r.check, r.view, r.message)
+    return blocking
 
-    # Run validation
-    report = validate_all(
-        release=release,
-        update_manifests=update_manifests,
-        include_seek=include_seek,
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Run the validation, write the report and return the exit code."""
+    args = parse_args(argv)
+    sources = (
+        source_roots(args.source_dir, VIEWS)
+        if args.source_dir is not None
+        else default_sources()
+    )
+    baseline_sources = (
+        source_roots(args.baseline, args.views) if args.baseline is not None else None
+    )
+    expected = load_expected_deltas(args.expected)
+
+    results = run_validation(
+        args.views,
+        sources,
+        baseline_sources=baseline_sources,
+        expected=expected,
+        cross_view=not args.no_cross_view,
     )
 
-    # Save report if requested
-    report_path = None
-    if save_report_file:
-        report_path = save_report(report)
-        logger.info("Report saved to: %s", report_path)
+    markdown = render_markdown(
+        results,
+        title=REPORT_TITLE,
+        sources={name: sources[name] for name in args.views},
+        strict=args.strict,
+    )
+    logger.info("Report written to %s", write_report(markdown, args.report_dir))
 
-    # Compute summary
-    high_count = len(report.get_warnings_by_level("high"))
-    medium_count = len(report.get_warnings_by_level("medium"))
-    info_count = len(report.get_warnings_by_level("info"))
-
-    summary = {
-        "high": high_count,
-        "medium": medium_count,
-        "info": info_count,
-    }
-
-    # Log results
-    if report.has_blocking_errors:
-        logger.error("VALIDATION FAILED - Blocking errors detected")
-        for dataset, checks in report.check_results.items():
-            for check_name, result in checks.items():
-                if not result.passed:
-                    for error in result.errors:
-                        logger.error("  %s/%s: %s", dataset, check_name, error)
-    elif high_count > 0:
-        logger.warning(
-            "VALIDATION PASSED with warnings: %s high, %s medium, %s info",
-            high_count,
-            medium_count,
-            info_count,
-        )
-    else:
-        logger.info(
-            "VALIDATION PASSED: %s medium, %s info warnings", medium_count, info_count
-        )
-
-    return {
-        "passed": not report.has_blocking_errors,
-        "report": report,
-        "report_path": report_path,
-        "summary": summary,
-    }
+    blocking = log_summary(results, strict=args.strict)
+    if blocking:
+        logger.error("VALIDATION FAILED: %s blocking failure(s)", len(blocking))
+        return 1
+    logger.info("VALIDATION PASSED")
+    return 0
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Validate the built dashboard data.")
-    parser.add_argument(
-        "release", help='Name to record this release under, e.g. "2026_10"'
-    )
-    parser.add_argument(
-        "--no-seek", action="store_true", help="Skip the SEEK sector validation"
-    )
-    args = parser.parse_args()
-
-    result = run_validation(release=args.release, include_seek=not args.no_seek)
-    if not result["passed"]:
-        raise SystemExit(1)
+    raise SystemExit(main())
