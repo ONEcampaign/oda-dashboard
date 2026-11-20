@@ -31,6 +31,9 @@ SHORT_START_YEAR: int = 2015
 # First year of the ODA article's three mini charts (Africa, health, humanitarian), which run
 # to LATEST_YEAR_DETAIL.
 MINI_CHART_START_YEAR: int = 2015
+# First year of oda_covid.csv, the article's COVID, refugees and Ukraine chart, which runs to
+# LATEST_YEAR_AGG.
+ODA_COVID_START_YEAR: int = 2016
 LATEST_YEAR_AGG: int = 2025
 LATEST_YEAR_DETAIL: int = 2024
 CONSTANT_YEAR: int = 2025
