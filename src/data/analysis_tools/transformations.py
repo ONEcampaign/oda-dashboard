@@ -971,6 +971,43 @@ def drop_empty_values(df: pd.DataFrame, label: str) -> pd.DataFrame:
     return df.loc[~missing & ~zero]
 
 
+def drop_empty_series(df: pd.DataFrame, keys: list[str], label: str) -> pd.DataFrame:
+    """Drop every currency and price row of a series whose USD current value is empty.
+
+    A sum that cancels out to exactly zero in USD current can leave float residue in the
+    converted copies. Dropping zero rows one by one would then keep the series in some
+    currencies only, and the pivot would give it a null USD current value. Here the
+    decision is made once per series, on USD current: missing or zero drops it everywhere.
+
+    Args:
+        df: Long frame with the keys, currency, price and value.
+        keys: Columns identifying a series apart from currency and price.
+        label: Name of the frame, for the log.
+
+    Returns:
+        The rows of series with a non-zero USD current value.
+
+    Raises:
+        ValueError: If a series has no USD current row.
+    """
+    is_usd = (df["currency"] == "USD") & (df["price"] == "current")
+    usd = df.loc[is_usd, [*keys, "value"]]
+    empty = usd["value"].isna() | (usd["value"] == 0)
+
+    row_keys = pd.MultiIndex.from_frame(df[keys])
+    if not row_keys.isin(pd.MultiIndex.from_frame(usd[keys])).all():
+        raise ValueError(f"{label}: rows without a USD current row of their own")
+
+    keep = row_keys.isin(pd.MultiIndex.from_frame(usd.loc[~empty, keys]))
+    logger.info(
+        "%s: dropping %s empty series (%s rows)",
+        label,
+        f"{int(empty.sum()):,}",
+        f"{int((~keep).sum()):,}",
+    )
+    return df.loc[keep]
+
+
 def widen_currency_price(
     df: pd.DataFrame,
     index_cols: tuple[str, ...] = ("year", "donor_code", "indicator"),

@@ -81,6 +81,15 @@ def scan_table(dataset: str, *, offline: bool = True) -> oda_reader.ScannedTable
     return oda_reader.scan(dataset, offline=offline)
 
 
+def scanned_release(table: oda_reader.ScannedTable) -> oda.Release:
+    """The release of a scanned table, in the form query provenance records."""
+    return oda.Release(
+        token=table.release,
+        downloaded=table.downloaded,
+        label_release=table.label_release,
+    )
+
+
 def open_context(*, offline: bool = True) -> oda.Context:
     """Open the oda-data context every query of a loader runs in.
 
@@ -157,13 +166,17 @@ class ProvenanceLog:
             )
         self.reference_data = provenance.reference_data
 
-    def record_dac1(self, release: oda.Release) -> None:
-        """Record the DAC1 release the conversion factors were read from.
+    def record_table(self, table: str, release: oda.Release) -> None:
+        """Record the release of a table read outside a query (scanned directly).
+
+        Args:
+            table: oda-reader dataset name, e.g. "dac1" for the conversion factors.
+            release: From scanned_release.
 
         Raises:
-            ValueError: If queries already recorded another DAC1 release.
+            ValueError: If queries already recorded another release of the table.
         """
-        self._add_table(_DAC1, release)
+        self._add_table(table, release)
 
     def to_dict(self) -> dict[str, object]:
         """Return the log as JSON-ready values, datetimes in ISO format."""
@@ -343,13 +356,7 @@ def conversion_factors(
         )
 
     if provenance is not None:
-        provenance.record_dac1(
-            oda.Release(
-                token=dac1.release,
-                downloaded=dac1.downloaded,
-                label_release=dac1.label_release,
-            )
-        )
+        provenance.record_table(_DAC1, scanned_release(dac1))
     return pd.concat(frames, ignore_index=True)[
         ["donor_code", "year", "currency", "price", "factor"]
     ]

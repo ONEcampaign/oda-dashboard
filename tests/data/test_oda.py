@@ -151,7 +151,7 @@ def test_provenance_merges_tables_and_refuses_a_second_release():
     log = ProvenanceLog()
     log.record(_provenance({"crs": "rel-1"}, {"a": 1}))
     log.record(_provenance({"crs": "rel-1", "multisystem": "rel-m"}, {"b": 2}))
-    log.record_dac1(oda.Release(token="dac1-rel", downloaded=DOWNLOADED))
+    log.record_table("dac1", oda.Release(token="dac1-rel", downloaded=DOWNLOADED))
 
     out = log.to_dict()
     assert set(out["tables"]) == {"crs", "multisystem", "dac1"}
@@ -171,7 +171,7 @@ def test_provenance_merges_tables_and_refuses_a_second_release():
     with pytest.raises(ValueError, match="two releases"):
         log.record(_provenance({"crs": "rel-2"}, {}))
     with pytest.raises(ValueError, match="two releases"):
-        log.record_dac1(oda.Release(token="other", downloaded=DOWNLOADED))
+        log.record_table("dac1", oda.Release(token="other", downloaded=DOWNLOADED))
 
 
 def _factors(nan_for: tuple[int, int] | None = None) -> pd.DataFrame:
@@ -317,6 +317,17 @@ def test_conversion_factors_refuse_a_mismatched_release(monkeypatch):
     )
     with pytest.raises(ValueError, match="release"):
         oda_tools.conversion_factors(entities=[4], years=[2023], base_year=2024)
+
+
+def test_a_scanned_table_release_is_recorded_like_a_query_one():
+    table = FakeTable(Path("dac2a.parquet"), (), release="dac2a-rel")
+    log = ProvenanceLog()
+    log.record_table("dac2a", oda_tools.scanned_release(table))
+    log.record(_provenance({"dac2a": "dac2a-rel"}, {}))
+
+    assert log.to_dict()["tables"]["dac2a"]["token"] == "dac2a-rel"
+    with pytest.raises(ValueError, match="two releases"):
+        log.record(_provenance({"dac2a": "other"}, {}))
 
 
 _CRS_COLUMNS = (

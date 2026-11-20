@@ -158,3 +158,272 @@ kind = "value"
 reason = "production values come from the 2.x API, which rounded to 0.01m; 3.0 reads full precision"
 columns = ["pct_of_total_oda"]
 max_abs = 0.0003
+
+# --- recipients_view: oda-data 3.0 migration ---------------------------------------------
+#
+# The view reads DAC2A Part I from the bulk file (analysis_tools.recipients); production
+# came from the 2.x API. Values match except for the causes below.
+
+# The DAC2A bulk file classifies recipients into income groups (10045-10049) differently
+# from the OECD API, so the income group totals differ in every year (UMICs up to +60% in
+# 2014, LMICs down up to 18%). Accepted: the view follows the bulk file.
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "DAC2A bulk income groups (10045-10049) differ from the 2.x API's (accepted)"
+recipients = [
+  "Low Income Countries (LICs)", "Lower-Middle Income Countries (LMICs)",
+  "Upper-Middle Income Countries (UMICs)", "High Income Countries (HICs)",
+  "Countries not classified by the World Bank",
+]
+
+[[delta]]
+view = "recipients_view"
+kind = "missing_in_candidate"
+reason = "DAC2A bulk income groups (10045-10049) differ from the 2.x API's (accepted)"
+recipients = [
+  "Low Income Countries (LICs)", "Lower-Middle Income Countries (LMICs)",
+  "Upper-Middle Income Countries (UMICs)", "High Income Countries (HICs)",
+  "Countries not classified by the World Bank",
+]
+
+[[delta]]
+view = "recipients_view"
+kind = "new_in_candidate"
+reason = "DAC2A bulk income groups (10045-10049) differ from the 2.x API's (accepted)"
+recipients = [
+  "Low Income Countries (LICs)", "Lower-Middle Income Countries (LMICs)",
+  "Upper-Middle Income Countries (UMICs)", "High Income Countries (HICs)",
+  "Countries not classified by the World Bank",
+]
+
+# The LDC row is summed from country rows of resolvekit's current UN LDC members, as in the
+# CRS views, instead of read as DAC2A's 10016. It leaves out aid donors report against the
+# LDC total only (Saudi Arabia, 2015-2024, up to USD 3.7bn a year) and applies today's list
+# to every year.
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "LDC row is the sum of resolvekit's current UN LDC members (snapshot); OECD's DAC2A aggregate and 2.x used the OECD list"
+recipients = ["Least Developed Countries (LDCs)"]
+
+[[delta]]
+view = "recipients_view"
+kind = "missing_in_candidate"
+reason = "LDC row is the sum of resolvekit's current UN LDC members (snapshot); OECD's DAC2A aggregate and 2.x used the OECD list"
+recipients = ["Least Developed Countries (LDCs)"]
+
+# Russia (87) is in PROVIDERS, but the 2.x DAC2A data held no rows for it. The bulk file has
+# its reports for 2010-2020. These entries cover Russia's own effect and carry no further
+# narrowing.
+[[delta]]
+view = "recipients_view"
+kind = "new_in_candidate"
+reason = "DAC2A bulk file has Russia (87) for 2010-2020; 2.x had no Russia rows"
+donors = ["Russia"]
+
+[[delta]]
+view = "recipients_view"
+kind = "new_in_candidate"
+reason = "Russia (87) joins Non-DAC countries and All bilateral donors in 2010-2020: recipients only Russia gives to among their members"
+donors = ["Non-DAC countries", "All bilateral donors"]
+years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "Russia (87) joins Non-DAC countries and All bilateral donors in 2010-2020 (up to USD 6.8bn a year)"
+donors = ["Non-DAC countries", "All bilateral donors"]
+years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "Russia (87) joins All bilateral donors in 2010-2020, the denominator of every donor's pct_total_recipient"
+years = [2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020]
+columns = ["pct_total_recipient"]
+
+# Data vintage: production was built from the API before the OECD revised some figures.
+# 2024 is widespread (the largest is EU Institutions to Ukraine at -607m, alongside Germany,
+# Italy and Spain to Ukraine), 2022 is France only (about +1.1m in total) and 2023 Austria only (-1.3m).
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "data vintage: 2024 DAC2A figures revised since the 2.x API pull behind production"
+years = [2024]
+donors = [
+  "Austria", "Belgium", "Bulgaria", "Croatia", "Czechia", "Denmark", "EU Institutions",
+  "Finland", "Germany", "Hungary", "Ireland", "Italy", "Latvia", "Lithuania", "Luxembourg",
+  "Malta", "Poland", "Portugal", "Romania", "Slovak Republic", "Slovenia", "Spain",
+  "United States", "All bilateral donors", "DAC countries", "Non-DAC countries",
+  "G7 countries", "EU27 countries", "EU27 & EU Institutions",
+]
+columns = [
+  "value_usd_current", "value_usd_constant", "value_eur_current", "value_eur_constant",
+  "value_gbp_current", "value_gbp_constant",
+]
+max_abs = 700000000
+
+# CAD runs about 1.37 times USD, so the same revisions reach -848m (EU Institutions to Europe).
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "data vintage: 2024 DAC2A figures revised since the 2.x API pull behind production"
+years = [2024]
+donors = [
+  "Austria", "Belgium", "Bulgaria", "Croatia", "Czechia", "Denmark", "EU Institutions",
+  "Finland", "Germany", "Hungary", "Ireland", "Italy", "Latvia", "Lithuania", "Luxembourg",
+  "Malta", "Poland", "Portugal", "Romania", "Slovak Republic", "Slovenia", "Spain",
+  "United States", "All bilateral donors", "DAC countries", "Non-DAC countries",
+  "G7 countries", "EU27 countries", "EU27 & EU Institutions",
+]
+columns = ["value_cad_current", "value_cad_constant"]
+max_abs = 960000000
+
+[[delta]]
+view = "recipients_view"
+kind = "new_in_candidate"
+reason = "data vintage: 2024 DAC2A figures revised since the 2.x API pull behind production"
+years = [2024]
+donors = ["United States"]
+recipients = ["Africa, unspecified"]
+
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "data vintage: 2024 DAC2A figures revised since the 2.x API pull behind production"
+years = [2024]
+columns = ["pct_total_donor", "pct_total_recipient"]
+max_abs = 0.106
+
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "data vintage: France's 2022 DAC2A figures revised since the 2.x API pull behind production"
+years = [2022]
+donors = [
+  "France", "All bilateral donors", "DAC countries", "G7 countries", "EU27 countries",
+  "EU27 & EU Institutions",
+]
+columns = [
+  "value_usd_current", "value_usd_constant", "value_eur_current", "value_eur_constant",
+  "value_gbp_current", "value_gbp_constant", "value_cad_current", "value_cad_constant",
+]
+max_abs = 2000000
+
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "data vintage: Austria's 2023 DAC2A figures revised since the 2.x API pull behind production"
+years = [2023]
+donors = [
+  "Austria", "All bilateral donors", "DAC countries", "EU27 countries",
+  "EU27 & EU Institutions",
+]
+columns = [
+  "value_usd_current", "value_usd_constant", "value_eur_current", "value_eur_constant",
+  "value_gbp_current", "value_gbp_constant", "value_cad_current", "value_cad_constant",
+]
+max_abs = 2000000
+
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "data vintage: France's 2022 revision moves every donor's pct_total_recipient for the recipients it touches"
+years = [2022]
+recipients = ["Algeria", "Kazakhstan", "Mauritania", "Montenegro", "Togo"]
+columns = ["pct_total_recipient"]
+max_abs = 0.0003
+
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "data vintage: Austria's 2023 revision moves every donor's pct_total_recipient, and Austria's own pct_total_donor, for the recipients it touches"
+years = [2023]
+recipients = ["South of Sahara, unspecified", "Southern Africa", "Southern Africa, unspecified"]
+columns = ["pct_total_recipient", "pct_total_donor"]
+max_abs = 0.02
+
+# Italy to Zambia, 2020: 0.8728m in the API, 0.8768m in the bulk file, carried into Italy's
+# regional totals and the donor groups.
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "data vintage: Italy to Zambia 2020 revised by 0.004m since the 2.x API pull"
+years = [2020]
+donors = [
+  "Italy", "All bilateral donors", "DAC countries", "G7 countries", "EU27 countries",
+  "EU27 & EU Institutions",
+]
+max_abs = 6000
+
+# pydeflate 2.7 reads the current DAC1 deflators (as in financing_view).
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "pydeflate 2.7 constant-price revision (current DAC1 deflators): Hungary 1992"
+donors = ["Hungary"]
+years = [1992]
+columns = ["value_usd_constant", "value_eur_constant", "value_gbp_constant", "value_cad_constant"]
+max_rel = 0.00711
+
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "pydeflate 2.7 constant-price revision (current DAC1 deflators): Estonia 1998-1999"
+donors = ["Estonia"]
+years = [1998, 1999]
+columns = ["value_usd_constant", "value_eur_constant", "value_gbp_constant", "value_cad_constant"]
+max_rel = 0.00362
+
+# Kuwait's and the UAE's 2004 flows to Tunisia cancel in Non-DAC countries, so a 200-unit
+# change in Kuwait's constant-price value (well within tolerance on its own row) is 0.8% of
+# the group's USD 24,600.
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "pydeflate 2.7 constant-price revision: Kuwait 2004, cancelling against the UAE in Non-DAC countries' Tunisia row"
+donors = ["Non-DAC countries"]
+years = [2004]
+recipients = ["Tunisia"]
+columns = ["value_usd_constant", "value_eur_constant", "value_gbp_constant", "value_cad_constant"]
+max_abs = 200
+
+# Two group series whose members cancel to exactly zero in USD current. Production showed
+# them as 0; the build drops them (drop_empty_series).
+[[delta]]
+view = "recipients_view"
+kind = "missing_in_candidate"
+reason = "members cancel to zero; the series is dropped instead of publishing a null USD value"
+years = [2004]
+donors = ["Non-DAC countries"]
+recipients = ["Benin"]
+indicators = ["Bilateral"]
+
+[[delta]]
+view = "recipients_view"
+kind = "missing_in_candidate"
+reason = "members cancel to zero; the series is dropped instead of publishing a null USD value"
+years = [2005]
+donors = ["EU27 countries"]
+recipients = ["Saint Kitts and Nevis"]
+indicators = ["Bilateral"]
+
+# Seven cells where the candidate is one 100-unit step below the baseline (-101 to -107).
+# Values are stored rounded to 100 units from float32 millions, and these sit on a rounding
+# midpoint. Switzerland to North of Sahara 2023 is 91.21505m in the bulk file, so float32
+# noise (about 8 units at that size) decides which way it rounds. The other six differ by
+# the same step.
+[[delta]]
+view = "recipients_view"
+kind = "value"
+reason = "one 100-unit rounding step on float32 millions (value on a rounding midpoint)"
+years = [2011, 2019, 2021, 2023]
+donors = ["EU27 & EU Institutions", "Poland", "Switzerland"]
+indicators = ["Bilateral"]
+recipients = [
+  "Angola", "Armenia", "Libya", "Philippines", "Dominican Republic", "Africa",
+  "North of Sahara",
+]
+columns = ["value_usd_current"]
+max_abs = 107
