@@ -1,0 +1,28 @@
+# Deltas the validation module should report as explained rather than as errors.
+#
+# Parity (a candidate build against a baseline snapshot) and cross-view (a view against the
+# topic_page outputs) match each delta against these entries. A matched delta is reported as
+# INFO "explained (<reason>)"; anything unmatched stays an ERROR, non-blocking unless --strict.
+#
+# Give a precise reason. Do not add an entry just to silence a delta nobody can explain.
+#
+# Fields:
+#   view        required: "financing_view", "recipients_view", "gender_view",
+#               "sectors_view" or "cross_view"
+#   reason      required: why the delta is expected
+#   kind        "value" (default), "missing_in_candidate" or "new_in_candidate"
+#   years       optional list of ints        } a filter left out, or an empty list,
+#   donors      optional list of names       } matches any value
+#   indicators  optional list of names       }
+#   recipients  optional list of names       }
+#   max_rel     optional, "value" only: largest |relative difference| this entry explains
+#
+# Example:
+#
+# [[delta]]
+# view = "financing_view"
+# kind = "value"
+# reason = "oda-data 3 reads PSI in grant equivalents from 2023 (DAC1 measure change)"
+# years = [2023, 2024]
+# indicators = ["Private sector instruments"]
+# max_rel = 0.05
