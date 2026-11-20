@@ -21,4 +21,4 @@ The cache lives in `src/data/cache/oda-reader`. Set `ODA_READER_CACHE_DIR` to us
 
 `src/data/scripts/validate.py` checks the built views and compares them with `topic_page`. `scripts/snapshot_baseline.sh` downloads the views in production into `validation_data/baseline`, which `validate.py --baseline validation_data/baseline` compares against.
 
-The `topic_page` outputs are not built in CI. Regenerate them with `PYTHONPATH=. uv run python -m src.data.topic_page.run_all`.
+The `topic_page` outputs are not built in CI. Regenerate them with `PYTHONPATH=. uv run python -m src.data.topic_page.run_all`. The ODA article on data.one.org reads them from `main` through CMS data sources: `tests/data/test_topic_page_contract.py` lists the files, columns and key numbers it depends on, so a rename there needs the matching change in the CMS.

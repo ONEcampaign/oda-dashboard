@@ -31,5 +31,17 @@
     "aid_to_health": "27.4 billion",
     "aid_to_health_share": "12.1%",
     "aid_to_humanitarian": "29.3 billion",
-    "aid_to_humanitarian_share": "13.0%"
+    "aid_to_humanitarian_share": "13.0%",
+    "ukraine_share_of_total_oda": "12.2%",
+    "ukraine_times_pre_invasion": "12 times",
+    "pre_invasion_year": "2021",
+    "pre_covid_year": "2019",
+    "other_oda_change_abs": "2.7%",
+    "other_oda_change_verb": "decreased",
+    "total_oda_change_since_pre_covid_abs": "24.1%",
+    "total_oda_change_since_pre_covid_noun": "increase",
+    "total_oda_change_abs": "22.8%",
+    "total_oda_change_verb": "decreased",
+    "previous_year": "2024",
+    "latest_year_detail": "2024"
 }

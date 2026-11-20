@@ -3,6 +3,9 @@
 Total ODA is the financing view's (DAC1 headline basis) and in-donor refugee costs its
 "Refugees in donor countries" (DAC1 line 1820, net flows), both converted per member and
 summed for DAC countries. The COVID-19 series is the static input covid.py reads.
+
+Also writes aid_to_ukraine_comparison.csv and the article's key numbers on Ukraine and on ODA
+without COVID-19, refugees and Ukraine.
 """
 
 import oda_data as oda
@@ -13,14 +16,22 @@ from src.data.config import DAC_COUNTRIES, DAC_COUNTRIES_NAME, PATHS, logger
 from src.data.topic_page.common import (
     AMOUNT_DECIMALS,
     CONSTANT_YEAR,
+    KEY_NUMBERS_FILE,
     LATEST_YEAR_AGG,
+    LATEST_YEAR_DETAIL,
     SHORT_START_YEAR,
+    describe_change,
     read_total_oda,
     to_usd_constant,
+    update_key_number,
     with_dac_total,
 )
 from src.data.topic_page.covid import covid_bi_multi_dac
-from src.data.topic_page.ukraine import dac_to_ukraine_total
+from src.data.topic_page.ukraine import (
+    PRE_INVASION_YEAR,
+    dac_to_ukraine_total,
+    write_ukraine_comparison,
+)
 
 # DAC1 line for in-donor refugee costs, read in net flows as the financing view reads it.
 IDRC_LINE: int = 1820
@@ -29,13 +40,17 @@ YEARS: range = range(SHORT_START_YEAR, LATEST_YEAR_AGG + 1)
 
 TOTAL_ODA: str = "Total ODA"
 IDRC: str = "IDRC"
+UKRAINE: str = "ODA to Ukraine"
+OTHER_ODA: str = "Other ODA"
+# The article compares ODA without COVID-19, refugees and Ukraine with this pre-COVID year.
+PRE_COVID_YEAR: int = 2019
 OUTPUT_COLUMNS: list[str] = [
     "Year",
     "Donor",
     "COVID ODA",
     IDRC,
-    "ODA to Ukraine",
-    "Other ODA",
+    UKRAINE,
+    OTHER_ODA,
     TOTAL_ODA,
 ]
 
@@ -81,6 +96,41 @@ def read_total_and_idrc(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataF
     )
 
 
+def _key_numbers(dac: pd.DataFrame) -> dict[str, str]:
+    """The article's figures on aid to Ukraine and on ODA without COVID-19, IDRC and Ukraine.
+
+    All are for LATEST_YEAR_DETAIL, the last year with ODA to Ukraine.
+
+    Args:
+        dac: The DAC countries rows of oda_covid, indexed by Year, before the latest year's
+            Other ODA moves to Preliminary.
+
+    Raises:
+        ValueError: If ODA to Ukraine does not end in LATEST_YEAR_DETAIL.
+    """
+    year = dac[UKRAINE].last_valid_index()
+    if year != LATEST_YEAR_DETAIL:
+        raise ValueError(
+            f"ODA to Ukraine ends in {year}, expected {LATEST_YEAR_DETAIL}"
+        )
+    other = describe_change(
+        dac.at[year, OTHER_ODA] / dac.at[PRE_COVID_YEAR, OTHER_ODA] - 1
+    )
+    total = describe_change(
+        dac.at[year, TOTAL_ODA] / dac.at[PRE_COVID_YEAR, TOTAL_ODA] - 1
+    )
+    return {
+        "ukraine_share_of_total_oda": f"{dac.at[year, UKRAINE] / dac.at[year, TOTAL_ODA]:.1%}",
+        "ukraine_times_pre_invasion": f"{dac.at[year, UKRAINE] / dac.at[PRE_INVASION_YEAR, UKRAINE]:.0f} times",
+        "pre_invasion_year": str(PRE_INVASION_YEAR),
+        "pre_covid_year": str(PRE_COVID_YEAR),
+        "other_oda_change_abs": other["abs"],
+        "other_oda_change_verb": other["verb"],
+        "total_oda_change_since_pre_covid_abs": total["abs"],
+        "total_oda_change_since_pre_covid_noun": total["noun"],
+    }
+
+
 def total_oda_excluding_covid_ukraine_idrc(
     ctx: oda.Context, provenance: ProvenanceLog
 ) -> None:
@@ -92,9 +142,9 @@ def total_oda_excluding_covid_ukraine_idrc(
         ctx: From open_context.
         provenance: Log to record every read and the conversion factors in.
     """
-    ukraine = dac_to_ukraine_total(ctx, provenance).rename(
-        columns={"value": "ODA to Ukraine"}
-    )
+    ukraine = dac_to_ukraine_total(ctx, provenance)
+    write_ukraine_comparison(ukraine)
+    ukraine = ukraine.rename(columns={"value": UKRAINE})
     covid = covid_bi_multi_dac()[["donor_name", "year", "value"]].rename(
         columns={"value": "COVID ODA"}
     )
@@ -107,26 +157,31 @@ def total_oda_excluding_covid_ukraine_idrc(
         .rename(columns={"donor_name": "Donor", "year": "Year"})
     )
 
-    full_data["Other ODA"] = round(
+    full_data[OTHER_ODA] = round(
         full_data[TOTAL_ODA]
         - full_data["COVID ODA"]
         - full_data[IDRC]
-        - full_data["ODA to Ukraine"].fillna(0),
+        - full_data[UKRAINE].fillna(0),
         1,
     )
     full_data = full_data[OUTPUT_COLUMNS].round(
         {
             TOTAL_ODA: AMOUNT_DECIMALS,
             IDRC: AMOUNT_DECIMALS,
-            "ODA to Ukraine": AMOUNT_DECIMALS,
+            UKRAINE: AMOUNT_DECIMALS,
         }
     )
 
-    is_preliminary = full_data["Year"] == LATEST_YEAR_AGG
-    full_data["Preliminary"] = full_data["Other ODA"].where(is_preliminary)
-    full_data.loc[is_preliminary, "Other ODA"] = None
-
     is_dac = full_data["Donor"] == DAC_COUNTRIES_NAME
+    update_key_number(
+        PATHS.TOPIC_PAGE / KEY_NUMBERS_FILE,
+        _key_numbers(full_data[is_dac].set_index("Year")),
+    )
+
+    is_preliminary = full_data["Year"] == LATEST_YEAR_AGG
+    full_data["Preliminary"] = full_data[OTHER_ODA].where(is_preliminary)
+    full_data.loc[is_preliminary, OTHER_ODA] = None
+
     full_data = pd.concat([full_data[is_dac], full_data[~is_dac]], ignore_index=True)
 
     full_data.to_csv(PATHS.TOPIC_PAGE / "oda_covid.csv", index=False)

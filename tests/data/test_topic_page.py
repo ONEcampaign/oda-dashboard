@@ -69,3 +69,23 @@ def test_dac_ratio_counts_only_members_reporting_gni(table):
     assert dac["oda_current"] == pytest.approx(30.0)
     assert dac["oda_constant"] == pytest.approx(60.0)
     assert dac["oda_gni"] == pytest.approx(10.0 / 1_000.0)
+
+
+@pytest.mark.parametrize(
+    ("change", "expected"),
+    [
+        (-0.027, {"abs": "2.7%", "verb": "decreased", "noun": "decrease"}),
+        (0.241, {"abs": "24.1%", "verb": "increased", "noun": "increase"}),
+        (0.0, {"abs": "0.0%", "verb": "increased", "noun": "increase"}),
+    ],
+)
+def test_describe_change_words(change: float, expected: dict[str, str]) -> None:
+    """A change becomes its unsigned size and the matching verb and noun."""
+    assert common.describe_change(change) == expected
+
+
+@pytest.mark.parametrize("change", [float("nan"), float("inf")])
+def test_describe_change_rejects_non_finite(change: float) -> None:
+    """A missing or infinite change raises instead of printing "nan%"."""
+    with pytest.raises(ValueError, match="Cannot describe"):
+        common.describe_change(change)
