@@ -768,17 +768,36 @@ def _option_delta(
     }
 
 
+def _option_path(delta: dict) -> str:
+    """The dotted options.json path a delta is about: the item's own path when one-sided."""
+    if delta["change"] == "changed" or delta["item"] is None:
+        return delta["path"]
+    return f"{delta['path']}.{delta['item']}" if delta["path"] else delta["item"]
+
+
 def _explain_option(delta: dict, view: str, expected: Sequence[ExpectedDelta]) -> str:
-    """The reason for a one-sided donor/recipient/indicator option, else UNEXPLAINED."""
+    """The reason for an options delta, else UNEXPLAINED.
+
+    A one-sided donor, recipient or indicator list item is matched by that dimension. A
+    changed value, or any other key or item added or removed, is matched by its dotted
+    path against entries with paths. Reorders are never explained.
+    """
+    change = delta["change"]
     dimension = _OPTION_DIMENSIONS.get(delta["path"])
-    if dimension is None or delta["change"] not in (
-        DeltaKind.MISSING_IN_CANDIDATE,
-        DeltaKind.NEW_IN_CANDIDATE,
-    ):
-        return UNEXPLAINED
-    entry = find_explanation(
-        list(expected), view=view, kind=delta["change"], **{dimension: delta["item"]}
-    )
+    one_sided = change in (DeltaKind.MISSING_IN_CANDIDATE, DeltaKind.NEW_IN_CANDIDATE)
+    if dimension is not None and one_sided:
+        entry = find_explanation(
+            list(expected), view=view, kind=change, **{dimension: delta["item"]}
+        )
+    elif one_sided or change == "changed":
+        entry = find_explanation(
+            [e for e in expected if e.paths is not None],
+            view=view,
+            kind=DeltaKind.VALUE if change == "changed" else change,
+            path=_option_path(delta),
+        )
+    else:
+        entry = None
     return UNEXPLAINED if entry is None else entry.reason
 
 

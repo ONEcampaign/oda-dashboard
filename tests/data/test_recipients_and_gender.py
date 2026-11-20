@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from src.data.analysis_tools import recipients
-from src.data.analysis_tools.gender import derive_not_screened
+from src.data.analysis_tools.gender import label_marker_scores
 from src.data.analysis_tools.oda import ProvenanceLog
 from src.data.analysis_tools.recipients import (
     aggregate_recipient_names,
@@ -190,33 +190,53 @@ def test_dac2a_read_raises_on_a_missing_column(monkeypatch, tmp_path):
         )
 
 
-def test_not_screened_is_allocable_minus_screened():
-    index = pd.MultiIndex.from_tuples(
-        [(2023, 302), (2023, 4)], names=["year", "donor_code"]
+def _markers(rows: list[tuple[str, float]]) -> pd.DataFrame:
+    """gender_marker rows for France (4) to Kenya (248) in 2023, from (score, value)."""
+    return pd.DataFrame(
+        [
+            {
+                "year": 2023,
+                "donor_code": 4,
+                "donor_name": "France",
+                "recipient_code": 248,
+                "score": score,
+                "value": value,
+            }
+            for score, value in rows
+        ]
     )
-    scores = {
-        "principal": pd.Series([1.0, 2.0], index=index),
-        "significant": pd.Series([3.0, 0.0], index=index),
-        "not_targeted": pd.Series([6.0, 1.0], index=index),
-    }
-    allocable = pd.Series([10.0, 8.0], index=index)
-    out = derive_not_screened(scores, allocable).set_index(
-        ["donor_code", "indicator_name"]
-    )
-    assert out.loc[(302, "Not screened"), "value"] == 0.0
-    assert out.loc[(4, "Not screened"), "value"] == 5.0
-    assert out.groupby(level="donor_code")["value"].sum().to_dict() == {
-        4: 8.0,
-        302: 10.0,
-    }
 
 
-def test_not_screened_rejects_screened_rows_outside_the_allocable_total():
-    index = pd.MultiIndex.from_tuples([(2023, 302)], names=["year", "donor_code"])
-    other = pd.MultiIndex.from_tuples([(2023, 4)], names=["year", "donor_code"])
-    scores = {"principal": pd.Series([1.0], index=other)}
-    with pytest.raises(ValueError, match="outside the allocable total"):
-        derive_not_screened(scores, pd.Series([1.0], index=index))
+def test_marker_scores_take_the_indicator_labels_and_lose_zero_rows():
+    out = label_marker_scores(
+        _markers(
+            [
+                ("principal", 1.0),
+                ("significant", 2.0),
+                ("not_targeted", 0.0),
+                ("not_screened", -0.5),
+            ]
+        )
+    )
+    assert out.set_index("indicator_name")["value"].to_dict() == {
+        "Main target": 1.0,
+        "Secondary target": 2.0,
+        "Not screened": -0.5,
+    }
+    assert "score" not in out.columns
+
+
+@pytest.mark.parametrize(
+    ("rows", "match"),
+    [
+        ([("total_allocable", 1.0)], "without a label"),
+        ([("principal", 1.0), ("principal", 2.0)], "repeat a key"),
+        ([(None, 1.0)], "missing key"),
+    ],
+)
+def test_marker_scores_raise_on_bad_rows(rows, match):
+    with pytest.raises(ValueError, match=match):
+        label_marker_scores(_markers(rows))
 
 
 def test_ldc_members_come_from_the_crs_classification_and_record_its_release(

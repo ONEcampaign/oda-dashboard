@@ -96,8 +96,9 @@ function App() {
               <p>
                 Totals for the same donor and year therefore differ between tabs. All four tabs cover ODA only. From
                 2023 that includes private sector instruments, which the CRS reports in a category of their own from that
-                year, so Sectors and Gender figures rise in 2023 partly for that reason. Other official flows, which are
-                not ODA, are left out.
+                year, so Sectors figures rise in 2023 partly for that reason. The gender marker data the Gender tab uses
+                leave that category out, so Gender figures from 2023 do not include private sector instruments. Other
+                official flows, which are not ODA, are left out.
               </p>
               <h2 className="font-bold text-xl mt-8 mb-2">How are donor groups defined?</h2>
               <p>
@@ -184,7 +185,8 @@ function App() {
               <p>
                 Donors score each activity 2 if gender equality is its main objective, 1 if it is a significant one, and
                 0 if it was screened and does not target gender equality. Activities that were not screened are left
-                blank, and the dashboard shows them as "Not screened".
+                blank, and the dashboard shows them as "Not screened". The gender marker data the dashboard uses start in
+                2010, so the Gender tab starts in that year.
               </p>
               <p>
                 Shares are calculated over a donor's bilateral allocable aid, which the four categories add up to. The
