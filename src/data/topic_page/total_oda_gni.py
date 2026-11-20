@@ -22,7 +22,6 @@ from src.data.topic_page.common import (
     CONSTANT_YEAR,
     LATEST_YEAR_AGG,
     LONG_START_YEAR,
-    latest_years,
     oda_gni_table,
     sort_dac_first,
 )
@@ -44,8 +43,6 @@ def _billions_or_millions(value: float) -> str:
 
 def oda_gni_ts(table: pd.DataFrame) -> None:
     """Write oda_gni_ts.csv: ODA (constant USD millions) and ODA/GNI (%, 2 dp).
-
-    Only the latest CHART_YEARS years are written.
 
     Args:
         table: From oda_gni_table, for DAC members, EU Institutions and DAC countries.
@@ -70,7 +67,7 @@ def oda_gni_ts(table: pd.DataFrame) -> None:
         data["name"] == EU_INSTITUTIONS_NAME, np.nan, data["ODA/GNI (right-axis)"]
     )
 
-    latest_years(data, "year").to_csv(PATHS.TOPIC_PAGE / "oda_gni_ts.csv", index=False)
+    data.to_csv(PATHS.TOPIC_PAGE / "oda_gni_ts.csv", index=False)
     logger.info("Saved chart oda_gni_ts.csv")
 
 
@@ -78,8 +75,7 @@ def oda_gni_year_columns(table: pd.DataFrame) -> None:
     """Write oda_gni_single_year_ts.csv: ODA, the gap to 0.7% and ODA/GNI, latest year first.
 
     Amounts are constant USD of CONSTANT_YEAR. The gap is converted with the donor's own
-    constant/current ratio of Total ODA (for DAC countries, the total's). Only the latest
-    CHART_YEARS years are written.
+    constant/current ratio of Total ODA (for DAC countries, the total's).
 
     Args:
         table: From oda_gni_table, for DAC members and DAC countries.
@@ -114,9 +110,7 @@ def oda_gni_year_columns(table: pd.DataFrame) -> None:
         ]
     )
 
-    latest_years(data, "Year").to_csv(
-        PATHS.TOPIC_PAGE / "oda_gni_single_year_ts.csv", index=False
-    )
+    data.to_csv(PATHS.TOPIC_PAGE / "oda_gni_single_year_ts.csv", index=False)
     logger.info("Saved chart oda_gni_single_year_ts.csv")
 
 
