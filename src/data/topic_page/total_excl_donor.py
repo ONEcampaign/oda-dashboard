@@ -21,6 +21,7 @@ from src.data.topic_page.common import (
     LATEST_YEAR_DETAIL,
     SHORT_START_YEAR,
     describe_change,
+    latest_years,
     read_total_oda,
     to_usd_constant,
     update_key_number,
@@ -137,6 +138,7 @@ def total_oda_excluding_covid_ukraine_idrc(
     """Write oda_covid.csv: Total ODA and its parts per DAC member and year, DAC first.
 
     The latest year is preliminary, so its "Other ODA" moves to the Preliminary column.
+    Only the latest CHART_YEARS years are written; the key numbers use every year.
 
     Args:
         ctx: From open_context.
@@ -184,7 +186,9 @@ def total_oda_excluding_covid_ukraine_idrc(
 
     full_data = pd.concat([full_data[is_dac], full_data[~is_dac]], ignore_index=True)
 
-    full_data.to_csv(PATHS.TOPIC_PAGE / "oda_covid.csv", index=False)
+    latest_years(full_data, "Year").to_csv(
+        PATHS.TOPIC_PAGE / "oda_covid.csv", index=False
+    )
     logger.info("Saved chart oda_covid.csv")
 
 

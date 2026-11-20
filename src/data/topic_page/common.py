@@ -41,6 +41,9 @@ ODA_GNI_TARGET: float = 0.007
 TOTAL_ODA_INDICATOR: str = "oecd.dac1.total_oda"
 DONOR_KEYS: list[str] = ["donor_name", "year"]
 
+# The ODA article's time-series charts show this many of each file's latest years.
+CHART_YEARS: int = 10
+
 # The key numbers the ODA article reads as {{oda_topic.<key>}} tokens.
 KEY_NUMBERS_FILE: str = "oda_key_numbers.json"
 
@@ -64,6 +67,25 @@ def format_percentage(series: pd.Series, decimals: int = 1) -> pd.Series:
 def format_billions(series: pd.Series, decimals: int = 1) -> pd.Series:
     """Format absolute values in billions with thousands separators, e.g. 1.5e9 -> "1.5"."""
     return _format(series / BILLION, f"{{:,.{decimals}f}}")
+
+
+def latest_years(
+    df: pd.DataFrame, year_column: str, years: int = CHART_YEARS
+) -> pd.DataFrame:
+    """Keep the rows in the latest `years` years of df, counted back from its last year.
+
+    Args:
+        df: A chart frame.
+        year_column: Its year column.
+        years: How many years to keep.
+
+    Raises:
+        ValueError: If year_column holds no year.
+    """
+    last = df[year_column].max()
+    if pd.isna(last):
+        raise ValueError(f"{year_column} holds no year")
+    return df.loc[df[year_column] > int(last) - years]
 
 
 def describe_change(change: float, decimals: int = 1) -> dict[str, str]:
