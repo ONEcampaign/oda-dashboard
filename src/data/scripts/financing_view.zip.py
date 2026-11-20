@@ -1,35 +1,36 @@
 """Builds the financing view: ODA totals and their components, by donor and year.
 
 Shape of the pipeline:
-    1. DAC1 aggregates, private sector instruments and in-donor items, read in net flows up to
-       GRANT_EQUIVALENT_START_YEAR and grant equivalents from then on
-    2. the grants / non-grants split, derived from one indicator read under two measures
-    3. the EU27 + institutions aggregate, which oda_data weights so that member states'
-       contributions to the institutions are not counted twice
-    4. donor aggregates summed locally, then shares of total ODA and of GNI
-    5. one zip on stdout for Observable: the data as parquet and its dropdown options
+    1. DAC1 aggregates on oda-data's headline basis (net flows before
+       GRANT_EQUIVALENT_START_YEAR, grant equivalents from then on), total private sector
+       instruments in net flows then grant equivalents, and the in-donor items and the PSI
+       split by approach in net flows; each row's type is the basis it was read on
+    2. the grants / non-grants split of Total ODA, from the grants flow
+    3. donor aggregates summed locally, including the EU27 + institutions bloc, whose
+       institutions are weighted so member contributions to them are not counted twice
+       (analysis_tools.eu)
+    4. shares of total ODA and of GNI
+    5. one zip on stdout for Observable: the data as parquet and its dropdown options, with
+       the provenance of every table read
 
 Output is keyed by name: year, donor_name, indicator_name, type.
 """
 
-from collections.abc import Callable
-
+import oda_data as oda
 import pandas as pd
-from oda_data import OECDClient
-from oda_data.indicators.research.eu import get_eui_plus_bilateral_providers_indicator
 
+from src.data.analysis_tools.eu import eui_weights, weight_eu_institutions
 from src.data.analysis_tools.financing import (
+    check_one_type_per_series,
     drop_grants_split,
-    resolve_indicator_duplicates,
     split_grants,
+    sum_by_name,
+    to_financing_rows,
     years_missing_grants,
 )
 from src.data.analysis_tools.naming import map_config_values
-from src.data.analysis_tools.outputs import (
-    build_view_options,
-    set_cache_dir,
-    view_archive_to_stdout,
-)
+from src.data.analysis_tools.oda import ProvenanceLog, open_context, run_query
+from src.data.analysis_tools.outputs import build_view_options, view_archive_to_stdout
 from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
     add_share_of_gni,
@@ -37,12 +38,11 @@ from src.data.analysis_tools.transformations import (
     build_donor_group_totals,
     convert_values_to_units,
     drop_empty_values,
+    get_group_total,
     get_member_gni,
     widen_currency_price,
 )
 from src.data.config import (
-    AGGREGATE_FINANCING_INDICATORS,
-    ALL_FINANCING_INDICATORS,
     CORE_ODA,
     DEFAULT_DONOR,
     DONOR_GROUPS,
@@ -54,298 +54,250 @@ from src.data.config import (
     FINANCING_TIME,
     FINANCING_TYPES,
     GRANT_EQUIVALENT_START_YEAR,
-    IN_DONOR_FINANCING_INDICATORS,
+    GRANTS_BASIS,
+    GRANTS_FLOW,
+    HEADLINE_FINANCING_INDICATORS,
+    IN_DONOR_FINANCING_LINES,
+    PARTIAL_YEAR_FINANCING_INDICATORS,
     PROVIDERS,
     PSI,
-    PSI_APPROACH_INDICATORS,
+    PSI_APPROACH_LINES,
+    PSI_FLOW_INDICATOR,
+    PSI_GRANT_EQUIVALENT_LINES,
     PSI_GRANT_EQUIVALENT_START_YEAR,
-    PSI_TOTAL_INDICATORS,
     PSI_TRANSITION_YEARS,
     TOTAL_ODA,
     logger,
 )
 
-FLOW_YEARS: range = range(FINANCING_TIME["start"], GRANT_EQUIVALENT_START_YEAR)
-GE_YEARS: range = range(GRANT_EQUIVALENT_START_YEAR, FINANCING_TIME["end"] + 1)
+NET: str = "net_disbursement"
+GRANT_EQUIVALENT: str = "grant_equivalent"
+
 ALL_YEARS: range = range(FINANCING_TIME["start"], FINANCING_TIME["end"] + 1)
 PSI_FLOW_YEARS: range = range(FINANCING_TIME["start"], PSI_GRANT_EQUIVALENT_START_YEAR)
 PSI_GE_YEARS: range = range(PSI_GRANT_EQUIVALENT_START_YEAR, FINANCING_TIME["end"] + 1)
-# Read as net flows in every year.
-NET_FLOW_INDICATORS: list[str] = list(
-    IN_DONOR_FINANCING_INDICATORS | PSI_APPROACH_INDICATORS
-)
-GRANTS_INDICATOR: list[str] = ["DAC1.10.1010"]
+# The years the EU27 + institutions bloc is published for, on each basis it is read on.
+EU27_EUI_YEARS: dict[str, range] = {
+    NET: range(FINANCING_TIME["start"], EU27_EUI_LAST_YEAR + 1),
+    GRANT_EQUIVALENT: range(GRANT_EQUIVALENT_START_YEAR, EU27_EUI_LAST_YEAR + 1),
+}
+NET_FLOW_LINES: dict[int, str] = IN_DONOR_FINANCING_LINES | PSI_APPROACH_LINES
 
-# Turns a configured client and indicator codes into raw rows.
-Reader = Callable[[OECDClient, list[str]], pd.DataFrame]
-
-
-def read_indicators(client: OECDClient, indicators: list[str]) -> pd.DataFrame:
-    """Read indicators for each provider on its own."""
-    return client.get_indicators(indicators)
+# Every row of the view is labelled by basis, and the EU weight must use the same one.
+if set(EU27_EUI_YEARS) != set(FINANCING_TYPES):
+    raise ValueError("EU27_EUI_YEARS must cover every basis in FINANCING_TYPES")
 
 
-def read_eui_eu27(client: OECDClient, indicators: list[str]) -> pd.DataFrame:
-    """Read indicators for the EU27 + institutions aggregate.
+def read_dac1(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataFrame:
+    """Read each DAC1 indicator for each provider, on the basis it is reported on.
 
-    oda_data scales the institutions' spending by the share not funded by member state
-    contributions, so summing members and institutions does not double count.
-    """
-    return get_eui_plus_bilateral_providers_indicator(client, indicator=indicators)
-
-
-def _read(
-    read: Reader,
-    providers: dict[int, str],
-    years: range,
-    measure: str | list[str],
-    indicators: list[str],
-) -> pd.DataFrame:
-    """Build a bulk-download client, read indicators through it and label their type.
-
-    The type follows the headline measure, the first when several are read together.
-    """
-    client = OECDClient(
-        years=years, providers=list(providers), measure=measure, use_bulk_download=True
-    )
-    headline = measure if isinstance(measure, str) else measure[0]
-    return read(client, indicators).assign(type=FINANCING_TYPES[headline])
-
-
-def read_dac1(read: Reader, providers: dict[int, str]) -> pd.DataFrame:
-    """Read each DAC1 indicator in the measure it is reported in, which sets its type.
-
-    The aggregates switch to grant equivalents at GRANT_EQUIVALENT_START_YEAR. In-donor items
-    stay in net flows throughout: preliminary data for the latest year report them only as
-    flows, and for earlier years their grant equivalents equal their flows, since they are
-    grants. Total PSI was reported under the provisional methods, as net flows, until the
-    revised methods began in PSI_GRANT_EQUIVALENT_START_YEAR, and its split by approach only
-    ever covers those provisional-method amounts.
+    The aggregates follow oda-data's headline basis. In-donor items stay in net flows
+    throughout: preliminary data for the latest year report them only as flows, and for
+    earlier years their grant equivalents equal their flows, since they are grants. Total
+    PSI was reported under the provisional methods, as net flows, until the revised methods
+    began in PSI_GRANT_EQUIVALENT_START_YEAR; from then it is the sum of lines 11030 and
+    11040 in grant equivalents. Its split by approach only ever covers the
+    provisional-method amounts, in net flows.
 
     Args:
-        read: How to read each client.
-        providers: Donor codes to read.
+        ctx: From open_context.
+        provenance: Log to record every query in.
 
     Returns:
-        Raw rows, with duplicates from renumbered indicator codes removed.
+        One financing row per year, donor, indicator name and type, in current USD.
     """
-    aggregates = list(AGGREGATE_FINANCING_INDICATORS)
-    psi_total = list(PSI_TOTAL_INDICATORS)
-    parts = [
-        _read(read, providers, ALL_YEARS, "net_disbursement", NET_FLOW_INDICATORS),
-        _read(read, providers, FLOW_YEARS, "net_disbursement", aggregates),
-        _read(read, providers, GE_YEARS, "grant_equivalent", aggregates),
-        _read(read, providers, PSI_FLOW_YEARS, "net_disbursement", psi_total),
-        _read(read, providers, PSI_GE_YEARS, "grant_equivalent", psi_total),
-    ]
-    return resolve_indicator_duplicates(pd.concat(parts, ignore_index=True))
-
-
-def read_grants(read: Reader, providers: dict[int, str]) -> pd.DataFrame:
-    """Read Total ODA under its headline measure and the grant-only measure.
-
-    Args:
-        read: How to read each client.
-        providers: Donor codes to read.
-
-    Returns:
-        Raw DAC1.10.1010 rows for split_grants.
-    """
-    # The headline measure comes first: get_eui_plus_bilateral_providers_indicator derives
-    # the EU institutions weight from measure[0] only. With the grants measure first the
-    # weight is computed on grants (negative in some years), which understates the EUI share
-    # and breaks Grants + Non-grants == Total ODA for that aggregate.
-    parts = [
-        _read(
-            read,
-            providers,
-            FLOW_YEARS,
-            ["net_disbursement", "net_disbursement_grant"],
-            GRANTS_INDICATOR,
-        ),
-        _read(
-            read,
-            providers,
-            GE_YEARS,
-            ["grant_equivalent", "net_disbursement_grant"],
-            GRANTS_INDICATOR,
-        ),
-    ]
-    return pd.concat(parts, ignore_index=True)
-
-
-def get_dac1() -> pd.DataFrame:
-    """Read the DAC1 indicators for each provider.
-
-    Summing by name adds up the codes that are parts of one figure (SUMMED_FINANCING_NAMES);
-    every other name has one code per donor and year once duplicates are resolved.
-
-    Returns:
-        One row per year, donor and indicator name.
-    """
-    return (
-        read_dac1(read_indicators, PROVIDERS)
-        .assign(
-            indicator_name=lambda d: map_config_values(
-                d["one_indicator"], ALL_FINANCING_INDICATORS, what="Indicator codes"
-            )
-        )
-        .groupby(
-            ["year", "donor_code", "donor_name", "type", "indicator_name"],
-            dropna=False,
-            observed=True,
-        )["value"]
-        .sum()
-        .reset_index()
-    )
-
-
-def get_grants() -> pd.DataFrame:
-    """Split each provider's total ODA into grants and non-grants.
-
-    Returns:
-        Long-form rows for the two derived indicator names.
-    """
-    return split_grants(
-        read_grants(read_indicators, PROVIDERS),
-        ["year", "donor_code", "donor_name", "type"],
-    )
-
-
-def get_eui_eu27_dac1() -> pd.DataFrame:
-    """Read the DAC1 indicators for the EU27 + institutions aggregate.
-
-    Returns:
-        One row per year, indicator, currency and price for the aggregate.
-    """
-    converted = add_currencies_and_prices(
-        read_dac1(read_eui_eu27, EU_TOTAL), base_year=FINANCING_TIME["base"]
-    )
-    return (
-        converted.assign(
-            indicator_name=lambda d: map_config_values(
-                d["one_indicator"], ALL_FINANCING_INDICATORS, what="Indicator codes"
+    providers = list(PROVIDERS)
+    headline = [
+        to_financing_rows(
+            run_query(
+                ctx,
+                indicator,
+                provenance=provenance,
+                years=ALL_YEARS,
+                providers=providers,
+                allow_partial=indicator in PARTIAL_YEAR_FINANCING_INDICATORS,
             ),
-            donor_name=EU27_EUI_NAME,
+            name,
         )
-        .groupby(
-            ["year", "donor_name", "type", "currency", "price", "indicator_name"],
-            dropna=False,
-            observed=True,
-        )["value"]
-        .sum()
-        .reset_index()
+        for indicator, name in HEADLINE_FINANCING_INDICATORS.items()
+    ]
+    psi_flows = run_query(
+        ctx,
+        PSI_FLOW_INDICATOR,
+        provenance=provenance,
+        years=PSI_FLOW_YEARS,
+        providers=providers,
+        basis=NET,
     )
+    psi_grant_equivalents = run_query(
+        ctx,
+        "oecd.dac1.lines",
+        provenance=provenance,
+        lines=list(PSI_GRANT_EQUIVALENT_LINES),
+        years=PSI_GE_YEARS,
+        providers=providers,
+        basis=GRANT_EQUIVALENT,
+        by=["provider", "year", "line"],
+    )
+    net_lines = run_query(
+        ctx,
+        "oecd.dac1.lines",
+        provenance=provenance,
+        lines=list(NET_FLOW_LINES),
+        years=ALL_YEARS,
+        providers=providers,
+        basis=NET,
+        by=["provider", "year", "line"],
+    )
+    rows = pd.concat(
+        [
+            *headline,
+            to_financing_rows(psi_flows, PSI),
+            to_financing_rows(psi_grant_equivalents, PSI),
+            to_financing_rows(
+                net_lines,
+                map_config_values(net_lines["line"], NET_FLOW_LINES, what="DAC1 lines"),
+            ),
+        ],
+        ignore_index=True,
+    )
+    return sum_by_name(rows)
 
 
-def get_eui_eu27_grants() -> pd.DataFrame:
-    """Split the EU27 + institutions aggregate into grants and non-grants.
+def read_grants(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataFrame:
+    """Read the grants flow of each provider's Total ODA.
+
+    Args:
+        ctx: From open_context.
+        provenance: Log to record the query in.
 
     Returns:
-        Long-form rows for the two derived indicator names, for the aggregate.
+        The query result: one row per donor and year that reports grants.
     """
-    converted = add_currencies_and_prices(
-        read_grants(read_eui_eu27, EU_TOTAL), base_year=FINANCING_TIME["base"]
-    )
-    return (
-        split_grants(converted, ["year", "donor_code", "type", "currency", "price"])
-        .groupby(
-            ["year", "indicator_name", "type", "currency", "price"],
-            dropna=False,
-            observed=True,
-        )["value"]
-        .sum()
-        .reset_index()
-        .assign(donor_name=EU27_EUI_NAME)
+    return run_query(
+        ctx,
+        "oecd.dac1.total_oda",
+        provenance=provenance,
+        years=ALL_YEARS,
+        providers=list(PROVIDERS),
+        basis=GRANTS_BASIS,
+        flows=GRANTS_FLOW,
     )
 
 
-def get_financing_data() -> pd.DataFrame:
+def read_eu_weights(
+    ctx: oda.Context, provenance: ProvenanceLog
+) -> dict[str, dict[int, float]]:
+    """Read the EU Institutions weight per year, keyed by the financing type it applies to.
+
+    Args:
+        ctx: From open_context.
+        provenance: Log to record the queries in.
+
+    Returns:
+        ``{type: {year: weight}}``.
+    """
+    return {
+        FINANCING_TYPES[basis]: eui_weights(
+            ctx, years, basis=basis, provenance=provenance
+        )
+        for basis, years in EU27_EUI_YEARS.items()
+    }
+
+
+def build_eu27_eui_total(
+    converted: pd.DataFrame, weights: dict[str, dict[int, float]]
+) -> pd.DataFrame:
+    """Sum the EU27 + institutions bloc, with the institutions weighted.
+
+    Args:
+        converted: Individual donors' rows in every currency and price.
+        weights: From read_eu_weights.
+
+    Returns:
+        The bloc's rows up to EU27_EUI_LAST_YEAR, named EU27_EUI_NAME.
+    """
+    logger.info("EU27 & EU Institutions: published up to %s", EU27_EUI_LAST_YEAR)
+    members = converted.loc[
+        lambda d: d["donor_code"].isin(EU_TOTAL) & (d["year"] <= EU27_EUI_LAST_YEAR)
+    ]
+    weighted = pd.concat(
+        [
+            weight_eu_institutions(rows, weights[str(financing_type)])
+            for financing_type, rows in members.groupby("type", observed=True)
+        ],
+        ignore_index=True,
+    )
+    return get_group_total(
+        weighted,
+        EU_TOTAL,
+        group_cols=["year", "indicator_name", "type", "currency", "price"],
+        group_name=EU27_EUI_NAME,
+    )
+
+
+def get_financing_data(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataFrame:
     """Assemble the financing view from its parts.
+
+    Args:
+        ctx: From open_context.
+        provenance: Log to record every query and the conversion factors in.
 
     Returns:
         Wide frame keyed by year, donor_name, indicator_name and type, with one column per
         currency and price pair plus the two share columns.
     """
-    dac1 = get_dac1()
-    grants = get_grants()
+    dac1 = read_dac1(ctx, provenance)
+    grants = read_grants(ctx, provenance)
+    total_oda = dac1.loc[lambda d: d["indicator_name"] == TOTAL_ODA]
+    donors = pd.concat([dac1, split_grants(total_oda, grants)], ignore_index=True)
 
-    non_eu_financing = pd.concat([dac1, grants])
-
-    # Add currencies and prices
-    non_eu_financing = add_currencies_and_prices(
-        non_eu_financing, base_year=FINANCING_TIME["base"]
+    converted = add_currencies_and_prices(
+        donors, base_year=FINANCING_TIME["base"], provenance=provenance
     )
-
-    usd_current = non_eu_financing.loc[
+    usd_current = converted.loc[
         lambda d: (d["currency"] == "USD") & (d["price"] == "current")
     ]
+
     group_totals = build_donor_group_totals(
-        non_eu_financing, ["year", "indicator_name", "type", "currency", "price"]
+        converted, ["year", "indicator_name", "type", "currency", "price"]
     )
     donor_groups = [
-        drop_grants_split(total, years_missing_grants(usd_current, DONOR_GROUPS[name]))
+        drop_grants_split(
+            total, years_missing_grants(total_oda, grants, DONOR_GROUPS[name])
+        )
         for name, total in group_totals.items()
     ]
-
-    eui_eu27 = pd.concat(
-        [
-            get_eui_eu27_dac1(),
-            drop_grants_split(
-                get_eui_eu27_grants(), years_missing_grants(usd_current, EU_TOTAL)
-            ),
-        ]
+    eu27_eui = drop_grants_split(
+        build_eu27_eui_total(converted, read_eu_weights(ctx, provenance)),
+        years_missing_grants(total_oda, grants, EU_TOTAL),
     )
-    logger.info(
-        "EU27 & EU Institutions: leaving out years after %s: %s",
-        EU27_EUI_LAST_YEAR,
-        sorted(eui_eu27.loc[lambda d: d["year"] > EU27_EUI_LAST_YEAR, "year"].unique()),
+
+    financing = drop_empty_values(
+        pd.concat([converted, *donor_groups, eu27_eui]), "financing"
     )
-    eui_eu27 = eui_eu27.loc[lambda d: d["year"] <= EU27_EUI_LAST_YEAR]
+    check_one_type_per_series(financing)
 
-    financing = pd.concat([non_eu_financing, *donor_groups, eui_eu27])
-
-    financing = drop_empty_values(financing, "financing")
-
-    # Every row needs the type it was read in, and one per year: two would split a series.
-    if financing["type"].isna().any():
-        raise ValueError("Financing rows without a type: a part skipped _read's label")
-    types_per_series = financing.groupby(
-        ["year", "donor_name", "indicator_name"], observed=True
-    )["type"].nunique()
-    if not (clashes := types_per_series[types_per_series > 1]).empty:
-        raise ValueError(
-            f"Financing series read in more than one measure: {clashes.index.tolist()[:10]}"
-        )
-
-    # Pivot values to columns
     financing = widen_currency_price(
-        df=financing,
-        index_cols=(
-            "year",
-            "donor_name",
-            "indicator_name",
-            "type",
-        ),
+        df=financing, index_cols=("year", "donor_name", "indicator_name", "type")
     )
-
-    # Add share of total ODA
     financing = add_share_of_total_oda(financing)
 
-    # Add share of GNI column
-    member_gni = get_member_gni(FINANCING_TIME["start"], FINANCING_TIME["end"])
+    member_gni = get_member_gni(
+        ctx, FINANCING_TIME["start"], FINANCING_TIME["end"], provenance=provenance
+    )
     financing = add_share_of_gni(financing, member_gni, usd_current)
 
-    # Convert values to units (integers) for better compression
-    financing = convert_values_to_units(financing)
-
-    return financing
+    # Integers in units compress far better than floats in millions.
+    return convert_values_to_units(financing)
 
 
-if __name__ == "__main__":
-    set_cache_dir(oda_data=True, pydeflate=True)
+def main() -> None:
+    """Build the view and write it to stdout as Observable's zip archive."""
     logger.info("Generating financing table...")
-    df = get_financing_data()
+    provenance = ProvenanceLog()
+    with open_context() as ctx:
+        df = get_financing_data(ctx, provenance)
     options = build_view_options(
         df=df,
         columns={
@@ -357,6 +309,7 @@ if __name__ == "__main__":
         extra={
             "eu27_eui_last_year": EU27_EUI_LAST_YEAR,
             "psi_transition_years": PSI_TRANSITION_YEARS,
+            "provenance": provenance.to_dict(),
         },
         defaults={"donor_name": DEFAULT_DONOR, "indicator_name": TOTAL_ODA},
         names={
@@ -369,3 +322,7 @@ if __name__ == "__main__":
         },
     )
     view_archive_to_stdout(df, options)
+
+
+if __name__ == "__main__":
+    main()
