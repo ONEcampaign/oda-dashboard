@@ -184,6 +184,29 @@ def read_hive_files(path: Path, files: list[Path], spec: ViewSpec) -> pd.DataFra
     return _table_to_frame(dataset.to_table(columns=_data_columns(dataset)), spec)
 
 
+def read_flat_rows(
+    path: Path, spec: ViewSpec, *, column: str, value: str
+) -> pd.DataFrame:
+    """Read the rows of a flat parquet file where one column equals a value.
+
+    The filter is pushed down to the parquet reader, so only matching rows are loaded.
+
+    Args:
+        path: The view's data.parquet.
+        spec: The view's spec, for the value column dtypes.
+        column: The column to filter on.
+        value: The value to keep.
+
+    Returns:
+        The matching rows with load_view's dtypes, without partition slug columns.
+    """
+    table = pq.read_table(path, filters=[(column, "==", value)])
+    table = table.drop_columns(
+        [c for c in PARTITION_COLUMNS if c in table.schema.names]
+    )
+    return _table_to_frame(table, spec)
+
+
 def _read_options(path: Path) -> dict:
     """Parse an options.json file, which must hold a JSON object."""
     options = json.loads(path.read_text())

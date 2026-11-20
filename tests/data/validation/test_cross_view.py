@@ -343,6 +343,20 @@ def test_sectors_reader_reads_only_oda_eligible(
         assert str(data["donor_name"].dtype) == "string"
 
 
+def test_sectors_reader_reads_only_oda_eligible_from_a_flat_file(
+    tmp_path: Path, make_view: MakeView
+) -> None:
+    """A flat data.parquet source is filtered to ODA eligible, from it or its parent."""
+    flat = write_flat(
+        make_view("sectors_view", _sector_rows()), tmp_path / "sectors_view"
+    )
+    for source in (flat, tmp_path):
+        data = ViewReader({"sectors_view": source}).sectors_oda_eligible
+        assert set(data["recipient_name"]) == {ELIGIBLE}
+        assert data["value_usd_constant"].sum() == 100 * MILLION
+        assert str(data["donor_name"].dtype) == "string"
+
+
 def test_sectors_reader_raises_without_partitions(tmp_path: Path) -> None:
     """No ODA eligible partitions is a FileNotFoundError naming the pattern."""
     with pytest.raises(FileNotFoundError, match="oda-eligible-countries"):

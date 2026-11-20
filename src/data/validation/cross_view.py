@@ -35,9 +35,11 @@ from src.data.config import (
 )
 from src.data.validation.expected import DeltaKind, ExpectedDelta, find_explanation
 from src.data.validation.io import (
+    DATA_FILE,
     load_topic_page,
     load_view,
     parse_amount,
+    read_flat_rows,
     read_hive_files,
 )
 from src.data.validation.models import CheckResult, Severity
@@ -130,20 +132,26 @@ class ViewReader:
     def sectors_oda_eligible(self) -> pd.DataFrame:
         """sectors_view rows for every donor at "ODA eligible countries".
 
-        Reads only that recipient's partition of each donor, a few thousand rows, instead of
-        the whole multi-million-row view.
+        Reads only that recipient's partition of each donor (or, from a flat data.parquet,
+        only its rows), a few thousand rows, instead of the whole multi-million-row view.
 
         Raises:
-            FileNotFoundError: No such partitions under the sectors source.
+            FileNotFoundError: No flat file and no such partitions under the sectors source.
         """
+        spec = get_spec("sectors_view")
         source = self.source("sectors_view")
         if (source / "sectors_view").is_dir():
             source = source / "sectors_view"
+        flat = source / DATA_FILE
+        if flat.is_file():
+            return read_flat_rows(
+                flat, spec, column="recipient_name", value=ODA_ELIGIBLE
+            )
         pattern = f"donor_slug=*/recipient_slug={slugify(ODA_ELIGIBLE)}/*.parquet"
         files = sorted(source.glob(pattern))
         if not files:
             raise FileNotFoundError(f"No {pattern} under {source}")
-        return read_hive_files(source, files, get_spec("sectors_view"))
+        return read_hive_files(source, files, spec)
 
 
 @dataclass(frozen=True)
