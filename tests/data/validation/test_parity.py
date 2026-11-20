@@ -135,6 +135,8 @@ def test_nulls(make_view: MakeView) -> None:
     assert failure.severity is Severity.ERROR
     assert _details(failure)["donor_name"].tolist() == ["Germany"]
     assert np.isnan(_details(failure)["candidate"].iat[0])
+    # Reported as |number|, the rule max_abs matches with, not NaN.
+    assert "max |diff| 0.3," in failure.message
 
 
 def test_one_sided_keys_are_summarised(make_view: MakeView) -> None:

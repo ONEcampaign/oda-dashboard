@@ -34,7 +34,6 @@ CONSTANT_YEAR: int = 2025
 BILLION: float = 1e9
 # Decimal places of the USD million amounts the chart CSVs publish unformatted.
 AMOUNT_DECIMALS: int = 6
-UNITS_PER_MILLION: float = 1e6
 # The UN target for ODA as a share of GNI.
 ODA_GNI_TARGET: float = 0.007
 
