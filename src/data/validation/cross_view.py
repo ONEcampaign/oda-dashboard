@@ -657,6 +657,7 @@ def _explain(
     """The expected delta explaining one out-of-tolerance row, if any."""
     missing = pd.isna(row[CANDIDATE])
     rel_diff = None if missing or pd.isna(row["rel_diff"]) else float(row["rel_diff"])
+    abs_diff = None if missing else abs(float(row["diff"]))
     return find_explanation(
         expected,
         view=VIEW,
@@ -666,6 +667,7 @@ def _explain(
         recipient=row.get("recipient"),
         indicator=row.get("indicator", spec.name),
         rel_diff=rel_diff,
+        abs_diff=abs_diff,
     )
 
 

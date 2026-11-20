@@ -177,6 +177,24 @@ def test_explained_mismatch_is_info_with_reason() -> None:
     assert all(not r.blocking for r in results)
 
 
+def test_absolute_bound_explains_a_mismatch() -> None:
+    """An entry with only max_abs explains a delta within it, and not one beyond it."""
+    check = _simple_check(
+        [
+            {"year": 2024, "donor": DAC, "value": 100.0},
+            {"year": 2024, "donor": "France", "value": 100.0},
+        ],
+        [
+            {"year": 2024, "donor": DAC, "value": 104.0},
+            {"year": 2024, "donor": "France", "value": 110.0},
+        ],
+    )
+    expected = [ExpectedDelta(view="cross_view", reason="small gap", max_abs=5.0)]
+    by_severity = {r.severity: r for r in _run(check, expected)}
+    assert by_severity[Severity.INFO].details["donor"].tolist() == [DAC]
+    assert by_severity[Severity.ERROR].details["donor"].tolist() == ["France"]
+
+
 def test_entries_for_other_views_do_not_explain_cross_view_deltas() -> None:
     """Only view = "cross_view" entries apply."""
     check = _simple_check(
