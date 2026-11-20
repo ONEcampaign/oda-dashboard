@@ -6,6 +6,7 @@ factor table, and the DAC countries total summed from its members.
 """
 
 import json
+import math
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -40,6 +41,9 @@ ODA_GNI_TARGET: float = 0.007
 TOTAL_ODA_INDICATOR: str = "oecd.dac1.total_oda"
 DONOR_KEYS: list[str] = ["donor_name", "year"]
 
+# The key numbers the ODA article reads as {{oda_topic.<key>}} tokens.
+KEY_NUMBERS_FILE: str = "oda_key_numbers.json"
+
 
 def _format(series: pd.Series, template: str) -> pd.Series:
     """Format a numeric series as strings with a str.format template.
@@ -60,6 +64,30 @@ def format_percentage(series: pd.Series, decimals: int = 1) -> pd.Series:
 def format_billions(series: pd.Series, decimals: int = 1) -> pd.Series:
     """Format absolute values in billions with thousands separators, e.g. 1.5e9 -> "1.5"."""
     return _format(series / BILLION, f"{{:,.{decimals}f}}")
+
+
+def describe_change(change: float, decimals: int = 1) -> dict[str, str]:
+    """Words for a relative change, for text such as "aid decreased by 2.7%".
+
+    Args:
+        change: Relative change, e.g. -0.027 for a 2.7% fall.
+        decimals: Decimal places of the percentage.
+
+    Returns:
+        "abs": the size without a sign, e.g. "2.7%"; "verb": "increased" or "decreased";
+        "noun": "increase" or "decrease". A change that rounds to zero is an increase.
+
+    Raises:
+        ValueError: If change is not a finite number.
+    """
+    if not math.isfinite(change):
+        raise ValueError(f"Cannot describe a change of {change}")
+    fell = round(change, decimals + 2) < 0
+    return {
+        "abs": f"{abs(change):,.{decimals}%}",
+        "verb": "decreased" if fell else "increased",
+        "noun": "decrease" if fell else "increase",
+    }
 
 
 def add_change(

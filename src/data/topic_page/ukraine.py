@@ -16,6 +16,7 @@ from src.data.config import (
     DAC_COUNTRIES_NAME,
     GRANT_EQUIVALENT_START_YEAR,
     IMPUTED_MULTILATERAL,
+    PATHS,
     RECIPIENTS_LINES,
     logger,
 )
@@ -28,6 +29,9 @@ from src.data.topic_page.common import (
 )
 
 UKRAINE_CODE: int = 85
+UKRAINE_NAME: str = "Ukraine"
+# The last full year before Russia's invasion; the comparison chart starts here.
+PRE_INVASION_YEAR: int = 2021
 CRS_BILATERAL_ODA: str = "oecd.crs.bilateral_oda"
 GRANT_EQUIVALENT: str = "grant_equivalent"
 # CRS and DAC2A hold no full year after LATEST_YEAR_DETAIL.
@@ -85,6 +89,28 @@ def dac_to_ukraine_total(ctx: oda.Context, provenance: ProvenanceLog) -> pd.Data
     constant = to_usd_constant(current, base_year=CONSTANT_YEAR, provenance=provenance)
     constant["donor_name"] = constant["donor_code"].map(DAC_COUNTRIES)
     return with_dac_total(constant, ["year"])[["donor_name", "year", "value"]]
+
+
+def write_ukraine_comparison(ukraine: pd.DataFrame) -> None:
+    """Write aid_to_ukraine_comparison.csv: each DAC member's ODA to Ukraine by year.
+
+    From PRE_INVASION_YEAR, latest year first and the largest donor first within a year.
+
+    Args:
+        ukraine: From dac_to_ukraine_total, constant USD millions of CONSTANT_YEAR.
+    """
+    members = ukraine.loc[
+        (ukraine["year"] >= PRE_INVASION_YEAR)
+        & (ukraine["donor_name"] != DAC_COUNTRIES_NAME)
+        & ukraine["value"].notna()
+    ]
+    data = members.assign(
+        recipient_name=UKRAINE_NAME, value=members["value"].round(2)
+    ).sort_values(["year", "value"], ascending=False)
+    data[["year", "donor_name", "recipient_name", "value"]].to_csv(
+        PATHS.TOPIC_PAGE / "aid_to_ukraine_comparison.csv", index=False
+    )
+    logger.info("Saved chart version of aid_to_ukraine_comparison.csv")
 
 
 def main() -> None:
