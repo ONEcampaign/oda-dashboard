@@ -135,6 +135,8 @@ def test_nulls(make_view: MakeView) -> None:
     assert failure.severity is Severity.ERROR
     assert _details(failure)["donor_name"].tolist() == ["Germany"]
     assert np.isnan(_details(failure)["candidate"].iat[0])
+    # Reported as |number|, the rule max_abs matches with, not NaN.
+    assert "max |diff| 0.3," in failure.message
 
 
 def test_one_sided_keys_are_summarised(make_view: MakeView) -> None:
@@ -297,6 +299,58 @@ def test_options_differences(make_view: MakeView) -> None:
     assert severities == {Severity.INFO, Severity.ERROR}
 
 
+@pytest.mark.parametrize(
+    ("kind", "path", "edit"),
+    [
+        (DeltaKind.VALUE, "year.start", lambda o: o["year"].update(start=1900)),
+        (DeltaKind.NEW_IN_CANDIDATE, "note_year", lambda o: o.update(note_year=2023)),
+        (DeltaKind.MISSING_IN_CANDIDATE, "year.base", lambda o: o["year"].pop("base")),
+    ],
+)
+def test_options_paths_explain_changes_and_keys(
+    make_view: MakeView, kind: DeltaKind, path: str, edit
+) -> None:
+    """A changed scalar, a new key and a removed key are explained by an entry's path."""
+    base = make_view(VIEW, [_row()])
+    options = {**base.options, "year": dict(base.options["year"])}
+    edit(options)
+    cand = make_view(VIEW, [_row()], options=options)
+    assert _only_failure(compare_views(cand, base, []), "parity.options").severity is (
+        Severity.ERROR
+    )
+
+    wrong = ExpectedDelta(view=VIEW, reason="r", kind=kind, paths=frozenset({"other"}))
+    right = ExpectedDelta(view=VIEW, reason="ok", kind=kind, paths=frozenset({path}))
+    unpathed = ExpectedDelta(view=VIEW, reason="any", kind=kind)
+    assert (
+        _only_failure(
+            compare_views(cand, base, [wrong, unpathed]), "parity.options"
+        ).severity
+        is Severity.ERROR
+    )
+    result = _only_failure(compare_views(cand, base, [right]), "parity.options")
+    assert result.severity is Severity.INFO
+    assert result.message.startswith("explained (ok)")
+
+
+def test_options_list_items_still_match_by_dimension(make_view: MakeView) -> None:
+    """A donor list item is explained by donors, not by a path entry."""
+    base = make_view(VIEW, [_row()])
+    cand = make_view(
+        VIEW, [_row()], options={**base.options, "donor_name": ["France", "Italy"]}
+    )
+    by_path = ExpectedDelta(
+        view=VIEW,
+        reason="r",
+        kind=DeltaKind.NEW_IN_CANDIDATE,
+        paths=frozenset({"donor_name.Italy"}),
+    )
+    assert (
+        _only_failure(compare_views(cand, base, [by_path]), "parity.options").severity
+        is Severity.ERROR
+    )
+
+
 def test_details_capped_largest_first(make_view: MakeView) -> None:
     """Details hold at most MAX_DETAIL_ROWS example rows, largest delta first."""
     n = MAX_DETAIL_ROWS + 10
@@ -407,3 +461,93 @@ def test_run_parity_layout_mismatch(
 
     with pytest.raises(ValueError, match="single-file source"):
         run_parity("sectors_view", flat, hive, [])
+
+
+def test_max_abs_entry_explains_small_absolute_deltas(make_view: MakeView) -> None:
+    """max_abs is matched against the delta's |diff| in the column's unit."""
+    base = make_view(VIEW, [_row(value=1_000_000), _row("Germany", value=1_000_000)])
+    cand = make_view(
+        VIEW,
+        [_row(value=1_005_000), _row("Germany", value=1_020_000)],
+        options=base.options,
+    )
+    expected = [
+        ExpectedDelta(
+            view=VIEW,
+            reason="rounding",
+            columns=frozenset({"value_usd_current"}),
+            max_abs=11_000,
+        )
+    ]
+
+    failures = _failures(
+        compare_views(cand, base, expected), "parity.value_usd_current"
+    )
+
+    by_severity = {r.severity: r for r in failures}
+    assert _details(by_severity[Severity.INFO])["donor_name"].tolist() == ["France"]
+    assert _details(by_severity[Severity.ERROR])["donor_name"].tolist() == ["Germany"]
+
+
+@pytest.mark.parametrize(
+    ("baseline_eur", "candidate_eur", "explained"),
+    [
+        (np.nan, 0.0, True),  # null vs 0: |0| within max_abs
+        (np.nan, 100.0, True),  # null vs 100: at the bound
+        (101.0, np.nan, False),  # number vs null: |101| beyond the bound
+    ],
+)
+def test_max_abs_bounds_null_against_number(
+    make_view: MakeView,
+    baseline_eur: float,
+    candidate_eur: float,
+    explained: bool,
+) -> None:
+    """A null against a number is matched as |number| (null read as 0) by max_abs."""
+    base = make_view(VIEW, [_row()])
+    cand = make_view(VIEW, [_row()], options=base.options)
+    base.data["value_eur_current"] = baseline_eur
+    cand.data["value_eur_current"] = candidate_eur
+    expected = [
+        ExpectedDelta(
+            view=VIEW,
+            reason="null vs near zero",
+            columns=frozenset({"value_eur_current"}),
+            max_abs=100,
+        )
+    ]
+
+    failure = _only_failure(compare_views(cand, base, expected), "parity.other_values")
+
+    assert (failure.severity is Severity.INFO) is explained
+
+
+def test_max_rel_cannot_explain_null_against_number(make_view: MakeView) -> None:
+    """A null against a number has no relative difference for max_rel to bound."""
+    base = make_view(VIEW, [_row()])
+    cand = make_view(VIEW, [_row()], options=base.options)
+    base.data["value_eur_current"] = np.nan
+    cand.data["value_eur_current"] = 0.0
+    expected = [
+        ExpectedDelta(
+            view=VIEW,
+            reason="relative only",
+            columns=frozenset({"value_eur_current"}),
+            max_rel=1.0,
+        )
+    ]
+
+    failure = _only_failure(compare_views(cand, base, expected), "parity.other_values")
+
+    assert failure.severity is Severity.ERROR
+
+
+def test_options_provenance_is_not_compared(make_view: MakeView) -> None:
+    """The root provenance key is build metadata, so parity leaves it out."""
+    base = make_view(VIEW, [_row()])
+    cand = make_view(
+        VIEW,
+        [_row()],
+        options={**base.options, "provenance": {"tables": {"dac1": {"token": "x"}}}},
+    )
+    assert not _failures(compare_views(cand, base, []), "parity.options")

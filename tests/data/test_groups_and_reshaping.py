@@ -6,6 +6,7 @@ import pytest
 from src.data.analysis_tools.naming import map_config_values
 from src.data.analysis_tools.transformations import (
     build_donor_group_totals,
+    drop_empty_series,
     drop_empty_values,
     widen_currency_price,
 )
@@ -79,3 +80,33 @@ def test_map_config_values_raises_on_an_unknown_code():
         ValueError, match=r"Indicator codes with no entry in config: \['B'\]"
     ):
         map_config_values(codes, {"A": "Alpha"}, what="Indicator codes")
+
+
+def _long(values: dict[tuple[str, str, str], float]) -> pd.DataFrame:
+    """Long rows keyed by recipient_name, from {(recipient, currency, price): value}."""
+    return pd.DataFrame(
+        [(r, c, p, v) for (r, c, p), v in values.items()],
+        columns=["recipient_name", "currency", "price", "value"],
+    )
+
+
+def test_a_series_zero_in_usd_current_is_dropped_in_every_currency():
+    df = _long(
+        {
+            ("Benin", "USD", "current"): 0.0,
+            ("Benin", "EUR", "current"): 1e-17,  # float residue of a cancelled sum
+            ("Chad", "USD", "current"): float("nan"),
+            ("Chad", "EUR", "current"): float("nan"),
+            ("Kenya", "USD", "current"): 2.0,
+            ("Kenya", "EUR", "current"): 1.8,
+        }
+    )
+    out = drop_empty_series(df, ["recipient_name"], "test")
+    assert out["recipient_name"].unique().tolist() == ["Kenya"]
+    assert len(out) == 2
+
+
+def test_a_series_without_a_usd_current_row_raises():
+    df = _long({("Kenya", "EUR", "current"): 1.8})
+    with pytest.raises(ValueError, match="without a USD current row"):
+        drop_empty_series(df, ["recipient_name"], "test")

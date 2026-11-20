@@ -1,11 +1,10 @@
-"""Everything the pipeline writes out, and the environment it writes into.
+"""Everything the pipeline writes out.
 
 This module owns the boundary between a finished DataFrame and the artifacts the frontend
 consumes: each loader's archive on stdout (its data as parquet and its dropdown options), and
-for sectors the partitioned dataset and its options JSON, published together on the CDN. It
-also points oda_data and pydeflate at the shared cache.
+for sectors the partitioned dataset and its options JSON, published together on the CDN.
 
-The rule for what belongs here: I/O, serialisation and environment setup. Anything that takes a
+The rule for what belongs here: I/O and serialisation. Anything that takes a
 DataFrame and returns a DataFrame belongs in ``transformations``; anything that decides how an
 entity is labelled belongs in ``naming``.
 """
@@ -21,8 +20,6 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
-from oda_data import set_cache_root
-from pydeflate import set_pydeflate_path
 
 from src.data.config import LABEL_COLUMNS, PATHS, logger
 
@@ -99,15 +96,19 @@ def build_view_options(
     return options
 
 
-def write_view_options(options: dict, file_name: str) -> None:
-    """Write a view's options to PATHS.CDN_FILES, to be published beside its CDN dataset.
+def write_view_options(
+    options: dict, file_name: str, *, root: Path = PATHS.CDN_FILES
+) -> None:
+    """Write a view's options, to be published beside its CDN dataset.
 
     Args:
         options: From build_view_options.
         file_name: Output filename.
+        root: Directory to write into; CI publishes PATHS.CDN_FILES.
     """
-    logger.info("Saving view options to %s/%s", PATHS.CDN_FILES, file_name)
-    with open(PATHS.CDN_FILES / file_name, "w") as f:
+    path = root / file_name
+    logger.info("Saving view options to %s", path)
+    with open(path, "w") as f:
         json.dump(options, f, indent=2)
 
 
@@ -116,30 +117,6 @@ def _require_options(values: list[str], options: list[str], label: str) -> None:
     missing = [v for v in values if v not in options]
     if missing:
         raise ValueError(f"{label} not among the options: {missing}")
-
-
-def set_cache_dir(
-    path: Path = PATHS.DATA, oda_data: bool = False, pydeflate: bool = False
-) -> None:
-    """Point the data libraries at the shared cache directory, creating it if needed.
-
-    Every loader calls this before fetching: without it each library caches somewhere of its
-    own, and CI restores one directory.
-
-    Args:
-        path: Cache directory.
-        oda_data: Whether to point oda_data at it. oda_data chains the same root to
-            oda_reader and keeps its own files under ``path / "oda-data"``.
-        pydeflate: Whether to point pydeflate at it.
-    """
-    if not path.exists():
-        logger.info("Creating directory for cached data: %s", path)
-        path.mkdir(parents=True, exist_ok=True)
-
-    if oda_data:
-        set_cache_root(path)
-    if pydeflate:
-        set_pydeflate_path(path)
 
 
 # Members of the archive a view's loader writes; the frontend reads them as
@@ -262,14 +239,17 @@ def write_partitioned_dataset(
     df: pd.DataFrame,
     base_dir: str,
     partition_cols: list[str],
+    *,
+    root: Path = PATHS.CDN_FILES,
 ) -> None:
     """Write the frame as a Hive-partitioned parquet dataset, for views too big for one file.
 
     Args:
         df: Wide frame ready to be written.
-        base_dir: Directory name, created under PATHS.CDN_FILES.
+        base_dir: Directory name, created under root.
         partition_cols: Columns to partition by, e.g. the donor and recipient slugs. The
             frontend addresses partitions by these values, so they have to be URL-safe.
+        root: Directory to write into; CI publishes PATHS.CDN_FILES.
     """
     missing = [col for col in partition_cols if col not in df.columns]
     if missing:
@@ -284,7 +264,7 @@ def write_partitioned_dataset(
 
     table = pa.Table.from_pandas(optimized, preserve_index=False)
 
-    output_dir = PATHS.CDN_FILES / base_dir
+    output_dir = root / base_dir
     if output_dir.exists():
         logger.info("Clearing existing partitioned dataset at %s", output_dir)
         shutil.rmtree(output_dir)

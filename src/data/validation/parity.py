@@ -16,9 +16,11 @@ Checks, each reported per reason (unexplained, or one result per explaining reas
 - ``parity.shares``: share columns, beyond 1e-4 absolute.
 - ``parity.donor_totals``: per (donor, year) totals of value_usd_current, within
   invariants' sum tolerance for the number of rows summed.
-- ``parity.options``: options.json differences.
+- ``parity.options``: options.json differences, root metadata keys
+  (OPTIONS_METADATA_KEYS: provenance) left out.
 
-Nulls: null against null is equal; null against a number is a delta.
+Nulls: null against null is equal; null against a number is a delta, which an entry's
+max_abs bounds by the number's absolute value (the null read as 0); max_rel cannot.
 """
 
 from collections.abc import Callable, Iterator, Sequence
@@ -77,6 +79,10 @@ _OPTION_DIMENSIONS: dict[str, str] = {
     "recipient_slugs": "recipient",
     "indicator_name": "indicator",
 }
+# Root options.json keys that describe how a build was made rather than what it shows.
+# They differ between any two builds from different releases, so parity skips them;
+# cross_view.provenance_consistency checks provenance across views instead.
+OPTIONS_METADATA_KEYS: frozenset[str] = frozenset({"provenance"})
 _AMOUNT_UNITS: tuple[tuple[float, str], ...] = ((1e9, "bn"), (1e6, "mn"))
 
 
@@ -91,6 +97,21 @@ def _nullable_values(deltas: pd.DataFrame, column: str) -> list:
     return values.astype(object).where(values.notna(), None).tolist()
 
 
+def _abs_diff(
+    diff: float | None, *, baseline: float | None, candidate: float | None
+) -> float | None:
+    """|diff|; for null against a number, the number's absolute value (null as 0).
+
+    None when both sides are null or the row carries neither side.
+    """
+    if diff is not None:
+        return abs(diff)
+    if (baseline is None) == (candidate is None):
+        return None
+    present = baseline if candidate is None else candidate
+    return abs(present)
+
+
 def _explain(
     deltas: pd.DataFrame,
     *,
@@ -100,21 +121,29 @@ def _explain(
 ) -> pd.Series:
     """The reason each delta row is expected, or UNEXPLAINED.
 
-    Rows carry the SUMMARY_DIMENSIONS columns, optionally recipient_name and rel_diff.
+    Rows carry the SUMMARY_DIMENSIONS columns, optionally recipient_name, column,
+    rel_diff, diff (whose absolute value is matched against max_abs), baseline and
+    candidate. A null against a number is matched with abs_diff = |number| (null as 0)
+    and no rel_diff, so max_abs can bound it and max_rel cannot.
     """
     relevant = [e for e in expected if e.view == view and e.kind == kind]
     if not relevant or deltas.empty:
         return pd.Series(UNEXPLAINED, index=deltas.index, dtype=object)
 
     reasons = []
-    for year, donor, indicator, recipient, rel_diff in zip(
+    for year, donor, indicator, recipient, column, rel_diff, diff, base, cand in zip(
         _nullable_values(deltas, "year"),
         _nullable_values(deltas, "donor_name"),
         _nullable_values(deltas, "indicator_name"),
         _nullable_values(deltas, "recipient_name"),
+        _nullable_values(deltas, "column"),
         _nullable_values(deltas, "rel_diff"),
+        _nullable_values(deltas, "diff"),
+        _nullable_values(deltas, "baseline"),
+        _nullable_values(deltas, "candidate"),
         strict=True,
     ):
+        abs_diff = _abs_diff(diff, baseline=base, candidate=cand)
         entry = find_explanation(
             relevant,
             view=view,
@@ -123,7 +152,9 @@ def _explain(
             donor=donor,
             indicator=indicator,
             recipient=recipient,
+            column=column,
             rel_diff=rel_diff,
+            abs_diff=abs_diff,
         )
         reasons.append(UNEXPLAINED if entry is None else entry.reason)
     return pd.Series(reasons, index=deltas.index, dtype=object)
@@ -133,10 +164,17 @@ def _explain(
 
 
 def _summarise(deltas: pd.DataFrame) -> pd.DataFrame:
-    """Aggregate delta rows by reason, column, year, donor and indicator."""
-    with_abs = deltas.assign(
-        abs_diff=deltas["diff"].abs(), abs_rel=deltas["rel_diff"].abs()
+    """Aggregate delta rows by reason, column, year, donor and indicator.
+
+    A null against a number counts as |number| in max_abs_diff, as in _abs_diff.
+    """
+    # diff is null only where one side is; the other side's |value| fills it.
+    abs_diff = (
+        deltas["diff"]
+        .abs()
+        .fillna(deltas["baseline"].abs().fillna(deltas["candidate"].abs()))
     )
+    with_abs = deltas.assign(abs_diff=abs_diff, abs_rel=deltas["rel_diff"].abs())
     return (
         with_abs.groupby(_SUMMARY_KEYS, observed=True, dropna=False)
         .agg(
@@ -758,25 +796,49 @@ def _option_delta(
     }
 
 
+def _option_path(delta: dict) -> str:
+    """The dotted options.json path a delta is about: the item's own path when one-sided."""
+    if delta["change"] == "changed" or delta["item"] is None:
+        return delta["path"]
+    return f"{delta['path']}.{delta['item']}" if delta["path"] else delta["item"]
+
+
 def _explain_option(delta: dict, view: str, expected: Sequence[ExpectedDelta]) -> str:
-    """The reason for a one-sided donor/recipient/indicator option, else UNEXPLAINED."""
+    """The reason for an options delta, else UNEXPLAINED.
+
+    A one-sided donor, recipient or indicator list item is matched by that dimension. A
+    changed value, or any other key or item added or removed, is matched by its dotted
+    path against entries with paths. Reorders are never explained.
+    """
+    change = delta["change"]
     dimension = _OPTION_DIMENSIONS.get(delta["path"])
-    if dimension is None or delta["change"] not in (
-        DeltaKind.MISSING_IN_CANDIDATE,
-        DeltaKind.NEW_IN_CANDIDATE,
-    ):
-        return UNEXPLAINED
-    entry = find_explanation(
-        list(expected), view=view, kind=delta["change"], **{dimension: delta["item"]}
-    )
+    one_sided = change in (DeltaKind.MISSING_IN_CANDIDATE, DeltaKind.NEW_IN_CANDIDATE)
+    if dimension is not None and one_sided:
+        entry = find_explanation(
+            list(expected), view=view, kind=change, **{dimension: delta["item"]}
+        )
+    elif one_sided or change == "changed":
+        entry = find_explanation(
+            [e for e in expected if e.paths is not None],
+            view=view,
+            kind=DeltaKind.VALUE if change == "changed" else change,
+            path=_option_path(delta),
+        )
+    else:
+        entry = None
     return UNEXPLAINED if entry is None else entry.reason
+
+
+def _without_metadata(options: dict) -> dict:
+    """options.json without its root OPTIONS_METADATA_KEYS."""
+    return {k: v for k, v in options.items() if k not in OPTIONS_METADATA_KEYS}
 
 
 def _options_results(
     view: str, candidate: dict, baseline: dict, expected: Sequence[ExpectedDelta]
 ) -> list[CheckResult]:
-    """Compare two options.json dicts; one result per reason."""
-    deltas = _options_deltas(candidate, baseline)
+    """Compare two options.json dicts, without OPTIONS_METADATA_KEYS; one per reason."""
+    deltas = _options_deltas(_without_metadata(candidate), _without_metadata(baseline))
     if not deltas:
         return [_passed("parity.options", view, "options.json identical")]
     table = pd.DataFrame(deltas)

@@ -177,6 +177,24 @@ def test_explained_mismatch_is_info_with_reason() -> None:
     assert all(not r.blocking for r in results)
 
 
+def test_absolute_bound_explains_a_mismatch() -> None:
+    """An entry with only max_abs explains a delta within it, and not one beyond it."""
+    check = _simple_check(
+        [
+            {"year": 2024, "donor": DAC, "value": 100.0},
+            {"year": 2024, "donor": "France", "value": 100.0},
+        ],
+        [
+            {"year": 2024, "donor": DAC, "value": 104.0},
+            {"year": 2024, "donor": "France", "value": 110.0},
+        ],
+    )
+    expected = [ExpectedDelta(view="cross_view", reason="small gap", max_abs=5.0)]
+    by_severity = {r.severity: r for r in _run(check, expected)}
+    assert by_severity[Severity.INFO].details["donor"].tolist() == [DAC]
+    assert by_severity[Severity.ERROR].details["donor"].tolist() == ["France"]
+
+
 def test_entries_for_other_views_do_not_explain_cross_view_deltas() -> None:
     """Only view = "cross_view" entries apply."""
     check = _simple_check(
@@ -278,7 +296,7 @@ def test_total_oda_and_oda_gni_use_the_headline_measure(
         checks=tuple(c for c in CROSS_CHECKS if c.check in names),
         read_topic=_topic_reader(topic),
     )
-    assert {r.check for r in results} == names
+    assert {r.check for r in results} == names | {cross_view.PROVENANCE_CHECK}
     assert all(r.passed for r in results), [r.message for r in results]
 
 
@@ -370,7 +388,7 @@ def test_sector_shares_and_amounts(tmp_path: Path, make_view: MakeView) -> None:
         "key_sector_shares": pd.DataFrame(
             {
                 "Year": [2010, 2024],
-                "name": ["DAC Countries, Total"] * 2,
+                "name": [DAC] * 2,
                 "Humanitarian": ["", ""],
                 "Education": [0.5, 0.7],
                 "Health": [0.5, 0.3],
@@ -381,7 +399,7 @@ def test_sector_shares_and_amounts(tmp_path: Path, make_view: MakeView) -> None:
         "aid_to_health_ts": pd.DataFrame(
             {
                 "Year": [2012, 2024],
-                "Donor": ["DAC Countries, Total"] * 2,
+                "Donor": [DAC] * 2,
                 "Recipient": ["All Developing Countries"] * 2,
                 "Sector": ["Health"] * 2,
                 "Total aid to health": ["99.0", "0.0"],
@@ -436,7 +454,7 @@ def test_africa_share_and_income_groups(tmp_path: Path, make_view: MakeView) -> 
         "aid_to_africa_ts": pd.DataFrame(
             {
                 "Year": [2024],
-                "Donor": ["DAC Countries, Total"],
+                "Donor": [DAC],
                 "Aid to Africa": ["0.0"],
                 "Share of total ODA": ['"25.0%"'],
                 "Annual change": [""],
@@ -445,7 +463,7 @@ def test_africa_share_and_income_groups(tmp_path: Path, make_view: MakeView) -> 
         "aid_to_income_latest": pd.DataFrame(
             {
                 "Year": [2024, 2024],
-                "Donor": ["DAC Countries, Total"] * 2,
+                "Donor": [DAC] * 2,
                 "Recipient": ["Low income", "Not classified by income"],
                 "ODA": ["US$27.0 billion", "US$88.3 billion"],
                 "Share of total ODA": [12.9, 42.2],
@@ -461,7 +479,99 @@ def test_africa_share_and_income_groups(tmp_path: Path, make_view: MakeView) -> 
         read_topic=_topic_reader(topic),
     )
     assert all(r.passed for r in results), [r.message for r in results]
-    assert {r.check for r in results} == names
+    assert {r.check for r in results} == names | {cross_view.PROVENANCE_CHECK}
+
+
+FRANCE, GERMANY = "France", "Germany"
+
+
+def _member_financing_rows() -> list[dict]:
+    """2017 Total ODA (flows) and refugee costs for two DAC members, constant = 2x current
+    for France and 4x for Germany."""
+    rows = []
+    for donor, ratio in [(FRANCE, 2), (GERMANY, 4)]:
+        for indicator, current in [
+            ("Total ODA", 100),
+            ("Refugees in donor countries", 10),
+        ]:
+            rows.append(
+                {
+                    "year": 2017,
+                    "donor_name": donor,
+                    "indicator_name": indicator,
+                    "type": "Flows",
+                    "value_usd_current": current * MILLION,
+                    "value_usd_constant": current * ratio * MILLION,
+                    "pct_of_gni": 0.003,
+                }
+            )
+    return rows
+
+
+def _ukraine_rows() -> list[dict]:
+    """France's ODA to Ukraine in 2017, current 3 = 2 + 1 across the two indicators;
+    Germany has none. Constant prices on another base, which the check must not use."""
+    return [
+        {
+            "year": 2017,
+            "donor_name": FRANCE,
+            "recipient_name": "Ukraine",
+            "indicator_name": indicator,
+            "value_usd_current": value * MILLION,
+            "value_usd_constant": 999 * MILLION,
+        }
+        for indicator, value in [("Bilateral", 2), ("Imputed multilateral", 1)]
+    ]
+
+
+def test_oda_covid_total_idrc_and_ukraine(tmp_path: Path, make_view: MakeView) -> None:
+    """oda_covid columns against financing, and Ukraine rebased per member; 2018 ignored."""
+    write_flat(make_view("financing_view", _member_financing_rows()), tmp_path / "fin")
+    write_flat(make_view("recipients_view", _ukraine_rows()), tmp_path / "rec")
+    topic = {
+        "oda_covid": pd.DataFrame(
+            {
+                "Year": [2017, 2017, 2017, 2018],
+                "Donor": [DAC, FRANCE, GERMANY, FRANCE],
+                "COVID ODA": [0.0] * 4,
+                # France 3 x 2 = 6; Germany nothing; DAC their sum. 2018 is out of scope.
+                "ODA to Ukraine": [6.0, 6.0, 0.0, 1_000.0],
+                "IDRC": [0.0, 20.0, 40.0, 0.0],
+                "Total ODA": ["", 200.0, 400.0, ""],
+            }
+        ),
+    }
+    names = {"cross_view.total_oda_covid", "cross_view.idrc", "cross_view.ukraine"}
+    results = run_cross_view(
+        {"financing_view": tmp_path / "fin", "recipients_view": tmp_path / "rec"},
+        [],
+        checks=tuple(c for c in CROSS_CHECKS if c.check in names),
+        read_topic=_topic_reader(topic),
+    )
+    by_check = {r.check: r for r in results}
+    assert all(by_check[name].passed for name in names), [r.message for r in results]
+    assert "3 values" in by_check["cross_view.ukraine"].message
+    # The DAC row's zero refugee costs mean nothing reported, so it is not compared.
+    assert "2 values" in by_check["cross_view.idrc"].message
+
+
+def test_ukraine_mismatch_is_reported(tmp_path: Path, make_view: MakeView) -> None:
+    """A topic Ukraine value not matching the rebased view is an error."""
+    write_flat(make_view("financing_view", _member_financing_rows()), tmp_path / "fin")
+    write_flat(make_view("recipients_view", _ukraine_rows()), tmp_path / "rec")
+    topic = {
+        "oda_covid": pd.DataFrame(
+            {"Year": [2017], "Donor": [FRANCE], "ODA to Ukraine": [3.0]}
+        ),
+    }
+    results = run_cross_view(
+        {"financing_view": tmp_path / "fin", "recipients_view": tmp_path / "rec"},
+        [],
+        checks=tuple(c for c in CROSS_CHECKS if c.check == "cross_view.ukraine"),
+        read_topic=_topic_reader(topic),
+    )
+    assert not results[0].passed
+    assert results[0].severity is Severity.ERROR
 
 
 def test_views_are_loaded_once(
@@ -481,3 +591,62 @@ def test_views_are_loaded_once(
     reader.data("financing_view")
     reader.data("financing_view")
     assert calls == ["financing_view"]
+
+
+def _view_with_provenance(
+    make_view: MakeView, directory: Path, tokens: dict[str, str] | None
+) -> Path:
+    """Write a financing_view whose options carry the given table tokens (None: none)."""
+    view = make_view("financing_view", _financing_rows())
+    if tokens is not None:
+        view.options[cross_view.PROVENANCE_KEY] = {
+            "tables": {t: {"token": tok} for t, tok in tokens.items()}
+        }
+    return write_flat(view, directory)
+
+
+def test_provenance_agrees_across_views(tmp_path: Path, make_view: MakeView) -> None:
+    """Views that read a shared table at one token pass; views without it are skipped."""
+    sources = {
+        "financing_view": _view_with_provenance(
+            make_view, tmp_path / "fin", {"dac1": "r1"}
+        ),
+        "recipients_view": _view_with_provenance(
+            make_view, tmp_path / "rec", {"dac1": "r1", "dac2a": "r2"}
+        ),
+        "gender_view": _view_with_provenance(make_view, tmp_path / "gen", None),
+    }
+    results = cross_view.check_provenance_consistency(sources)
+    assert all(r.passed for r in results), [r.message for r in results]
+    assert all(r.check == cross_view.PROVENANCE_CHECK for r in results)
+    assert any("gender_view" in r.message for r in results)
+    assert all(not r.blocking for r in results)
+
+
+def test_provenance_mismatch_is_an_error(tmp_path: Path, make_view: MakeView) -> None:
+    """A table read at two tokens is a non-blocking ERROR naming the table."""
+    sources = {
+        "financing_view": _view_with_provenance(
+            make_view, tmp_path / "fin", {"dac1": "r1"}
+        ),
+        "recipients_view": _view_with_provenance(
+            make_view, tmp_path / "rec", {"dac1": "r2"}
+        ),
+    }
+    [failure] = [
+        r for r in cross_view.check_provenance_consistency(sources) if not r.passed
+    ]
+    assert failure.severity is Severity.ERROR
+    assert "dac1" in failure.message
+    assert failure.details is not None
+    assert set(failure.details["token"]) == {"r1", "r2"}
+
+
+def test_malformed_provenance_is_an_error(tmp_path: Path, make_view: MakeView) -> None:
+    """A provenance block without tables is reported, not skipped."""
+    view = make_view("financing_view", _financing_rows())
+    view.options[cross_view.PROVENANCE_KEY] = {"libraries": {}}
+    sources = {"financing_view": write_flat(view, tmp_path / "fin")}
+    [failure] = cross_view.check_provenance_consistency(sources)
+    assert not failure.passed
+    assert "no 'tables'" in failure.message

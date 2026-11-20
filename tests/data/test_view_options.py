@@ -3,6 +3,7 @@
 import io
 import json
 import zipfile
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -12,6 +13,8 @@ from src.data.analysis_tools.outputs import (
     VIEW_OPTIONS_MEMBER,
     build_view_options,
     view_archive_to_stdout,
+    write_partitioned_dataset,
+    write_view_options,
 )
 
 ROWS = pd.DataFrame(
@@ -72,3 +75,18 @@ def test_the_archive_carries_the_data_and_its_options(capsysbinary):
     data = pd.read_parquet(io.BytesIO(archive.read(VIEW_DATA_MEMBER)))
     assert data["donor_name"].astype(str).tolist() == ROWS["donor_name"].tolist()
     assert len(data) == len(ROWS)
+
+
+def test_view_options_are_written_under_root(tmp_path: Path) -> None:
+    options = build_view_options(ROWS, COLUMNS)
+    write_view_options(options, "view_options.json", root=tmp_path)
+    assert json.loads((tmp_path / "view_options.json").read_text()) == options
+
+
+def test_partitioned_dataset_is_written_under_root(tmp_path: Path) -> None:
+    rows = ROWS.assign(donor_slug=["dac-countries", "france"])
+    write_partitioned_dataset(rows, "view", ["donor_slug"], root=tmp_path)
+    partitions = sorted(p.name for p in (tmp_path / "view").iterdir())
+    assert partitions == ["donor_slug=dac-countries", "donor_slug=france"]
+    data = pd.read_parquet(tmp_path / "view")
+    assert sorted(data["year"].tolist()) == ROWS["year"].tolist()

@@ -1,153 +1,163 @@
 """Testable frame logic for the financing loader, which Python cannot import by name."""
 
-from collections import Counter
+from collections.abc import Iterable
 
 import pandas as pd
 
 from src.data.analysis_tools.naming import map_config_values
 from src.data.config import (
-    ALL_FINANCING_INDICATORS,
+    FINANCING_TYPES,
     SUMMED_FINANCING_NAMES,
-    TOTAL_ODA,
     logger,
 )
 
 # The indicators derived from splitting Total ODA by whether it is a grant.
 GRANTS_SPLIT: tuple[str, ...] = ("Grants", "Non-grants")
 
-# The DAC1 fund flows read for the split, by the indicator they become. The headline measure
-# is net flows before 2018 and grant equivalents from then on.
-GRANTS_FUND_FLOWS: dict[str, str] = {
-    "Disbursements, net": TOTAL_ODA,
-    "Grant equivalents": TOTAL_ODA,
-    "Disbursements, grants": "Grants",
-}
+# Columns of every financing row before currency conversion.
+FINANCING_COLUMNS: list[str] = [
+    "year",
+    "donor_code",
+    "donor_name",
+    "indicator_name",
+    "type",
+    "value",
+]
+SERIES_KEY: list[str] = ["year", "donor_code", "indicator_name"]
 
 # A group's grants split is left out for a year when members that do not report it hold
 # more than this share of the group's Total ODA.
 MAX_MISSING_GRANTS_SHARE: float = 0.01
 
 
-def resolve_indicator_duplicates(dac1_raw: pd.DataFrame) -> pd.DataFrame:
-    """Drop the duplicate rows created by indicators that share a display name.
-
-    The DAC renumbered several indicators when it moved to grant equivalents, so two codes can
-    map to one name (1015 and 11015 are both "Bilateral ODA"). Where both are present for the
-    same donor and year they report the same figure, and keeping both would double it. Names in
-    SUMMED_FINANCING_NAMES are left alone: their codes are parts of one figure, to be added up.
+def to_financing_rows(raw: pd.DataFrame, names: str | pd.Series) -> pd.DataFrame:
+    """Name a query result's rows and label their type from the basis they were read on.
 
     Args:
-        dac1_raw: Raw DAC1 rows, with a one_indicator column.
+        raw: A run_query result with year, donor_code, donor_name, basis and value.
+        names: The indicator name for every row, or one per row.
 
     Returns:
-        The rows with duplicates removed. Each set keeps a row with a value.
+        The rows in FINANCING_COLUMNS.
 
     Raises:
-        ValueError: If two codes for one name disagree, since the two codes are then not
-            interchangeable after all.
+        ValueError: If a row's basis has no financing type.
     """
-    multi_code_names = {
-        name
-        for name, count in Counter(ALL_FINANCING_INDICATORS.values()).items()
-        if count > 1 and name not in SUMMED_FINANCING_NAMES
-    }
-
-    annotated = dac1_raw.assign(
-        _indicator=lambda d: d["one_indicator"].map(ALL_FINANCING_INDICATORS)
-    )
-    shared = annotated[annotated["_indicator"].isin(multi_code_names)]
-
-    conflicts = []
-    drop_indices = []
-
-    for (year, donor_code, indicator), group in shared.groupby(
-        ["year", "donor_code", "_indicator"], dropna=False, observed=True
-    ):
-        if len(group) <= 1:
-            continue
-
-        # Rows with a value first, so the row kept is never a missing copy of a figure another
-        # code reports.
-        ranked = group.sort_values(
-            "value", key=lambda v: v.isna(), ascending=True, kind="stable"
-        )
-        drop_indices.extend(ranked.index[1:].tolist())
-
-        if group["value"].dropna().nunique() > 1:
-            conflicts.append((year, donor_code, indicator))
-
-    if conflicts:
-        lines = [
-            f"  year={y}, donor_code={d}, indicator='{ind}'" for y, d, ind in conflicts
-        ]
-        message = (
-            "Conflicting values for year-donor pairs with shared indicator codes:\n"
-            + "\n".join(lines)
-        )
-        raise ValueError(message)
-
-    return dac1_raw.drop(index=drop_indices)
+    return raw.assign(
+        indicator_name=names,
+        type=map_config_values(raw["basis"].astype(str), FINANCING_TYPES, what="Bases"),
+    )[FINANCING_COLUMNS]
 
 
-def split_grants(df: pd.DataFrame, index_cols: list[str]) -> pd.DataFrame:
-    """Split DAC1 Total ODA into Grants and Non-grants.
-
-    The grant-only measure gives Grants, and the headline measure minus that gives
-    Non-grants. Where a donor-year has no grants measure, both come out missing, and are
-    dropped later with the other empty values.
+def sum_by_name(rows: pd.DataFrame) -> pd.DataFrame:
+    """Add up the parts of names read in several parts, one row per series and type.
 
     Args:
-        df: Long DAC1.10.1010 rows with fund_flows and value, read under the grants measure
-            and the headline measure.
-        index_cols: Columns identifying one donor-year (and currency and price, if present).
+        rows: Financing rows from to_financing_rows.
 
     Returns:
-        Long rows for Grants and Non-grants, keyed by index_cols and indicator_name.
+        One row per year, donor, indicator name and type.
+
+    Raises:
+        ValueError: If a name outside SUMMED_FINANCING_NAMES has more than one row for a
+            donor and year, which would mean two reads overlap and the sum double counts.
     """
-    return (
-        df.assign(
-            indicator_name=lambda d: map_config_values(
-                d["fund_flows"], GRANTS_FUND_FLOWS, what="Fund flows"
-            )
+    repeated = rows[rows.duplicated(SERIES_KEY, keep=False)]
+    overlapping = repeated.loc[~repeated["indicator_name"].isin(SUMMED_FINANCING_NAMES)]
+    if not overlapping.empty:
+        raise ValueError(
+            "Financing series read more than once: "
+            f"{overlapping[SERIES_KEY].drop_duplicates().head(10).values.tolist()}"
         )
-        .groupby([*index_cols, "indicator_name"], dropna=False, observed=True)["value"]
-        .sum()
+    return (
+        rows.groupby(
+            ["year", "donor_code", "donor_name", "indicator_name", "type"],
+            observed=True,
+        )["value"]
+        .sum(min_count=1)
         .reset_index()
-        .pivot(index=index_cols, columns="indicator_name", values="value")
-        .reset_index()
-        .assign(**{"Non-grants": lambda d: d[TOTAL_ODA] - d["Grants"]})
-        .melt(id_vars=index_cols, value_vars=list(GRANTS_SPLIT))
     )
 
 
-def years_missing_grants(usd_current: pd.DataFrame, members: dict) -> dict[int, float]:
-    """Find the years in which members without a grants split hold too much of Total ODA.
+def split_grants(total_oda: pd.DataFrame, grants: pd.DataFrame) -> pd.DataFrame:
+    """Split each donor's Total ODA into Grants and Non-grants.
 
-    Preliminary DAC1 data carry the grants measure for only a few donors, so a group's
-    Grants and Non-grants summed over the members that report them would fall far short of
-    the group's Total ODA. A few small donors never report the split, which a group can
-    absorb up to MAX_MISSING_GRANTS_SHARE of its Total ODA.
+    Grants is the grants flow, and Non-grants Total ODA minus it. Both take Total ODA's type,
+    the headline basis of their year. Where a donor-year has no grants, both come out
+    missing, and are dropped later with the other empty values.
 
     Args:
-        usd_current: Long frame of individual donors in current USD, with donor_code.
+        total_oda: Financing rows for Total ODA, one per donor and year.
+        grants: The grants flow (run_query result), with donor_code, year and value.
+
+    Returns:
+        Financing rows for Grants and Non-grants.
+
+    Raises:
+        ValueError: If a donor has grants in a year with no Total ODA, or more than one
+            grants row in a year.
+    """
+    key = ["year", "donor_code"]
+    if grants.duplicated(key).any():
+        raise ValueError("More than one grants row for a donor and year")
+
+    merged = total_oda.merge(
+        grants[[*key, "value"]].rename(columns={"value": "Grants"}),
+        on=key,
+        how="outer",
+        validate="1:1",
+        indicator=True,
+    )
+    orphans = merged.loc[merged["_merge"] == "right_only", key]
+    if not orphans.empty:
+        raise ValueError(
+            f"Grants for donor-years with no Total ODA: {orphans.values.tolist()[:10]}"
+        )
+
+    return (
+        merged.assign(**{"Non-grants": lambda d: d["value"] - d["Grants"]})
+        .drop(columns=["indicator_name", "value", "_merge"])
+        .melt(
+            id_vars=["year", "donor_code", "donor_name", "type"],
+            value_vars=list(GRANTS_SPLIT),
+            var_name="indicator_name",
+        )[FINANCING_COLUMNS]
+    )
+
+
+def years_missing_grants(
+    total_oda: pd.DataFrame, grants: pd.DataFrame, members: Iterable[int]
+) -> dict[int, float]:
+    """Find the years in which members without a grants split hold too much of Total ODA.
+
+    A member misses its split in a year when it has Total ODA but DAC1 has no grants value
+    for it. A grants value of zero is a reported split. Preliminary DAC1 data carry grants
+    for only a few donors, so a group's Grants and Non-grants summed over the members that
+    report them would fall far short of the group's Total ODA. A few small donors never
+    report the split, which a group can absorb up to MAX_MISSING_GRANTS_SHARE of its Total
+    ODA.
+
+    Args:
+        total_oda: Individual donors' Total ODA in current USD, with donor_code, year, value.
+        grants: The grants flow as read (run_query result), with donor_code, year, value.
         members: The group's donor codes.
 
     Returns:
         The years above the threshold, each with the share of Total ODA missing its split.
     """
-    usd = usd_current.loc[lambda d: d["donor_code"].isin(members)]
+    members = set(members)
     total = (
-        usd.loc[lambda d: d["indicator_name"] == TOTAL_ODA]
+        total_oda.loc[lambda d: d["donor_code"].isin(members)]
         .groupby(["year", "donor_code"])["value"]
         .sum()
     )
-    with_grants = (
-        usd.loc[lambda d: (d["indicator_name"] == "Grants") & d["value"].notna()]
+    reported = (
+        grants.loc[lambda d: d["value"].notna(), ["year", "donor_code"]]
         .set_index(["year", "donor_code"])
         .index
     )
 
-    missing = total[~total.index.isin(with_grants)].groupby(level="year").sum()
+    missing = total[~total.index.isin(reported)].groupby(level="year").sum()
     share = (missing / total.groupby(level="year").sum()).dropna()
 
     return share[share > MAX_MISSING_GRANTS_SHARE].to_dict()
@@ -172,3 +182,26 @@ def drop_grants_split(group: pd.DataFrame, years: dict[int, float]) -> pd.DataFr
             {year: round(share, 3) for year, share in sorted(years.items())},
         )
     return group.loc[~incomplete]
+
+
+def check_one_type_per_series(financing: pd.DataFrame) -> None:
+    """Raise if a row has no type, or a series has two types in one year.
+
+    Every row needs the basis it was read on, and one per year: two would split a series.
+
+    Args:
+        financing: Long financing frame with year, donor_name, indicator_name and type.
+
+    Raises:
+        ValueError: On a missing type or a series with more than one type in a year.
+    """
+    if financing["type"].isna().any():
+        raise ValueError("Financing rows without a type")
+    types_per_series = financing.groupby(
+        ["year", "donor_name", "indicator_name"], observed=True
+    )["type"].nunique()
+    clashes = types_per_series[types_per_series > 1]
+    if not clashes.empty:
+        raise ValueError(
+            f"Financing series read in more than one basis: {clashes.index.tolist()[:10]}"
+        )
