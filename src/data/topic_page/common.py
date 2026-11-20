@@ -28,6 +28,9 @@ START_YEAR: int = 2010
 # oda-data 3.0's Multisystem, which imputed multilateral spending comes from, starts here.
 SECTORS_START_YEAR: int = 2011
 SHORT_START_YEAR: int = 2015
+# First year of the ODA article's three mini charts (Africa, health, humanitarian), which run
+# to LATEST_YEAR_DETAIL.
+MINI_CHART_START_YEAR: int = 2015
 LATEST_YEAR_AGG: int = 2025
 LATEST_YEAR_DETAIL: int = 2024
 CONSTANT_YEAR: int = 2025

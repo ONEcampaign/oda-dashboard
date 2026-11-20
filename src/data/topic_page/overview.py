@@ -29,6 +29,7 @@ from src.data.topic_page.common import (
     LATEST_YEAR_AGG,
     LATEST_YEAR_DETAIL,
     LONG_START_YEAR,
+    MINI_CHART_START_YEAR,
     SECTORS_START_YEAR,
     START_YEAR,
     add_change,
@@ -253,7 +254,8 @@ def aid_to_africa_ts(provenance: ProvenanceLog) -> None:
     """Write aid_to_africa_ts.csv and the aid to Africa key numbers.
 
     Amounts are constant USD of CONSTANT_YEAR. The share of total ODA is computed in current
-    USD, as the recipients view computes its shares.
+    USD, as the recipients view computes its shares. The file starts in MINI_CHART_START_YEAR;
+    the years before it are read so its first annual change has a previous year.
 
     Args:
         provenance: Log to record every read in.
@@ -293,7 +295,11 @@ def aid_to_africa_ts(provenance: ProvenanceLog) -> None:
             }
         )
     )
-    _save_quoted_shares(data, "Share of total ODA", "aid_to_africa_ts.csv")
+    _save_quoted_shares(
+        data.loc[data["Year"] >= MINI_CHART_START_YEAR],
+        "Share of total ODA",
+        "aid_to_africa_ts.csv",
+    )
 
     _update_key_numbers(
         {
@@ -483,6 +489,8 @@ def _dac_sector_amounts(sectors: pd.DataFrame) -> pd.DataFrame:
 def aid_to_sectors_ts(sectors: pd.DataFrame) -> None:
     """Write aid_to_{health,humanitarian}_ts.csv and their key numbers.
 
+    The files start in MINI_CHART_START_YEAR; the shares use every sector of each year.
+
     Args:
         sectors: From sector_totals, constant USD of LATEST_YEAR_DETAIL.
     """
@@ -502,7 +510,11 @@ def aid_to_sectors_ts(sectors: pd.DataFrame) -> None:
             .sort_values("Year")
             .rename(columns={"value": column})
         )
-        _save_quoted_shares(rows, "Share of total ODA", filename)
+        _save_quoted_shares(
+            rows.loc[rows["Year"] >= MINI_CHART_START_YEAR],
+            "Share of total ODA",
+            filename,
+        )
         _update_key_numbers(
             {
                 key: f"{rows[column].to_numpy()[-1]} billion",
