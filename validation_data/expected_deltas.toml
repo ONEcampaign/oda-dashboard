@@ -556,3 +556,127 @@ view = "gender_view"
 kind = "new_in_candidate"
 reason = "page note metadata: the first year of the 2023 PSI exclusion"
 paths = ["psi_excluded_from"]
+
+# --- sectors_view: oda-data 3.0 migration ------------------------------------------------
+#
+# Bilateral reads oecd.crs.bilateral_oda, imputed multilateral one.crs.imputed_multilateral_oda.
+# From 2013 to 2022 both match the 2.x reads, and imputed multilateral matches in every year.
+# The deltas below are the PSI exclusion the migration accepted, plus storage effects.
+
+# oecd.crs.bilateral_oda leaves out CRS category 60 (private sector instruments), which the
+# CRS reports from 2023. Production counted it. For every individual donor and country the
+# gap equals the category-60 gross disbursements cell by cell, within 100 units (2023
+# -10,661.28m, 2024 -12,831.39m). 9,199 USD current cells move, by up to 99.9984%, and 63
+# converted cells round to 0 (100%). The 22 donors are those whose PSI moves a cell, plus
+# their groups.
+[[delta]]
+view = "sectors_view"
+kind = "value"
+reason = "oecd.crs.bilateral_oda leaves out CRS private sector instruments (category 60), 2023-2024 (accepted, noted on the page)"
+years = [2023, 2024]
+indicators = ["Bilateral"]
+donors = [
+  "Australia", "Austria", "Belgium", "Canada", "Chinese Taipei", "Czechia", "Denmark",
+  "EU Institutions", "Finland", "France", "Germany", "Italy", "Japan", "Korea",
+  "Netherlands", "Norway", "Portugal", "Spain", "Sweden", "Switzerland", "United Kingdom",
+  "United States", "All bilateral donors", "DAC countries", "Non-DAC countries",
+  "G7 countries", "EU27 countries", "EU27 & EU Institutions",
+]
+columns = [
+  "value_usd_current", "value_usd_constant", "value_eur_current", "value_eur_constant",
+  "value_gbp_current", "value_gbp_constant", "value_cad_current", "value_cad_constant",
+]
+max_rel = 1.0
+
+# 1,084 Bilateral cells that were entirely PSI (USD 6.98bn in 2023, 7.33bn in 2024).
+[[delta]]
+view = "sectors_view"
+kind = "missing_in_candidate"
+reason = "oecd.crs.bilateral_oda leaves out CRS private sector instruments (category 60), 2023-2024: cells that were all PSI"
+years = [2023, 2024]
+indicators = ["Bilateral"]
+donors = [
+  "Australia", "Austria", "Belgium", "Canada", "Chinese Taipei", "Denmark",
+  "EU Institutions", "Finland", "France", "Germany", "Italy", "Japan", "Korea",
+  "Netherlands", "Norway", "Portugal", "Spain", "Sweden", "Switzerland", "United Kingdom",
+  "United States", "All bilateral donors", "DAC countries", "Non-DAC countries",
+  "G7 countries", "EU27 countries", "EU27 & EU Institutions",
+]
+
+# The same exclusion lowers the donor totals behind pct_total_donor (27 PSI donors and
+# groups, both indicators, largest 0.0659) and the All bilateral donors totals behind every
+# donor's pct_total_recipient (54 donors, largest 0.3114).
+[[delta]]
+view = "sectors_view"
+kind = "value"
+reason = "oecd.crs.bilateral_oda leaves out CRS private sector instruments (category 60), 2023-2024: donor totals behind pct_total_donor"
+years = [2023, 2024]
+donors = [
+  "Australia", "Austria", "Belgium", "Canada", "Chinese Taipei", "Denmark",
+  "EU Institutions", "Finland", "France", "Germany", "Italy", "Japan", "Korea",
+  "Netherlands", "Norway", "Portugal", "Spain", "Sweden", "Switzerland", "United Kingdom",
+  "United States", "All bilateral donors", "DAC countries", "Non-DAC countries",
+  "G7 countries", "EU27 countries", "EU27 & EU Institutions",
+]
+columns = ["pct_total_donor"]
+max_abs = 0.066
+
+[[delta]]
+view = "sectors_view"
+kind = "value"
+reason = "oecd.crs.bilateral_oda leaves out CRS private sector instruments (category 60), 2023-2024: All bilateral donors totals behind pct_total_recipient"
+years = [2023, 2024]
+columns = ["pct_total_recipient"]
+max_abs = 0.312
+
+# Bulgaria's 2019 Bilateral "Unallocated/ Unspecified" rows to ODA eligible countries cancel
+# to exactly zero. Production showed 0; the build drops the series (drop_empty_series).
+[[delta]]
+view = "sectors_view"
+kind = "missing_in_candidate"
+reason = "members cancel to zero; the series is dropped instead of publishing a zero row"
+years = [2019]
+donors = ["Bulgaria"]
+recipients = ["ODA eligible countries"]
+indicators = ["Bilateral"]
+
+# 277,674 converted values of Imputed multilateral cells whose USD current value is 0 on both
+# sides (below 50 units, so rounded to 0): production left them empty, the factor-table
+# conversion gives 0. Parity reads the null as 0, so max_abs = 0 admits exactly those zeros.
+# They span every year 2013-2024 and 56 donors, so neither filter narrows the entry further.
+[[delta]]
+view = "sectors_view"
+kind = "value"
+reason = "near-zero imputed cells (USD current 0 on both sides): production left converted values empty, the build stores 0"
+indicators = ["Imputed multilateral"]
+columns = [
+  "value_usd_constant", "value_eur_current", "value_eur_constant", "value_gbp_current",
+  "value_gbp_constant", "value_cad_current", "value_cad_constant",
+]
+max_abs = 0
+
+# Values are rounded to 4 decimals of a million (100 units) before they are stored. 49 USD
+# current cells in 2013-2022 land one step apart (101 to 107 units with the baseline's
+# float32 noise). Each of the 32 donor-to-country cells among them was checked to sit on a
+# 50-unit midpoint (fraction 0.5); the other 17 are recipient groups of the same cells.
+[[delta]]
+view = "sectors_view"
+kind = "value"
+reason = "one 100-unit rounding step: value on a 50-unit midpoint, rounded on a different side of it"
+years = [2013, 2014, 2015, 2017, 2018, 2020, 2021, 2022]
+indicators = ["Bilateral"]
+donors = [
+  "All bilateral donors", "Canada", "DAC countries", "EU Institutions",
+  "EU27 & EU Institutions", "EU27 countries", "France", "G7 countries", "Japan",
+  "Saudi Arabia", "United States",
+]
+columns = ["value_usd_current"]
+max_abs = 107
+
+# options.json: the page reads the first year of the PSI exclusion from the options to show
+# its note.
+[[delta]]
+view = "sectors_view"
+kind = "new_in_candidate"
+reason = "page note metadata: the first year of the 2023 PSI exclusion"
+paths = ["psi_excluded_from"]

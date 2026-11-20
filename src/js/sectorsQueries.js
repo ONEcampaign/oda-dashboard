@@ -24,6 +24,9 @@ export const recipientNames = viewOptions.recipient_name;
 export const indicatorNames = viewOptions.indicator_name;
 export const sectorNames = viewOptions.sector_name;
 export const yearOptions = viewOptions.year;
+// From this year the CRS reports private sector instruments in a category the bilateral
+// data leaves out.
+export const psiExcludedFrom = viewOptions.psi_excluded_from;
 // The selections the page opens on.
 export const defaults = viewOptions.defaults;
 export const subSectorsBySector = viewOptions.sub_sectors_by_sector;

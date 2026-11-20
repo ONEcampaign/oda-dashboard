@@ -19,7 +19,8 @@ Checks, each reported per reason (unexplained, or one result per explaining reas
 - ``parity.options``: options.json differences, root metadata keys
   (OPTIONS_METADATA_KEYS: provenance) left out.
 
-Nulls: null against null is equal; null against a number is a delta.
+Nulls: null against null is equal; null against a number is a delta, which an entry's
+max_abs bounds by the number's absolute value (the null read as 0); max_rel cannot.
 """
 
 from collections.abc import Callable, Iterator, Sequence
@@ -96,6 +97,21 @@ def _nullable_values(deltas: pd.DataFrame, column: str) -> list:
     return values.astype(object).where(values.notna(), None).tolist()
 
 
+def _abs_diff(
+    diff: float | None, *, baseline: float | None, candidate: float | None
+) -> float | None:
+    """|diff|; for null against a number, the number's absolute value (null as 0).
+
+    None when both sides are null or the row carries neither side.
+    """
+    if diff is not None:
+        return abs(diff)
+    if (baseline is None) == (candidate is None):
+        return None
+    present = baseline if candidate is None else candidate
+    return abs(present)
+
+
 def _explain(
     deltas: pd.DataFrame,
     *,
@@ -106,14 +122,16 @@ def _explain(
     """The reason each delta row is expected, or UNEXPLAINED.
 
     Rows carry the SUMMARY_DIMENSIONS columns, optionally recipient_name, column,
-    rel_diff and diff (whose absolute value is matched against max_abs).
+    rel_diff, diff (whose absolute value is matched against max_abs), baseline and
+    candidate. A null against a number is matched with abs_diff = |number| (null as 0)
+    and no rel_diff, so max_abs can bound it and max_rel cannot.
     """
     relevant = [e for e in expected if e.view == view and e.kind == kind]
     if not relevant or deltas.empty:
         return pd.Series(UNEXPLAINED, index=deltas.index, dtype=object)
 
     reasons = []
-    for year, donor, indicator, recipient, column, rel_diff, diff in zip(
+    for year, donor, indicator, recipient, column, rel_diff, diff, base, cand in zip(
         _nullable_values(deltas, "year"),
         _nullable_values(deltas, "donor_name"),
         _nullable_values(deltas, "indicator_name"),
@@ -121,8 +139,11 @@ def _explain(
         _nullable_values(deltas, "column"),
         _nullable_values(deltas, "rel_diff"),
         _nullable_values(deltas, "diff"),
+        _nullable_values(deltas, "baseline"),
+        _nullable_values(deltas, "candidate"),
         strict=True,
     ):
+        abs_diff = _abs_diff(diff, baseline=base, candidate=cand)
         entry = find_explanation(
             relevant,
             view=view,
@@ -133,7 +154,7 @@ def _explain(
             recipient=recipient,
             column=column,
             rel_diff=rel_diff,
-            abs_diff=None if diff is None else abs(diff),
+            abs_diff=abs_diff,
         )
         reasons.append(UNEXPLAINED if entry is None else entry.reason)
     return pd.Series(reasons, index=deltas.index, dtype=object)
