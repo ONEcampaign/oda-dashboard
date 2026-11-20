@@ -89,3 +89,17 @@ def test_describe_change_rejects_non_finite(change: float) -> None:
     """A missing or infinite change raises instead of printing "nan%"."""
     with pytest.raises(ValueError, match="Cannot describe"):
         common.describe_change(change)
+
+
+def test_latest_years_keeps_the_last_ten_counted_from_the_data() -> None:
+    """The window ends at the frame's own last year, whatever its first year."""
+    df = pd.DataFrame({"year": list(range(2000, 2026)) * 2})
+    kept = common.latest_years(df, "year")
+    assert sorted(kept["year"].unique()) == list(range(2016, 2026))
+    assert len(kept) == 20
+
+
+def test_latest_years_rejects_a_frame_without_years() -> None:
+    """A year column with no year raises instead of writing an empty file."""
+    with pytest.raises(ValueError, match="holds no year"):
+        common.latest_years(pd.DataFrame({"year": [None, None]}), "year")

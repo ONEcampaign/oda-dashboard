@@ -1,5 +1,8 @@
 """The topic page overview: key numbers and the small charts beside them.
 
+Time-series files keep only the latest CHART_YEARS years (common.latest_years); key numbers
+are computed before that cut.
+
 Every figure uses a dashboard view's definition, with DAC countries summed from its members:
 Total ODA and ODA/GNI the financing view's, aid to Africa, regions and income groups the
 recipients view's (DAC2A Part I, bilateral plus imputed multilateral), and sectors the sectors
@@ -36,6 +39,7 @@ from src.data.topic_page.common import (
     df_to_key_number,
     format_billions,
     format_percentage,
+    latest_years,
     oda_gni_table,
     sort_dac_first,
     to_usd_constant,
@@ -293,7 +297,9 @@ def aid_to_africa_ts(provenance: ProvenanceLog) -> None:
             }
         )
     )
-    _save_quoted_shares(data, "Share of total ODA", "aid_to_africa_ts.csv")
+    _save_quoted_shares(
+        latest_years(data, "Year"), "Share of total ODA", "aid_to_africa_ts.csv"
+    )
 
     _update_key_numbers(
         {
@@ -394,7 +400,7 @@ def aid_to_regions_ts(provenance: ProvenanceLog) -> None:
         .rename(columns={"donor_name": "name"})
     )
     data["note"] = data.apply(_region_note, axis=1, regions=regions)
-    _save_dac_first(data, "aid_to_regions_ts.csv")
+    _save_dac_first(latest_years(data, "year"), "aid_to_regions_ts.csv")
 
 
 def aid_to_incomes_ts(provenance: ProvenanceLog) -> None:
@@ -429,7 +435,7 @@ def aid_to_incomes_ts(provenance: ProvenanceLog) -> None:
         .reset_index()
         .rename(columns={"donor_name": "name"})
     )
-    _save_dac_first(data, "aid_to_income_ts.csv")
+    _save_dac_first(latest_years(data, "year"), "aid_to_income_ts.csv")
 
 
 def sector_totals_ts(sectors: pd.DataFrame) -> None:
@@ -454,7 +460,7 @@ def sector_totals_ts(sectors: pd.DataFrame) -> None:
         .reset_index()
         .rename(columns={"donor_name": "name"})
     )
-    _save_dac_first(wide, "sector_totals.csv")
+    _save_dac_first(latest_years(wide, "year"), "sector_totals.csv")
 
 
 def _dac_sector_amounts(sectors: pd.DataFrame) -> pd.DataFrame:
@@ -502,7 +508,7 @@ def aid_to_sectors_ts(sectors: pd.DataFrame) -> None:
             .sort_values("Year")
             .rename(columns={"value": column})
         )
-        _save_quoted_shares(rows, "Share of total ODA", filename)
+        _save_quoted_shares(latest_years(rows, "Year"), "Share of total ODA", filename)
         _update_key_numbers(
             {
                 key: f"{rows[column].to_numpy()[-1]} billion",
@@ -536,7 +542,9 @@ def key_sector_shares(sectors: pd.DataFrame) -> None:
         .rename(columns={"year": "Year"})
     )
 
-    result.to_csv(PATHS.TOPIC_PAGE / "key_sector_shares.csv", index=False)
+    latest_years(result, "Year").to_csv(
+        PATHS.TOPIC_PAGE / "key_sector_shares.csv", index=False
+    )
     logger.info("Saved chart version of key_sector_shares.csv")
 
 
