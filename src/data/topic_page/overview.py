@@ -144,6 +144,7 @@ def total_aid_key_number(dac: pd.DataFrame) -> None:
             "total_oda_change": f"{float(data['pct_change'].item()):.1f} %",
             "total_oda_change_abs": change["abs"],
             "total_oda_change_verb": change["verb"],
+            "total_oda_change_noun": change["noun"],
             "latest_year": str(year),
             "previous_year": str(year - 1),
             "latest_year_detail": str(LATEST_YEAR_DETAIL),

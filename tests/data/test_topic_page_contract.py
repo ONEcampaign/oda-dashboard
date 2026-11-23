@@ -151,6 +151,7 @@ AGGREGATE_KEYS: list[str] = [
     "total_oda_change",
     "total_oda_change_abs",
     "total_oda_change_verb",
+    "total_oda_change_noun",
     "oda_gni",
     "oda_gni_distance",
 ]
