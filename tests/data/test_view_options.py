@@ -90,3 +90,28 @@ def test_partitioned_dataset_is_written_under_root(tmp_path: Path) -> None:
     assert partitions == ["donor_slug=dac-countries", "donor_slug=france"]
     data = pd.read_parquet(tmp_path / "view")
     assert sorted(data["year"].tolist()) == ROWS["year"].tolist()
+
+
+def test_each_partition_is_one_file_holding_all_its_rows(tmp_path: Path) -> None:
+    # The frontend fetches only part-0.parquet, so a second file would drop rows from charts.
+    n_partitions, rows_per_partition = 1_500, 3
+    rows = pd.DataFrame(
+        {
+            # Interleaved, so each partition's rows are spread across the frame.
+            "donor_slug": [f"d{i}" for i in range(n_partitions)] * rows_per_partition,
+            "year": [y for y in range(rows_per_partition) for _ in range(n_partitions)],
+            "value_usd_current": 1,
+        }
+    )
+    write_partitioned_dataset(rows, "view", ["donor_slug"], root=tmp_path)
+    part_dirs = list((tmp_path / "view").iterdir())
+    assert len(part_dirs) == n_partitions
+    for part_dir in part_dirs:
+        assert [f.name for f in part_dir.iterdir()] == ["part-0.parquet"]
+        assert len(pd.read_parquet(part_dir / "part-0.parquet")) == rows_per_partition
+
+
+def test_partition_column_with_missing_values_raises(tmp_path: Path) -> None:
+    rows = ROWS.assign(donor_slug=["dac-countries", None])
+    with pytest.raises(ValueError, match="missing values"):
+        write_partitioned_dataset(rows, "view", ["donor_slug"], root=tmp_path)
