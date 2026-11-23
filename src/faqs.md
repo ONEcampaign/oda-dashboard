@@ -150,6 +150,10 @@ function App() {
                 organisations, such as the World Bank's IBRD, report mostly non-concessional lending.
               </p>
               <p>
+                Sector data therefore start in 2013. The OECD's data on multilateral organisations' spending begin in
+                2011, so 2013 is the first year with a full three-year period.
+              </p>
+              <p>
                 Contributions that cannot be traced to a recipient are shown under "ODA eligible countries, unspecified",
                 where the OECD's DAC2A table also records them, so the total matches the contributions made.
               </p>

@@ -145,7 +145,16 @@ LABEL_COLUMNS: tuple[str, ...] = (
 
 FINANCING_TIME: dict[str, int] = {"start": 1990, "end": 2025, "base": 2025}
 BASE_TIME: dict[str, int] = {"start": 1990, "end": 2024, "base": 2024}
-SECTORS_TIME: dict[str, int] = {"start": 2013, "end": 2024, "base": 2024}
+# Imputed multilateral spends each contribution in the proportions of the organisation's
+# spending over three years (t-2 to t). The MultiSystem data starts in 2011, so 2013 is the
+# first year with a full window. See
+# https://docs.one.org/methodologies/data/oda/imputed-multilateral-sectors/
+IMPUTED_MULTILATERAL_START_YEAR: int = 2013
+SECTORS_TIME: dict[str, int] = {
+    "start": IMPUTED_MULTILATERAL_START_YEAR,
+    "end": 2024,
+    "base": 2024,
+}
 # oecd.crs.gender_marker starts in 2010 and refuses earlier years.
 MARKERS_START_YEAR: int = 2010
 GENDER_TIME: dict[str, int] = {

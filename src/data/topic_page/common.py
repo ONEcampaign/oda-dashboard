@@ -21,12 +21,18 @@ from src.data.analysis_tools.transformations import (
     get_group_total,
     get_member_gni,
 )
-from src.data.config import DAC_COUNTRIES, DAC_COUNTRIES_NAME
+from src.data.config import (
+    DAC_COUNTRIES,
+    DAC_COUNTRIES_NAME,
+    IMPUTED_MULTILATERAL_START_YEAR,
+)
 
 LONG_START_YEAR: int = 2000
 START_YEAR: int = 2010
-# oda-data 3.0's Multisystem, which imputed multilateral spending comes from, starts here.
-SECTORS_START_YEAR: int = 2011
+# Sector totals include imputed multilateral spending, which needs three years of MultiSystem
+# data (t-2 to t), so they start two years after the MultiSystem's 2011; see
+# IMPUTED_MULTILATERAL_START_YEAR in src/data/config.py.
+SECTORS_START_YEAR: int = IMPUTED_MULTILATERAL_START_YEAR
 SHORT_START_YEAR: int = 2015
 # First year of the ODA article's three mini charts (Africa, health, humanitarian), which run
 # to LATEST_YEAR_DETAIL.
