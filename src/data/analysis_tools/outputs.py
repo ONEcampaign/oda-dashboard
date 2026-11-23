@@ -18,7 +18,6 @@ from pathlib import Path
 
 import pandas as pd
 import pyarrow as pa
-import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 
 from src.data.config import LABEL_COLUMNS, PATHS, logger
@@ -169,9 +168,7 @@ def optimize_dataframe_types(df: pd.DataFrame) -> pd.DataFrame:
 
     Values arrive from convert_values_to_units already as integers in units; anything still
     floating (the pct_* columns) becomes Float32, year becomes Int16, and the label columns are
-    dictionary-encoded. Rows are left in whatever order the caller chose:
-    write_partitioned_dataset sorts by its partition columns, which is what actually helps
-    compression here.
+    dictionary-encoded. Rows are left in whatever order the caller chose.
 
     Args:
         df: Wide frame ready to be written.
@@ -196,6 +193,10 @@ def optimize_dataframe_types(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+# The one file per partition; src/js/sectorsQueries.js fetches exactly this name.
+PARTITION_FILE: str = "part-0.parquet"
+PARTITION_ROW_GROUP_SIZE: int = 100_000
+
 # Codec shared by the single-file and partitioned writers.
 PARQUET_CODEC: dict[str, str | int | bool] = {
     "compression": "zstd",
@@ -206,12 +207,7 @@ PARQUET_CODEC: dict[str, str | int | bool] = {
 
 
 def get_parquet_write_options() -> dict:
-    """Compression and encoding settings for the single-file parquet in a view's archive.
-
-    write_partitioned_dataset deliberately does not reuse these: the paging and row-group keys
-    below are arguments to pq.write_table, while the dataset writer takes its row-group sizing
-    from ds.write_dataset instead.
-    """
+    """Compression and encoding settings for the single-file parquet in a view's archive."""
     return {
         **PARQUET_CODEC,
         "data_page_size": 1_048_576,
@@ -244,69 +240,47 @@ def write_partitioned_dataset(
 ) -> None:
     """Write the frame as a Hive-partitioned parquet dataset, for views too big for one file.
 
+    Each partition is written as exactly one file, part-0.parquet, which is the only file the
+    frontend fetches. pyarrow's ds.write_dataset split about 90 sectors partitions across
+    part-0 and part-1, so those charts silently lost every row in part-1.
+
     Args:
         df: Wide frame ready to be written.
         base_dir: Directory name, created under root.
         partition_cols: Columns to partition by, e.g. the donor and recipient slugs. The
             frontend addresses partitions by these values, so they have to be URL-safe.
         root: Directory to write into; CI publishes PATHS.CDN_FILES.
+
+    Raises:
+        ValueError: If a partition column is absent or has missing values.
     """
     missing = [col for col in partition_cols if col not in df.columns]
     if missing:
         raise ValueError(f"Partition columns absent from the data: {missing}")
+    null_keys = [col for col in partition_cols if df[col].isna().any()]
+    if null_keys:
+        raise ValueError(f"Partition columns with missing values: {null_keys}")
 
-    optimized = optimize_dataframe_types(df)
-
-    # Sort by the partition columns so each fragment written covers only a few partitions.
-    # Unsorted input makes every fragment span every partition, and pyarrow then refuses the
-    # write for exceeding its per-fragment partition ceiling.
-    optimized = optimized.sort_values(partition_cols, kind="stable")
-
-    table = pa.Table.from_pandas(optimized, preserve_index=False)
+    # Sorting keeps each partition's rows in a stable order within its file.
+    optimized = optimize_dataframe_types(df).sort_values(partition_cols, kind="stable")
 
     output_dir = root / base_dir
     if output_dir.exists():
         logger.info("Clearing existing partitioned dataset at %s", output_dir)
         shutil.rmtree(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Take each partition column's type from the table, so both string slugs and numeric
-    # codes work. Forcing int32 here silently ruled out name-based partitioning.
-    partition_fields = []
-    for col in partition_cols:
-        field = table.schema.field(col)
-        # Dictionary-typed partition keys make pyarrow hang in teardown across thousands of
-        # partitions, so partition on the underlying values instead.
-        if pa.types.is_dictionary(field.type):
-            field = field.with_type(field.type.value_type)
-            table = table.set_column(
-                table.schema.get_field_index(col), field, table[col].cast(field.type)
-            )
-        partition_fields.append(field)
-    partition_schema = pa.schema(partition_fields)
-
-    # Row-group sizing is set on ds.write_dataset below.
-    parquet_format = ds.ParquetFileFormat()
-    file_options = parquet_format.make_write_options(**PARQUET_CODEC)
-
-    # pyarrow's default ceiling is 1024 partitions per fragment; raise it to what the data
-    # actually needs so a legitimate dataset is never silently capped.
-    n_partitions = optimized.groupby(
-        partition_cols, observed=True, dropna=False
-    ).ngroups
-    logger.info("Writing %s partitions to %s", f"{n_partitions:,}", output_dir)
-
-    # Write partitioned dataset
-    ds.write_dataset(
-        data=table,
-        base_dir=str(output_dir),
-        format="parquet",
-        partitioning=ds.partitioning(partition_schema, flavor="hive"),
-        basename_template="part-{i}.parquet",
-        file_options=file_options,
-        existing_data_behavior="delete_matching",
-        max_partitions=max(1_024, n_partitions + 1),
-        max_rows_per_file=1_000_000,
-        max_rows_per_group=100_000,
-        min_rows_per_group=100_000,
-    )
+    groups = optimized.groupby(partition_cols, observed=True, sort=False)
+    logger.info("Writing %s partitions to %s", f"{groups.ngroups:,}", output_dir)
+    for keys, part in groups:
+        part_dir = output_dir.joinpath(
+            *(f"{col}={key}" for col, key in zip(partition_cols, keys, strict=True))
+        )
+        part_dir.mkdir(parents=True)
+        pq.write_table(
+            pa.Table.from_pandas(
+                part.drop(columns=partition_cols), preserve_index=False
+            ),
+            part_dir / PARTITION_FILE,
+            row_group_size=PARTITION_ROW_GROUP_SIZE,
+            **PARQUET_CODEC,
+        )
