@@ -441,17 +441,17 @@ def aid_to_incomes_ts(provenance: ProvenanceLog) -> None:
 def sector_totals_ts(sectors: pd.DataFrame) -> None:
     """Write sector_totals.csv: ODA per broad sector, DAC member and year.
 
-    Amounts are constant USD millions of LATEST_YEAR_DETAIL. Sectors are ordered by their
-    shares of each donor-year's total summed over every donor and year, largest first.
+    Amounts are constant USD millions of LATEST_YEAR_DETAIL. Sectors are ordered by the DAC
+    countries total summed over every year in the file, largest first.
 
     Args:
         sectors: From sector_totals.
     """
     data = _with_named_dac_total(sectors, ["year", "sector"])
-    share = data["value"] / data.groupby(["year", "donor_name"])["value"].transform(
-        "sum"
-    )
-    order = share.groupby(data["sector"]).sum().sort_values(ascending=False).index
+    dac = data.loc[data["donor_name"] == DAC_COUNTRIES_NAME]
+    order = dac.groupby("sector")["value"].sum().sort_values(ascending=False).index
+    if set(order) != set(data["sector"]):
+        raise ValueError("Some sectors have no DAC countries total to order them by")
     wide = (
         data.pivot(index=["year", "donor_name"], columns="sector", values="value")
         .reindex(columns=order)
