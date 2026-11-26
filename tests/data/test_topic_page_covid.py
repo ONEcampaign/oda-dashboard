@@ -32,16 +32,22 @@ def test_every_donor_in_the_input_is_a_dac_member(covid):
 
 
 def test_oda_covid_csv_publishes_the_series(covid):
+    """Every input row in the file's years reaches oda_covid.csv with its value.
+
+    Donor-years before the series starts publish 0; later ones the series leaves out (members
+    that never reported it, years after it ends) publish empty.
+    """
     published = pd.read_csv(PATHS.TOPIC_PAGE / "oda_covid.csv")
     expected = covid.rename(columns={"donor_name": "Donor", "year": "Year"})[
         ["Donor", "Year", "value"]
-    ]
+    ].loc[lambda d: d["Year"].between(published["Year"].min(), published["Year"].max())]
     merged = published.merge(
         expected, on=["Donor", "Year"], how="outer", indicator=True
     )
 
-    # Every input row reaches the CSV; donor-years without COVID-19 ODA publish 0.
     assert (merged["_merge"] != "right_only").all()
-    assert merged["COVID ODA"].to_numpy() == pytest.approx(
-        merged["value"].fillna(0).to_numpy(), abs=1e-9
+    before = merged["Year"] < covid["year"].min()
+    assert (merged.loc[before, "COVID ODA"] == 0).all()
+    assert merged.loc[~before, "COVID ODA"].to_numpy() == pytest.approx(
+        merged.loc[~before, "value"].to_numpy(), abs=1e-9, nan_ok=True
     )

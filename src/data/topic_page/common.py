@@ -25,18 +25,18 @@ from src.data.config import (
     DAC_COUNTRIES,
     DAC_COUNTRIES_NAME,
     IMPUTED_MULTILATERAL_START_YEAR,
+    logger,
 )
 
 LONG_START_YEAR: int = 2000
-START_YEAR: int = 2010
 # Sector totals include imputed multilateral spending, which needs three years of MultiSystem
 # data (t-2 to t), so they start two years after the MultiSystem's 2011; see
 # IMPUTED_MULTILATERAL_START_YEAR in src/data/config.py.
 SECTORS_START_YEAR: int = IMPUTED_MULTILATERAL_START_YEAR
-SHORT_START_YEAR: int = 2015
 LATEST_YEAR_AGG: int = 2025
 LATEST_YEAR_DETAIL: int = 2024
-CONSTANT_YEAR: int = 2025
+# Every constant price on the topic page is in USD of the latest aggregate year.
+CONSTANT_YEAR: int = LATEST_YEAR_AGG
 
 # Years plotted by the article charts whose files are cut to a window, ending at their latest year.
 CHART_WINDOW_YEARS: int = 10
@@ -46,6 +46,9 @@ MINI_CHART_START_YEAR: int = LATEST_YEAR_DETAIL - CHART_WINDOW_YEARS + 1
 # First year of oda_covid.csv, the article's COVID, refugees and Ukraine chart, which runs to
 # LATEST_YEAR_AGG.
 ODA_COVID_START_YEAR: int = LATEST_YEAR_AGG - CHART_WINDOW_YEARS + 1
+# First year read for oda_covid.csv and the Ukraine series: the chart's window, so the key
+# numbers' comparison years (pre-COVID, pre-invasion) must fall inside it.
+SHORT_START_YEAR: int = ODA_COVID_START_YEAR
 
 BILLION: float = 1e9
 # Decimal places of the USD million amounts the chart CSVs publish unformatted.
@@ -58,6 +61,39 @@ DONOR_KEYS: list[str] = ["donor_name", "year"]
 
 # The key numbers the ODA article reads as {{oda_topic.<key>}} tokens.
 KEY_NUMBERS_FILE: str = "oda_key_numbers.json"
+# Every key the scripts write to KEY_NUMBERS_FILE; any other key is dropped as retired.
+KEY_NUMBER_KEYS: frozenset[str] = frozenset(
+    {
+        # overview.py, aggregates (LATEST_YEAR_AGG)
+        "latest_year",
+        "previous_year",
+        "total_oda",
+        "total_oda_change",
+        "total_oda_change_abs",
+        "total_oda_change_verb",
+        "total_oda_change_noun",
+        "oda_gni",
+        "oda_gni_distance",
+        # overview.py, granular (LATEST_YEAR_DETAIL)
+        "latest_year_detail",
+        "aid_to_africa",
+        "aid_to_africa_share",
+        "aid_to_incomes",
+        "aid_to_health",
+        "aid_to_health_share",
+        "aid_to_humanitarian",
+        "aid_to_humanitarian_share",
+        # total_excl_donor.py
+        "ukraine_share_of_total_oda",
+        "ukraine_times_pre_invasion",
+        "pre_invasion_year",
+        "pre_covid_year",
+        "other_oda_change_abs",
+        "other_oda_change_verb",
+        "total_oda_change_since_pre_covid_abs",
+        "total_oda_change_since_pre_covid_noun",
+    }
+)
 
 
 def _format(series: pd.Series, template: str) -> pd.Series:
@@ -134,10 +170,24 @@ def add_change(
 
 
 def update_key_number(path: Path, new_dict: dict) -> None:
-    """Merge new_dict into the key numbers JSON at path, creating the file if needed."""
+    """Merge new_dict into the key numbers JSON at path, creating the file if needed.
+
+    Keys outside KEY_NUMBER_KEYS are retired: they are dropped from the file, so the article
+    never reads a stale figure.
+
+    Raises:
+        ValueError: If new_dict holds a key missing from KEY_NUMBER_KEYS.
+    """
+    undeclared = sorted(set(new_dict) - KEY_NUMBER_KEYS)
+    if undeclared:
+        raise ValueError(f"Key numbers missing from KEY_NUMBER_KEYS: {undeclared}")
     data = json.loads(path.read_text()) if path.exists() else {}
     data.update(new_dict)
-    path.write_text(json.dumps(data, indent=4))
+    retired = sorted(set(data) - KEY_NUMBER_KEYS)
+    if retired:
+        logger.warning("Dropping retired key numbers from %s: %s", path.name, retired)
+    kept = {key: value for key, value in data.items() if key in KEY_NUMBER_KEYS}
+    path.write_text(json.dumps(kept, indent=4))
 
 
 def df_to_key_number(
