@@ -20,6 +20,8 @@ from src.data.topic_page.common import (
     LATEST_YEAR_AGG,
     LATEST_YEAR_DETAIL,
     ODA_COVID_START_YEAR,
+    PRE_COVID_YEAR,
+    PRE_INVASION_YEAR,
     SHORT_START_YEAR,
     describe_change,
     read_total_oda,
@@ -29,7 +31,6 @@ from src.data.topic_page.common import (
 )
 from src.data.topic_page.covid import covid_bi_multi_dac
 from src.data.topic_page.ukraine import (
-    PRE_INVASION_YEAR,
     dac_to_ukraine_total,
     write_ukraine_comparison,
 )
@@ -44,13 +45,6 @@ IDRC: str = "IDRC"
 UKRAINE: str = "ODA to Ukraine"
 OTHER_ODA: str = "Other ODA"
 COVID_ODA: str = "COVID ODA"
-# The article compares ODA without COVID-19, refugees and Ukraine with this pre-COVID year.
-PRE_COVID_YEAR: int = 2019
-if min(PRE_COVID_YEAR, PRE_INVASION_YEAR) < SHORT_START_YEAR:
-    raise ValueError(
-        f"SHORT_START_YEAR ({SHORT_START_YEAR}) is after a comparison year of the key "
-        f"numbers (pre-COVID {PRE_COVID_YEAR}, pre-invasion {PRE_INVASION_YEAR})"
-    )
 OUTPUT_COLUMNS: list[str] = [
     "Year",
     "Donor",

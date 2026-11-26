@@ -13,12 +13,10 @@ from src.data.topic_page import common, overview, total_oda_gni
 from src.data.topic_page.total_excl_donor import (
     COVID_ODA,
     IDRC,
-    PRE_COVID_YEAR,
     TOTAL_ODA,
     add_covid_oda,
     check_total_oda_present,
 )
-from src.data.topic_page.ukraine import PRE_INVASION_YEAR
 
 
 @pytest.fixture
@@ -49,8 +47,11 @@ def test_constant_year_is_the_latest_aggregate_year() -> None:
 
 
 def test_short_window_holds_the_comparison_years() -> None:
-    """oda_covid.csv's key numbers compare with years the short read includes."""
-    assert common.SHORT_START_YEAR <= min(PRE_COVID_YEAR, PRE_INVASION_YEAR)
+    """oda_covid.csv's key numbers compare with years the short read includes, and the
+    read covers the chart's window."""
+    assert common.SHORT_START_YEAR <= min(
+        common.PRE_COVID_YEAR, common.PRE_INVASION_YEAR, common.ODA_COVID_START_YEAR
+    )
 
 
 def test_update_key_number_drops_retired_keys(tmp_path: Path) -> None:

@@ -6,6 +6,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from src.data.config import GRANT_EQUIVALENT_START_YEAR
 from src.data.validation import cross_view
 from src.data.validation.cross_view import (
     CROSS_CHECKS,
@@ -27,6 +28,7 @@ from tests.data.validation.conftest import (
 DAC = "DAC countries"
 ELIGIBLE = "ODA eligible countries"
 MILLION = 1_000_000
+FRANCE, GERMANY = "France", "Germany"
 
 
 def _topic_reader(files: dict[str, pd.DataFrame]) -> Callable[[str], pd.DataFrame]:
@@ -327,8 +329,8 @@ def test_latest_year_files(tmp_path: Path, make_view: MakeView) -> None:
 
 
 def _sector_rows() -> list[dict]:
-    """DAC at ODA eligible (Health 30, Education 70, split across both indicators), plus a
-    country partition that must not be read."""
+    """France at ODA eligible (Health 30, Education 70, split across both indicators), plus
+    a country partition that must not be read."""
     rows = []
     for recipient, scale in [(ELIGIBLE, 1), ("Kenya", 1_000)]:
         for indicator, health, education in [
@@ -339,7 +341,7 @@ def _sector_rows() -> list[dict]:
                 rows.append(
                     {
                         "year": 2024,
-                        "donor_name": DAC,
+                        "donor_name": FRANCE,
                         "recipient_name": recipient,
                         "indicator_name": indicator,
                         "sector_name": sector,
@@ -402,13 +404,17 @@ def test_sectors_reader_raises_without_partitions(tmp_path: Path) -> None:
 
 
 def test_sector_shares_and_amounts(tmp_path: Path, make_view: MakeView) -> None:
-    """Shares over both indicators and all sectors; amounts in billions; pre-2013 dropped."""
+    """Shares over both indicators and all sectors; amounts rebased per member and summed
+    to DAC countries; pre-2013 dropped."""
     write_hive(make_view("sectors_view", _sector_rows()), tmp_path / "sectors_view")
+    write_flat(
+        make_view("financing_view", _member_financing_rows(2024)), tmp_path / "fin"
+    )
     topic = {
         "key_sector_shares": pd.DataFrame(
             {
                 "Year": [2010, 2024],
-                "name": [DAC] * 2,
+                "name": [FRANCE] * 2,
                 "Humanitarian": ["", ""],
                 "Education": [0.5, 0.7],
                 "Health": [0.5, 0.3],
@@ -422,14 +428,15 @@ def test_sector_shares_and_amounts(tmp_path: Path, make_view: MakeView) -> None:
                 "Donor": [DAC] * 2,
                 "Recipient": ["All Developing Countries"] * 2,
                 "Sector": ["Health"] * 2,
-                "Total aid to health": ["99.0", "0.0"],
+                # France's current 30 x 2 = 60 USD mn; Germany nothing.
+                "Total aid to health": ["99.0", "0.06"],
                 "Share of total ODA": ['"30.0%"'] * 2,
             }
         ),
     }
     names = {"cross_view.sector_shares", "cross_view.health"}
     results = run_cross_view(
-        {"sectors_view": tmp_path},
+        {"sectors_view": tmp_path, "financing_view": tmp_path / "fin"},
         [],
         checks=tuple(c for c in CROSS_CHECKS if c.check in names),
         read_topic=_topic_reader(topic),
@@ -437,18 +444,20 @@ def test_sector_shares_and_amounts(tmp_path: Path, make_view: MakeView) -> None:
     by_check = {r.check: r for r in results}
     assert by_check["cross_view.sector_shares"].passed
     assert "2 values" in by_check["cross_view.sector_shares"].message
-    # 30 USD mn vs a topic "0.0" billion: within the 0.05bn rounding floor; 2012 dropped.
+    # 2012 is dropped.
     assert by_check["cross_view.health"].passed
     assert "1 values" in by_check["cross_view.health"].message
 
 
 def _recipient_rows() -> list[dict]:
-    """DAC to Africa, ODA eligible and LICs in 2024, over both indicators."""
+    """DAC to Africa and ODA eligible, France to LICs, in 2024, over both indicators; a DAC
+    LIC row the income check must not use (it sums the rebased members)."""
     rows = []
-    for recipient, bilateral, imputed in [
-        ("Africa", 30, 10),
-        (ELIGIBLE, 100, 60),
-        ("Low Income Countries (LICs)", 20_000, 7_000),
+    for donor, recipient, bilateral, imputed in [
+        (DAC, "Africa", 30, 10),
+        (DAC, ELIGIBLE, 100, 60),
+        (DAC, "Low Income Countries (LICs)", 1, 1),
+        (FRANCE, "Low Income Countries (LICs)", 10_000, 3_500),
     ]:
         for indicator, value in [
             ("Bilateral", bilateral),
@@ -457,7 +466,7 @@ def _recipient_rows() -> list[dict]:
             rows.append(
                 {
                     "year": 2024,
-                    "donor_name": DAC,
+                    "donor_name": donor,
                     "recipient_name": recipient,
                     "indicator_name": indicator,
                     "value_usd_current": value * MILLION,
@@ -468,8 +477,12 @@ def _recipient_rows() -> list[dict]:
 
 
 def test_africa_share_and_income_groups(tmp_path: Path, make_view: MakeView) -> None:
-    """Africa / ODA eligible as a share; income groups from "US$x billion" strings."""
+    """Africa / ODA eligible as a share; income groups from "US$x billion" strings, against
+    France's current 13,500 x 2 = 27,000 USD mn."""
     write_flat(make_view("recipients_view", _recipient_rows()), tmp_path / "rec")
+    write_flat(
+        make_view("financing_view", _member_financing_rows(2024)), tmp_path / "fin"
+    )
     topic = {
         "aid_to_africa_ts": pd.DataFrame(
             {
@@ -493,7 +506,7 @@ def test_africa_share_and_income_groups(tmp_path: Path, make_view: MakeView) -> 
     }
     names = {"cross_view.africa_share", "cross_view.income_groups"}
     results = run_cross_view(
-        {"recipients_view": tmp_path / "rec"},
+        {"recipients_view": tmp_path / "rec", "financing_view": tmp_path / "fin"},
         [],
         checks=tuple(c for c in CROSS_CHECKS if c.check in names),
         read_topic=_topic_reader(topic),
@@ -503,12 +516,11 @@ def test_africa_share_and_income_groups(tmp_path: Path, make_view: MakeView) -> 
     assert {r.check for r in results} == names | {cross_view.PROVENANCE_CHECK}
 
 
-FRANCE, GERMANY = "France", "Germany"
-
-
-def _member_financing_rows() -> list[dict]:
-    """2017 Total ODA (flows) and refugee costs for two DAC members, constant = 2x current
-    for France and 4x for Germany."""
+def _member_financing_rows(year: int = 2017) -> list[dict]:
+    """Total ODA and refugee costs for two DAC members in one year, constant = 2x current
+    for France and 4x for Germany. Flows before GRANT_EQUIVALENT_START_YEAR, grant
+    equivalents from it (the headline measure)."""
+    measure = "Flows" if year < GRANT_EQUIVALENT_START_YEAR else "Grant equivalents"
     rows = []
     for donor, ratio in [(FRANCE, 2), (GERMANY, 4)]:
         for indicator, current in [
@@ -517,10 +529,10 @@ def _member_financing_rows() -> list[dict]:
         ]:
             rows.append(
                 {
-                    "year": 2017,
+                    "year": year,
                     "donor_name": donor,
                     "indicator_name": indicator,
-                    "type": "Flows",
+                    "type": measure,
                     "value_usd_current": current * MILLION,
                     "value_usd_constant": current * ratio * MILLION,
                     "pct_of_gni": 0.003,

@@ -22,9 +22,9 @@ from src.data.topic_page.common import (
     LONG_START_YEAR,
     MINI_CHART_START_YEAR,
     ODA_COVID_START_YEAR,
+    PRE_INVASION_YEAR,
     SECTORS_START_YEAR,
 )
-from src.data.topic_page.ukraine import PRE_INVASION_YEAR
 
 # File -> (its exact header, the column holding the donor name, or None).
 CHART_FILES: dict[str, tuple[list[str], str | None]] = {

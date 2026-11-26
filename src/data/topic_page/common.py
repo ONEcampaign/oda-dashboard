@@ -46,9 +46,13 @@ MINI_CHART_START_YEAR: int = LATEST_YEAR_DETAIL - CHART_WINDOW_YEARS + 1
 # First year of oda_covid.csv, the article's COVID, refugees and Ukraine chart, which runs to
 # LATEST_YEAR_AGG.
 ODA_COVID_START_YEAR: int = LATEST_YEAR_AGG - CHART_WINDOW_YEARS + 1
-# First year read for oda_covid.csv and the Ukraine series: the chart's window, so the key
-# numbers' comparison years (pre-COVID, pre-invasion) must fall inside it.
-SHORT_START_YEAR: int = ODA_COVID_START_YEAR
+# The article compares ODA without COVID-19, refugees and Ukraine with this pre-COVID year.
+PRE_COVID_YEAR: int = 2019
+# The last full year before Russia's invasion; the Ukraine comparison chart starts here.
+PRE_INVASION_YEAR: int = 2021
+# First year read for oda_covid.csv and the Ukraine series: the chart's window, widened back
+# to the key numbers' comparison years once the window moves past them.
+SHORT_START_YEAR: int = min(ODA_COVID_START_YEAR, PRE_COVID_YEAR, PRE_INVASION_YEAR)
 
 BILLION: float = 1e9
 # Decimal places of the USD million amounts the chart CSVs publish unformatted.

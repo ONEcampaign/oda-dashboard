@@ -23,6 +23,7 @@ from src.data.config import (
 from src.data.topic_page.common import (
     CONSTANT_YEAR,
     LATEST_YEAR_DETAIL,
+    PRE_INVASION_YEAR,
     SHORT_START_YEAR,
     to_usd_constant,
     with_dac_total,
@@ -30,8 +31,6 @@ from src.data.topic_page.common import (
 
 UKRAINE_CODE: int = 85
 UKRAINE_NAME: str = "Ukraine"
-# The last full year before Russia's invasion; the comparison chart starts here.
-PRE_INVASION_YEAR: int = 2021
 CRS_BILATERAL_ODA: str = "oecd.crs.bilateral_oda"
 GRANT_EQUIVALENT: str = "grant_equivalent"
 # CRS and DAC2A hold no full year after LATEST_YEAR_DETAIL.
