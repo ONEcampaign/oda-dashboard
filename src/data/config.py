@@ -394,6 +394,7 @@ EUI_CHANNEL_CODES: frozenset[int] = frozenset({42000, 42001, 42003, 42004, 42999
 # recipient is spelled the same way on every page. Regions are renamed to match across the
 # DAC2A and CRS views, and the few countries the two sources spell differently take the CRS
 # spelling. naming.canonical_recipient_names applies these in every view.
+# Code 361 keeps the source name "Netherlands Antilles" (1990-1999 data, before Sint Maarten split off).
 RECIPIENT_NAME_OVERRIDES: dict[int, str] = {
     10_100: ODA_ELIGIBLE,
     UNSPECIFIED_RECIPIENT_CODE: UNSPECIFIED_RECIPIENT_NAME,

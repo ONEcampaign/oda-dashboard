@@ -62,6 +62,7 @@ def test_canonical_recipients_keep_the_views_display_names():
 _SOURCE_SPELLINGS: dict[int, tuple[str, str]] = {
     88: ("States Ex-Yugoslavia unspecified", "States Ex-Yugoslavia unspecified"),
     247: ("Cote d'Ivoire", "C\u00f4te d'Ivoire"),
+    361: ("Netherlands Antilles", "Netherlands Antilles"),
     550: ("West Bank and Gaza Strip", "West Bank and Gaza Strip"),
     679: ("South Asia, regional", "South Asia, regional"),
     730: ("China (People\u2019s Republic of)", "China (People's Republic of)"),
@@ -91,6 +92,7 @@ def test_every_view_gives_a_recipient_code_one_name():
     assert dict(zip(codes, crs_names, strict=True)) == {
         88: "States ex-Yugoslavia, unspecified",
         247: "C\u00f4te d'Ivoire",
+        361: "Netherlands Antilles",
         550: "West Bank and Gaza Strip",
         679: "South Asia, unspecified",
         730: "China (People's Republic of)",
