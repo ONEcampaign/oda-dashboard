@@ -1,26 +1,13 @@
 ```js
 import * as React from "npm:react"
 import { Header } from "npm:@one-data/observable-themes/ui"
-import {
-    generateList,
-    isEmbedded
-} from "npm:@one-data/observable-themes/utils"
+// Importing from the theme's utils turns on embed mode (the `embedded` class and height messages).
+import {isEmbedded} from "npm:@one-data/observable-themes/utils"
 import {APP_TITLE, APP_DESCRIPTION, NAV_ITEMS} from "./js/config.js"
 
 ```
 
 ```jsx
-function GeneratedList({data, mode}) {
-  const ref = React.useRef(null)
-  React.useEffect(() => {
-    if (!ref.current) return
-    const el = generateList(data, mode)
-    ref.current.innerHTML = ""
-    ref.current.appendChild(el)
-  }, [data, mode])
-  return <div ref={ref} />
-}
-
 function App() {
   return (
       <div className="mx-auto space-y-12 px-4 py-10 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
@@ -29,7 +16,7 @@ function App() {
 
           
           <div
-              className="max-w-4xl mx-auto space-y-4 text-md [&_a]:text-indigo-500 [&_a]:underline [&_a:hover]:underline [&_a:focus]:underline [&_a:visited]:text-indigo-500"
+              className="max-w-4xl mx-auto space-y-4 text-base [&_a]:text-indigo-500 [&_a]:underline [&_a:hover]:underline [&_a:focus]:underline [&_a:visited]:text-indigo-500"
               style={{ fontFamily: "Colfax, Helvetica, sans-serif" }}
           >
               <h2 className="font-bold text-xl mt-8 mb-2">What is the ODA Dashboard?</h2>

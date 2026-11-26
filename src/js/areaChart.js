@@ -8,7 +8,7 @@ import {
     paletteRecipients,
     paletteGender
 } from "./colors.js";
-import {plotHeight} from "./utils.js";
+import {plotHeight, plotAriaDescription} from "./utils.js";
 
 export function areaChart(data, mode, width,
                           {
@@ -68,6 +68,8 @@ export function areaChart(data, mode, width,
     }
 
     return Plot.plot({
+        ariaLabel: `Area chart of ${customChannels.custom.label} (%) by year`,
+        ariaDescription: plotAriaDescription(arrayData, groupVar),
         width: width,
         height: plotHeight(width),
         marginTop: 25,

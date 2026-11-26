@@ -11,14 +11,15 @@ const tooltip = d3.select("body")
 // Module-level tracking of the active sector for coloring across redraws
 let _activeSector = "All sectors";
 
-export function treemapChart(data, width, { currency = null, onSectorChange = null } = {}) {
+export function treemapChart(data, width, { currency = null, activeSector = null, onSectorChange = null } = {}) {
 
+    // The page owns the selection; start each render from it.
+    if (activeSector != null) _activeSector = activeSector;
+
+    // The page resets a sector missing from the data; until it does, draw nothing as selected.
     const uniqueSectors = [...new Set(data.map(d => d.sector))];
-
-    // If active sector is set but no longer in data, reset to "All sectors"
     if (_activeSector !== "All sectors" && !uniqueSectors.includes(_activeSector)) {
         _activeSector = "All sectors";
-        if (onSectorChange) setTimeout(() => onSectorChange("All sectors"), 0);
     }
 
     // Layout config
@@ -76,7 +77,7 @@ export function treemapChart(data, width, { currency = null, onSectorChange = nu
         .round(true)(root);
 
     const leaves = root.leaves();
-    const uid = `O-${Math.random().toString(16).slice(2)}`;
+    const currencyUnitLabel = getCurrencyLabel(currency, { suffix: scale.suffix });
 
     // Create SVG container
     const svg = d3
@@ -86,7 +87,11 @@ export function treemapChart(data, width, { currency = null, onSectorChange = nu
         .attr("height", height)
         .attr("style", "max-width: 100%; height: auto; height: intrinsic;")
         .attr("font-family", "'Italian Plate', sans-serif")
-        .attr("font-size", 10);
+        .attr("font-size", 10)
+        // A group, not an image: the tiles inside are focusable buttons.
+        .attr("role", "group")
+        .attr("aria-roledescription", "treemap")
+        .attr("aria-label", `Treemap of ODA by sector, ${year}, in ${currencyUnitLabel}. Select a sector to see its trend.`);
 
     // Create a group for each node
     const node = svg
@@ -138,7 +143,6 @@ export function treemapChart(data, width, { currency = null, onSectorChange = nu
 
     // Sector value label (centered)
     node.append("text")
-        .attr("clip-path", (d, i) => `url(${new URL(`#${uid}-clip-${i}`, location)})`)
         .attr("x", d => (d.x1 - d.x0) / 2)
         .attr("y", d => (d.y1 - d.y0) / 1.8)
         .attr("text-anchor", "middle")
@@ -167,56 +171,86 @@ export function treemapChart(data, width, { currency = null, onSectorChange = nu
         .attr("font-weight", "500")
         .style("fill", d => (_activeSector === "All sectors" || d.id === _activeSector) ? "white" : "black");
 
-    // Interactive overlay for hover/click
-    node.append("rect")
+    function tileLabel(d) {
+        return `${d.id}: ${(d.value / scale.divisor).toFixed(1)} ${currencyUnitLabel}`;
+    }
+
+    function showOutline(element, d) {
+        d3.select(element.parentNode)
+            .append("rect")
+            .attr("class", "hover-outline")
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("width", d.x1 - d.x0)
+            .attr("height", d.y1 - d.y0)
+            .attr("stroke", "black")
+            .attr("stroke-width", 1.25)
+            .attr("fill", "none")
+            .attr("pointer-events", "none");
+    }
+
+    function hideOutline(element) {
+        d3.select(element.parentNode).selectAll(".hover-outline").remove();
+    }
+
+    function chooseSector(d) {
+        _activeSector = d.id;
+
+        // Update rect fill/stroke
+        node.selectAll("rect")
+            .filter(function () {
+                return d3.select(this).attr("id")?.startsWith("rect-");
+            })
+            .transition()
+            .attr("fill", rectD => rectD.id === d.id ? paletteTreemap.active : paletteTreemap.inactive)
+            .attr("stroke", rectD => rectD.id === d.id ? paletteTreemap.active : paletteTreemap.inactive);
+
+        // Update text fill and font-weight for all tiles
+        node.each(function(nodeData) {
+            const isSelected = nodeData.id === d.id;
+            const g = d3.select(this);
+            g.selectAll("text").transition()
+                .style("fill", isSelected ? "white" : "black");
+            g.select("text")
+                .attr("font-weight", isSelected ? "700" : "500");
+        });
+
+        overlay.attr("aria-pressed", tileD => String(tileD.id === d.id));
+
+        onSectorChange?.(d.id);
+    }
+
+    // Interactive overlay for hover, click and keyboard
+    const overlay = node.append("rect")
         .attr("id", d => d.id)
         .attr("fill", "transparent")
         .attr("width", d => d.x1 - d.x0)
         .attr("height", d => d.y1 - d.y0)
         .attr("cursor", "pointer")
-        .on("click", function (event, d) {
-            _activeSector = d.id;
-
-            // Update rect fill/stroke
-            node.selectAll("rect")
-                .filter(function () {
-                    return d3.select(this).attr("id")?.startsWith("rect-");
-                })
-                .transition()
-                .attr("fill", rectD => rectD.id === d.id ? paletteTreemap.active : paletteTreemap.inactive)
-                .attr("stroke", rectD => rectD.id === d.id ? paletteTreemap.active : paletteTreemap.inactive);
-
-            // Update text fill and font-weight for all tiles
-            node.each(function(nodeData) {
-                const isSelected = nodeData.id === d.id;
-                const g = d3.select(this);
-                g.selectAll("text").transition()
-                    .style("fill", isSelected ? "white" : "black");
-                g.select("text")
-                    .attr("font-weight", isSelected ? "700" : "500");
-            });
-
-            onSectorChange?.(d.id);
+        .attr("tabindex", 0)
+        .attr("role", "button")
+        .attr("aria-label", tileLabel)
+        .attr("aria-pressed", d => String(d.id === _activeSector))
+        .on("click", (event, d) => chooseSector(d))
+        .on("keydown", (event, d) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            chooseSector(d);
+        })
+        .on("focus", function (event, d) {
+            showOutline(this, d);
+        })
+        .on("blur", function () {
+            hideOutline(this);
         })
         .on("mouseenter", function (event, d) {
             const id = d.id.replace(/\s+/g, '-').replace(/[&/,]/g, '');
 
             d3.select(`#rect-${id}`).transition().style("fill-opacity", 0.6);
 
-            d3.select(this.parentNode)
-                .append("rect")
-                .attr("class", "hover-outline")
-                .attr("x", 0)
-                .attr("y", 0)
-                .attr("width", d.x1 - d.x0)
-                .attr("height", d.y1 - d.y0)
-                .attr("stroke", "black")
-                .attr("stroke-width", 1.25)
-                .attr("fill", "none")
-                .attr("pointer-events", "none");
+            showOutline(this, d);
 
             const scaledValue = (d.value / scale.divisor).toFixed(1);
-            const currencyUnitLabel = getCurrencyLabel(currency, { suffix: scale.suffix });
             const label = `
                 <span style="font-size: calc(var(--table-base-font-size) * 1.15)">
                     <span style="line-height: 1.25"><b>Year</b> ${year}</span><br>
@@ -236,7 +270,7 @@ export function treemapChart(data, width, { currency = null, onSectorChange = nu
             const id = d.id.replace(/\s+/g, '-').replace(/[&/,]/g, '');
             const isActive = _activeSector === "All sectors" || d.id === _activeSector;
             d3.select(`#rect-${id}`).transition().style("fill-opacity", isActive ? 0.6 : 0.8);
-            d3.select(this.parentNode).select(".hover-outline").remove();
+            hideOutline(this);
             tooltip.style("visibility", "hidden");
         });
 
@@ -254,6 +288,9 @@ export function selectSector(container, sectorId) {
         .attr("fill", d => (sectorId === "All sectors" || d.id === sectorId) ? paletteTreemap.active : paletteTreemap.inactive)
         .attr("fill-opacity", d => (sectorId === "All sectors" || d.id === sectorId) ? 0.6 : 0.8)
         .attr("stroke", d => (sectorId === "All sectors" || d.id === sectorId) ? paletteTreemap.active : paletteTreemap.inactive)
+
+    svg.selectAll("rect[role=button]")
+        .attr("aria-pressed", d => String(d.id === sectorId))
 
     svg.selectAll("g").each(function(nodeData) {
         if (!nodeData) return
