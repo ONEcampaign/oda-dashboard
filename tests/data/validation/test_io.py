@@ -113,7 +113,7 @@ def test_load_hive_options_beside(
 def test_load_versioned_cdn_build(
     tmp_path: Path, make_view: MakeView, sector_rows: list[dict], pass_parent: bool
 ) -> None:
-    """Layout 3, versioned: only the version the options name is read."""
+    """Layout 3, versioned. Only the version the options name is read."""
     view = make_view("sectors_view", sector_rows)
     view_dir = write_versioned_hive(view, tmp_path / "sectors_view", "abc123")
     # A stray older version beside it must not be read.

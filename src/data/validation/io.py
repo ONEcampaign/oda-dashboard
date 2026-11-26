@@ -11,7 +11,7 @@ A view source is a directory in one of three layouts:
    ``<source>/../<view>_options.json``, whose ``dataset_version`` names the version
    directory. The CDN build (``cdn_files/sectors_view``). Options without a
    ``dataset_version`` (builds before versioning) mean the partitions sit in ``<source>``
-   itself. Passing the parent (``cdn_files``) also works: ``<source>/<view>`` is tried first.
+   itself. Passing the parent (``cdn_files``) also works, and ``<source>/<view>`` is tried first.
 
 So a baseline or source root ``R`` maps every view to ``R/<view>``.
 """

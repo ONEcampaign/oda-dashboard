@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Upload a local sectors build by hand, as deploy.yml does: the version directory its options
-# name, then the options. Nothing is deleted: old versions are pruned only by deploy.yml,
-# which runs one deploy at a time.
+# Upload a local sectors build by hand, as deploy.yml does. The version directory its options
+# name goes up first, then the options. Nothing is deleted. Old versions are pruned only by
+# deploy.yml. Do not run this while a deploy is in progress (gh run list -w deploy.yml
+# -s in_progress): its prune step can delete a version mid-upload, and its options upload
+# replaces yours.
 #
 # Usage: scripts/upload_sectors_partition.sh [local_dir] [gcs_path]
 #   local_dir: the built dataset, default cdn_files/sectors_view
 #   gcs_path:  where versions live, default gs://data-apps-one-data/sources/sectors_view
-# The options file sits beside each: <dir>/../sectors_view_options.json.
+# The options file sits beside each, at <dir>/../sectors_view_options.json.
 
 set -euo pipefail
 

@@ -297,7 +297,7 @@ _HASH_CHUNK_BYTES: int = 1 << 20
 def dataset_version(path: Path) -> str:
     """Content hash of a partitioned dataset, used as its immutable version name.
 
-    Hashes every file under path in sorted relative-path order: its path, its size and its
+    Hashes every file under path in sorted relative-path order, taking its path, size and
     bytes, so the same partitions written twice give the same version and any changed byte,
     renamed partition or added file gives a new one.
 
@@ -318,7 +318,8 @@ def dataset_version(path: Path) -> str:
 
     digest = hashlib.sha256()
     for relative, file in files:
-        # Length-prefixed, so a boundary between path and bytes cannot be shifted.
+        # The NUL after the path and the fixed-width size keep the path and content
+        # boundaries unambiguous.
         digest.update(relative.encode())
         digest.update(b"\0")
         digest.update(file.stat().st_size.to_bytes(8, "big"))
@@ -339,14 +340,14 @@ def write_versioned_dataset(
 
     Everything under root/base_dir is cleared first, so only the new version is left to
     publish. The partitions are written to a staging directory, hashed, then renamed. A
-    published version is never overwritten in place: new data gets a new URL, so a reader
+    published version is never overwritten in place. New data gets a new URL, so a reader
     holding an old options file, or old cached footers, never mixes two releases.
 
     Args:
         df: Wide frame ready to be written.
         base_dir: Directory name, created under root.
-        partition_cols: Columns to partition by; see write_partitioned_dataset.
-        root: Directory to write into; CI publishes PATHS.CDN_FILES.
+        partition_cols: Columns to partition by, as in write_partitioned_dataset.
+        root: Directory to write into. CI publishes PATHS.CDN_FILES.
 
     Returns:
         The version, from dataset_version.

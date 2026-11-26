@@ -66,7 +66,7 @@ done
 
 rm -rf "${OUT_DIR:?}/sectors_view"
 mkdir -p "${OUT_DIR}/sectors_view"
-# cp, not cat: cp decompresses the gzip-encoded options.
+# cp decompresses the gzip-encoded options.
 gsutil cp "${SECTORS_OPTIONS_URL}" "${OUT_DIR}/sectors_view/options.json"
 sectors_version="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("dataset_version") or "")' \
     "${OUT_DIR}/sectors_view/options.json")"
@@ -74,7 +74,7 @@ if [ -n "${sectors_version}" ]; then
     echo "sectors_view: ${SECTORS_URL}/${sectors_version} -> ${OUT_DIR}/sectors_view"
     gsutil -m rsync -r "${SECTORS_URL}/${sectors_version}" "${OUT_DIR}/sectors_view"
 else
-    # Live options from before versioning: the partitions sit at the root.
+    # Live options from before versioning have the partitions at the root.
     echo "sectors_view: ${SECTORS_URL} (unversioned) -> ${OUT_DIR}/sectors_view"
     gsutil -m rsync -r -x '^(?!donor_slug=).*' "${SECTORS_URL}" "${OUT_DIR}/sectors_view"
 fi

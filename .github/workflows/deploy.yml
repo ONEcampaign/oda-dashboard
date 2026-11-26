@@ -165,9 +165,9 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       # Each sectors release lives under sources/sectors_view/<version>/, named by its
-      # content hash and never overwritten, so it is cached as immutable. The options file is
-      # the pointer to the live version: it goes up after the data (every pair it lists then
-      # resolves), gzipped and no-cache. The live version is read first, so the prune step
+      # content hash and never overwritten, so it is cached as immutable. The options file
+      # points to the live version. It goes up after the data, so every pair it lists
+      # resolves, gzipped and no-cache. The live version is read first, so the prune step
       # can keep it for pages that loaded the old options.
       - name: Upload sectors partitioned dataset
         id: sectors
@@ -182,8 +182,8 @@ jobs:
           fi
 
           # Prints the live dataset_version, or nothing when the options object does not
-          # exist yet. Any other failure (auth, network, 5xx) returns 1: an empty version
-          # must only ever mean "first deploy", or the prune step would delete the live one.
+          # exist yet. Any other failure (auth, network, 5xx) returns 1, so an empty version
+          # always means "first deploy". Otherwise the prune step could delete the live one.
           read_live_version() {
             local out
             if ! out="$(gsutil ls "${options_url}" 2>&1)"; then
@@ -193,7 +193,7 @@ jobs:
               echo "::error::cannot read ${options_url}: ${out}" >&2
               return 1
             fi
-            # cp, not cat: cp decompresses the gzip-encoded object.
+            # cp decompresses the gzip-encoded object.
             gsutil -q cp "${options_url}" "${RUNNER_TEMP}/live_options.json" || return 1
             jq -er '.dataset_version // ""' "${RUNNER_TEMP}/live_options.json" || return 1
           }
@@ -241,12 +241,14 @@ jobs:
       # the new version, the one the live options pointed to before this deploy (pages
       # opened before it still read that one) and the one they point to now (re-read just
       # before deleting, in case scripts/upload_sectors_partition.sh published another
-      # version during the deploy). If the live options cannot be read, or nothing but the
-      # new version is known while older versions exist, nothing is deleted and the step
-      # fails. Only directories named like a version
-      # (VERSION_HEX_LENGTH hex digits, src/data/analysis_tools/outputs.py) are removed.
-      # The root-level donor_slug=* tree from before versioning is left for old cached pages.
-      # Follow-up, by hand, a day or more after the first versioned deploy:
+      # version during the deploy). A deploy whose sectors data did not change prunes nothing,
+      # so a tab opened before the last release keeps its version until the next one. If the
+      # live options cannot be read, or no previous version was recorded while older versions
+      # exist, nothing is deleted and the step fails. Only directories named like a version
+      # (VERSION_HEX_LENGTH hex digits, src/data/analysis_tools/outputs.py) are removed. The
+      # root-level donor_slug=* tree
+      # from before versioning is left for old cached pages. By hand, a day or more after
+      # the first versioned deploy, remove it with:
       #   gsutil -m rm -r 'gs://data-apps-one-data/sources/sectors_view/donor_slug=*'
       - name: Prune old sectors dataset versions
         env:
@@ -259,6 +261,10 @@ jobs:
           if [ -z "${VERSION}" ]; then
             echo "::error::no new sectors version from the upload step; nothing pruned"
             exit 1
+          fi
+          if [ "${VERSION}" = "${PREVIOUS}" ]; then
+            echo "Sectors data unchanged (${VERSION}); nothing to prune"
+            exit 0
           fi
 
           # Same rule as the upload step: empty only when the options object does not exist.
@@ -295,7 +301,7 @@ jobs:
           fi
 
           # No live options before this deploy means a first versioned deploy, which leaves one
-          # version; more than one then means versions this run cannot account for.
+          # version. More than one means versions this run cannot account for.
           if [ -z "${PREVIOUS}" ] && { [ -z "${live}" ] || [ "${live}" = "${VERSION}" ]; } \
             && [ "${#versions[@]}" -gt 1 ]; then
             echo "::error::no previous version recorded but ${#versions[@]} versions exist; nothing pruned"

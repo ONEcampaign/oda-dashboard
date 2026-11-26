@@ -495,12 +495,12 @@ def main(output_dir: Path) -> None:
     version = write_versioned_dataset(
         df, DATASET_DIR, partition_cols=list(PARTITION_COLS), root=output_dir
     )
-    # Contract with src/js/sectorsQueries.js: options changes are additive only. The options
+    # Contract with src/js/sectorsQueries.js. Options changes are additive only. The options
     # file is a mutable pointer the page fetches at runtime, so for one deploy the previous
     # app reads the new options and must still find every key it expects.
     options["dataset_version"] = version
-    # The pairs that have a partition, so the page requests only those and can treat any
-    # failed fetch as an error rather than as missing data.
+    # The pairs that have a partition, so the page requests only those and treats any
+    # failed fetch as an error.
     options["partition_pairs"] = partition_pairs(
         output_dir / DATASET_DIR / version, *PARTITION_COLS
     )

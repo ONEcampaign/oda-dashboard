@@ -145,7 +145,7 @@ def write_hive(
 
 
 def write_versioned_hive(view: LoadedView, directory: Path, version: str) -> Path:
-    """Write a view in the versioned CDN layout; returns directory (the view directory).
+    """Write a view in the versioned CDN layout and return directory (the view directory).
 
     Partitions go under ``directory/<version>``, the options beside directory, naming the
     version as sectors_view.py does.
