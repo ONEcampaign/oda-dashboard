@@ -18,7 +18,7 @@ from src.data.validation.views import get_spec
 from tests.data.validation.conftest import MakeView
 
 FIRST_YEAR = 2015
-# Steady ~5% growth with some noise, so the history has a small but non-zero spread; in
+# Steady ~5% growth with some noise, so the history has a small but non-zero spread. Values are in
 # units of 1e8, so every series is material.
 _UNIT = 1e8
 STEADY_GROWTH = tuple(v * _UNIT for v in (100.0, 105.0, 111.0, 116.0, 122.0, 128.0))
@@ -216,7 +216,7 @@ def test_critical_donor_real_cut_passes(make_view: MakeView) -> None:
 
 
 def test_tenfold_rise_blocks_but_not_other_donors(make_view: MakeView) -> None:
-    """A tenfold-plus rise blocks too; donors outside CRITICAL_DONORS are not judged."""
+    """A tenfold-plus rise blocks too. Donors outside CRITICAL_DONORS are not judged."""
     rows = [
         *_two_years("Japan", 1e9, 1e9 * CRITICAL_RATIO_MAX * 1.1),
         *_two_years("Kuwait", 1e9, 1e6),

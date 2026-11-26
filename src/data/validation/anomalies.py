@@ -37,15 +37,15 @@ Z_SCORE_THRESHOLD: float = 3.0
 # Years of history before the latest year needed to judge it.
 MIN_HISTORY_YEARS: int = 4
 # Only donors with at least this much (current USD units) in the latest or the previous
-# year are judged: a small donor's total swings several-fold with one loan or project
+# year are judged. A small donor's total swings several-fold with one loan or project
 # (Kuwait, Malta), which says nothing about the build.
 MIN_MATERIAL_UNITS: float = 1e9
-# Only changes of at least this size (relative) are flagged: a donor with a steady
+# Only changes of at least this size (relative) are flagged. A donor with a steady
 # history gets a large z from an ordinary 20-40% policy swing. A halving, or a rise by
 # half, is worth a look whatever the history.
 MIN_FLAGGED_CHANGE: float = 0.5
 # A critical donor's end-year key total below (1 - this) or above 1 / (1 - this) times
-# the year before blocks: a tenfold move is a units slip, not policy. The largest real
+# the year before blocks. A tenfold move is a units slip. The largest real
 # move so far, the US cut in 2025 financing, was -56%.
 MAX_CRITICAL_DONOR_CHANGE: float = 0.9
 CRITICAL_RATIO_MIN: float = 1 - MAX_CRITICAL_DONOR_CHANGE

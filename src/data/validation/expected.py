@@ -89,7 +89,7 @@ class ExpectedDelta:
         max_abs: For kind "value", the largest |difference| explained, in the column's
             unit. With neither bound set, a delta of any size matches; with both, a delta
             within either matches.
-        hits: How many deltas the entry has explained so far in this process; not part
+        hits: How many deltas the entry has explained so far in this process, not part
             of equality.
     """
 

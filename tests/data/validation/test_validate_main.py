@@ -22,7 +22,7 @@ DONOR_VALUE: float = 1e10
 
 def _financing_rows() -> list[dict]:
     """Total ODA for the critical donors and every group they make up, in the first and
-    last year of the window, for both types: a view that passes every blocking check."""
+    last year of the window, for both types. The view passes every blocking check."""
     time = get_spec(VIEW).time
     donors = {donor: DONOR_VALUE for donor in CRITICAL_DONORS}
     groups = {

@@ -97,7 +97,7 @@ def test_anomaly_entries_take_max_rel_only(tmp_path: Path) -> None:
 
 
 def test_hits_and_unused_entries() -> None:
-    """find_explanation counts hits; unused_entries lists in-scope entries never hit."""
+    """find_explanation counts hits, and unused_entries lists in-scope entries never hit."""
     used = ExpectedDelta(view="financing_view", reason="u", years=frozenset({2024}))
     idle = ExpectedDelta(view="gender_view", reason="i", years=frozenset({2024}))
     cross = ExpectedDelta(view="cross_view", reason="c", years=frozenset({2024}))

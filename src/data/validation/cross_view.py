@@ -978,7 +978,7 @@ def check_provenance_consistency(sources: dict[str, Path]) -> list[CheckResult]:
 
     if skipped:
         # Every loader writes provenance, so a view without it was built by old code or
-        # lost it; either way the consistency check cannot cover it.
+        # lost it. Either way the consistency check cannot cover it.
         results.append(
             _provenance_result(
                 passed=False,

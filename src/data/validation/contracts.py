@@ -33,12 +33,12 @@ from src.data.validation.views import CRITICAL_DONORS, CURRENCY_PAIRS
 # Units guard: a value this large means millions were scaled twice, or worse.
 MAX_SANE_VALUE: float = 1e15
 
-# A value column with nulls in more than this fraction of its rows blocks: a missing
+# A value column with nulls in more than this fraction of its rows blocks. A missing
 # conversion factor for one small donor-year touches far fewer rows, while a broken
 # currency or price step nulls most of the column.
 VALUE_NULL_ERROR_FRACTION: float = 0.001
 
-# The anchor: DAC countries' key total in the view's end year, in current USD units. It
+# The anchor is DAC countries' key total in the view's end year, in current USD units. It
 # ran between US$95bn (gender, 2019) and US$240bn (sectors, 2023) across the four views
 # in 2019-2025; this band leaves room for a halving or a doubling and still blocks a
 # thousandfold units slip either way.
@@ -79,7 +79,7 @@ SUB_SECTOR_COLUMN: str = "sub_sector_name"
 # Sectors list their sub-sectors per sector rather than as a flat list.
 SUB_SECTORS_KEY: str = "sub_sectors_by_sector"
 YEAR_KEYS: tuple[str, ...] = ("start", "end", "base")
-# The financing "type" labels the frontend filters on: exactly these, no others.
+# The financing "type" labels the frontend filters on. The column holds exactly these.
 TYPE_COLUMN: str = "type"
 FINANCING_TYPE_VALUES: frozenset[str] = frozenset(FINANCING_TYPES.values())
 
@@ -378,7 +378,7 @@ def _anchor_totals(view: LoadedView) -> pd.DataFrame:
 def check_anchor(view: LoadedView) -> list[CheckResult]:
     """DAC countries' end-year key total lies in [ANCHOR_MIN_UNITS, ANCHOR_MAX_UNITS].
 
-    The floor that MAX_SANE_VALUE lacks: values scaled down by a units slip pass every
+    The floor that MAX_SANE_VALUE lacks. Values scaled down by a units slip pass every
     other check. Missing anchor rows fail too.
     """
     column, value = ANCHOR_ROWS[view.spec.name]
@@ -414,7 +414,7 @@ def check_anchor(view: LoadedView) -> list[CheckResult]:
 def check_anchor_currencies(view: LoadedView) -> list[CheckResult]:
     """Each non-USD current anchor total per USD lies in the CURRENCY_PER_USD band.
 
-    The anchor band checks value_usd_current only; a units slip in one currency's
+    The anchor band checks value_usd_current only. A units slip in one currency's
     conversion would pass it and every other blocking check. Missing anchor rows fail.
     """
     end = view.spec.time["end"]
@@ -457,7 +457,7 @@ def check_anchor_currencies(view: LoadedView) -> list[CheckResult]:
 def check_gni_share(view: LoadedView) -> list[CheckResult]:
     """pct_of_gni within +/-PCT_OF_GNI_LIMIT, and set for critical donors' end year.
 
-    Two ERROR results; nothing for a view without pct_of_gni. Other null pct_of_gni
+    Two ERROR results, or nothing for a view without pct_of_gni. Other null pct_of_gni
     (donors or years without GNI in DAC1, groups whose GNI-reporting members lack an
     indicator) are structural and only counted in the passing message.
     """
@@ -508,7 +508,7 @@ def check_gni_share(view: LoadedView) -> list[CheckResult]:
 
 
 def check_types(view: LoadedView) -> list[CheckResult]:
-    """Financing's type column holds exactly FINANCING_TYPE_VALUES; [] for other views."""
+    """Financing's type column holds exactly FINANCING_TYPE_VALUES. Other views return []."""
     if TYPE_COLUMN not in view.spec.keys:
         return []
     present = set(view.data[TYPE_COLUMN].dropna().unique())

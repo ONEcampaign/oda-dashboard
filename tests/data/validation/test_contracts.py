@@ -34,7 +34,7 @@ from tests.data.validation.conftest import MakeView
 FINANCING_END = get_spec("financing_view").time["end"]
 SECTORS_END = get_spec("sectors_view").time["end"]
 TYPES: tuple[str, ...] = ("Flows", "Grant equivalents")
-# Inside the anchor band: a realistic DAC countries total.
+# A realistic DAC countries total, inside the anchor band.
 ANCHOR_VALUE: float = 2e11
 
 
@@ -250,7 +250,7 @@ def test_critical_donors_without_type(make_view: MakeView) -> None:
     [(1.0, True), (1e-6, False), (1e3, False), (ANCHOR_MIN_UNITS / ANCHOR_VALUE, True)],
 )
 def test_anchor_band(financing: LoadedView, scale: float, passes: bool) -> None:
-    """Values scaled out of the anchor band block; the band's edge passes."""
+    """Values scaled out of the anchor band block. The band's edge passes."""
     financing.data["value_usd_current"] *= scale
     [result] = check_anchor(financing)
     assert result.passed is passes
@@ -258,7 +258,7 @@ def test_anchor_band(financing: LoadedView, scale: float, passes: bool) -> None:
 
 
 def test_anchor_missing_rows_fail(financing: LoadedView) -> None:
-    """No DAC countries Total ODA in the end year is a failure, not a pass."""
+    """No DAC countries Total ODA in the end year is a failure."""
     financing.data = financing.data[financing.data["donor_name"] != DAC_COUNTRIES_NAME]
     [result] = check_anchor(financing)
     assert not result.passed and "No rows" in result.message
@@ -292,7 +292,7 @@ def test_anchor_sums_recipient_views(make_view: MakeView) -> None:
     ],
 )
 def test_anchor_currencies(financing: LoadedView, scale: float, passes: bool) -> None:
-    """EUR on the anchor rows scaled out of the per-USD band blocks; the edges pass."""
+    """EUR on the anchor rows scaled out of the per-USD band blocks. The edges pass."""
     eur = [c for c in financing.data.columns if c.startswith("value_eur")]
     financing.data[eur] *= scale
     [result] = check_anchor_currencies(financing)
@@ -303,7 +303,7 @@ def test_anchor_currencies(financing: LoadedView, scale: float, passes: bool) ->
 
 
 def test_anchor_currencies_recipient_view_and_missing_rows(make_view: MakeView) -> None:
-    """Recipient views are checked once; missing anchor rows fail."""
+    """Recipient views are checked once. Missing anchor rows fail."""
     end = get_spec("recipients_view").time["end"]
     row = {
         "year": end,
@@ -324,7 +324,7 @@ def test_anchor_currencies_recipient_view_and_missing_rows(make_view: MakeView) 
 
 
 def test_gni_share_range_and_population(financing: LoadedView) -> None:
-    """pct_of_gni beyond the limit fails; a critical donor's null end-year share fails."""
+    """pct_of_gni beyond the limit fails, and a critical donor's null end-year share fails."""
     assert all(r.passed for r in check_gni_share(financing))
     financing.data["pct_of_gni"] *= 100
     results = _by_check(check_gni_share(financing))

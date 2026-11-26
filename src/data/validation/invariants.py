@@ -66,13 +66,13 @@ SUM_RELATIVE_TOLERANCE: float = 1e-6
 # codes no country row holds), but a shortfall above this share of the total is a WARNING.
 RECIPIENT_GAP_WARNING: float = 0.01
 # Donors whose DAC2A ODA-eligible total runs far above their recipient rows in most years
-# (by 95% or more since 2018): Saudi Arabia reports most of its bilateral ODA to the DAC2A
-# total without a recipient breakdown. Their gap is a known reporting gap, not a build
-# fault, and every group that holds them inherits it.
+# (by 95% or more since 2018). Saudi Arabia reports most of its bilateral ODA to the DAC2A
+# total without a recipient breakdown. Their gap is a known reporting gap, and every
+# group that holds them inherits it.
 RECIPIENT_GAP_KNOWN_DONORS: frozenset[str] = frozenset({"Saudi Arabia"})
 
 # Config group members that report no ODA to DAC1, DAC2A or the CRS in any year of any
-# view: listed in the DAC's Non-DAC countries group, absent from the data.
+# view. They are listed in the DAC's Non-DAC countries group and absent from the data.
 MEMBERS_WITHOUT_DATA: frozenset[str] = frozenset({"Algeria", "Iraq", "Libya", "Mexico"})
 
 # Share range: a fraction in [0, 1], give or take float32 rounding.
@@ -278,9 +278,8 @@ def _members_present_finalize(
 ) -> list[CheckResult]:
     """WARNING naming config group members with no rows anywhere in the view.
 
-    Members in MEMBERS_WITHOUT_DATA are left out: they never report, so their absence is
-    no news. The passing message names any of them that now have rows, so the list can
-    shrink.
+    Members in MEMBERS_WITHOUT_DATA are left out, since they never report. The passing
+    message names any of them that now have rows, so the list can shrink.
     """
     present = set(frame[DONOR]) if len(frame) else set()
     missing = [
@@ -486,8 +485,7 @@ _REFERENCE_SHARES: tuple[_ShareBasis, ...] = (
         outside_reference=_EU_INSTITUTION_DONORS,
     ),
 )
-# Per view, the share columns the share invariants check. pct_of_gni is not a share of
-# anything in the view; contracts bound it.
+# Per view, the share columns the share invariants check. contracts.py bounds pct_of_gni.
 SHARE_BASES: dict[str, tuple[_ShareBasis, ...]] = {
     # Grants above 1 and Non-grants below 0 of Total ODA are normal (loan repayments), so
     # financing is held only to its Total ODA = 1 identity (SHARE_IDENTITIES).
@@ -521,7 +519,7 @@ _SHARE_RECORD_COLUMNS: tuple[str, ...] = (
 )
 
 
-# Joins a group's key values into one label; no view label contains it.
+# Joins a group's key values into one label. No view label contains it.
 _GROUP_SEPARATOR: str = "\x1f"
 
 
@@ -879,7 +877,7 @@ def _value_column(currency: str, price: str) -> str:
 def _currency_ratio_partial(data: pd.DataFrame, spec: ViewSpec) -> pd.DataFrame:
     """Per (donor, year, currency): min and max constant/current ratio, and row count.
 
-    Rows where one side is null have no ratio and are left out here; the blocking
+    Rows where one side is null have no ratio and are left out here. The blocking
     contracts.value_null_pairs check fails them.
     """
     rows = data.loc[
@@ -960,7 +958,7 @@ def _base_year_partial(data: pd.DataFrame, spec: ViewSpec) -> pd.DataFrame:
         current = rows[_value_column(currency, "current")]
         constant = rows[_value_column(currency, "constant")]
         tolerance = BASE_YEAR_RELATIVE_TOLERANCE * current.abs() + ROUNDING_UNIT
-        # A null against a number differs: NaN > tolerance alone would read as equal.
+        # A null against a number differs, since NaN > tolerance alone would read as equal.
         bad = ((constant - current).abs() > tolerance) | (
             constant.isna() != current.isna()
         )

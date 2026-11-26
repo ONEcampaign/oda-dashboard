@@ -95,8 +95,8 @@ _AMOUNT_UNITS: tuple[tuple[float, str], ...] = ((1e9, "bn"), (1e6, "mn"))
 
 # Renames made after the production baseline of 2026-11-20 (one canonical name per
 # recipient code, and gender's share named for its denominator). Applied to the baseline
-# side only. Delete both maps once the baseline is refreshed past that change; until then
-# a rename that finds nothing to rename is simply not reported.
+# side only. Delete both maps once the baseline is refreshed past that change. Until then
+# a rename that finds nothing to rename is not reported.
 BASELINE_RENAMES_REASON: str = (
     "baseline predates the 2026-11 recipient and column renames; refresh it after merge"
 )
@@ -1062,7 +1062,7 @@ def _set_aside(
 ) -> Iterator[tuple[str, LoadedView]]:
     """Yield partitions, keeping those whose slug is in ``slugs`` in ``held`` instead.
 
-    ``held`` is keyed by ``slugs[slug]``: the name both sides share after renaming.
+    ``held`` is keyed by ``slugs[slug]``, the name both sides share after renaming.
     """
     for slug, view in partitions:
         if slug in slugs:
@@ -1075,7 +1075,7 @@ def _merge_join(
     candidates: Iterator[tuple[str, LoadedView]],
     baselines: Iterator[tuple[str, LoadedView]],
 ) -> Iterator[_PartitionPair]:
-    """Merge-join two sorted partition streams by slug; a missing side is None."""
+    """Merge-join two sorted partition streams by slug. A missing side is None."""
     c, b = next(candidates, None), next(baselines, None)
     while c is not None or b is not None:
         if c is not None and (b is None or c[0] < b[0]):
@@ -1092,9 +1092,9 @@ def _merge_join(
 def _paired_partitions(
     name: str, candidate_source: Path, baseline_source: Path
 ) -> Iterator[_PartitionPair]:
-    """Pair the two sides' partitions by slug; a missing side is None.
+    """Pair the two sides' partitions by slug. A missing side is None.
 
-    Partitions under a renamed slug (BASELINE_SLUG_RENAMES; a handful of recipients) sort
+    Partitions under a renamed slug (BASELINE_SLUG_RENAMES, a handful of recipients) sort
     elsewhere on each side, so both sides' copies are held back and paired at the end
     under the new slug.
 
