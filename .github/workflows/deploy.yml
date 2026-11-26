@@ -10,7 +10,7 @@ env:
   BUCKET: data-apps-one-data
 
 # One deploy at a time: overlapping runs would rsync to the same GCS paths. A run that
-# arrives while one is in progress waits; GitHub keeps only the newest waiting run.
+# arrives while one is in progress waits, and GitHub keeps only the newest waiting run.
 concurrency:
   group: deploy-gcs
   cancel-in-progress: false
