@@ -1,11 +1,10 @@
-"""The EU27 + EU Institutions bloc: how each view avoids counting member money twice.
+"""The EU27 + EU Institutions bloc, and how each view avoids counting member money twice.
 
 EU member states fund much of the EU Institutions' (918) spending through their core
 contributions, which DAC1 records on line 2102 of each member. Summing members and the
 institutions as they stand can count that money twice, once as the members' contributions
 and again as the institutions' spending. Whether it does depends on what a view reads, so the
-views de-duplicate in three different ways. This docstring is the one place that states all
-three.
+views de-duplicate in three different ways.
 
 1. Financing and recipients: weight the institutions. Both read totals that include the
    members' core contributions to the EU (DAC1 aggregates; DAC2A imputed multilateral, line
@@ -22,8 +21,7 @@ three.
    channel, so the members' imputed multilateral on EUI_CHANNEL_CODES (their contributions
    reaching the institutions) is left out of the bloc, and the institutions' own spending is
    kept in full (``get_eu27_eui_imputed`` in ``scripts/sectors_view.py``). This removes the
-   overlap exactly where it sits, by sector and recipient, rather than scaling it out on
-   average.
+   overlap exactly where it sits, by sector and recipient.
 
 3. Gender: a plain sum. The gender marker data is bilateral CRS only, with no imputed
    multilateral leg, so members' core contributions to the EU never appear in it and nothing

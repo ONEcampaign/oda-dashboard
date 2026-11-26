@@ -131,7 +131,7 @@ def test_group_share_of_gni_is_empty_when_only_members_without_gni_report():
 
 
 def test_eu27_eui_share_of_gni_divides_the_bloc_by_member_gni():
-    """The EU27 + institutions bloc is not a DONOR_GROUPS group: its own value counts."""
+    """The EU27 + institutions bloc sits outside DONOR_GROUPS, so its own value counts."""
     df = pd.DataFrame(
         {
             "year": [2020],

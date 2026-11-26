@@ -735,7 +735,7 @@ def build_donor_group_totals(
     Every view builds its aggregates here, so "All bilateral donors" is DAC countries plus
     Non-DAC countries everywhere, and EU Institutions sits in no group. Each view builds the
     EU27 + institutions bloc itself, since how to avoid counting member contributions twice
-    depends on the data it reads; analysis_tools.eu sets out the three methods.
+    depends on the data it reads. analysis_tools.eu sets out the three methods.
 
     Args:
         df: Frame with donor_code and a "value" column.

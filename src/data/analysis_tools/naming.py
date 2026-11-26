@@ -5,7 +5,7 @@ the same entity must not appear as "Caribbean unspecified" in one view and
 "Caribbean, regional" in another, and a name used as a URL path segment has to be ASCII-safe.
 This module owns those rules.
 
-The rule for recipients: one name per recipient code, in every view. Each view names its
+Every view gives a recipient code one name. Each view names its
 recipients through ``canonical_recipient_names``, which applies config's
 ``RECIPIENT_NAME_OVERRIDES`` (the single place a code's display name is chosen) and the
 spelling normalisations below. No view keeps a name list of its own for countries.

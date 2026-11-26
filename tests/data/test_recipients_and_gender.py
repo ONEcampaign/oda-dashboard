@@ -57,7 +57,7 @@ def test_canonical_recipients_keep_the_views_display_names():
     ]
 
 
-# The spellings each source gives the codes they used to disagree on: oda_data's DAC2A names
+# The spellings each source gives the codes where they differ: oda_data's DAC2A names
 # (recipients view) and the CRS bulk file's (gender and sectors views).
 _SOURCE_SPELLINGS: dict[int, tuple[str, str]] = {
     88: ("States Ex-Yugoslavia unspecified", "States Ex-Yugoslavia unspecified"),

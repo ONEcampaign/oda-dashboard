@@ -165,8 +165,8 @@ def combined_gender(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataFrame
     gender = widen_currency_price(df=gender, index_cols=tuple(VIEW_KEYS))
 
     # The four marker scores partition each entity's bilateral allocable aid, so the
-    # denominator is the entity's own total rather than a reference entity's. That total is
-    # not the donor's total ODA, hence the column name.
+    # denominator is the entity's own total rather than a reference entity's. That total
+    # covers bilateral allocable aid only, hence the column name.
     gender = add_share_of_group_total(
         gender,
         group_cols=["year", "donor_name", "recipient_name"],
