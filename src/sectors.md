@@ -156,7 +156,12 @@ function App() {
 
     // Effect 1: treemap data — uses selected year only
     React.useEffect(() => {
-        if (indicator.length === 0) return
+        if (indicator.length === 0) {
+            setTreemapData([])
+            setLoading(false)
+            setError(null)
+            return
+        }
         let cancelled = false
         setLoading(true)
         setError(null)
