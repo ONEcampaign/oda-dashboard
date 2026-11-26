@@ -294,14 +294,11 @@ jobs:
             exit 1
           fi
 
-          others_known=false
-          for keep in "${PREVIOUS}" "${live}"; do
-            if [ -n "${keep}" ] && [ "${keep}" != "${VERSION}" ]; then
-              others_known=true
-            fi
-          done
-          if [ "${others_known}" = false ] && [ "${#versions[@]}" -gt 1 ]; then
-            echo "::error::only the new version is known but ${#versions[@]} versions exist; nothing pruned"
+          # No live options before this deploy means a first versioned deploy, which leaves one
+          # version; more than one then means versions this run cannot account for.
+          if [ -z "${PREVIOUS}" ] && { [ -z "${live}" ] || [ "${live}" = "${VERSION}" ]; } \
+            && [ "${#versions[@]}" -gt 1 ]; then
+            echo "::error::no previous version recorded but ${#versions[@]} versions exist; nothing pruned"
             exit 1
           fi
 
