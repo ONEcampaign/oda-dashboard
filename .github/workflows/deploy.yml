@@ -181,12 +181,23 @@ jobs:
             exit 1
           fi
 
-          previous=""
-          if gsutil -q stat "${options_url}"; then
+          # Prints the live dataset_version, or nothing when the options object does not
+          # exist yet. Any other failure (auth, network, 5xx) returns 1: an empty version
+          # must only ever mean "first deploy", or the prune step would delete the live one.
+          read_live_version() {
+            local out
+            if ! out="$(gsutil ls "${options_url}" 2>&1)"; then
+              if grep -Eq 'matched no objects|No URLs matched' <<<"${out}"; then
+                return 0
+              fi
+              echo "::error::cannot read ${options_url}: ${out}" >&2
+              return 1
+            fi
             # cp, not cat: cp decompresses the gzip-encoded object.
-            gsutil -q cp "${options_url}" "${RUNNER_TEMP}/live_options.json"
-            previous="$(jq -r '.dataset_version // empty' "${RUNNER_TEMP}/live_options.json")"
-          fi
+            gsutil -q cp "${options_url}" "${RUNNER_TEMP}/live_options.json" || return 1
+            jq -er '.dataset_version // ""' "${RUNNER_TEMP}/live_options.json" || return 1
+          }
+          previous="$(read_live_version)"
           echo "Live sectors version: ${previous:-none}; new: ${version}"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "previous=${previous}" >> "$GITHUB_OUTPUT"
@@ -227,8 +238,12 @@ jobs:
             --data '{"purge_everything":true}' | jq -e '.success'
 
       # Runs only once dist/ is up, so the new app is live before anything is removed. Keeps
-      # the new version and the one the live options pointed to before this deploy (pages
-      # opened before it still read that one). Only directories named like a version
+      # the new version, the one the live options pointed to before this deploy (pages
+      # opened before it still read that one) and the one they point to now (re-read just
+      # before deleting, in case scripts/upload_sectors_partition.sh published another
+      # version during the deploy). If the live options cannot be read, or nothing but the
+      # new version is known while older versions exist, nothing is deleted and the step
+      # fails. Only directories named like a version
       # (VERSION_HEX_LENGTH hex digits, src/data/analysis_tools/outputs.py) are removed.
       # The root-level donor_slug=* tree from before versioning is left for old cached pages.
       # Follow-up, by hand, a day or more after the first versioned deploy:
@@ -240,9 +255,58 @@ jobs:
         run: |
           set -euo pipefail
           base="gs://${{ env.BUCKET }}/sources/sectors_view"
-          gsutil ls -d "${base}/*/" | while IFS= read -r dir; do
+          options_url="gs://${{ env.BUCKET }}/sources/sectors_view_options.json"
+          if [ -z "${VERSION}" ]; then
+            echo "::error::no new sectors version from the upload step; nothing pruned"
+            exit 1
+          fi
+
+          # Same rule as the upload step: empty only when the options object does not exist.
+          read_live_version() {
+            local out
+            if ! out="$(gsutil ls "${options_url}" 2>&1)"; then
+              if grep -Eq 'matched no objects|No URLs matched' <<<"${out}"; then
+                return 0
+              fi
+              echo "::error::cannot read ${options_url}: ${out}" >&2
+              return 1
+            fi
+            gsutil -q cp "${options_url}" "${RUNNER_TEMP}/live_options_prune.json" || return 1
+            jq -er '.dataset_version // ""' "${RUNNER_TEMP}/live_options_prune.json" || return 1
+          }
+          if ! live="$(read_live_version)"; then
+            echo "::error::cannot re-read the live sectors version; nothing pruned"
+            exit 1
+          fi
+          echo "Keeping sectors versions: new ${VERSION}, previous ${PREVIOUS:-none}, live ${live:-none}"
+
+          listing="$(gsutil ls -d "${base}/*/")"
+          versions=()
+          while IFS= read -r dir; do
             name="$(basename "${dir}")"
-            if [[ ! "${name}" =~ ^[0-9a-f]{16}$ ]] || [ "${name}" = "${VERSION}" ] || [ "${name}" = "${PREVIOUS}" ]; then
+            if [[ "${name}" =~ ^[0-9a-f]{16}$ ]]; then
+              versions+=("${name}")
+            fi
+          done <<<"${listing}"
+          # The new version was just uploaded, so a listing without it is wrong.
+          if [[ " ${versions[*]-} " != *" ${VERSION} "* ]]; then
+            echo "::error::new version ${VERSION} not listed under ${base}; nothing pruned"
+            exit 1
+          fi
+
+          others_known=false
+          for keep in "${PREVIOUS}" "${live}"; do
+            if [ -n "${keep}" ] && [ "${keep}" != "${VERSION}" ]; then
+              others_known=true
+            fi
+          done
+          if [ "${others_known}" = false ] && [ "${#versions[@]}" -gt 1 ]; then
+            echo "::error::only the new version is known but ${#versions[@]} versions exist; nothing pruned"
+            exit 1
+          fi
+
+          for name in "${versions[@]}"; do
+            if [ "${name}" = "${VERSION}" ] || [ "${name}" = "${PREVIOUS}" ] || [ "${name}" = "${live}" ]; then
               continue
             fi
             echo "Removing sectors version ${name}"
