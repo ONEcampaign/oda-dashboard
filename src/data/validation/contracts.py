@@ -7,7 +7,9 @@ VALUE_NULL_ERROR_FRACTION of a column's rows are an ERROR.
 
 Magnitude has a floor as well as a ceiling: each view's anchor (DAC countries' key total
 in the end year) must lie in [ANCHOR_MIN_UNITS, ANCHOR_MAX_UNITS], and pct_of_gni within
-+/-PCT_OF_GNI_LIMIT, so a units slip in either direction blocks.
++/-PCT_OF_GNI_LIMIT, so a units slip in either direction blocks. On the anchor rows,
+each other currency's current total per US dollar must lie in [CURRENCY_PER_USD_MIN,
+CURRENCY_PER_USD_MAX], so a slip confined to one currency blocks too.
 
 ``run_contracts(view)`` runs them all. It needs the whole view in memory: for sectors that
 means ``load_view("sectors_view", source)``, not a partition.
@@ -51,6 +53,11 @@ ANCHOR_ROWS: dict[str, tuple[str, str]] = {
     "gender_view": ("recipient_name", ODA_ELIGIBLE),
     "sectors_view": ("recipient_name", ODA_ELIGIBLE),
 }
+
+# Units of EUR, GBP or CAD per US dollar on the anchor rows. Annual rates in 1990-2025
+# ran from about 0.5 (GBP) to 1.6 (CAD); this band blocks a units slip in one currency.
+CURRENCY_PER_USD_MIN: float = 0.4
+CURRENCY_PER_USD_MAX: float = 2.5
 
 # ODA/GNI as a fraction. No donor in the 1990-2025 window gave more than 1.5% of GNI
 # (Sweden 2015, 1.42%), and the most negative indicator share is -0.2%; 3% either way
@@ -342,7 +349,10 @@ def check_values(view: LoadedView) -> list[CheckResult]:
 
 
 def _anchor_totals(view: LoadedView) -> pd.DataFrame:
-    """The anchor per series in the end year: one row (per type for financing)."""
+    """The anchor per series in the end year: one row (per type for financing).
+
+    Columns: the series column (financing only), rows, and each current value column.
+    """
     column, value = ANCHOR_ROWS[view.spec.name]
     data = view.data
     end = view.spec.time["end"]
@@ -351,18 +361,17 @@ def _anchor_totals(view: LoadedView) -> pd.DataFrame:
         & (data[column] == value)
         & (data["year"] == end)
     ]
+    current = [c for c, _ in CURRENCY_PAIRS]
     series = [TYPE_COLUMN] if TYPE_COLUMN in view.spec.keys else []
     if not series:
-        return pd.DataFrame(
-            {
-                "rows": [len(rows)],
-                "value_usd_current": [rows[PRIMARY_VALUE_COLUMN].sum()],
-            }
-        ).loc[lambda d: d["rows"] > 0]
+        totals = rows[current].sum().to_frame().T.assign(rows=len(rows))
+        return totals.loc[totals["rows"] > 0, ["rows", *current]]
+    grouped = rows.groupby(series, observed=True)
     return (
-        rows.groupby(series, observed=True)[PRIMARY_VALUE_COLUMN]
-        .agg(rows="size", value_usd_current="sum")
-        .reset_index()
+        grouped[current]
+        .sum()
+        .join(grouped.size().rename("rows"))
+        .reset_index()[[*series, "rows", *current]]
     )
 
 
@@ -398,6 +407,49 @@ def check_anchor(view: LoadedView) -> list[CheckResult]:
             passed_message=f"{what}: {shown} units, within {band}",
             failed_message=message,
             details=totals,
+        )
+    ]
+
+
+def check_anchor_currencies(view: LoadedView) -> list[CheckResult]:
+    """Each non-USD current anchor total per USD lies in the CURRENCY_PER_USD band.
+
+    The anchor band checks value_usd_current only; a units slip in one currency's
+    conversion would pass it and every other blocking check. Missing anchor rows fail.
+    """
+    end = view.spec.time["end"]
+    totals = _anchor_totals(view)
+    band = f"[{CURRENCY_PER_USD_MIN}, {CURRENCY_PER_USD_MAX}]"
+    others = [c for c, _ in CURRENCY_PAIRS if c != PRIMARY_VALUE_COLUMN]
+    series = [c for c in totals.columns if c == TYPE_COLUMN]
+    ratios = totals[series].assign(
+        **{
+            c: totals[c]
+            / totals[PRIMARY_VALUE_COLUMN].where(totals[PRIMARY_VALUE_COLUMN] != 0)
+            for c in others
+        }
+    )
+    outside = ~ratios[others].apply(
+        lambda r: r.between(CURRENCY_PER_USD_MIN, CURRENCY_PER_USD_MAX)
+    )
+    failures = int(outside.to_numpy().sum()) if len(totals) else 1
+    shown = "; ".join(
+        ", ".join(f"{c}: {r[c]:.3g}" for c in others) for _, r in ratios.iterrows()
+    )
+    return [
+        build_result(
+            check="contracts.anchor_currencies",
+            view=view.spec.name,
+            failures=failures,
+            severity=Severity.ERROR,
+            passed_message=f"Anchor in {end}, units per USD within {band}: {shown}",
+            failed_message=(
+                f"No anchor rows in {end}"
+                if totals.empty
+                else f"{failures} anchor currency totals per USD outside {band}: "
+                f"{shown}"
+            ),
+            details=ratios,
         )
     ]
 
@@ -687,6 +739,7 @@ def run_contracts(view: LoadedView) -> list[CheckResult]:
         *check_years(view),
         *check_values(view),
         *check_anchor(view),
+        *check_anchor_currencies(view),
         *check_gni_share(view),
         *check_types(view),
         *check_critical_donors(view),

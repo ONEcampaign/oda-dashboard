@@ -1,7 +1,10 @@
 """Anomalies: year-on-year changes in a view's key total that break with a donor's history.
 
-Results are WARNINGs, since an unusual year is worth a look but not a block. A view with
-no key-total rows at all is an ERROR: the check would otherwise pass on nothing.
+Results are WARNINGs, since an unusual year is worth a look but not a block. Two cases
+are ERRORs: a view with no key-total rows at all (the check would otherwise pass on
+nothing), and a critical donor whose end-year key total moved by more than
+MAX_CRITICAL_DONOR_CHANGE with no "anomaly" entry to explain it (a units slip in one
+donor, carried consistently into its groups, passes every other blocking check).
 ``run_anomalies(view)`` reads only the key-total rows (below), so for sectors the
 "oda-eligible-countries" recipient partition is enough. The whole view also works.
 
@@ -27,7 +30,7 @@ from src.data.validation.contracts import PRIMARY_VALUE_COLUMN, build_result
 from src.data.validation.expected import DeltaKind, ExpectedDelta, find_explanation
 from src.data.validation.io import LoadedView
 from src.data.validation.models import CheckResult, Severity
-from src.data.validation.views import AGGREGATE_DONORS
+from src.data.validation.views import AGGREGATE_DONORS, CRITICAL_DONORS
 
 # A year-on-year change this many standard deviations from the donor's mean change is flagged.
 Z_SCORE_THRESHOLD: float = 3.0
@@ -41,6 +44,12 @@ MIN_MATERIAL_UNITS: float = 1e9
 # history gets a large z from an ordinary 20-40% policy swing. A halving, or a rise by
 # half, is worth a look whatever the history.
 MIN_FLAGGED_CHANGE: float = 0.5
+# A critical donor's end-year key total below (1 - this) or above 1 / (1 - this) times
+# the year before blocks: a tenfold move is a units slip, not policy. The largest real
+# move so far, the US cut in 2025 financing, was -56%.
+MAX_CRITICAL_DONOR_CHANGE: float = 0.9
+CRITICAL_RATIO_MIN: float = 1 - MAX_CRITICAL_DONOR_CHANGE
+CRITICAL_RATIO_MAX: float = 1 / CRITICAL_RATIO_MIN
 
 
 @dataclass(frozen=True)
@@ -242,6 +251,95 @@ def check_yoy_anomalies(
     return results
 
 
+def _critical_changes(
+    totals: pd.DataFrame, series_cols: list[str], end: int
+) -> pd.DataFrame:
+    """Critical donors' end-year key total against the year before, per series.
+
+    Series without both years, or with a zero previous year, are left out.
+
+    Returns:
+        Columns: the series columns, year, previous, latest, ratio, change.
+    """
+    critical = totals.loc[totals["donor_name"].isin(CRITICAL_DONORS)]
+    wide = critical.pivot_table(
+        index=series_cols,
+        columns="year",
+        values=PRIMARY_VALUE_COLUMN,
+        observed=True,
+    )
+    if end not in wide.columns or end - 1 not in wide.columns:
+        return pd.DataFrame(
+            columns=[*series_cols, "year", "previous", "latest", "ratio", "change"]
+        )
+    pair = wide[[end - 1, end]].dropna()
+    pair = pair.loc[pair[end - 1] != 0]
+    ratio = pair[end] / pair[end - 1]
+    return pd.DataFrame(
+        {
+            "year": end,
+            "previous": pair[end - 1],
+            "latest": pair[end],
+            "ratio": ratio,
+            "change": ratio - 1,
+        }
+    ).reset_index()
+
+
+def check_critical_donor_change(
+    view: LoadedView, expected: Sequence[ExpectedDelta] = ()
+) -> list[CheckResult]:
+    """Block a critical donor whose end-year key total moved tenfold or more.
+
+    The end year is the spec's. A move outside [CRITICAL_RATIO_MIN, CRITICAL_RATIO_MAX]
+    times the year before is an ERROR unless an "anomaly" entry explains it (as for
+    check_yoy_anomalies; max_rel bounds the change). A view with no key-total rows is
+    left to check_yoy_anomalies.
+
+    Args:
+        view: The view, or for sectors its "oda-eligible-countries" partition.
+        expected: Expected deltas; "anomaly" entries for this view explain moves.
+
+    Returns:
+        One ERROR result (a pass when nothing moved that far).
+    """
+    name = view.spec.name
+    key_total = KEY_TOTALS[name]
+    totals = key_total_series(view)
+    if totals.empty:
+        return []
+    series_cols = list(key_total.series)
+    end = view.spec.time["end"]
+    changes = _critical_changes(totals, series_cols, end)
+    moved = changes.loc[
+        ~changes["ratio"].between(CRITICAL_RATIO_MIN, CRITICAL_RATIO_MAX)
+    ]
+    if len(moved):
+        moved = moved.assign(reason=_explain_flags(moved, name, expected))
+        moved = moved.loc[moved["reason"].isna()].drop(columns="reason")
+    band = f"[{CRITICAL_RATIO_MIN:.2g}x, {CRITICAL_RATIO_MAX:.2g}x]"
+    listed = ", ".join(
+        f"{r.donor_name} {r.ratio:.3g}x" for r in moved.itertuples(index=False)
+    )
+    return [
+        build_result(
+            check="anomalies.critical_donor_change",
+            view=name,
+            failures=len(moved),
+            severity=Severity.ERROR,
+            passed_message=(
+                f"Every critical donor's {key_total.label} in {end} within {band} of "
+                f"{end - 1} ({len(changes)} series)"
+            ),
+            failed_message=(
+                f"{len(moved)} critical donor series moved beyond {band} from "
+                f"{end - 1} to {end} with no anomaly entry: {listed}"
+            ),
+            details=moved,
+        )
+    ]
+
+
 def run_anomalies(
     view: LoadedView, expected: Sequence[ExpectedDelta] = ()
 ) -> list[CheckResult]:
@@ -252,6 +350,10 @@ def run_anomalies(
         expected: Expected deltas; "anomaly" entries explain flags.
 
     Returns:
-        WARNING and INFO results, or an ERROR when there is nothing to check.
+        WARNING and INFO results; ERRORs when there is nothing to check or a critical
+        donor moved tenfold.
     """
-    return check_yoy_anomalies(view, expected)
+    return [
+        *check_yoy_anomalies(view, expected),
+        *check_critical_donor_change(view, expected),
+    ]

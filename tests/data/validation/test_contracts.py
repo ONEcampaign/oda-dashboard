@@ -8,10 +8,13 @@ from src.data.config import DAC_COUNTRIES_NAME, ODA_ELIGIBLE
 from src.data.validation.contracts import (
     ANCHOR_MAX_UNITS,
     ANCHOR_MIN_UNITS,
+    CURRENCY_PER_USD_MAX,
+    CURRENCY_PER_USD_MIN,
     MAX_SANE_VALUE,
     PCT_OF_GNI_LIMIT,
     VALUE_NULL_ERROR_FRACTION,
     check_anchor,
+    check_anchor_currencies,
     check_columns,
     check_critical_donors,
     check_gni_share,
@@ -276,6 +279,48 @@ def test_anchor_sums_recipient_views(make_view: MakeView) -> None:
     ]
     [result] = check_anchor(make_view("recipients_view", rows))
     assert not result.passed  # 1.2 x the ceiling once summed
+
+
+@pytest.mark.parametrize(
+    ("scale", "passes"),
+    [
+        (0.9, True),
+        (CURRENCY_PER_USD_MIN, True),
+        (CURRENCY_PER_USD_MAX, True),
+        (1e-6, False),
+        (1e3, False),
+    ],
+)
+def test_anchor_currencies(financing: LoadedView, scale: float, passes: bool) -> None:
+    """EUR on the anchor rows scaled out of the per-USD band blocks; the edges pass."""
+    eur = [c for c in financing.data.columns if c.startswith("value_eur")]
+    financing.data[eur] *= scale
+    [result] = check_anchor_currencies(financing)
+    assert result.passed is passes
+    assert result.severity is Severity.ERROR
+    if not passes:
+        assert (result.details["value_eur_current"] == scale).all()
+
+
+def test_anchor_currencies_recipient_view_and_missing_rows(make_view: MakeView) -> None:
+    """Recipient views are checked once; missing anchor rows fail."""
+    end = get_spec("recipients_view").time["end"]
+    row = {
+        "year": end,
+        "donor_name": DAC_COUNTRIES_NAME,
+        "recipient_name": ODA_ELIGIBLE,
+        "indicator_name": "Bilateral",
+        "value_usd_current": ANCHOR_VALUE,
+        "value_gbp_current": ANCHOR_VALUE * 1e-3,
+    }
+    [result] = check_anchor_currencies(make_view("recipients_view", [row]))
+    assert not result.passed
+    assert result.details["value_gbp_current"].tolist() == [1e-3]
+    assert result.details["value_eur_current"].tolist() == [1.0]
+
+    other = {**row, "donor_name": "France"}
+    [result] = check_anchor_currencies(make_view("recipients_view", [other]))
+    assert not result.passed and "No anchor rows" in result.message
 
 
 def test_gni_share_range_and_population(financing: LoadedView) -> None:
