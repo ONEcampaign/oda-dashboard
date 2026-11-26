@@ -6,11 +6,6 @@ on:
 permissions:
   contents: read
 
-# Same group as deploy.yml, so a manual purge never runs in the middle of a deploy.
-concurrency:
-  group: deploy-gcs
-  cancel-in-progress: false
-
 jobs:
   purge_cache:
     runs-on: ubuntu-latest
