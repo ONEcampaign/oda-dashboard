@@ -9,6 +9,7 @@ import pytest
 
 from src.data.analysis_tools import recipients
 from src.data.analysis_tools.gender import label_marker_scores
+from src.data.analysis_tools.naming import canonical_recipient_names
 from src.data.analysis_tools.oda import ProvenanceLog
 from src.data.analysis_tools.recipients import (
     aggregate_recipient_names,
@@ -50,10 +51,52 @@ def test_canonical_recipients_keep_the_views_display_names():
         "Kenya",
         "ODA eligible countries",
         "Africa",
-        "C\u00f4te d\u2019Ivoire",
-        "Southern Asia, unspecified",
+        "C\u00f4te d'Ivoire",
+        "South Asia, unspecified",
         "Middle Africa, unspecified",
     ]
+
+
+# The spellings each source gives the codes they used to disagree on: oda_data's DAC2A names
+# (recipients view) and the CRS bulk file's (gender and sectors views).
+_SOURCE_SPELLINGS: dict[int, tuple[str, str]] = {
+    88: ("States Ex-Yugoslavia unspecified", "States Ex-Yugoslavia unspecified"),
+    247: ("Cote d'Ivoire", "C\u00f4te d'Ivoire"),
+    550: ("West Bank and Gaza Strip", "West Bank and Gaza Strip"),
+    679: ("South Asia, regional", "South Asia, regional"),
+    730: ("China (People\u2019s Republic of)", "China (People's Republic of)"),
+    740: (
+        "Democratic People's Republic of Korea",
+        "Democratic People\u2019s Republic of Korea",
+    ),
+    745: ("Lao People\u2019s Democratic Republic", "Lao People's Democratic Republic"),
+}
+
+
+def test_every_view_gives_a_recipient_code_one_name():
+    codes = list(_SOURCE_SPELLINGS)
+    dac2a_names = canonical_recipients(
+        dac2a([(code, dac) for code, (dac, _) in _SOURCE_SPELLINGS.items()])
+    )["recipient_name"].tolist()
+    crs_names = canonical_recipient_names(
+        pd.DataFrame(
+            {
+                "recipient_code": codes,
+                "recipient_name": [crs for _, crs in _SOURCE_SPELLINGS.values()],
+            }
+        )
+    )["recipient_name"].tolist()
+
+    assert dac2a_names == crs_names
+    assert dict(zip(codes, crs_names, strict=True)) == {
+        88: "States ex-Yugoslavia, unspecified",
+        247: "C\u00f4te d'Ivoire",
+        550: "West Bank and Gaza Strip",
+        679: "South Asia, unspecified",
+        730: "China (People's Republic of)",
+        740: "Democratic People's Republic of Korea",
+        745: "Lao People's Democratic Republic",
+    }
 
 
 def test_canonical_recipients_raises_on_a_missing_code():

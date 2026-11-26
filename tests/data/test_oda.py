@@ -18,7 +18,7 @@ from src.data.analysis_tools.transformations import (
     add_currencies_and_prices,
     get_crs_recipient_classifications,
 )
-from src.data.config import logger
+from src.data.config import DAC1_PRELIMINARY_YEAR, logger
 
 DOWNLOADED = datetime(2026, 10, 14, 8, 30, tzinfo=UTC)
 
@@ -300,10 +300,75 @@ def test_conversion_factors_log_fallbacks_and_record_dac1(monkeypatch, records):
     assert calls == [("USD", 2024), ("EUR", None), ("EUR", 2024)]
     assert list(out.columns) == ["donor_code", "year", "currency", "price", "factor"]
     assert len(out) == 6
-    assert "USD constant factors: donor codes [87]" in records.text
-    assert "EUR constant factors: donor codes [87]" in records.text
+    assert "USD constant factors: allowlisted donor codes [87]" in records.text
+    assert "EUR constant factors: allowlisted donor codes [87]" in records.text
     assert "EUR current factors" not in records.text
+    assert "now have DAC1 factors" not in records.text
     assert log.tables["dac1"].token == "dac1-rel"
+
+
+def _fallback_for(monkeypatch, fallback_codes: set[int]) -> None:
+    """Make pydeflate flag fallback_codes as using the DAC total's constant factors."""
+
+    def fake_get(dac1, *, entities, years, target_currency, base_year):
+        factors = pd.DataFrame(
+            {
+                "entity_code": entities,
+                "year": [years[0]] * len(entities),
+                "factor": [0.9] * len(entities),
+                "fallback": [
+                    base_year is not None and code in fallback_codes
+                    for code in entities
+                ],
+            }
+        )
+        return FakeFactorResult(factors, dac1.release)
+
+    monkeypatch.setattr(
+        oda_tools, "scan_table", lambda dataset: FakeTable(Path("dac1.parquet"), ())
+    )
+    monkeypatch.setattr(
+        oda_tools.pydeflate, "get_oecd_dac_conversion_factors", fake_get
+    )
+
+
+def test_conversion_factors_raise_on_a_fallback_nobody_allowed(monkeypatch):
+    _fallback_for(monkeypatch, {4})
+    with pytest.raises(ValueError, match=r"donor codes \[4\]"):
+        oda_tools.conversion_factors(
+            entities=[4], years=[2023], base_year=2024, currencies=["USD"]
+        )
+
+
+def test_preliminary_year_fallbacks_are_allowed_only_at_that_base_year(monkeypatch):
+    saudi_arabia = 566
+    _fallback_for(monkeypatch, {saudi_arabia})
+
+    out = oda_tools.conversion_factors(
+        entities=[saudi_arabia],
+        years=[2023],
+        base_year=DAC1_PRELIMINARY_YEAR,
+        currencies=["USD"],
+    )
+    assert len(out) == 1
+    with pytest.raises(ValueError, match=r"donor codes \[566\]"):
+        oda_tools.conversion_factors(
+            entities=[saudi_arabia],
+            years=[2023],
+            base_year=DAC1_PRELIMINARY_YEAR - 1,
+            currencies=["USD"],
+        )
+
+
+def test_conversion_factors_report_allowlisted_donors_that_no_longer_fall_back(
+    monkeypatch, records
+):
+    russia = 87
+    _fallback_for(monkeypatch, set())
+    oda_tools.conversion_factors(
+        entities=[russia], years=[2023], base_year=2024, currencies=["USD"]
+    )
+    assert "Allowlisted donor codes [87] now have DAC1 factors" in records.text
 
 
 def test_conversion_factors_refuse_a_mismatched_release(monkeypatch):

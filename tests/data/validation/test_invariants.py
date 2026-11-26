@@ -258,7 +258,7 @@ def test_share_range_severity(make_view: MakeView) -> None:
             "France",
             "Kenya",
             1.0,
-            pct_of_total_oda=1.5,
+            pct_of_bilateral_allocable=1.5,
             pct_total_donor=SHARE_MIN - 0.5,
         )
     ]
@@ -275,10 +275,13 @@ def test_share_range_severity(make_view: MakeView) -> None:
 def test_gender_share_range_net_flows(make_view: MakeView) -> None:
     """Gender: out-of-range shares in a group with a negative value are a WARNING."""
     net = [
-        {**_row("France", "Kenya", v, pct_of_total_oda=s), "indicator_name": marker}
+        {
+            **_row("France", "Kenya", v, pct_of_bilateral_allocable=s),
+            "indicator_name": marker,
+        }
         for marker, v, s in (("Main target", -50.0, -1.0), ("Not targeted", 100.0, 2.0))
     ]
-    gross = [_row("France", "Mali", 100.0, pct_of_total_oda=1.5)]
+    gross = [_row("France", "Mali", 100.0, pct_of_bilateral_allocable=1.5)]
     results = _by_check(check_share_range(make_view("gender_view", net + gross)))
     gross_result = results["invariants.share_range"]
     net_result = results["invariants.share_range_net_flows"]
@@ -290,13 +293,17 @@ def test_gender_share_range_net_flows(make_view: MakeView) -> None:
 
 def test_share_nulls_error_above_one_percent(make_view: MakeView) -> None:
     """Null shares are a WARNING, an ERROR above 1% of rows."""
-    rows = [_row("France", f"R{i}", 1.0, pct_of_total_oda=0.5) for i in range(200)]
-    rows[0]["pct_of_total_oda"] = np.nan
+    rows = [
+        _row("France", f"R{i}", 1.0, pct_of_bilateral_allocable=0.5) for i in range(200)
+    ]
+    rows[0]["pct_of_bilateral_allocable"] = np.nan
     nulls = _by_check(check_share_range(make_view("gender_view", rows)))
     assert nulls["invariants.share_nulls"].severity is Severity.WARNING
     assert not nulls["invariants.share_nulls"].passed
 
-    rows[1]["pct_of_total_oda"] = rows[2]["pct_of_total_oda"] = np.nan
+    rows[1]["pct_of_bilateral_allocable"] = rows[2]["pct_of_bilateral_allocable"] = (
+        np.nan
+    )
     nulls = _by_check(check_share_range(make_view("gender_view", rows)))
     assert nulls["invariants.share_nulls"].severity is Severity.ERROR
 
@@ -338,13 +345,13 @@ def test_gender_shares_sum_to_one(make_view: MakeView) -> None:
     """Gender marker shares sum to 1 per donor, recipient and year."""
     rows = [
         {
-            **_row("France", "Kenya", 1.0, pct_of_total_oda=share),
+            **_row("France", "Kenya", 1.0, pct_of_bilateral_allocable=share),
             "indicator_name": marker,
         }
         for marker, share in (("Main target", 0.25), ("Not targeted", 0.75))
     ]
     assert check_share_sums(make_view("gender_view", rows))[0].passed
-    rows[0]["pct_of_total_oda"] = 0.3
+    rows[0]["pct_of_bilateral_allocable"] = 0.3
     [result] = check_share_sums(make_view("gender_view", rows))
     assert not result.passed
     assert result.details["off_by"].tolist() == [pytest.approx(0.05)]

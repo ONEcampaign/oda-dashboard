@@ -37,6 +37,7 @@ from src.data.analysis_tools.oda import (
 from src.data.config import (
     ALL_BILATERAL_DONORS,
     BILATERAL_DONORS,
+    CRS_ISO3_OVERRIDES,
     CRS_REGION_GROUPS,
     CRS_REGIONS,
     CRS_UNCLASSIFIED_INCOME,
@@ -287,24 +288,20 @@ def get_group_total(
     group_dict: dict,
     group_cols: list,
     column: str = "donor",
-    check_all_keys: bool = True,
     group_name: str | None = None,
-    group_code: int | None = None,
-    coverage_cols: list[str] | None = None,
 ) -> pd.DataFrame:
     """Sum a group of donors or recipients into a single aggregate row per group_cols.
+
+    Logs a warning naming group members missing from the data, judged per year and
+    counterpart entity (see _default_coverage_cols). It never raises: members legitimately
+    absent from a source must not break the build.
 
     Args:
         df: Long-form frame with a "value" column.
         group_dict: Mapping of {member code: member name} defining the group.
         group_cols: Columns to group by when summing.
         column: Entity being aggregated over, "donor" or "recipient".
-        check_all_keys: Log a warning naming group members missing from the data. Never
-            raises: members legitimately absent from a source must not break the build.
         group_name: Value to assign to the aggregate's name column.
-        group_code: Value to assign to the aggregate's code column.
-        coverage_cols: Combinations to check coverage over. Defaults to year plus the
-            counterpart entity, e.g. year x recipient when aggregating donors.
 
     Returns:
         The aggregated frame.
@@ -312,16 +309,13 @@ def get_group_total(
     code_col = f"{column}_code"
     name_col = f"{column}_name"
 
-    if check_all_keys:
-        _warn_missing_group_members(
-            df,
-            group_dict,
-            code_col,
-            coverage_cols
-            if coverage_cols is not None
-            else _default_coverage_cols(df, column),
-            group_name or f"{column} group total",
-        )
+    _warn_missing_group_members(
+        df,
+        group_dict,
+        code_col,
+        _default_coverage_cols(df, column),
+        group_name or f"{column} group total",
+    )
 
     df = (
         df.loc[lambda d: d[code_col].isin(group_dict)]
@@ -332,8 +326,6 @@ def get_group_total(
 
     if group_name:
         df[name_col] = group_name
-    if group_code:
-        df[code_col] = group_code
 
     return df
 
@@ -358,11 +350,11 @@ _CRS_ATTRIBUTES: dict[str, str] = {
 
 
 def _resolve_iso3(codes: pd.Series, known: set[str]) -> dict[str, str | None]:
-    """Resolve CRS recipient codes to ISO3 with resolvekit, one call per unique code.
+    """Resolve CRS recipient codes to ISO3, one call per unique code.
 
-    Codes already in known are taken as they are: resolvekit's fuzzy matching finds some valid
-    codes ambiguous (UGA, UKR). Its bulk resolver is not used because it loses Kosovo, which the
-    CRS spells XKV and the scalar resolver maps to XKX.
+    CRS_ISO3_OVERRIDES comes first, then codes already in known are taken as they are:
+    resolvekit's fuzzy matching finds some valid codes ambiguous (UGA, UKR). Anything else
+    goes to resolvekit's scalar resolver.
 
     Args:
         codes: CRS de_recipientcode values.
@@ -370,20 +362,32 @@ def _resolve_iso3(codes: pd.Series, known: set[str]) -> dict[str, str | None]:
 
     Returns:
         ISO3 code, or None for codes that are not a country, by three-letter code.
+
+    Raises:
+        ValueError: If resolvekit finds a code ambiguous and CRS_ISO3_OVERRIDES does not
+            settle it. Labelling it unallocated by income would move its aid out of every
+            income group without anyone deciding so.
     """
     resolver = rk.default()
     resolved = {}
+    ambiguous = []
     for code in codes.dropna().unique():
         if not (isinstance(code, str) and len(code) == 3 and code.isalpha()):
             continue
-        if code in known:
+        if code in CRS_ISO3_OVERRIDES:
+            resolved[code] = CRS_ISO3_OVERRIDES[code]
+        elif code in known:
             resolved[code] = code
-            continue
-        try:
-            resolved[code] = resolver.resolve(code, to="iso3")
-        except rk.AmbiguousResolutionError:
-            logger.warning("Recipient code %s matches more than one country", code)
-            resolved[code] = None
+        else:
+            try:
+                resolved[code] = resolver.resolve(code, to="iso3")
+            except rk.AmbiguousResolutionError:
+                ambiguous.append(code)
+    if ambiguous:
+        raise ValueError(
+            f"Recipient codes {sorted(ambiguous)} match more than one country. Settle "
+            "each in config's CRS_ISO3_OVERRIDES."
+        )
     return resolved
 
 
@@ -731,7 +735,7 @@ def build_donor_group_totals(
     Every view builds its aggregates here, so "All bilateral donors" is DAC countries plus
     Non-DAC countries everywhere, and EU Institutions sits in no group. Each view builds the
     EU27 + institutions bloc itself, since how to avoid counting member contributions twice
-    depends on the data it reads.
+    depends on the data it reads; analysis_tools.eu sets out the three methods.
 
     Args:
         df: Frame with donor_code and a "value" column.
@@ -1099,8 +1103,11 @@ def add_share_of_gni(
 ) -> pd.DataFrame:
     """Add each row's value_usd_current as a share of the donor's GNI.
 
-    Donor groups divide the ODA of only their members that report GNI, so the numerator and
-    denominator cover the same countries.
+    Donor groups in DONOR_GROUPS divide the ODA of only their members that report GNI, so the
+    numerator and denominator cover the same countries. A group whose GNI-reporting members
+    report nothing for an indicator gets no share: its own value would come from members
+    outside the denominator. Every other row (individual donors, and the EU27 + institutions
+    bloc, whose denominator is its member states' GNI by design) divides its own value.
 
     Args:
         df: Wide financing frame keyed by year, donor_name and indicator_name.
@@ -1122,7 +1129,20 @@ def add_share_of_gni(
         how="left",
         validate="m:1",
     )
-    numerator = merged["gni_matched_value"].fillna(merged["value_usd_current"])
+    is_group = merged["donor_name"].isin(DONOR_GROUPS)
+    numerator = merged["value_usd_current"].where(
+        ~is_group, merged["gni_matched_value"]
+    )
+    unmatched = is_group & merged["gni_matched_value"].isna() & merged["gni"].notna()
+    if unmatched.any():
+        logger.info(
+            "pct_of_gni: %s donor-group rows left empty because no member that reports "
+            "GNI reports the indicator, e.g. %s",
+            f"{int(unmatched.sum()):,}",
+            merged.loc[unmatched, ["year", "donor_name", "indicator_name"]]
+            .head(3)
+            .to_dict("records"),
+        )
     merged["pct_of_gni"] = safe_share(numerator, merged["gni"])
     check_share_column(merged, "pct_of_gni")
     return merged.drop(columns=["gni", "gni_matched_value"])

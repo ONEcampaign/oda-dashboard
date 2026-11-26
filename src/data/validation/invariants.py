@@ -612,8 +612,8 @@ SHARE_IDENTITIES: dict[str, tuple[_ShareIdentity, ...]] = {
     ),
     "gender_view": (
         _ShareIdentity(
-            "pct_of_total_oda over the four markers",
-            "pct_of_total_oda",
+            "pct_of_bilateral_allocable over the four markers",
+            "pct_of_bilateral_allocable",
             by=(YEAR, DONOR, RECIPIENT),
             where=None,
         ),

@@ -22,7 +22,14 @@ import oda_reader
 import pandas as pd
 import pydeflate
 
-from src.data.config import CURRENCIES, PATHS, logger
+from src.data.config import (
+    CONSTANT_PRICE_FALLBACK_DONORS,
+    CURRENCIES,
+    DAC1_PRELIMINARY_YEAR,
+    PATHS,
+    PRELIMINARY_BASE_YEAR_FALLBACK_DONORS,
+    logger,
+)
 
 _CACHE_ENV_VAR: str = "ODA_READER_CACHE_DIR"
 ODA_CACHE_DIR: Path = Path(os.environ.get(_CACHE_ENV_VAR, PATHS.DATA / "oda-reader"))
@@ -293,6 +300,54 @@ def _factor_units(
     ]
 
 
+def allowed_factor_fallbacks(price: str, base_year: int | None) -> set[int]:
+    """The donors allowed to take the DAC total's factor for one price and base year.
+
+    Args:
+        price: "current" or "constant".
+        base_year: Base year of constant prices, None for current prices.
+
+    Returns:
+        Donor codes from config's fallback allowlists that apply to this unit.
+    """
+    if price != "constant":
+        return set()
+    allowed = set(CONSTANT_PRICE_FALLBACK_DONORS)
+    if base_year == DAC1_PRELIMINARY_YEAR:
+        allowed |= set(PRELIMINARY_BASE_YEAR_FALLBACK_DONORS)
+    return allowed
+
+
+def check_factor_fallbacks(
+    fallback: set[int], *, currency: str, price: str, base_year: int | None
+) -> None:
+    """Raise if a donor outside the allowlists takes the DAC total's factor.
+
+    Args:
+        fallback: Donor codes pydeflate flagged as using the DAC total's factor.
+        currency: Target currency, for the messages.
+        price: "current" or "constant".
+        base_year: Base year of constant prices, None for current prices.
+
+    Raises:
+        ValueError: If a donor not allowed for this price and base year falls back.
+    """
+    unexpected = sorted(fallback - allowed_factor_fallbacks(price, base_year))
+    if unexpected:
+        raise ValueError(
+            f"{currency} {price} factors: donor codes {unexpected} have no DAC1 rate of "
+            "their own and would silently use the DAC total's. Add them to config's "
+            "fallback allowlists if that is intended."
+        )
+    if fallback:
+        logger.info(
+            "%s %s factors: allowlisted donor codes %s use the DAC total's",
+            currency,
+            price,
+            sorted(fallback),
+        )
+
+
 def conversion_factors(
     *,
     entities: Iterable[int],
@@ -305,7 +360,8 @@ def conversion_factors(
 
     One DAC1 scan feeds every pydeflate call, so all factors share one release, and that
     release is the one recorded in provenance. Entities with no DAC1 rate of their own take
-    the DAC total's (pydeflate's fallback) and are logged.
+    the DAC total's (pydeflate's fallback); only the donors config allowlists may, and an
+    allowlisted donor that no longer falls back is reported so the list can shrink.
 
     Args:
         entities: DAC donor codes to read factors for.
@@ -319,11 +375,14 @@ def conversion_factors(
         NaN where DAC1 has no data for that donor-year. The caller decides if that matters.
 
     Raises:
-        ValueError: If pydeflate read a different DAC1 release from the one scanned.
+        ValueError: If pydeflate read a different DAC1 release from the one scanned, or a
+            donor outside the allowlists falls back to the DAC total's factor.
     """
     entities, years = sorted(set(entities)), sorted(set(years))
     dac1 = scan_table(_DAC1)
     frames = []
+    allowed_requested: set[int] = set()
+    fell_back: set[int] = set()
     for currency, price, unit_base_year in _factor_units(currencies, base_year):
         result = pydeflate.get_oecd_dac_conversion_factors(
             dac1,
@@ -338,21 +397,29 @@ def conversion_factors(
                 f"{dac1.release!r}."
             )
         factors = result.factors
-        fallback = sorted(
-            factors.loc[factors["fallback"], "entity_code"].unique().tolist()
+        fallback = {
+            int(code)
+            for code in factors.loc[factors["fallback"], "entity_code"].unique()
+        }
+        check_factor_fallbacks(
+            fallback, currency=currency, price=price, base_year=unit_base_year
         )
-        if fallback:
-            logger.info(
-                "%s %s factors: donor codes %s have no DAC1 rate of their own and use "
-                "the DAC total's",
-                currency,
-                price,
-                fallback,
-            )
+        allowed_requested |= allowed_factor_fallbacks(price, unit_base_year) & set(
+            entities
+        )
+        fell_back |= fallback
         frames.append(
             factors.rename(columns={"entity_code": "donor_code"})
             .drop(columns="fallback")
             .assign(currency=currency, price=price)
+        )
+
+    stale = sorted(allowed_requested - fell_back)
+    if stale:
+        logger.warning(
+            "Allowlisted donor codes %s now have DAC1 factors of their own; remove them "
+            "from config's conversion factor fallback allowlists",
+            stale,
         )
 
     if provenance is not None:

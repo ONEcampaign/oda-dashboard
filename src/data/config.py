@@ -144,6 +144,9 @@ LABEL_COLUMNS: tuple[str, ...] = (
 # ---------------------------------------------------------------------------------------
 
 FINANCING_TIME: dict[str, int] = {"start": 1990, "end": 2025, "base": 2025}
+# The latest DAC1 year, which holds preliminary data only. Some donors have no deflator for it
+# yet (see PRELIMINARY_BASE_YEAR_FALLBACK_DONORS).
+DAC1_PRELIMINARY_YEAR: int = FINANCING_TIME["end"]
 BASE_TIME: dict[str, int] = {"start": 1990, "end": 2024, "base": 2024}
 # Imputed multilateral spends each contribution in the proportions of the organisation's
 # spending over three years (t-2 to t). The MultiSystem data starts in 2011, so 2013 is the
@@ -351,6 +354,22 @@ if DAC_COUNTRIES.keys() & NON_DAC_COUNTRIES.keys() or (
         "non_dac_countries, so All bilateral donors would not equal DAC + Non-DAC."
     )
 
+# Donors whose constant-price conversion factors come from the DAC total's deflator, because
+# DAC1 has no deflator of their own (pydeflate's fallback). oda.conversion_factors raises on a
+# fallback for any donor not listed here, so a new one is accepted on purpose.
+CONSTANT_PRICE_FALLBACK_DONORS: dict[int, str] = {
+    87: "Russia",
+    765: "Timor-Leste",
+}
+# Donors that have a deflator of their own, but not yet for DAC1_PRELIMINARY_YEAR, so constant
+# prices based on that year use the DAC total's deflator. Allowed only at that base year.
+PRELIMINARY_BASE_YEAR_FALLBACK_DONORS: dict[int, str] = {
+    30: "Cyprus",
+    566: "Saudi Arabia",
+    613: "Kazakhstan",
+    764: "Thailand",
+}
+
 # The EU27 + institutions bloc needs EU members' contributions to the institutions to avoid
 # counting them twice. Preliminary DAC1 data for the latest year do not yet carry them, so
 # the financing view shows the bloc only up to this year.
@@ -371,8 +390,10 @@ EUI_CHANNEL_CODES: frozenset[int] = frozenset({42000, 42001, 42003, 42004, 42999
 # classifications in section 7 instead.
 # ---------------------------------------------------------------------------------------
 
-# Display labels for recipients in every view, keyed by code. Regions are renamed to match
-# across the DAC2A and CRS views.
+# Display labels for recipients in every view, keyed by code: one name per code, so the same
+# recipient is spelled the same way on every page. Regions are renamed to match across the
+# DAC2A and CRS views, and the few countries the two sources spell differently take the CRS
+# spelling. naming.canonical_recipient_names applies these in every view.
 RECIPIENT_NAME_OVERRIDES: dict[int, str] = {
     10_100: ODA_ELIGIBLE,
     UNSPECIFIED_RECIPIENT_CODE: UNSPECIFIED_RECIPIENT_NAME,
@@ -393,6 +414,10 @@ RECIPIENT_NAME_OVERRIDES: dict[int, str] = {
     389: "Caribbean & Central America, unspecified",
     # DAC2A calls both the sub-region and the country (code 860) "Micronesia"
     10_058: "Micronesia (region)",
+    # oda_data's DAC2A names drop the accent; the CRS keeps it.
+    247: "Côte d'Ivoire",
+    # Both sources capitalise "Ex-", which is not part of the name.
+    88: "States ex-Yugoslavia, unspecified",
 }
 
 # DAC2A recipients the recipients view must not read, checked against DAC2A_RECIPIENTS:
@@ -456,19 +481,6 @@ DAC2A_RECIPIENT_AGGREGATES: dict[int, str] = {
     },
 }
 
-# Countries and unspecified codes whose DAC2A bulk name differs from the name the recipients
-# view shows. Recipients view only: the CRS views keep their own spellings.
-DAC2A_RECIPIENT_NAMES: dict[int, str] = {
-    88: "States ex-Yugoslavia, unspecified",
-    247: "C\u00f4te d\u2019Ivoire",
-    361: "Sint Maarten",
-    550: "Palestinian Authority or West Bank and Gaza Strip",
-    679: "Southern Asia, unspecified",
-    730: "China (People\u2019s Republic of)",
-    740: "Democratic People\u2019s Republic of Korea",
-    745: "Lao People\u2019s Democratic Republic",
-}
-
 # Unspecified codes the OECD API used and the DAC2A bulk file does not: the bulk file holds
 # the same money under the code each maps to, which the view shows under the API's name.
 DAC2A_API_ONLY_RECIPIENTS: dict[int, int] = {
@@ -476,7 +488,7 @@ DAC2A_API_ONLY_RECIPIENTS: dict[int, int] = {
     10_330: 1033,  # Melanesia, unspecified
     10_350: 1035,  # Polynesia, unspecified
     8600: 1034,  # Micronesia, unspecified
-    6790: 679,  # Southern Asia, unspecified
+    6790: 679,  # South Asia, unspecified
 }
 
 # Every recipient the recipients view reads from DAC2A.
@@ -509,6 +521,10 @@ WORLD_BANK_INCOME_GROUPS: dict[str, str] = {
     "World Bank Upper-Middle-Income Countries": RECIPIENT_NAME_OVERRIDES[10_047],
     "World Bank High-Income Countries": RECIPIENT_NAME_OVERRIDES[10_048],
 }
+# CRS de_recipientcode values resolved by hand before resolvekit: the ISO3 code, or None for a
+# code that is not a country. The CRS spells Kosovo XKV; ISO uses XKX. classify_income raises
+# on any code resolvekit finds ambiguous that is not listed here.
+CRS_ISO3_OVERRIDES: dict[str, str | None] = {"XKV": "XKX"}
 # Countries the World Bank does not classify, mostly small territories.
 WORLD_BANK_NOT_CLASSIFIED: str = "Countries not classified by the World Bank"
 # Regional and unspecified recipients, which belong to no income group.
