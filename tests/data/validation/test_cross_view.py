@@ -404,8 +404,8 @@ def test_sectors_reader_raises_without_partitions(tmp_path: Path) -> None:
 
 
 def test_sector_shares_and_amounts(tmp_path: Path, make_view: MakeView) -> None:
-    """Shares over both indicators and all sectors; amounts rebased per member and summed
-    to DAC countries; pre-2013 dropped."""
+    """Shares run over both indicators and all sectors. Amounts are rebased per member and
+    summed to DAC countries. Pre-2013 years are dropped."""
     write_hive(make_view("sectors_view", _sector_rows()), tmp_path / "sectors_view")
     write_flat(
         make_view("financing_view", _member_financing_rows(2024)), tmp_path / "fin"
@@ -450,7 +450,7 @@ def test_sector_shares_and_amounts(tmp_path: Path, make_view: MakeView) -> None:
 
 
 def _recipient_rows() -> list[dict]:
-    """DAC to Africa and ODA eligible, France to LICs, in 2024, over both indicators; a DAC
+    """DAC to Africa and ODA eligible, France to LICs, in 2024, over both indicators, and a DAC
     LIC row the income check must not use (it sums the rebased members)."""
     rows = []
     for donor, recipient, bilateral, imputed in [

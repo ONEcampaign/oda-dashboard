@@ -34,7 +34,7 @@ def test_every_donor_in_the_input_is_a_dac_member(covid):
 def test_oda_covid_csv_publishes_the_series(covid):
     """Every input row in the file's years reaches oda_covid.csv with its value.
 
-    Donor-years before the series starts publish 0; later ones the series leaves out (members
+    Donor-years before the series starts publish 0. Later ones the series leaves out (members
     that never reported it, years after it ends) publish empty.
     """
     published = pd.read_csv(PATHS.TOPIC_PAGE / "oda_covid.csv")

@@ -48,10 +48,10 @@ MINI_CHART_START_YEAR: int = LATEST_YEAR_DETAIL - CHART_WINDOW_YEARS + 1
 ODA_COVID_START_YEAR: int = LATEST_YEAR_AGG - CHART_WINDOW_YEARS + 1
 # The article compares ODA without COVID-19, refugees and Ukraine with this pre-COVID year.
 PRE_COVID_YEAR: int = 2019
-# The last full year before Russia's invasion; the Ukraine comparison chart starts here.
+# The last full year before Russia's invasion. The Ukraine comparison chart starts here.
 PRE_INVASION_YEAR: int = 2021
-# First year read for oda_covid.csv and the Ukraine series: the chart's window, widened back
-# to the key numbers' comparison years once the window moves past them.
+# First year read for oda_covid.csv and the Ukraine series. It is the chart's window, widened
+# back to the key numbers' comparison years once the window moves past them.
 SHORT_START_YEAR: int = min(ODA_COVID_START_YEAR, PRE_COVID_YEAR, PRE_INVASION_YEAR)
 
 BILLION: float = 1e9
@@ -65,7 +65,7 @@ DONOR_KEYS: list[str] = ["donor_name", "year"]
 
 # The key numbers the ODA article reads as {{oda_topic.<key>}} tokens.
 KEY_NUMBERS_FILE: str = "oda_key_numbers.json"
-# Every key the scripts write to KEY_NUMBERS_FILE; any other key is dropped as retired.
+# Every key the scripts write to KEY_NUMBERS_FILE. Any other key is dropped as retired.
 KEY_NUMBER_KEYS: frozenset[str] = frozenset(
     {
         # overview.py, aggregates (LATEST_YEAR_AGG)
@@ -176,8 +176,8 @@ def add_change(
 def update_key_number(path: Path, new_dict: dict) -> None:
     """Merge new_dict into the key numbers JSON at path, creating the file if needed.
 
-    Keys outside KEY_NUMBER_KEYS are retired: they are dropped from the file, so the article
-    never reads a stale figure.
+    Keys outside KEY_NUMBER_KEYS are retired and dropped from the file, so the article
+    reads no stale figure.
 
     Raises:
         ValueError: If new_dict holds a key missing from KEY_NUMBER_KEYS.

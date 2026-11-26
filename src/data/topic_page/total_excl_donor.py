@@ -65,7 +65,7 @@ def read_total_and_idrc(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataF
 
     Returns:
         One row per donor_name and year, with TOTAL_ODA and IDRC columns in constant USD
-        millions of CONSTANT_YEAR; IDRC is 0 where a donor reports none.
+        millions of CONSTANT_YEAR. IDRC is 0 where a donor reports none.
 
     Raises:
         ValueError: If a donor-year has in-donor refugee costs but no Total ODA.
@@ -120,7 +120,7 @@ def add_covid_oda(df: pd.DataFrame, covid: pd.DataFrame) -> pd.DataFrame:
 
     COVID-19 ODA is 0 before the series' first year, when there was none. From then on a
     donor-year the series leaves out (a member that never reported it, or a year after the
-    series ends) stays missing, so the chart shows a gap rather than a zero.
+    series ends) stays missing, so the chart shows a gap.
 
     Args:
         df: Frame with donor_name and year.
