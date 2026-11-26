@@ -144,6 +144,19 @@ def write_hive(
     return directory
 
 
+def write_versioned_hive(view: LoadedView, directory: Path, version: str) -> Path:
+    """Write a view in the versioned CDN layout; returns directory (the view directory).
+
+    Partitions go under ``directory/<version>``, the options beside directory, naming the
+    version as sectors_view.py does.
+    """
+    write_hive(view, directory / version)
+    options_path = directory.parent / f"{view.spec.name}_options.json"
+    options_path.write_text(json.dumps({**view.options, "dataset_version": version}))
+    (directory / version / OPTIONS_FILE).unlink()
+    return directory
+
+
 @pytest.fixture
 def sector_rows() -> list[dict]:
     """Four sectors_view rows: two donors by two recipients."""

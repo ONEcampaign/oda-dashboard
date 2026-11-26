@@ -16,7 +16,12 @@ from src.data.validation.io import (
     parse_amount,
     parse_percent,
 )
-from tests.data.validation.conftest import MakeView, write_flat, write_hive
+from tests.data.validation.conftest import (
+    MakeView,
+    write_flat,
+    write_hive,
+    write_versioned_hive,
+)
 
 FINANCING_ROWS = [
     {
@@ -102,6 +107,38 @@ def test_load_hive_options_beside(
 
     assert len(loaded.data) == 4
     assert loaded.options == view.options
+
+
+@pytest.mark.parametrize("pass_parent", [False, True])
+def test_load_versioned_cdn_build(
+    tmp_path: Path, make_view: MakeView, sector_rows: list[dict], pass_parent: bool
+) -> None:
+    """Layout 3, versioned: only the version the options name is read."""
+    view = make_view("sectors_view", sector_rows)
+    view_dir = write_versioned_hive(view, tmp_path / "sectors_view", "abc123")
+    # A stray older version beside it must not be read.
+    write_hive(view, view_dir / "0ld0ld")
+    (view_dir / "0ld0ld" / "options.json").unlink()
+
+    source = tmp_path if pass_parent else view_dir
+    loaded = load_view("sectors_view", source)
+    parts = list(iter_partitions("sectors_view", source, by="donor_slug"))
+
+    assert len(loaded.data) == 4
+    assert loaded.options["dataset_version"] == "abc123"
+    assert sum(len(part.data) for _, part in parts) == 4
+    assert not {"donor_slug", "recipient_slug"} & set(loaded.data.columns)
+
+
+def test_versioned_cdn_build_without_its_version_dir_raises(
+    tmp_path: Path, make_view: MakeView, sector_rows: list[dict]
+) -> None:
+    """Options naming a version that is not on disk fail loudly, naming the version."""
+    view = make_view("sectors_view", sector_rows)
+    view_dir = write_versioned_hive(view, tmp_path / "sectors_view", "abc123")
+    (view_dir / "abc123").rename(view_dir / "other")
+    with pytest.raises(FileNotFoundError, match="abc123"):
+        load_view("sectors_view", view_dir)
 
 
 def test_missing_data_names_paths(tmp_path: Path) -> None:
