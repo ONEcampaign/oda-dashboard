@@ -13,10 +13,10 @@ let _activeSector = "All sectors";
 
 export function treemapChart(data, width, { currency = null, activeSector = null, onSectorChange = null } = {}) {
 
-    // The page owns the selection; start each render from it.
+    // The page owns the selection, so each render starts from it.
     if (activeSector != null) _activeSector = activeSector;
 
-    // The page resets a sector missing from the data; until it does, draw nothing as selected.
+    // The page resets a sector missing from the data. Until it does, nothing is drawn as selected.
     const uniqueSectors = [...new Set(data.map(d => d.sector))];
     if (_activeSector !== "All sectors" && !uniqueSectors.includes(_activeSector)) {
         _activeSector = "All sectors";
@@ -88,7 +88,7 @@ export function treemapChart(data, width, { currency = null, activeSector = null
         .attr("style", "max-width: 100%; height: auto; height: intrinsic;")
         .attr("font-family", "'Italian Plate', sans-serif")
         .attr("font-size", 10)
-        // A group, not an image: the tiles inside are focusable buttons.
+        // The tiles inside are focusable buttons, so the svg is a group.
         .attr("role", "group")
         .attr("aria-roledescription", "treemap")
         .attr("aria-label", `Treemap of ODA by sector, ${year}, in ${currencyUnitLabel}. Select a sector to see its trend.`);

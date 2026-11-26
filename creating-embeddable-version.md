@@ -1,6 +1,6 @@
 # Embedding a dashboard page
 
-Every page in this dashboard can be embedded in an iframe. Embed mode comes from the `@one-data/observable-themes` package. This repository has no embed module of its own.
+Every page in this dashboard can be embedded in an iframe. Embed mode comes entirely from the `@one-data/observable-themes` package.
 
 ## How it works
 
@@ -14,7 +14,7 @@ The module treats a page as embedded when it is loaded inside an iframe or with 
 
 `isEmbedded` is exported as a boolean for pages that want to render differently when embedded. No page reads it today.
 
-Observable's own header, footer, sidebar and pager are off for the whole site in `observablehq.config.js`. Nothing in this repository styles the `embedded` class, so the theme's `Header` component still shows on an embedded page. To hide it or anything else, add rules to `src/style.css`:
+Observable's own header, footer, sidebar and pager are off for the whole site in `observablehq.config.js`. The repository defines no styles for the `embedded` class, so the theme's `Header` component shows on an embedded page. To hide it or anything else, add rules to `src/style.css`:
 
 ```css
 .embedded .your-element {
