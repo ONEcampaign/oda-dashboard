@@ -9,6 +9,12 @@ env:
   APP_PATH: oda-dashboard  # Change for each app
   BUCKET: data-apps-one-data
 
+# One deploy at a time: overlapping runs would rsync to the same GCS paths. A run that
+# arrives while one is in progress waits; GitHub keeps only the newest waiting run.
+concurrency:
+  group: deploy-gcs
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -27,13 +33,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.13'  # Adjust to your required version
           cache: 'pip'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -45,7 +51,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Python dependencies
-        run: uv sync
+        run: uv sync --locked
 
       - name: Install Node dependencies
         run: npm ci
@@ -68,18 +74,29 @@ jobs:
       # Each file is registered with its own token, the release tag plus that asset's full
       # updatedAt timestamp. oda-reader reuses a derived parquet by token, so a same-day
       # re-upload under a date-only token would serve stale data from an existing cache.
+      # The same timestamps go into the Observable output cache key below.
+      - name: Read OECD bulk asset versions
+        id: bulk
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          versions=$(gh release view oecd-bulk-data --json assets --jq '[.assets[] | {(.name): .updatedAt}] | add')
+          echo "versions=$versions" >> "$GITHUB_OUTPUT"
+          echo "hash=$(printf '%s' "$versions" | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
       - name: Seed OECD bulk cache
         env:
           GH_TOKEN: ${{ github.token }}
           PYTHONPATH: ${{ github.workspace }}
+          BULK_VERSIONS: ${{ steps.bulk.outputs.versions }}
         run: |
           gh release download oecd-bulk-data --dir src/data/raw_data/oecd_bulk --clobber
-          versions=$(gh release view oecd-bulk-data --json assets --jq '[.assets[] | {(.name): .updatedAt}] | add')
-          uv run python src/data/scripts/register_bulk_files.py --dir src/data/raw_data/oecd_bulk --versions "$versions"
+          uv run python src/data/scripts/register_bulk_files.py --dir src/data/raw_data/oecd_bulk --versions "$BULK_VERSIONS"
         timeout-minutes: 30
 
       # Observable compiled output — keyed on script/config content and
-      # the locked dependencies, so a code or dependency change forces recompilation.
+      # the locked dependencies and the oecd-bulk-data asset timestamps, so a code, dependency
+      # or source-data change forces recompilation.
       # Framework reruns a data loader whose cached output is older than the loader
       # file, and a fresh checkout gives every loader the checkout time, so in CI
       # loaders rerun even on a cache hit.
@@ -93,9 +110,9 @@ jobs:
           path: |
             src/.observablehq/cache/*
             !src/.observablehq/cache/_npm
-          key: observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py', 'pyproject.toml', 'uv.lock') }}-${{ steps.date.outputs.week }}
+          key: observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py', 'pyproject.toml', 'uv.lock') }}-${{ steps.bulk.outputs.hash }}-${{ steps.date.outputs.week }}
           restore-keys: |
-            observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py', 'pyproject.toml', 'uv.lock') }}-
+            observable-${{ hashFiles('src/data/scripts/**', 'src/data/analysis_tools/**', 'src/data/config.py', 'pyproject.toml', 'uv.lock') }}-${{ steps.bulk.outputs.hash }}-
 
       # Caches saved before the _npm exclusion still carry it.
       - name: Drop cached npm modules
@@ -145,16 +162,6 @@ jobs:
           path: validation_data/reports/
           if-no-files-found: ignore
 
-      - name: Cache gcloud SDK
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.config/gcloud
-            ~/.cache/google-cloud-sdk
-          key: ${{ runner.os }}-gcloud-${{ hashFiles('**/*.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-gcloud-
-
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
@@ -171,9 +178,19 @@ jobs:
             exit 1
           fi
 
+      # Everything but the pages first, then the pages, so a page never points at an asset
+      # that is not there yet. Pages are copied one by one with no-cache (a rsync -c pass
+      # skips unchanged pages and would leave their old max-age header). Hashed assets
+      # under _observablehq, _file, _npm and _import keep the bucket default.
       - name: Deploy to GCS
         run: |
-          gsutil -m rsync -r -c dist/ gs://${{ env.BUCKET }}/${{ env.APP_PATH }}/
+          set -euo pipefail
+          dest="gs://${{ env.BUCKET }}/${{ env.APP_PATH }}"
+          gsutil -m rsync -r -c -x '.*\.html$' dist/ "${dest}/"
+          (cd dist && find . -name '*.html' -print0) |
+            while IFS= read -r -d '' page; do
+              gsutil -h "Cache-Control:no-cache" cp "dist/${page#./}" "${dest}/${page#./}"
+            done
 
       - name: Purge Cloudflare cache
         if: env.CLOUDFLARE_ZONE_ID != '' && env.CLOUDFLARE_API_TOKEN != ''
@@ -181,7 +198,8 @@ jobs:
           CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          curl -X POST "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
+          set -euo pipefail
+          curl -fsS -X POST "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             -H "Content-Type: application/json" \
-            --data '{"purge_everything":true}'
+            --data '{"purge_everything":true}' | jq -e '.success'
