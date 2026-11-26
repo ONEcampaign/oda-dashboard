@@ -21,6 +21,11 @@ Tolerances: sums agree within 1e-6 of the summed absolute values plus half a rou
 per value compared; base-year constant equals current within 1e-6 plus one rounding unit;
 share identities within 1e-4 (1e-3 for sectors); the currency ratio within 1e-5 relative,
 on rows of at least 1e8 units, non-aggregate donors only.
+
+Shares follow how the pipeline computes them (SHARE_BASES): a share outside [0, 1] blocks
+unless a negative value in its denominator group explains it, and a null share blocks
+unless its denominator is zero or absent. A check that finds nothing to check fails
+rather than passing.
 """
 
 from collections.abc import Callable, Iterable
@@ -60,19 +65,20 @@ SUM_RELATIVE_TOLERANCE: float = 1e-6
 # Recipients view: countries may fall short of ODA eligible countries (DAC2A totals carry
 # codes no country row holds), but a shortfall above this share of the total is a WARNING.
 RECIPIENT_GAP_WARNING: float = 0.01
+# Donors whose DAC2A ODA-eligible total runs far above their recipient rows in most years
+# (by 95% or more since 2018): Saudi Arabia reports most of its bilateral ODA to the DAC2A
+# total without a recipient breakdown. Their gap is a known reporting gap, not a build
+# fault, and every group that holds them inherits it.
+RECIPIENT_GAP_KNOWN_DONORS: frozenset[str] = frozenset({"Saudi Arabia"})
 
-# Share range: a fraction, allowing net flows a little below 0 and float32 rounding above 1.
-SHARE_MIN: float = -0.01
-SHARE_MAX: float = 1.0001
-# Gender: out-of-range shares are an ERROR, except in a (donor, recipient, year) group with
-# a negative value, where net flows legitimately push shares outside [0, 1] (WARNING).
-NET_FLOW_GROUPS: dict[str, tuple[str, ...]] = {
-    "gender_view": ("year", "donor_name", "recipient_name")
-}
-# Null shares above this fraction of rows make the null check an ERROR.
-SHARE_NULL_ERROR_FRACTION: float = 0.01
-# Null pct_of_gni shares are structural (donors without GNI data) and always a WARNING.
-GNI_SHARE_COLUMN: str = "pct_of_gni"
+# Config group members that report no ODA to DAC1, DAC2A or the CRS in any year of any
+# view: listed in the DAC's Non-DAC countries group, absent from the data.
+MEMBERS_WITHOUT_DATA: frozenset[str] = frozenset({"Algeria", "Iraq", "Libya", "Mexico"})
+
+# Share range: a fraction in [0, 1], give or take float32 rounding.
+SHARE_RANGE_TOLERANCE: float = 1e-4
+SHARE_MIN: float = -SHARE_RANGE_TOLERANCE
+SHARE_MAX: float = 1.0 + SHARE_RANGE_TOLERANCE
 SHARE_SUM_TOLERANCE: float = 1e-4
 SECTORS_SHARE_SUM_TOLERANCE: float = 1e-3
 
@@ -270,14 +276,25 @@ def _drop_duplicates(frame: pd.DataFrame) -> pd.DataFrame:
 def _members_present_finalize(
     frame: pd.DataFrame, rows: int, spec: ViewSpec
 ) -> list[CheckResult]:
-    """WARNING naming config group members with no rows anywhere in the view."""
+    """WARNING naming config group members with no rows anywhere in the view.
+
+    Members in MEMBERS_WITHOUT_DATA are left out: they never report, so their absence is
+    no news. The passing message names any of them that now have rows, so the list can
+    shrink.
+    """
     present = set(frame[DONOR]) if len(frame) else set()
     missing = [
         (group, member)
         for group, members in DONOR_GROUP_MEMBERS.items()
         if group in present
-        for member in sorted(members - present)
+        for member in sorted(members - present - MEMBERS_WITHOUT_DATA)
     ]
+    reporting = sorted(MEMBERS_WITHOUT_DATA & present)
+    stale = (
+        f"; now reporting, drop from MEMBERS_WITHOUT_DATA: {reporting}"
+        if reporting
+        else ""
+    )
     details = pd.DataFrame(missing, columns=["group", "member"])
     by_group = details["group"].value_counts().to_dict()
     return [
@@ -286,7 +303,10 @@ def _members_present_finalize(
             view=spec.name,
             failures=len(missing),
             severity=Severity.WARNING,
-            passed_message="Every config member of every donor group has rows",
+            passed_message=(
+                "Every config member of every donor group has rows, bar "
+                f"{len(MEMBERS_WITHOUT_DATA)} that never report{stale}"
+            ),
             failed_message=(
                 f"{len(missing)} config group members have no rows in the view: {by_group}"
             ),
@@ -373,7 +393,12 @@ def _recipient_sum_finalize(
         ]
 
     overshoot = frame.loc[-frame["difference"] > tolerance]
-    gap = frame.loc[frame["difference"] > RECIPIENT_GAP_WARNING * frame["total"].abs()]
+    # Groups' gaps are the sums of their members' (group_sums checks that), so only
+    # reporting donors are judged, bar the known DAC2A total-only reporters.
+    judged = ~frame[DONOR].isin(AGGREGATE_DONORS | RECIPIENT_GAP_KNOWN_DONORS)
+    gap = frame.loc[
+        judged & (frame["difference"] > RECIPIENT_GAP_WARNING * frame["total"].abs())
+    ]
     gap = gap.assign(gap_share=gap["difference"] / gap["total"].abs())
     return [
         build_result(
@@ -393,7 +418,8 @@ def _recipient_sum_finalize(
             failures=len(gap),
             severity=Severity.WARNING,
             passed_message=(
-                f"Countries within {RECIPIENT_GAP_WARNING:.0%} of {ODA_ELIGIBLE}"
+                f"Countries within {RECIPIENT_GAP_WARNING:.0%} of {ODA_ELIGIBLE} for "
+                f"every reporting donor bar {sorted(RECIPIENT_GAP_KNOWN_DONORS)}"
             ),
             failed_message=(
                 f"{len(gap):,} cells where countries fall short of {ODA_ELIGIBLE} by "
@@ -406,7 +432,9 @@ def _recipient_sum_finalize(
 
 def _by_abs(frame: pd.DataFrame, column: str) -> pd.DataFrame:
     """Sort a frame by a column's absolute value, largest first."""
-    return frame.iloc[frame[column].abs().argsort()[::-1]]
+    return frame.sort_values(
+        column, key=lambda values: values.abs(), ascending=False, na_position="last"
+    )
 
 
 RECIPIENT_SUMS = _Invariant(
@@ -420,159 +448,294 @@ RECIPIENT_SUMS = _Invariant(
 # --- Shares -------------------------------------------------------------------------------
 
 
-def _in_net_flow_group(data: pd.DataFrame, spec: ViewSpec) -> pd.Series:
-    """Rows whose NET_FLOW_GROUPS group has a negative value; all False if none apply."""
-    by = NET_FLOW_GROUPS.get(spec.name)
-    if by is None:
-        return pd.Series(False, index=data.index)
-    negative = data[PRIMARY_VALUE_COLUMN].lt(0)
-    return negative.groupby([data[k] for k in by], observed=True).transform("any")
+@dataclass(frozen=True)
+class _ShareBasis:
+    """How the pipeline computes a share column: value_usd_current over a denominator.
+
+    Attributes:
+        column: The share column.
+        by: The keys of the denominator group.
+        where: The (column, value) rows whose sum per ``by`` is the denominator; None when
+            the denominator is the sum of the group's own rows.
+        bounded: Whether the share must lie in [0, 1] when no row of its ``by`` group is
+            negative. With every value in the group non-negative, a row cannot exceed the
+            total it is part of; a negative value anywhere in the group (net flows) can
+            push shares either side.
+        outside_reference: Donors whose rows are not part of the ``where`` reference, so
+            nothing bounds their share by 1.
+    """
+
+    column: str
+    by: tuple[str, ...]
+    where: tuple[str, str] | None
+    bounded: bool = True
+    outside_reference: frozenset[str] = frozenset()
+
+
+# EU Institutions are not a member of All bilateral donors (DAC countries plus Non-DAC
+# countries), so EU rows can exceed a recipient's bilateral total.
+_EU_INSTITUTION_DONORS: frozenset[str] = frozenset(
+    {EU_INSTITUTIONS_NAME, EU27_EUI_NAME}
+)
+_REFERENCE_SHARES: tuple[_ShareBasis, ...] = (
+    _ShareBasis("pct_total_donor", by=(YEAR, DONOR), where=(RECIPIENT, ODA_ELIGIBLE)),
+    _ShareBasis(
+        "pct_total_recipient",
+        by=(YEAR, RECIPIENT),
+        where=(DONOR, ALL_BILATERAL_DONORS),
+        outside_reference=_EU_INSTITUTION_DONORS,
+    ),
+)
+# Per view, the share columns the share invariants check. pct_of_gni is not a share of
+# anything in the view; contracts bound it.
+SHARE_BASES: dict[str, tuple[_ShareBasis, ...]] = {
+    # Grants above 1 and Non-grants below 0 of Total ODA are normal (loan repayments), so
+    # financing is held only to its Total ODA = 1 identity (SHARE_IDENTITIES).
+    "financing_view": (
+        _ShareBasis(
+            "pct_of_total_oda",
+            by=(YEAR, DONOR),
+            where=(INDICATOR, TOTAL_ODA),
+            bounded=False,
+        ),
+    ),
+    "recipients_view": _REFERENCE_SHARES,
+    "gender_view": (
+        _ShareBasis(
+            "pct_of_bilateral_allocable", by=(YEAR, DONOR, RECIPIENT), where=None
+        ),
+    ),
+    "sectors_view": _REFERENCE_SHARES,
+}
+
+_CELL, _NEGATIVE, _DENOMINATOR = "cell", "negative", "denominator"
+_SHARE_RECORD_COLUMNS: tuple[str, ...] = (
+    "record",
+    "column",
+    "group",
+    "problem",
+    "share",
+    "denominator",
+    "denominator_abs",
+    "denominator_n",
+)
+
+
+# Joins a group's key values into one label; no view label contains it.
+_GROUP_SEPARATOR: str = "\x1f"
+
+
+def _group_labels(data: pd.DataFrame, by: tuple[str, ...]) -> pd.Series:
+    """Each row's ``by`` key as one string label, so groups of any width share a column."""
+    labels = data[by[0]].astype(str)
+    for key in by[1:]:
+        labels = labels + _GROUP_SEPARATOR + data[key].astype(str)
+    return labels.astype(object)
+
+
+def _share_cells(
+    data: pd.DataFrame, spec: ViewSpec, basis: _ShareBasis
+) -> pd.DataFrame:
+    """Null and out-of-range cells of one share column, with their group."""
+    share = data[basis.column]
+    null = share.isna()
+    outside = ~null & ~share.between(SHARE_MIN, SHARE_MAX)
+    flagged = null | outside
+    if not flagged.any():
+        return pd.DataFrame()
+    cells = data.loc[flagged]
+    return cells[list(spec.keys)].assign(
+        record=_CELL,
+        column=basis.column,
+        group=_group_labels(cells, basis.by),
+        problem=np.where(null[flagged], "null", "out_of_range"),
+        share=share[flagged],
+    )
+
+
+def _share_negative_groups(data: pd.DataFrame, basis: _ShareBasis) -> pd.DataFrame:
+    """The ``by`` groups of a part that hold a negative value."""
+    negative = data.loc[data[PRIMARY_VALUE_COLUMN] < 0]
+    if negative.empty:
+        return pd.DataFrame()
+    return pd.DataFrame(
+        {
+            "record": _NEGATIVE,
+            "column": basis.column,
+            "group": _group_labels(negative, basis.by),
+        }
+    ).drop_duplicates(subset=["group"])
+
+
+def _share_denominators(data: pd.DataFrame, basis: _ShareBasis) -> pd.DataFrame:
+    """A part's contribution to each ``by`` group's denominator: sum, |sum| and terms."""
+    rows = data
+    if basis.where is not None:
+        column, value = basis.where
+        rows = rows.loc[rows[column] == value]
+    if rows.empty:
+        return pd.DataFrame()
+    frame = pd.DataFrame(
+        {
+            "group": _group_labels(rows, basis.by),
+            "denominator": rows[PRIMARY_VALUE_COLUMN],
+            "denominator_abs": rows[PRIMARY_VALUE_COLUMN].abs(),
+            "denominator_n": 1,
+        }
+    )
+    return (
+        frame.groupby("group", sort=False)
+        .sum()
+        .reset_index()
+        .assign(record=_DENOMINATOR, column=basis.column)
+    )
 
 
 def _share_partial(data: pd.DataFrame, spec: ViewSpec) -> pd.DataFrame:
-    """Share cells out of range or null, one row per cell, flagged if in a net flow group."""
-    keys = list(spec.keys)
-    net_flows = _in_net_flow_group(data, spec)
-    cells = []
-    for column in spec.share_columns:
-        share = data[column]
-        null = share.isna()
-        outside = ~null & ~share.between(SHARE_MIN, SHARE_MAX)
-        for problem, mask in (("null", null), ("out_of_range", outside)):
-            if mask.any():
-                cells.append(
-                    data.loc[mask, keys].assign(
-                        column=column,
-                        problem=problem,
-                        share=share[mask],
-                        net_flows=net_flows[mask],
-                    )
-                )
-    if not cells:
-        return pd.DataFrame(columns=[*keys, "column", "problem", "share", "net_flows"])
-    return pd.concat(cells, ignore_index=True)
-
-
-def _count_by(frame: pd.DataFrame, problem: str) -> dict[str, int]:
-    """Per share column, how many cells have a problem."""
-    return frame.loc[frame["problem"] == problem, "column"].value_counts().to_dict()
-
-
-def _share_range_results(frame: pd.DataFrame, spec: ViewSpec) -> list[CheckResult]:
-    """Out-of-range shares: ERROR for gender (WARNING in net flow groups), else WARNING."""
-    outside = frame.loc[frame["problem"] == "out_of_range"]
-    range_text = f"[{SHARE_MIN}, {SHARE_MAX}]"
-    if spec.name not in NET_FLOW_GROUPS:
-        return [
-            build_result(
-                check="invariants.share_range",
-                view=spec.name,
-                failures=len(outside),
-                severity=Severity.WARNING,
-                passed_message=f"Every share within {range_text}",
-                failed_message=(
-                    f"{len(outside):,} shares outside {range_text}: "
-                    f"{_count_by(outside, 'out_of_range')}"
-                ),
-                details=_by_abs(outside, "share"),
-            )
-        ]
-    net = outside["net_flows"].astype(bool)
-    gross, netted = outside.loc[~net], outside.loc[net]
-    group_text = "/".join(NET_FLOW_GROUPS[spec.name])
-    return [
-        build_result(
-            check="invariants.share_range",
-            view=spec.name,
-            failures=len(gross),
-            severity=Severity.ERROR,
-            passed_message=(
-                f"Every share within {range_text} where its {group_text} group has no "
-                "negative value"
-            ),
-            failed_message=(
-                f"{len(gross):,} shares outside {range_text} in groups with no negative "
-                f"value: {_count_by(gross, 'out_of_range')}"
-            ),
-            details=_by_abs(gross, "share"),
-        ),
-        build_result(
-            check="invariants.share_range_net_flows",
-            view=spec.name,
-            failures=len(netted),
-            severity=Severity.WARNING,
-            passed_message=f"Every share within {range_text} in net flow groups",
-            failed_message=(
-                f"{len(netted):,} shares outside {range_text} in {group_text} groups "
-                f"with a negative value: {_count_by(netted, 'out_of_range')}"
-            ),
-            details=_by_abs(netted, "share"),
-        ),
+    """Flagged share cells, negative groups and denominator sums, as tagged records."""
+    pieces = [
+        piece
+        for basis in SHARE_BASES[spec.name]
+        for piece in (
+            _share_cells(data, spec, basis),
+            _share_negative_groups(data, basis),
+            _share_denominators(data, basis),
+        )
+        if not piece.empty
     ]
+    if not pieces:
+        return pd.DataFrame()
+    return pd.concat(pieces, ignore_index=True)
 
 
-def _share_null_results(
-    frame: pd.DataFrame, rows: int, spec: ViewSpec
-) -> list[CheckResult]:
-    """Null shares (WARNING; ERROR above 1% of rows), and ODA/GNI nulls (WARNING)."""
-    nulls = frame.loc[frame["problem"] == "null"]
-    is_gni = nulls["column"] == GNI_SHARE_COLUMN
-    other, gni = nulls.loc[~is_gni], nulls.loc[is_gni]
-    null_counts = _count_by(other, "null")
-    worst_null_fraction = max(null_counts.values(), default=0) / max(rows, 1)
-    null_severity = (
-        Severity.ERROR
-        if worst_null_fraction > SHARE_NULL_ERROR_FRACTION
-        else Severity.WARNING
+def _fold_share_records(frame: pd.DataFrame) -> pd.DataFrame:
+    """Reduce: keep cells, dedupe negative groups, add up denominators per group."""
+    frame = _with_record_columns(frame)
+    record = frame["record"]
+    cells = frame.loc[record == _CELL]
+    negatives = frame.loc[record == _NEGATIVE].drop_duplicates(
+        subset=["column", "group"]
     )
-    results = [
-        build_result(
-            check="invariants.share_nulls",
-            view=spec.name,
-            failures=len(other),
-            severity=null_severity,
-            passed_message="No null shares",
-            failed_message=(
-                f"{len(other):,} null shares of {rows:,} rows "
-                f"(worst column {worst_null_fraction:.2%}): {null_counts}"
-            ),
-            details=other,
+    denominators = frame.loc[record == _DENOMINATOR]
+    if not denominators.empty:
+        denominators = (
+            denominators.groupby(["column", "group"], sort=False)[
+                ["denominator", "denominator_abs", "denominator_n"]
+            ]
+            .sum()
+            .reset_index()
+            .assign(record=_DENOMINATOR)
         )
-    ]
-    if GNI_SHARE_COLUMN in spec.share_columns:
-        by_donor = gni[DONOR].value_counts().to_dict()
-        results.append(
-            build_result(
-                check="invariants.share_nulls_gni",
-                view=spec.name,
-                failures=len(gni),
-                severity=Severity.WARNING,
-                passed_message=f"No null {GNI_SHARE_COLUMN}",
-                failed_message=(
-                    f"{len(gni):,} null {GNI_SHARE_COLUMN} (donors without GNI data), "
-                    f"by donor: {by_donor}"
-                ),
-                details=gni,
+    pieces = [p for p in (cells, negatives, denominators) if not p.empty]
+    return pd.concat(pieces, ignore_index=True) if pieces else frame.iloc[0:0]
+
+
+def _with_record_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    """The frame with every record column, absent ones as nulls."""
+    missing = [c for c in _SHARE_RECORD_COLUMNS if c not in frame.columns]
+    return frame.reindex(columns=[*frame.columns, *missing])
+
+
+def _classify_share_cells(frame: pd.DataFrame, spec: ViewSpec) -> pd.DataFrame:
+    """The flagged cells, each marked ``allowed`` when the pipeline's rule explains it.
+
+    An out-of-range share is allowed in an unbounded column, in a group with a negative
+    value, or for a donor outside the reference. A null share is allowed when its
+    denominator is absent or zero within rounding (the pipeline's safe_share gives NaN).
+    """
+    columns = [*spec.keys, "column", "problem", "share", "allowed"]
+    frame = _with_record_columns(frame)
+    cells = frame.loc[frame["record"] == _CELL].copy()
+    if cells.empty:
+        return pd.DataFrame(columns=columns)
+    negative = set(
+        frame.loc[frame["record"] == _NEGATIVE, ["column", "group"]].itertuples(
+            index=False, name=None
+        )
+    )
+    denominator_rows = frame.loc[frame["record"] == _DENOMINATOR]
+    denominators = {
+        (column, group): (total, total_abs, n)
+        for column, group, total, total_abs, n in denominator_rows[
+            ["column", "group", "denominator", "denominator_abs", "denominator_n"]
+        ].itertuples(index=False, name=None)
+    }
+    bases = {b.column: b for b in SHARE_BASES[spec.name]}
+    allowed = []
+    for column, group, problem, donor in zip(
+        cells["column"], cells["group"], cells["problem"], cells[DONOR], strict=True
+    ):
+        basis = bases[column]
+        if problem == "out_of_range":
+            allowed.append(
+                not basis.bounded
+                or (column, group) in negative
+                or donor in basis.outside_reference
             )
-        )
-    return results
+            continue
+        if (column, group) not in denominators:
+            allowed.append(True)
+            continue
+        total, total_abs, n = denominators[(column, group)]
+        tolerance = sum_tolerance(pd.Series([total_abs]), pd.Series([n])).iloc[0]
+        allowed.append(abs(total) <= tolerance)
+    return cells.assign(allowed=allowed)[columns]
 
 
 def _share_finalize(
     frame: pd.DataFrame, rows: int, spec: ViewSpec
 ) -> list[CheckResult]:
-    """Share range results, then share null results."""
-    if frame.empty:
-        frame = pd.DataFrame(columns=["column", "problem", "share", "net_flows", DONOR])
-    return [*_share_range_results(frame, spec), *_share_null_results(frame, rows, spec)]
+    """share_range and share_nulls: ERRORs for cells the pipeline's rule cannot explain."""
+    cells = _classify_share_cells(frame, spec)
+    results = []
+    for problem, check, passed_text, failed_text in (
+        (
+            "out_of_range",
+            "invariants.share_range",
+            "Every share within [0, 1] where the rule requires it; {n_allowed:,} "
+            "outside it from net flows, unbounded columns or donors outside the "
+            "reference",
+            "{n_bad:,} shares outside [0, 1] whose group has no negative value: "
+            "{by_column}",
+        ),
+        (
+            "null",
+            "invariants.share_nulls",
+            "No null share with a non-zero denominator; {n_allowed:,} null where the "
+            "denominator is zero or absent",
+            "{n_bad:,} null shares of {rows:,} rows whose denominator is not zero: "
+            "{by_column}",
+        ),
+    ):
+        mine = cells.loc[cells["problem"] == problem]
+        bad = mine.loc[~mine["allowed"].astype(bool)]
+        fields = {
+            "n_allowed": len(mine) - len(bad),
+            "n_bad": len(bad),
+            "rows": rows,
+            "by_column": bad["column"].value_counts().to_dict(),
+        }
+        results.append(
+            build_result(
+                check=check,
+                view=spec.name,
+                failures=len(bad),
+                severity=Severity.ERROR,
+                passed_message=passed_text.format(**fields),
+                failed_message=failed_text.format(**fields),
+                details=_by_abs(bad.drop(columns="allowed"), "share")
+                if problem == "out_of_range"
+                else bad.drop(columns="allowed"),
+            )
+        )
+    return results
 
 
 SHARE_RANGE = _Invariant(
-    views=frozenset(
-        {"financing_view", "recipients_view", "gender_view", "sectors_view"}
-    ),
+    views=frozenset(SHARE_BASES),
     partial=_share_partial,
     finalize=_share_finalize,
+    reduce=_fold_share_records,
 )
 
 
@@ -631,50 +794,71 @@ SHARE_IDENTITIES: dict[str, tuple[_ShareIdentity, ...]] = {
 
 
 def _share_sum_partial(data: pd.DataFrame, spec: ViewSpec) -> pd.DataFrame:
-    """Groups whose shares do not sum to 1. Each group lies within one recipient part."""
-    violations = []
+    """Every group's share sum, per identity. Each group lies within one recipient part."""
+    sums = []
     for identity in SHARE_IDENTITIES.get(spec.name, ()):
         rows = data
         if identity.where is not None:
             column, value = identity.where
             rows = rows.loc[rows[column] == value]
-        sums = (
+        if rows.empty:
+            continue
+        sums.append(
             rows.groupby(list(identity.by), observed=True)[identity.column]
             .agg(share_sum=lambda s: s.sum(min_count=1), rows="size")
             .dropna(subset=["share_sum"])
+            .reset_index()
+            .assign(identity=identity.label)
         )
-        bad = (sums["share_sum"] - 1).abs() > identity.tolerance
-        if bad.any():
-            violations.append(
-                sums.loc[bad].reset_index().assign(identity=identity.label)
-            )
-    if not violations:
+    if not sums:
         return pd.DataFrame()
-    return pd.concat(violations, ignore_index=True)
+    return pd.concat(sums, ignore_index=True)
 
 
 def _share_sum_finalize(
     frame: pd.DataFrame, rows: int, spec: ViewSpec
 ) -> list[CheckResult]:
-    """One ERROR result for the view's share identities."""
-    n = len(frame)
+    """One ERROR result for the view's share identities.
+
+    An identity with no group to check fails too: its ``where`` rows are missing, so the
+    identity would otherwise pass without checking anything.
+    """
     labels = [i.label for i in SHARE_IDENTITIES[spec.name]]
-    by_identity = frame["identity"].value_counts().to_dict() if n else {}
+    checked = frame["identity"].value_counts().to_dict() if len(frame) else {}
+    unchecked = [label for label in labels if not checked.get(label)]
+    bad = (
+        frame.loc[(frame["share_sum"] - 1).abs() > _identity_tolerances(frame, spec)]
+        if len(frame)
+        else frame
+    )
+    n = len(bad)
+    by_identity = bad["identity"].value_counts().to_dict() if n else {}
+    problems = []
+    if n:
+        problems.append(f"{n:,} groups whose shares do not sum to 1: {by_identity}")
+    if unchecked:
+        problems.append(f"no rows to check for {unchecked}")
     return [
         build_result(
             check="invariants.share_sums",
             view=spec.name,
-            failures=n,
+            failures=n + len(unchecked),
             severity=Severity.ERROR,
-            passed_message=f"Shares sum to 1: {labels}",
-            failed_message=f"{n:,} groups whose shares do not sum to 1: {by_identity}",
+            passed_message=f"Shares sum to 1 in {sum(checked.values()):,} groups: {labels}",
+            failed_message="; ".join(problems),
             details=(
-                frame.assign(off_by=frame["share_sum"] - 1).pipe(_by_abs, "off_by")
+                bad.assign(off_by=bad["share_sum"] - 1).pipe(_by_abs, "off_by")
                 if n
                 else None
             ),
         )
     ]
+
+
+def _identity_tolerances(frame: pd.DataFrame, spec: ViewSpec) -> pd.Series:
+    """Each group's tolerance, from its identity."""
+    tolerances = {i.label: i.tolerance for i in SHARE_IDENTITIES[spec.name]}
+    return frame["identity"].map(tolerances)
 
 
 SHARE_SUMS = _Invariant(
@@ -693,7 +877,11 @@ def _value_column(currency: str, price: str) -> str:
 
 
 def _currency_ratio_partial(data: pd.DataFrame, spec: ViewSpec) -> pd.DataFrame:
-    """Per (donor, year, currency): min and max constant/current ratio, and row count."""
+    """Per (donor, year, currency): min and max constant/current ratio, and row count.
+
+    Rows where one side is null have no ratio and are left out here; the blocking
+    contracts.value_null_pairs check fails them.
+    """
     rows = data.loc[
         ~data[DONOR].isin(AGGREGATE_DONORS)
         & (data[PRIMARY_VALUE_COLUMN].abs() >= CURRENCY_RATIO_MIN_UNITS)
@@ -772,7 +960,10 @@ def _base_year_partial(data: pd.DataFrame, spec: ViewSpec) -> pd.DataFrame:
         current = rows[_value_column(currency, "current")]
         constant = rows[_value_column(currency, "constant")]
         tolerance = BASE_YEAR_RELATIVE_TOLERANCE * current.abs() + ROUNDING_UNIT
-        bad = (constant - current).abs() > tolerance
+        # A null against a number differs: NaN > tolerance alone would read as equal.
+        bad = ((constant - current).abs() > tolerance) | (
+            constant.isna() != current.isna()
+        )
         if bad.any():
             cells.append(
                 rows.loc[bad, keys].assign(
@@ -787,7 +978,7 @@ def _base_year_partial(data: pd.DataFrame, spec: ViewSpec) -> pd.DataFrame:
 def _base_year_finalize(
     frame: pd.DataFrame, rows: int, spec: ViewSpec
 ) -> list[CheckResult]:
-    """ERROR for base-year cells where constant prices differ from current."""
+    """ERROR for base-year cells where constant prices differ from current, or one is null."""
     n = len(frame)
     base = spec.time["base"]
     by_currency = frame["currency"].value_counts().to_dict() if n else {}
@@ -918,17 +1109,18 @@ def check_recipient_sums(view: LoadedView) -> list[CheckResult]:
     """Countries vs "ODA eligible countries", per key without recipient.
 
     Gender and sectors: equal (ERROR). Recipients: never above (ERROR), and short by at
-    most 1% of the total (WARNING).
+    most 1% of the total for each reporting donor outside RECIPIENT_GAP_KNOWN_DONORS
+    (WARNING).
     """
     return _check(RECIPIENT_SUMS, view)
 
 
 def check_share_range(view: LoadedView) -> list[CheckResult]:
-    """Shares within [-0.01, 1.0001], and null shares.
+    """Shares in [0, 1] and populated, by the rule in SHARE_BASES (two ERROR results).
 
-    Range: gender is an ERROR, except in a (donor, recipient, year) group with a negative
-    value (a separate WARNING); other views a WARNING. Nulls: a WARNING, an ERROR above 1%
-    of rows in a column; pct_of_gni nulls are a separate WARNING with counts per donor.
+    Range: a share outside [0, 1] fails unless its column is unbounded (financing), its
+    ``by`` group holds a negative value, or its donor is outside the reference. Nulls: a
+    null share fails unless its denominator is absent or zero within rounding.
     """
     return _check(SHARE_RANGE, view)
 

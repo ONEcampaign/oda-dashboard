@@ -8,11 +8,19 @@ import pytest
 
 from src.data.validation.expected import DeltaKind, ExpectedDelta
 from src.data.validation.models import MAX_DETAIL_ROWS, CheckResult, Severity
-from src.data.validation.parity import compare_views, run_parity
+from src.data.validation.parity import (
+    BASELINE_RENAMES_REASON,
+    compare_views,
+    run_parity,
+)
+from src.data.validation.views import VALUE_COLUMNS
 from tests.data.validation.conftest import MakeView, write_flat, write_hive
 
 VIEW = "financing_view"
 BILLION = 1_000_000_000
+VALUE_COLUMNS_NO_USD: tuple[str, ...] = tuple(
+    c for c in VALUE_COLUMNS if c != "value_usd_current"
+)
 
 
 def _row(
@@ -551,3 +559,99 @@ def test_options_provenance_is_not_compared(make_view: MakeView) -> None:
         options={**base.options, "provenance": {"tables": {"dac1": {"token": "x"}}}},
     )
     assert not _failures(compare_views(cand, base, []), "parity.options")
+
+
+def _gender_row(recipient: str, share_column: str, value: float = BILLION) -> dict:
+    """One gender_view row with its share under the given column name."""
+    return {
+        "year": 2024,
+        "donor_name": "France",
+        "recipient_name": recipient,
+        "indicator_name": "Main target",
+        "value_usd_current": value,
+        share_column: 0.25,
+    }
+
+
+def test_baseline_renames_compare_renamed_rows(make_view: MakeView) -> None:
+    """An old-name baseline is compared under the new names, and the renames reported."""
+    old, new = "Southern Asia, unspecified", "South Asia, unspecified"
+    baseline = make_view(
+        "gender_view",
+        [
+            _gender_row(old, "pct_of_total_oda"),
+            _gender_row("Kenya", "pct_of_total_oda"),
+        ],
+        fill=False,
+    )
+    baseline.data = baseline.data.assign(
+        **{c: baseline.data["value_usd_current"] for c in VALUE_COLUMNS_NO_USD}
+    )
+    candidate = make_view(
+        "gender_view",
+        [
+            _gender_row(new, "pct_of_bilateral_allocable"),
+            _gender_row("Kenya", "pct_of_bilateral_allocable"),
+        ],
+    )
+
+    results = compare_views(candidate, baseline, [])
+
+    renames = _only_failure(results, "parity.baseline_renames")
+    assert renames.severity is Severity.INFO
+    assert renames.message.startswith(f"explained ({BASELINE_RENAMES_REASON})")
+    assert set(_details(renames)["what"]) == {"column", "recipient"}
+    errors = [r for r in _failures(results) if r.severity is Severity.ERROR]
+    assert errors == [], [r.message for r in errors]
+
+
+def test_renamed_option_lists_reorder_as_explained(make_view: MakeView) -> None:
+    """A renamed recipient that moves in its sorted list is an explained reorder."""
+    old, new = "Sint Maarten", "Netherlands Antilles"
+    names = ("Kenya", new, "Niger")
+    rows = [_gender_row(name, "pct_of_bilateral_allocable") for name in names]
+    candidate = make_view("gender_view", rows)
+    baseline = make_view("gender_view", rows)
+    candidate.options["recipient_name"] = ["Kenya", new, "Niger"]
+    baseline.options["recipient_name"] = ["Kenya", "Niger", old]
+
+    options = _only_failure(compare_views(candidate, baseline, []), "parity.options")
+    assert options.severity is Severity.INFO
+    assert BASELINE_RENAMES_REASON in options.message
+
+
+def test_run_parity_hive_pairs_renamed_partitions(
+    tmp_path: Path, make_view: MakeView, sector_rows: list[dict]
+) -> None:
+    """A recipient partition under its old slug is paired with the new one."""
+    old, new = "Southern Asia, unspecified", "South Asia, unspecified"
+    renamed = [
+        {
+            **r,
+            "recipient_name": new
+            if r["recipient_name"] == "Mali"
+            else r["recipient_name"],
+        }
+        for r in sector_rows
+    ]
+    baseline_rows = [
+        {
+            **r,
+            "recipient_name": old
+            if r["recipient_name"] == new
+            else r["recipient_name"],
+        }
+        for r in renamed
+    ]
+    base_dir = write_hive(
+        make_view("sectors_view", baseline_rows), tmp_path / "baseline" / "sectors_view"
+    )
+    cand_dir = write_hive(
+        make_view("sectors_view", renamed), tmp_path / "candidate" / "sectors_view"
+    )
+
+    results = run_parity("sectors_view", cand_dir, base_dir, [])
+
+    assert _only_failure(results, "parity.baseline_renames").severity is Severity.INFO
+    unexplained = [r for r in _failures(results) if r.severity is Severity.ERROR]
+    assert unexplained == [], [r.message for r in unexplained]

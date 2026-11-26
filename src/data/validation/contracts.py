@@ -1,8 +1,13 @@
 """Contracts: the shape every published view must have, checked on one whole view.
 
-Every check is ``check_<x>(view) -> list[CheckResult]`` and fails as an ERROR, except the
-null count on the seven non-primary value columns, which is a WARNING (real data gaps, such
-as a missing conversion factor, that must stay visible without blocking).
+Every check is ``check_<x>(view) -> list[CheckResult]`` and fails as an ERROR, except a
+few nulls in the seven non-primary value columns, which are a WARNING (a missing
+conversion factor for one donor-year must stay visible without blocking). Nulls above
+VALUE_NULL_ERROR_FRACTION of a column's rows are an ERROR.
+
+Magnitude has a floor as well as a ceiling: each view's anchor (DAC countries' key total
+in the end year) must lie in [ANCHOR_MIN_UNITS, ANCHOR_MAX_UNITS], and pct_of_gni within
++/-PCT_OF_GNI_LIMIT, so a units slip in either direction blocks.
 
 ``run_contracts(view)`` runs them all. It needs the whole view in memory: for sectors that
 means ``load_view("sectors_view", source)``, not a partition.
@@ -13,12 +18,45 @@ from collections.abc import Iterable
 import numpy as np
 import pandas as pd
 
+from src.data.config import (
+    DAC_COUNTRIES_NAME,
+    FINANCING_TYPES,
+    ODA_ELIGIBLE,
+    TOTAL_ODA,
+)
 from src.data.validation.io import LoadedView
 from src.data.validation.models import CheckResult, Severity
-from src.data.validation.views import CRITICAL_DONORS
+from src.data.validation.views import CRITICAL_DONORS, CURRENCY_PAIRS
 
 # Units guard: a value this large means millions were scaled twice, or worse.
 MAX_SANE_VALUE: float = 1e15
+
+# A value column with nulls in more than this fraction of its rows blocks: a missing
+# conversion factor for one small donor-year touches far fewer rows, while a broken
+# currency or price step nulls most of the column.
+VALUE_NULL_ERROR_FRACTION: float = 0.001
+
+# The anchor: DAC countries' key total in the view's end year, in current USD units. It
+# ran between US$95bn (gender, 2019) and US$240bn (sectors, 2023) across the four views
+# in 2019-2025; this band leaves room for a halving or a doubling and still blocks a
+# thousandfold units slip either way.
+ANCHOR_MIN_UNITS: float = 5e10
+ANCHOR_MAX_UNITS: float = 5e11
+ANCHOR_DONOR: str = DAC_COUNTRIES_NAME
+# Per view, the (column, value) rows the anchor sums besides donor and end year. Financing
+# is checked per type; the recipient views sum every indicator (and sector).
+ANCHOR_ROWS: dict[str, tuple[str, str]] = {
+    "financing_view": ("indicator_name", TOTAL_ODA),
+    "recipients_view": ("recipient_name", ODA_ELIGIBLE),
+    "gender_view": ("recipient_name", ODA_ELIGIBLE),
+    "sectors_view": ("recipient_name", ODA_ELIGIBLE),
+}
+
+# ODA/GNI as a fraction. No donor in the 1990-2025 window gave more than 1.5% of GNI
+# (Sweden 2015, 1.42%), and the most negative indicator share is -0.2%; 3% either way
+# leaves headroom and still blocks a percent-vs-fraction slip (x100).
+GNI_SHARE_COLUMN: str = "pct_of_gni"
+PCT_OF_GNI_LIMIT: float = 0.03
 
 # The value column the dashboard leads with; every other one is derived from it.
 PRIMARY_VALUE_COLUMN: str = "value_usd_current"
@@ -34,6 +72,9 @@ SUB_SECTOR_COLUMN: str = "sub_sector_name"
 # Sectors list their sub-sectors per sector rather than as a flat list.
 SUB_SECTORS_KEY: str = "sub_sectors_by_sector"
 YEAR_KEYS: tuple[str, ...] = ("start", "end", "base")
+# The financing "type" labels the frontend filters on: exactly these, no others.
+TYPE_COLUMN: str = "type"
+FINANCING_TYPE_VALUES: frozenset[str] = frozenset(FINANCING_TYPES.values())
 
 _INT_DTYPES: frozenset[str] = frozenset({"int8", "int16", "int32", "int64"})
 _FLOAT_DTYPES: frozenset[str] = frozenset({"float32", "float64"})
@@ -205,12 +246,23 @@ def _null_counts(data: pd.DataFrame, columns: Iterable[str]) -> pd.DataFrame:
     return counts.loc[counts["nulls"] > 0].reset_index(drop=True)
 
 
-def check_values(view: LoadedView) -> list[CheckResult]:
-    """Value columns are populated and of sane magnitude.
+def _null_severity(counts: pd.DataFrame, rows: int) -> Severity:
+    """ERROR when any column's nulls exceed VALUE_NULL_ERROR_FRACTION of rows."""
+    worst = int(counts["nulls"].max()) if len(counts) else 0
+    return (
+        Severity.ERROR
+        if worst > VALUE_NULL_ERROR_FRACTION * max(rows, 1)
+        else Severity.WARNING
+    )
 
-    Three results: nulls in value_usd_current (ERROR), nulls in the other seven value
-    columns (WARNING, with per-column counts and sample rows), and any non-finite value or
-    one with absolute size above MAX_SANE_VALUE (ERROR).
+
+def check_values(view: LoadedView) -> list[CheckResult]:
+    """Value columns are populated, paired and of sane magnitude.
+
+    Four results: nulls in value_usd_current (ERROR); nulls in the other seven value
+    columns (WARNING, an ERROR above VALUE_NULL_ERROR_FRACTION of rows in any column);
+    a constant value null where its current value is not, or the reverse (ERROR); any
+    non-finite value or one with absolute size above MAX_SANE_VALUE (ERROR).
     """
     data, spec = view.data, view.spec
     keys = list(spec.keys)
@@ -224,6 +276,17 @@ def check_values(view: LoadedView) -> list[CheckResult]:
     counts_text = ", ".join(
         f"{r.column}: {r.nulls:,}" for r in other_counts.itertuples()
     )
+
+    unpaired = pd.DataFrame(
+        {
+            f"{current}/{constant}": data[current].isna() != data[constant].isna()
+            for current, constant in CURRENCY_PAIRS
+        },
+        index=data.index,
+    )
+    unpaired_counts = unpaired.sum()
+    unpaired_counts = unpaired_counts[unpaired_counts > 0]
+    unpaired_rows = unpaired.any(axis=1)
 
     values = data[list(spec.value_columns)]
     insane = (~np.isfinite(values) & values.notna()) | (values.abs() > MAX_SANE_VALUE)
@@ -244,10 +307,25 @@ def check_values(view: LoadedView) -> list[CheckResult]:
             check="contracts.values_populated",
             view=spec.name,
             failures=int(other_counts["nulls"].sum()),
-            severity=Severity.WARNING,
+            severity=_null_severity(other_counts, len(data)),
             passed_message="No nulls in the other value columns",
-            failed_message=f"Nulls in value columns ({counts_text})",
+            failed_message=(
+                f"Nulls in value columns of {len(data):,} rows ({counts_text}); an "
+                f"ERROR above {VALUE_NULL_ERROR_FRACTION:.1%} of rows in a column"
+            ),
             details=data.loc[other_null, [*keys, *others]],
+        ),
+        build_result(
+            check="contracts.value_null_pairs",
+            view=spec.name,
+            failures=int(unpaired_counts.sum()),
+            severity=Severity.ERROR,
+            passed_message="Every constant value is null exactly where its current one is",
+            failed_message=(
+                "Current and constant values null on different rows: "
+                f"{unpaired_counts.to_dict()}"
+            ),
+            details=data.loc[unpaired_rows, [*keys, *spec.value_columns]],
         ),
         build_result(
             check="contracts.value_magnitude",
@@ -263,19 +341,187 @@ def check_values(view: LoadedView) -> list[CheckResult]:
     ]
 
 
+def _anchor_totals(view: LoadedView) -> pd.DataFrame:
+    """The anchor per series in the end year: one row (per type for financing)."""
+    column, value = ANCHOR_ROWS[view.spec.name]
+    data = view.data
+    end = view.spec.time["end"]
+    rows = data.loc[
+        (data["donor_name"] == ANCHOR_DONOR)
+        & (data[column] == value)
+        & (data["year"] == end)
+    ]
+    series = [TYPE_COLUMN] if TYPE_COLUMN in view.spec.keys else []
+    if not series:
+        return pd.DataFrame(
+            {
+                "rows": [len(rows)],
+                "value_usd_current": [rows[PRIMARY_VALUE_COLUMN].sum()],
+            }
+        ).loc[lambda d: d["rows"] > 0]
+    return (
+        rows.groupby(series, observed=True)[PRIMARY_VALUE_COLUMN]
+        .agg(rows="size", value_usd_current="sum")
+        .reset_index()
+    )
+
+
+def check_anchor(view: LoadedView) -> list[CheckResult]:
+    """DAC countries' end-year key total lies in [ANCHOR_MIN_UNITS, ANCHOR_MAX_UNITS].
+
+    The floor that MAX_SANE_VALUE lacks: values scaled down by a units slip pass every
+    other check. Missing anchor rows fail too.
+    """
+    column, value = ANCHOR_ROWS[view.spec.name]
+    end = view.spec.time["end"]
+    what = f"{ANCHOR_DONOR} {value} in {end}"
+    totals = _anchor_totals(view)
+    band = f"[{ANCHOR_MIN_UNITS:.0e}, {ANCHOR_MAX_UNITS:.0e}]"
+    if totals.empty:
+        failures, message = 1, f"No rows for the anchor {what}"
+    else:
+        outside = ~totals[PRIMARY_VALUE_COLUMN].between(
+            ANCHOR_MIN_UNITS, ANCHOR_MAX_UNITS
+        )
+        failures = int(outside.sum())
+        message = (
+            f"{failures} anchor totals for {what} outside {band} units: "
+            f"{totals.loc[outside, PRIMARY_VALUE_COLUMN].tolist()}"
+        )
+    shown = ", ".join(f"{v:,.0f}" for v in totals[PRIMARY_VALUE_COLUMN])
+    return [
+        build_result(
+            check="contracts.anchor",
+            view=view.spec.name,
+            failures=failures,
+            severity=Severity.ERROR,
+            passed_message=f"{what}: {shown} units, within {band}",
+            failed_message=message,
+            details=totals,
+        )
+    ]
+
+
+def check_gni_share(view: LoadedView) -> list[CheckResult]:
+    """pct_of_gni within +/-PCT_OF_GNI_LIMIT, and set for critical donors' end year.
+
+    Two ERROR results; nothing for a view without pct_of_gni. Other null pct_of_gni
+    (donors or years without GNI in DAC1, groups whose GNI-reporting members lack an
+    indicator) are structural and only counted in the passing message.
+    """
+    if GNI_SHARE_COLUMN not in view.spec.share_columns:
+        return []
+    data, keys, name = view.data, list(view.spec.keys), view.spec.name
+    share = data[GNI_SHARE_COLUMN]
+    outside = share.notna() & (share.abs() > PCT_OF_GNI_LIMIT)
+    n_outside = int(outside.sum())
+
+    end = view.spec.time["end"]
+    critical_total = (
+        data["donor_name"].isin(CRITICAL_DONORS)
+        & (data["indicator_name"] == TOTAL_ODA)
+        & (data["year"] == end)
+    )
+    unset = critical_total & share.isna()
+    n_unset = int(unset.sum())
+    return [
+        build_result(
+            check="contracts.gni_share_range",
+            view=name,
+            failures=n_outside,
+            severity=Severity.ERROR,
+            passed_message=f"Every {GNI_SHARE_COLUMN} within +/-{PCT_OF_GNI_LIMIT}",
+            failed_message=(
+                f"{n_outside:,} {GNI_SHARE_COLUMN} beyond +/-{PCT_OF_GNI_LIMIT} "
+                f"(max |value| {share.abs().max():.4g}): a percent read as a fraction?"
+            ),
+            details=data.loc[outside, [*keys, GNI_SHARE_COLUMN]],
+        ),
+        build_result(
+            check="contracts.gni_share_populated",
+            view=name,
+            failures=n_unset,
+            severity=Severity.ERROR,
+            passed_message=(
+                f"{GNI_SHARE_COLUMN} set on every critical donor's {TOTAL_ODA} in {end}; "
+                f"{int(share.isna().sum()):,} nulls elsewhere (no GNI in DAC1)"
+            ),
+            failed_message=(
+                f"{n_unset:,} critical donor {TOTAL_ODA} rows in {end} without "
+                f"{GNI_SHARE_COLUMN}"
+            ),
+            details=data.loc[unset, keys],
+        ),
+    ]
+
+
+def check_types(view: LoadedView) -> list[CheckResult]:
+    """Financing's type column holds exactly FINANCING_TYPE_VALUES; [] for other views."""
+    if TYPE_COLUMN not in view.spec.keys:
+        return []
+    present = set(view.data[TYPE_COLUMN].dropna().unique())
+    unknown = sorted(present - FINANCING_TYPE_VALUES)
+    absent = sorted(FINANCING_TYPE_VALUES - present)
+    problems = [(t, "unknown") for t in unknown] + [(t, "absent") for t in absent]
+    return [
+        build_result(
+            check="contracts.types",
+            view=view.spec.name,
+            failures=len(problems),
+            severity=Severity.ERROR,
+            passed_message=f"{TYPE_COLUMN} is exactly {sorted(FINANCING_TYPE_VALUES)}",
+            failed_message=(
+                f"{TYPE_COLUMN} values not {sorted(FINANCING_TYPE_VALUES)}: "
+                f"unknown {unknown}, absent {absent}"
+            ),
+            details=pd.DataFrame(problems, columns=[TYPE_COLUMN, "problem"]),
+        )
+    ]
+
+
 def check_critical_donors(view: LoadedView) -> list[CheckResult]:
-    """Every donor in CRITICAL_DONORS has rows."""
-    present = set(view.data["donor_name"].dropna().unique())
-    missing = [d for d in CRITICAL_DONORS if d not in present]
+    """Every donor in CRITICAL_DONORS has rows in the end year (per type in financing).
+
+    A donor missing from the latest year leaves the dashboard's default year without it,
+    while its history still passes an any-year check.
+    """
+    data = view.data
+    end = view.spec.time["end"]
+    latest = data.loc[data["year"] == end]
+    by_type = TYPE_COLUMN in view.spec.keys
+    groups = (
+        latest.groupby(TYPE_COLUMN, observed=True)["donor_name"]
+        if by_type
+        else [("all", latest["donor_name"])]
+    )
+    missing = [
+        (series, donor)
+        for series, donors in groups
+        for donor in CRITICAL_DONORS
+        if donor not in set(donors.dropna())
+    ]
+    if by_type:
+        # a type with no end-year rows at all misses every critical donor
+        covered = set(latest[TYPE_COLUMN].dropna().unique())
+        missing += [
+            (t, donor)
+            for t in sorted(FINANCING_TYPE_VALUES - covered)
+            for donor in CRITICAL_DONORS
+        ]
+    details = pd.DataFrame(missing, columns=["series", "donor_name"])
+    by_series = details.groupby("series")["donor_name"].apply(list).to_dict()
     return [
         build_result(
             check="contracts.critical_donors",
             view=view.spec.name,
             failures=len(missing),
             severity=Severity.ERROR,
-            passed_message=f"All {len(CRITICAL_DONORS)} critical donors present",
-            failed_message=f"Critical donors missing: {missing}",
-            details=pd.DataFrame({"donor_name": missing}),
+            passed_message=(
+                f"All {len(CRITICAL_DONORS)} critical donors have rows in {end}"
+                + (" for every type" if by_type else "")
+            ),
+            failed_message=f"Critical donors without rows in {end}: {by_series}",
+            details=details,
         )
     ]
 
@@ -440,6 +686,9 @@ def run_contracts(view: LoadedView) -> list[CheckResult]:
         *check_keys(view),
         *check_years(view),
         *check_values(view),
+        *check_anchor(view),
+        *check_gni_share(view),
+        *check_types(view),
         *check_critical_donors(view),
         *check_options(view),
     ]

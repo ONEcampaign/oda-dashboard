@@ -302,7 +302,8 @@ def test_total_oda_and_oda_gni_use_the_headline_measure(
         read_topic=_topic_reader(topic),
     )
     assert {r.check for r in results} == names | {cross_view.PROVENANCE_CHECK}
-    assert all(r.passed for r in results), [r.message for r in results]
+    compared = [r for r in results if r.check != cross_view.PROVENANCE_CHECK]
+    assert all(r.passed for r in compared), [r.message for r in compared]
 
 
 def test_latest_year_files(tmp_path: Path, make_view: MakeView) -> None:
@@ -321,7 +322,8 @@ def test_latest_year_files(tmp_path: Path, make_view: MakeView) -> None:
         checks=tuple(c for c in CROSS_CHECKS if c.check in names),
         read_topic=_topic_reader(topic),
     )
-    assert all(r.passed for r in results), [r.message for r in results]
+    compared = [r for r in results if r.check != cross_view.PROVENANCE_CHECK]
+    assert all(r.passed for r in compared), [r.message for r in compared]
 
 
 def _sector_rows() -> list[dict]:
@@ -496,7 +498,8 @@ def test_africa_share_and_income_groups(tmp_path: Path, make_view: MakeView) -> 
         checks=tuple(c for c in CROSS_CHECKS if c.check in names),
         read_topic=_topic_reader(topic),
     )
-    assert all(r.passed for r in results), [r.message for r in results]
+    compared = [r for r in results if r.check != cross_view.PROVENANCE_CHECK]
+    assert all(r.passed for r in compared), [r.message for r in compared]
     assert {r.check for r in results} == names | {cross_view.PROVENANCE_CHECK}
 
 
@@ -624,7 +627,7 @@ def _view_with_provenance(
 
 
 def test_provenance_agrees_across_views(tmp_path: Path, make_view: MakeView) -> None:
-    """Views that read a shared table at one token pass; views without it are skipped."""
+    """Views that read a shared table at one token pass; one without it is a WARNING."""
     sources = {
         "financing_view": _view_with_provenance(
             make_view, tmp_path / "fin", {"dac1": "r1"}
@@ -635,9 +638,10 @@ def test_provenance_agrees_across_views(tmp_path: Path, make_view: MakeView) -> 
         "gender_view": _view_with_provenance(make_view, tmp_path / "gen", None),
     }
     results = cross_view.check_provenance_consistency(sources)
-    assert all(r.passed for r in results), [r.message for r in results]
+    [missing] = [r for r in results if not r.passed]
+    assert missing.severity is Severity.WARNING and "gender_view" in missing.message
+    assert any(r.passed and "2 views agree" in r.message for r in results)
     assert all(r.check == cross_view.PROVENANCE_CHECK for r in results)
-    assert any("gender_view" in r.message for r in results)
     assert all(not r.blocking for r in results)
 
 

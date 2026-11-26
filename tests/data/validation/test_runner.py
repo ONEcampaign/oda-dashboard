@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from src.data.validation import runner
+from src.data.validation.expected import ExpectedDelta
 from src.data.validation.models import CheckResult, Severity
 from src.data.validation.runner import (
     ANOMALY_PARTITION,
@@ -67,7 +68,8 @@ def test_run_validation_runs_each_family_in_order(calls: list[str]) -> None:
         "parity:gender_view",
         "cross:cross_view",
     ]
-    assert len(results) == 5
+    assert len(results) == 6
+    assert results[-1].check == "expected.unused" and results[-1].passed
 
 
 def test_run_validation_skips_parity_without_baseline_and_cross_view_when_off(
@@ -122,7 +124,7 @@ def test_run_view_runs_all_families_on_a_flat_view(
     monkeypatch.setattr(runner, "load_view", lambda name, source: view)
     monkeypatch.setattr(runner, "run_contracts", lambda v: [ok("contracts.x")])
     monkeypatch.setattr(runner, "run_invariants", lambda parts: [ok("invariants.x")])
-    monkeypatch.setattr(runner, "run_anomalies", lambda v: [ok("anomalies.x")])
+    monkeypatch.setattr(runner, "run_anomalies", lambda v, e: [ok("anomalies.x")])
 
     results = run_view("financing_view", Path("/unused"))
 
@@ -151,7 +153,7 @@ def test_run_view_streams_partitions_and_checks_anomalies_on_one(
         seen_by_invariants.extend(parts)  # consumes the stream, as the real check does
         return [ok("invariants.x", "sectors_view")]
 
-    def anomalies(v) -> list[CheckResult]:
+    def anomalies(v, expected) -> list[CheckResult]:
         seen_by_anomalies.append(v)
         return [ok("anomalies.x", "sectors_view")]
 
@@ -170,7 +172,7 @@ def test_run_view_streams_partitions_and_checks_anomalies_on_one(
     assert seen_by_anomalies == [view]
 
 
-def test_run_view_warns_when_the_anomaly_partition_is_missing(
+def test_run_view_fails_when_the_anomaly_partition_is_missing(
     monkeypatch: pytest.MonkeyPatch, make_view
 ) -> None:
     view = make_view(
@@ -196,7 +198,7 @@ def test_run_view_warns_when_the_anomaly_partition_is_missing(
     results = run_view("sectors_view", Path("/unused"))
 
     assert [r.check for r in results] == ["anomalies.partition"]
-    assert results[0].severity is Severity.WARNING
+    assert results[0].severity is Severity.ERROR and results[0].blocking
     assert not results[0].passed
 
 
@@ -251,3 +253,30 @@ def test_run_view_lets_a_check_error_propagate(
 
     with pytest.raises(KeyError, match="bug in a check"):
         run_view("financing_view", Path("/unused"))
+
+
+def test_unused_expected_entries_are_reported(calls: list[str]) -> None:
+    """An entry for a view whose parity ran, which explained nothing, is a WARNING."""
+    entry = ExpectedDelta(
+        view="financing_view", reason="stale", years=frozenset({2020})
+    )
+    sources = {name: Path("/s") / name for name in VIEWS}
+    unused = run_validation(
+        ["financing_view"],
+        sources,
+        baseline_sources=source_roots(Path("/b"), VIEWS),
+        expected=[entry],
+        cross_view=False,
+    )[-1]
+    assert unused.check == "expected.unused"
+    assert not unused.passed and unused.severity is Severity.WARNING
+    assert "stale" in unused.message
+
+    without_parity = run_validation(
+        ["financing_view"],
+        sources,
+        baseline_sources=None,
+        expected=[entry],
+        cross_view=False,
+    )[-1]
+    assert without_parity.passed  # the entry was never in scope

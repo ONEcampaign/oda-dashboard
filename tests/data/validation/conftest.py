@@ -10,6 +10,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
+from src.data.analysis_tools.naming import slugify
 from src.data.validation.io import DATA_FILE, OPTIONS_FILE, LoadedView
 from src.data.validation.views import ViewSpec, get_spec
 
@@ -110,8 +111,8 @@ def write_flat(view: LoadedView, directory: Path) -> Path:
 
 
 def _slug(name: str) -> str:
-    """A simple slug for test partitions."""
-    return name.lower().replace(" ", "-")
+    """The pipeline's slug for a name, as the sectors partitions use."""
+    return slugify(name)
 
 
 def write_hive(

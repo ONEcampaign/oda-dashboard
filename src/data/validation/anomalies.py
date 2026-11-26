@@ -1,8 +1,13 @@
 """Anomalies: year-on-year changes in a view's key total that break with a donor's history.
 
-Results are WARNINGs, since an unusual year is worth a look but not a block.
+Results are WARNINGs, since an unusual year is worth a look but not a block. A view with
+no key-total rows at all is an ERROR: the check would otherwise pass on nothing.
 ``run_anomalies(view)`` reads only the key-total rows (below), so for sectors the
 "oda-eligible-countries" recipient partition is enough. The whole view also works.
+
+Only material moves by reporting donors are flagged (see the constants), and a move that
+an expected_deltas.toml entry of kind "anomaly" explains is reported as INFO with its
+reason, so a clean build stays quiet and a new warning means something.
 
 Key totals, in value_usd_current per donor and year:
 
@@ -11,6 +16,7 @@ Key totals, in value_usd_current per donor and year:
   indicators (and sectors).
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -18,13 +24,23 @@ import pandas as pd
 
 from src.data.config import ODA_ELIGIBLE, TOTAL_ODA
 from src.data.validation.contracts import PRIMARY_VALUE_COLUMN, build_result
+from src.data.validation.expected import DeltaKind, ExpectedDelta, find_explanation
 from src.data.validation.io import LoadedView
 from src.data.validation.models import CheckResult, Severity
+from src.data.validation.views import AGGREGATE_DONORS
 
 # A year-on-year change this many standard deviations from the donor's mean change is flagged.
 Z_SCORE_THRESHOLD: float = 3.0
 # Years of history before the latest year needed to judge it.
 MIN_HISTORY_YEARS: int = 4
+# Only donors with at least this much (current USD units) in the latest or the previous
+# year are judged: a small donor's total swings several-fold with one loan or project
+# (Kuwait, Malta), which says nothing about the build.
+MIN_MATERIAL_UNITS: float = 1e9
+# Only changes of at least this size (relative) are flagged: a donor with a steady
+# history gets a large z from an ordinary 20-40% policy swing. A halving, or a rise by
+# half, is worth a look whatever the history.
+MIN_FLAGGED_CHANGE: float = 0.5
 
 
 @dataclass(frozen=True)
@@ -104,52 +120,138 @@ def _latest_change_z(yearly: pd.Series, latest: int) -> dict | None:
     }
 
 
-def check_yoy_anomalies(view: LoadedView) -> list[CheckResult]:
-    """Flag series whose latest-year change has |z| > Z_SCORE_THRESHOLD (WARNING).
+def _judged(yearly: pd.Series, latest: int) -> bool:
+    """Whether a series is large enough in the latest or previous year to judge."""
+    recent = yearly.reindex([latest - 1, latest]).abs()
+    return bool((recent >= MIN_MATERIAL_UNITS).any())
 
-    The latest year is the last year in the view. Each series needs MIN_HISTORY_YEARS of
-    history before it.
-    """
-    key_total = KEY_TOTALS[view.spec.name]
-    totals = key_total_series(view)
+
+def _flag_series(totals: pd.DataFrame, series_cols: list[str]) -> list[dict]:
+    """Reporting donors' series whose latest-year change is both unusual and material."""
+    latest = int(totals["year"].max())
     flagged = []
-    if not totals.empty:
-        latest = int(totals["year"].max())
-        series_cols = list(key_total.series)
-        for series, group in totals.groupby(series_cols, observed=True):
-            yearly = group.set_index("year")[PRIMARY_VALUE_COLUMN].sort_index()
-            stats = _latest_change_z(yearly, latest)
-            if stats is not None and abs(stats["z"]) > Z_SCORE_THRESHOLD:
-                flagged.append({**dict(zip(series_cols, series, strict=True)), **stats})
-    details = pd.DataFrame(flagged)
-    if flagged:
+    for series, group in totals.groupby(series_cols, observed=True):
+        labels = dict(zip(series_cols, series, strict=True))
+        if labels["donor_name"] in AGGREGATE_DONORS:
+            continue  # a group moves with its members, which are judged themselves
+        yearly = group.set_index("year")[PRIMARY_VALUE_COLUMN].sort_index()
+        if not _judged(yearly, latest):
+            continue
+        stats = _latest_change_z(yearly, latest)
+        if (
+            stats is not None
+            and abs(stats["z"]) > Z_SCORE_THRESHOLD
+            and abs(stats["change"]) >= MIN_FLAGGED_CHANGE
+        ):
+            flagged.append({**labels, "year": latest, **stats})
+    return flagged
+
+
+def _explain_flags(
+    flagged: pd.DataFrame, view: str, expected: Sequence[ExpectedDelta]
+) -> pd.Series:
+    """The reason an expected "anomaly" entry gives each flagged series, or None."""
+    reasons = []
+    for row in flagged.itertuples(index=False):
+        entry = find_explanation(
+            list(expected),
+            view=view,
+            kind=DeltaKind.ANOMALY,
+            year=int(row.year),
+            donor=row.donor_name,
+            indicator=getattr(row, "type", None),
+            rel_diff=float(row.change),
+        )
+        reasons.append(None if entry is None else entry.reason)
+    return pd.Series(reasons, index=flagged.index, dtype=object)
+
+
+def check_yoy_anomalies(
+    view: LoadedView, expected: Sequence[ExpectedDelta] = ()
+) -> list[CheckResult]:
+    """Flag reporting donors whose latest-year change is unusual and material.
+
+    Unusual: |z| > Z_SCORE_THRESHOLD against MIN_HISTORY_YEARS or more of history.
+    Material: the donor had MIN_MATERIAL_UNITS in the latest or the previous year, and the
+    change is at least MIN_FLAGGED_CHANGE. The latest year is the last year in the view.
+    For financing, an anomaly entry's ``indicators`` filter matches the type.
+
+    Args:
+        view: The view, or for sectors its "oda-eligible-countries" partition.
+        expected: Expected deltas; "anomaly" entries for this view explain flags.
+
+    Returns:
+        A WARNING for unexplained flags (or a pass), one INFO per explaining reason, or an
+        ERROR when the view has no key-total rows.
+    """
+    name = view.spec.name
+    key_total = KEY_TOTALS[name]
+    totals = key_total_series(view)
+    if totals.empty:
+        column, value = key_total.where
+        return [
+            build_result(
+                check="anomalies.yoy",
+                view=name,
+                failures=1,
+                severity=Severity.ERROR,
+                passed_message="",
+                failed_message=f"No {column} = {value!r} rows: nothing to check",
+            )
+        ]
+
+    series_cols = list(key_total.series)
+    details = pd.DataFrame(_flag_series(totals, series_cols))
+    if not details.empty:
         details = details.iloc[details["z"].abs().argsort()[::-1]]
-    return [
+        details = details.assign(reason=_explain_flags(details, name, expected))
+    unexplained = details.loc[details["reason"].isna()] if len(details) else details
+    criteria = (
+        f"|z| > {Z_SCORE_THRESHOLD}, |change| >= {MIN_FLAGGED_CHANGE:.0%}, "
+        f"donors with >= {MIN_MATERIAL_UNITS:.0e} units"
+    )
+    results = [
         build_result(
             check="anomalies.yoy",
-            view=view.spec.name,
-            failures=len(flagged),
+            view=name,
+            failures=len(unexplained),
             severity=Severity.WARNING,
-            passed_message=(
-                f"No unusual latest-year change in {key_total.label} "
-                f"(|z| <= {Z_SCORE_THRESHOLD})"
-            ),
+            passed_message=f"No unexplained latest-year change in {key_total.label} "
+            f"({criteria})",
             failed_message=(
-                f"{len(flagged)} series with an unusual latest-year change in "
-                f"{key_total.label} (|z| > {Z_SCORE_THRESHOLD})"
+                f"{len(unexplained)} series with an unusual latest-year change in "
+                f"{key_total.label} ({criteria})"
             ),
-            details=details,
+            details=unexplained.drop(columns="reason", errors="ignore"),
         )
     ]
+    if len(details):
+        for reason, group in details.dropna(subset=["reason"]).groupby("reason"):
+            donors = ", ".join(group["donor_name"].astype(str))
+            results.append(
+                CheckResult(
+                    check="anomalies.yoy",
+                    view=name,
+                    passed=False,
+                    severity=Severity.INFO,
+                    message=f"explained ({reason}): {donors}",
+                    details=group.drop(columns="reason").reset_index(drop=True),
+                    blocking=False,
+                )
+            )
+    return results
 
 
-def run_anomalies(view: LoadedView) -> list[CheckResult]:
+def run_anomalies(
+    view: LoadedView, expected: Sequence[ExpectedDelta] = ()
+) -> list[CheckResult]:
     """Run every anomaly check on a view.
 
     Args:
         view: The whole view, or for sectors just its "oda-eligible-countries" partition.
+        expected: Expected deltas; "anomaly" entries explain flags.
 
     Returns:
-        WARNING results only.
+        WARNING and INFO results, or an ERROR when there is nothing to check.
     """
-    return check_yoy_anomalies(view)
+    return check_yoy_anomalies(view, expected)
