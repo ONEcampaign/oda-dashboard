@@ -1,4 +1,5 @@
 import {DuckDBClient} from "npm:@observablehq/duckdb";
+import {escapeSQL} from "npm:@one-data/observable-themes/utils";
 import {COMBINED_INDICATOR_ODA} from "./config.js";
 
 /**
@@ -59,12 +60,18 @@ function getDB() {
         SET enable_object_cache = true;
       `);
       return db;
+    }).catch((error) => {
+      // Forget a failed start so the next query retries instead of reusing the rejection.
+      dbPromise = null;
+      throw error;
     });
   }
   return dbPromise;
 }
 
 const sectorsCache = new Map();
+// Shape of the currency and prices parts of a value_<currency>_<prices> column name.
+const SQL_IDENTIFIER_PART = /^[a-z]+$/;
 
 function toArray(value) {
     return Array.isArray(value) ? value : [value];
@@ -183,14 +190,19 @@ async function fetchSectorsSeries({
     const cacheKey = sectorsCacheKey({donor, recipient, indicators, currency, prices, timeRange});
 
     if (!sectorsCache.has(cacheKey)) {
-        sectorsCache.set(cacheKey, executeSectorsSeries({
+        const series = executeSectorsSeries({
             donor,
             recipient,
             indicators,
             currency,
             prices,
             timeRange
-        }));
+        });
+        sectorsCache.set(cacheKey, series);
+        // Evict a failed query so the same selection retries rather than replaying the error.
+        series.catch(() => {
+            if (sectorsCache.get(cacheKey) === series) sectorsCache.delete(cacheKey);
+        });
     }
 
     return sectorsCache.get(cacheKey);
@@ -208,8 +220,15 @@ async function executeSectorsSeries({
         return [];
     }
 
-    const indicatorSelection = indicators.map((name) => `'${name}'`).join(", ");
+    const indicatorSelection = indicators.map((name) => `'${escapeSQL(name)}'`).join(", ");
     const combineIndicators = indicators.length > 1;
+    // These go into the SQL as an identifier and numbers, so check their shape first.
+    if (!SQL_IDENTIFIER_PART.test(currency) || !SQL_IDENTIFIER_PART.test(prices)) {
+        throw new Error(`Invalid currency or prices: ${currency}, ${prices}`);
+    }
+    if (!timeRange.every(Number.isInteger)) {
+        throw new Error(`Invalid time range: ${timeRange}`);
+    }
     const valueColumn = `value_${currency}_${prices}`;
 
     const partitionPaths = buildPartitionPaths({donor, recipient});
@@ -256,7 +275,7 @@ async function runSectorsQuery(db, {
                     sector_name,
                     sub_sector_name AS sub_sector,
                     ${combineIndicators
-                        ? `'${COMBINED_INDICATOR_ODA}' AS indicator_label,`
+                        ? `'${escapeSQL(COMBINED_INDICATOR_ODA)}' AS indicator_label,`
                         : "indicator_name AS indicator_label,"
                     }
                     SUM(${valueColumn}) / 1e6 AS converted_value,
@@ -470,7 +489,7 @@ function tableUnitLabel(unit, currency, prices, selectedSector) {
     }
 
     if (unit === "pct_sector") {
-        return `% of ${selectedSector}`;
+        return pctSectorLabel(selectedSector);
     }
 
     if (unit === "pct_total_donor") {
@@ -482,6 +501,11 @@ function tableUnitLabel(unit, currency, prices, selectedSector) {
     }
 
     return `${currency} ${prices} million`;
+}
+
+// One label for the share-of-sector unit, used by the unit dropdown and the table.
+export function pctSectorLabel(sector) {
+    return `% of ${sector} ODA`;
 }
 
 function ratioAsPct(numerator, denominator) {

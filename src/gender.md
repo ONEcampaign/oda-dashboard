@@ -4,8 +4,7 @@ import {
     DropdownMenu,
     DropdownMenuMini,
     RangeInput,
-    ToggleSwitch,
-    ToggleSwitchMini
+    ToggleSwitch
 } from "npm:@one-data/observable-themes/inputs"
 import {Header} from "npm:@one-data/observable-themes/ui"
 import {ONEVisual, AutoPlot, AutoTable} from "npm:@one-data/observable-themes/charts"

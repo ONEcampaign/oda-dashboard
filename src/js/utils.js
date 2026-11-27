@@ -1,4 +1,3 @@
-
 export function plotHeight(width) {
     if (width < 480) return Math.round(width * 0.7)
     if (width < 768) return Math.round(width * 0.5)
@@ -41,81 +40,14 @@ export function fillMissingYearIndicators(rows, timeRange, fillValue = 0) {
 }
 
 /**
- * Build a Map from indicator name → sequential index for the given page, sorted alphabetically.
- * @param {Record<string, { page: string, name: string }>} data
- * @param {string} page
- * @returns {Map<string, number>}
- */
-export function generateIndicatorMap(data, page) {
-    const names = new Set()
-
-    for (const key in data) {
-        const entry = data[key]
-        if (entry.page === page && typeof entry.name === "string") {
-            names.add(entry.name)
-        }
-    }
-
-    const sortedNames = [...names].sort()
-    const nameToId = new Map()
-    sortedNames.forEach((name, index) => { nameToId.set(name, index) })
-
-    return nameToId
-}
-
-/**
- * Generate an HTML `<ul>` string for a grouped list of sectors or countries.
- * Returns the raw HTML — insert via `innerHTML` or `dangerouslySetInnerHTML`.
- * @param {Object} data
- * @param {"sectors"|"countries"} mode
+ * Describe a year-by-series Plot chart for screen readers.
+ * @param {Array} rows - Plot rows with a `Year` Date and a series field
+ * @param {string} seriesField - Field that names each series (the chart's fill)
  * @returns {string}
  */
-export function generateList(data, mode) {
-    if (mode === "sectors") {
-        const grouped = Object.entries(data).reduce((acc, [subsector, sector]) => {
-            (acc[sector] ??= []).push(subsector)
-            return acc
-        }, {})
-
-        const items = Object.entries(grouped)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([sector, subsectors]) =>
-                subsectors.length === 1
-                    ? `<li><strong>${sector}</strong></li>`
-                    : `<li><strong>${sector}</strong>: ${subsectors.join("; ")}</li>`
-            )
-            .join("")
-
-        return `<ul class="group-list">${items}</ul>`
-    }
-
-    if (mode === "countries") {
-        const groupToCountries = {}
-
-        for (const donor of Object.values(data)) {
-            for (const group of donor.groups) {
-                (groupToCountries[group] ??= []).push(donor.name)
-            }
-        }
-
-        const items = Object.entries(groupToCountries)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([group, countries]) => {
-                let content
-                if (group === "All bilateral donors") {
-                    content = "DAC and Non-DAC countries"
-                } else if (group === "ODA eligible countries") {
-                    content = "All recipient countries and regions"
-                } else {
-                    content = countries.join("; ")
-                }
-                return `<li><strong>${group}</strong>: ${content}</li>`
-            })
-            .join("")
-
-        return `<ul class="group-list">${items}</ul>`
-    }
-
-    return `<p>Unsupported mode: ${mode}</p>`
+export function plotAriaDescription(rows, seriesField) {
+    if (rows.length === 0) return "No data.";
+    const years = rows.map(row => row.Year.getFullYear());
+    const series = [...new Set(rows.map(row => row[seriesField]))].filter(name => name != null);
+    return `Years ${Math.min(...years)} to ${Math.max(...years)}. Series: ${series.join(", ")}.`;
 }
-

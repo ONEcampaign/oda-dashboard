@@ -3,7 +3,6 @@ import * as React from "npm:react"
 import {
     DropdownMenu,
     DropdownMenuMini,
-    RangeInput,
     RangeInputMini,
     ToggleSwitch,
     ToggleSwitchMini
@@ -13,7 +12,6 @@ import {ONEVisual, AutoPlot, AutoTable} from "npm:@one-data/observable-themes/ch
 import {
     getCurrencyLabel,
     formatString,
-    formatValue,
     resolveScale,
     isEmbedded
 } from "npm:@one-data/observable-themes/utils"
@@ -28,7 +26,8 @@ import {
     subSectorsBySector,
     sectorsQueries,
     transformTableData,
-    transformSelectedData
+    transformSelectedData,
+    pctSectorLabel
 } from "./js/sectorsQueries.js"
 import {treemapChart, selectSector} from "./js/treemapChart.js"
 import {customPalette, paletteSubsectors} from "./js/colors.js"
@@ -49,6 +48,7 @@ const SECTORS_MIN_YEAR = yearOptions.start
 const PSI_EXCLUDED_INDICATOR = "Bilateral"
 // Table units whose denominators are donor or recipient totals, which include Bilateral.
 const SHARE_OF_TOTAL_UNITS = ["pct_total_donor", "pct_total_recipient"]
+const ALL_SECTORS = "All sectors"
 ```
 
 ```jsx
@@ -58,6 +58,9 @@ function TreemapContainer({data, currency, sector, onSectorChange}) {
     const [width, setWidth] = React.useState(0)
     const onSectorChangeRef = React.useRef(onSectorChange)
     onSectorChangeRef.current = onSectorChange
+    // Read at draw time so a redraw shows the page's selection without redrawing on every pick.
+    const sectorRef = React.useRef(sector)
+    sectorRef.current = sector
 
     React.useEffect(() => {
         if (!ref.current) return
@@ -75,6 +78,7 @@ function TreemapContainer({data, currency, sector, onSectorChange}) {
         }
         const chartEl = treemapChart(data, width, {
             currency,
+            activeSector: sectorRef.current,
             onSectorChange: (s) => onSectorChangeRef.current(s)
         })
         node.innerHTML = ""
@@ -121,7 +125,7 @@ function App() {
     const [currency, setCurrency] = React.useState("usd")
     const [prices, setPrices] = React.useState("constant")
     const [breakdown, setBreakdown] = React.useState(true)
-    const [sector, setSector] = React.useState("All sectors")
+    const [sector, setSector] = React.useState(ALL_SECTORS)
     const [year, setYear] =
         React.useState(timeRangeOptions.end)
     const [yearRange, setYearRange] = React.useState([timeRangeOptions.end - 10, timeRangeOptions.end])
@@ -132,6 +136,9 @@ function App() {
     const [tableBaseData, setTableBaseData] = React.useState([])
     const [loading, setLoading] = React.useState(false)
     const [error, setError] = React.useState(null)
+    // The column chart and table have their own query, so they keep their own status.
+    const [seriesLoading, setSeriesLoading] = React.useState(false)
+    const [seriesError, setSeriesError] = React.useState(null)
 
     const breakdownIsDisabled = React.useMemo(
         () => (subSectorsBySector[sector] ?? []).length === 1,
@@ -149,7 +156,12 @@ function App() {
 
     // Effect 1: treemap data — uses selected year only
     React.useEffect(() => {
-        if (indicator.length === 0) return
+        if (indicator.length === 0) {
+            setTreemapData([])
+            setLoading(false)
+            setError(null)
+            return
+        }
         let cancelled = false
         setLoading(true)
         setError(null)
@@ -157,17 +169,22 @@ function App() {
         const result = sectorsQueries(donor, recipient, indicator, null, currency, prices, [year, year])
         result.treemap
             .then(treemap => {
-                if (!cancelled) {
-                    setTreemapData(treemap ?? []);
-                    setLoading(false)
-                }
+                if (cancelled) return
+                const rows = treemap ?? []
+                setTreemapData(rows)
+                setLoading(false)
+                // A sector missing from the new treemap (or an empty one) cannot stay selected.
+                setSector(current => current === ALL_SECTORS || rows.some(d => d.sector === current)
+                    ? current
+                    : ALL_SECTORS)
             })
             .catch(err => {
-                if (!cancelled) {
-                    console.error("Treemap query failed:", err);
-                    setError(err);
-                    setLoading(false)
-                }
+                if (cancelled) return
+                console.error("Treemap query failed:", err)
+                // Drop the previous selection's treemap so it is not shown under the error.
+                setTreemapData([])
+                setError(err)
+                setLoading(false)
             })
 
         return () => {
@@ -177,23 +194,33 @@ function App() {
 
     // Effect 2: column/table data
     React.useEffect(() => {
-        if (indicator.length === 0 || sector === "All sectors") {
+        if (indicator.length === 0 || sector === ALL_SECTORS) {
             setSelectedBaseData([])
             setTableBaseData([])
+            setSeriesLoading(false)
+            setSeriesError(null)
             return
         }
         let cancelled = false
+        setSeriesLoading(true)
+        setSeriesError(null)
 
         const result = sectorsQueries(donor, recipient, indicator, sector, currency, prices, yearRange)
         Promise.all([result.selectedBase, result.tableBase])
             .then(([selectedBase, tableBase]) => {
-                if (!cancelled) {
-                    setSelectedBaseData(selectedBase ?? []);
-                    setTableBaseData(tableBase ?? [])
-                }
+                if (cancelled) return
+                setSelectedBaseData(selectedBase ?? [])
+                setTableBaseData(tableBase ?? [])
+                setSeriesLoading(false)
             })
             .catch(err => {
-                if (!cancelled) console.error("column/table query failed:", err)
+                if (cancelled) return
+                console.error("Column/table query failed:", err)
+                // Clear the previous selection's data so the error is not shown beside stale figures.
+                setSelectedBaseData([])
+                setTableBaseData([])
+                setSeriesError(err)
+                setSeriesLoading(false)
             })
 
         return () => {
@@ -221,7 +248,7 @@ function App() {
             .filter(Boolean)
             .sort()
             .map(s => ({label: s, value: s}))
-        return [{label: "All sectors", value: "All sectors"}, ...unique]
+        return [{label: ALL_SECTORS, value: ALL_SECTORS}, ...unique]
     }, [treemapData])
 
     const unitOptions = React.useMemo(() => {
@@ -230,7 +257,7 @@ function App() {
             : (indicator[0] ?? "")
         return [
             {label: getCurrencyLabel(currency, {currencyLong: true, currencyOnly: true}), value: "value"},
-            {label: `% of ${sector} ODA`, value: "pct_sector", disabled: breakdownIsDisabled || !effectiveBreakdown},
+            {label: pctSectorLabel(sector), value: "pct_sector", disabled: breakdownIsDisabled || !effectiveBreakdown},
             {label: "% of provided aid", value: "pct_total_donor"},
             {label: "% of received aid", value: "pct_total_recipient"},
         ]
@@ -390,7 +417,7 @@ function App() {
                             />
                         </ONEVisual>
 
-                        {sector === "All sectors" ? (
+                        {sector === ALL_SECTORS ? (
                             <div
                                 className="plain-text flex px-20 py-10 items-start justify-center text-center text-lg text-slate-500">
                                 Select a sector from the dropdown or treemap to explore trends over time.
@@ -402,29 +429,31 @@ function App() {
                                     subtitle={sectorColumnSubtitle}
                                     subtitleIsHTML={true}
                                     controls={
-                                        !breakdownIsDisabled && (
-                                            <div>
-                                                <RangeInputMini
-                                                    min={SECTORS_MIN_YEAR}
-                                                    max={timeRangeOptions.end}
-                                                    step={1}
-                                                    label="Time range"
-                                                    value={yearRange}
-                                                    onChange={setYearRange}
-                                                />
+                                        <div>
+                                            <RangeInputMini
+                                                min={SECTORS_MIN_YEAR}
+                                                max={timeRangeOptions.end}
+                                                step={1}
+                                                label="Time range"
+                                                value={yearRange}
+                                                onChange={setYearRange}
+                                            />
+                                            {/* A sector with one sub-sector has nothing to break down. */}
+                                            {!breakdownIsDisabled && (
                                                 <ToggleSwitchMini
                                                     label="Sector breakdown"
                                                     value={breakdown}
                                                     options={[{label: "Off", value: false}, {label: "On", value: true}]}
                                                     onChange={setBreakdown}
                                                 />
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
+                                    }
                                     source={sourceText}
                                     note={columnNote}
-                                    loading={loading}
-                                    error={error}
-                                    empty={!loading && !error && selectedData.length === 0}
+                                    loading={seriesLoading}
+                                    error={seriesError}
+                                    empty={!seriesLoading && !seriesError && selectedData.length === 0}
                                     emptyMessage="No data available"
                                     fileName={columnFilename}
                                     data={selectedData}
@@ -437,7 +466,7 @@ function App() {
                         )}
                     </div>
 
-                    {sector === "All sectors" ? (
+                    {sector === ALL_SECTORS ? (
                         <>
                             <div
                                 className="plain-text flex px-6 py-10 items-center justify-center text-center text-lg text-slate-500">
@@ -455,9 +484,9 @@ function App() {
                                 }
                                 source={sourceText}
                                 note={tableNote}
-                                loading={loading}
-                                error={error}
-                                empty={!loading && !error && tableData.length === 0}
+                                loading={seriesLoading}
+                                error={seriesError}
+                                empty={!seriesLoading && !seriesError && tableData.length === 0}
                                 emptyMessage="No data available"
                                 fileName={tableFilename}
                                 data={tableData}

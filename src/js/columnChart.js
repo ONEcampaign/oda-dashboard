@@ -8,7 +8,7 @@ import {
     paletteSubsectors,
     paletteGender
 } from "./colors.js";
-import {plotHeight} from "./utils.js";
+import {plotHeight, plotAriaDescription} from "./utils.js";
 
 export function columnChart(data, currency, mode, width, {breakdown = false, scale = null}) {
 
@@ -62,6 +62,8 @@ export function columnChart(data, currency, mode, width, {breakdown = false, sca
     }
 
     return Plot.plot({
+        ariaLabel: `Column chart of ${yAxisLabel} by year`,
+        ariaDescription: plotAriaDescription(arrayData, fillVar),
         width: width,
         height: plotHeight(width),
         marginTop: 25,
