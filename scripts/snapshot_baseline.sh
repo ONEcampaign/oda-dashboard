@@ -3,7 +3,8 @@
 #
 # Writes validation_data/baseline/<view>/ for every view, the layout load_view reads:
 #   financing_view, recipients_view, gender_view: data.parquet + options.json
-#   sectors_view: the hive partitions + options.json
+#   sectors_view: the hive partitions of the live dataset version, flat (no version
+#     directory), + options.json
 # plus README.txt recording the date and the pipeline package versions.
 #
 # Needs an authenticated gsutil (gcloud auth login). Not for CI.
@@ -37,26 +38,14 @@ referenced_file() {
     echo "${path##*/}"
 }
 
-# Fallback: the newest hashed file in the bucket for a view.
-newest_file() {
-    local view="$1" stem="$2" ext="$3"
-    local url
-    url="$(gsutil ls -l "${APP_URL}/_file/data/scripts/${view}/${stem}.*.${ext}" \
-        | grep -v '^TOTAL' | sort -k2 | tail -n 1 | awk '{print $3}' || true)"
-    echo "${url##*/}"
-}
-
 # Copy one hashed view file to a fixed name in the view's baseline directory.
 snapshot_file() {
     local view="$1" stem="$2" ext="$3" target="$4" pages_html="$5"
     local name
     name="$(referenced_file "${view}" "${stem}" "${ext}" "${pages_html}")"
+    # The newest file in the bucket need not be the live one, so there is no fallback.
     if [ -z "${name}" ]; then
-        echo "No page references a ${view} ${stem} file; taking the newest in the bucket." >&2
-        name="$(newest_file "${view}" "${stem}" "${ext}")"
-    fi
-    if [ -z "${name}" ]; then
-        echo "Error: no ${stem}.*.${ext} found for ${view}." >&2
+        echo "Error: no deployed page references a ${view} ${stem}.*.${ext} file." >&2
         exit 1
     fi
     echo "${view}: ${name} -> ${target}"
@@ -75,11 +64,20 @@ for view in "${OBSERVABLE_VIEWS[@]}"; do
     snapshot_file "${view}" options json options.json "${pages_html}"
 done
 
-echo "sectors_view: ${SECTORS_URL} -> ${OUT_DIR}/sectors_view"
 rm -rf "${OUT_DIR:?}/sectors_view"
 mkdir -p "${OUT_DIR}/sectors_view"
-gsutil -m rsync -r "${SECTORS_URL}" "${OUT_DIR}/sectors_view"
+# cp decompresses the gzip-encoded options.
 gsutil cp "${SECTORS_OPTIONS_URL}" "${OUT_DIR}/sectors_view/options.json"
+sectors_version="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1])).get("dataset_version") or "")' \
+    "${OUT_DIR}/sectors_view/options.json")"
+if [ -n "${sectors_version}" ]; then
+    echo "sectors_view: ${SECTORS_URL}/${sectors_version} -> ${OUT_DIR}/sectors_view"
+    gsutil -m rsync -r "${SECTORS_URL}/${sectors_version}" "${OUT_DIR}/sectors_view"
+else
+    # Live options from before versioning have the partitions at the root.
+    echo "sectors_view: ${SECTORS_URL} (unversioned) -> ${OUT_DIR}/sectors_view"
+    gsutil -m rsync -r -x '^(?!donor_slug=).*' "${SECTORS_URL}" "${OUT_DIR}/sectors_view"
+fi
 
 {
     echo "Production snapshot of the dashboard views, taken $(date -u +'%Y-%m-%dT%H:%M:%SZ')."

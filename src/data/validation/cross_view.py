@@ -51,6 +51,7 @@ from src.data.validation.io import (
     read_flat_rows,
     read_hive_files,
     read_options,
+    resolve_dataset_dir,
     resolve_source,
 )
 from src.data.validation.models import CheckResult, Severity
@@ -151,6 +152,7 @@ class ViewReader:
         source = self.source("sectors_view")
         if (source / "sectors_view").is_dir():
             source = source / "sectors_view"
+        source = resolve_dataset_dir("sectors_view", source)
         flat = source / DATA_FILE
         if flat.is_file():
             return read_flat_rows(

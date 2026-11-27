@@ -9,11 +9,14 @@ import pandas as pd
 import pytest
 
 from src.data.analysis_tools.outputs import (
+    VERSION_HEX_LENGTH,
     VIEW_DATA_MEMBER,
     VIEW_OPTIONS_MEMBER,
     build_view_options,
+    partition_pairs,
     view_archive_to_stdout,
     write_partitioned_dataset,
+    write_versioned_dataset,
     write_view_options,
 )
 
@@ -115,3 +118,61 @@ def test_partition_column_with_missing_values_raises(tmp_path: Path) -> None:
     rows = ROWS.assign(donor_slug=["dac-countries", None])
     with pytest.raises(ValueError, match="missing values"):
         write_partitioned_dataset(rows, "view", ["donor_slug"], root=tmp_path)
+
+
+PAIR_ROWS = pd.DataFrame(
+    {
+        "donor_slug": ["france", "france", "germany"],
+        "recipient_slug": ["kenya", "mali", "kenya"],
+        "year": [2023, 2024, 2024],
+        "value_usd_current": [1, 2, 3],
+    }
+)
+PAIR_COLS = ["donor_slug", "recipient_slug"]
+
+
+def test_dataset_version_is_deterministic_and_content_addressed(tmp_path: Path) -> None:
+    first = write_versioned_dataset(PAIR_ROWS, "view", PAIR_COLS, root=tmp_path / "a")
+    second = write_versioned_dataset(PAIR_ROWS, "view", PAIR_COLS, root=tmp_path / "b")
+    changed = write_versioned_dataset(
+        PAIR_ROWS.assign(value_usd_current=[1, 2, 4]),
+        "view",
+        PAIR_COLS,
+        root=tmp_path / "c",
+    )
+
+    assert first == second
+    assert changed != first
+    assert len(first) == VERSION_HEX_LENGTH
+    assert set(first) <= set("0123456789abcdef")  # deploy.yml prunes only hex names
+
+
+def test_a_rewrite_leaves_only_the_new_version(tmp_path: Path) -> None:
+    old = write_versioned_dataset(PAIR_ROWS, "view", PAIR_COLS, root=tmp_path)
+    new = write_versioned_dataset(PAIR_ROWS.head(2), "view", PAIR_COLS, root=tmp_path)
+
+    assert old != new
+    assert [p.name for p in (tmp_path / "view").iterdir()] == [new]
+    data = pd.read_parquet(tmp_path / "view" / new)
+    assert len(data) == 2
+
+
+def test_partition_pairs_are_the_written_partition_dirs(tmp_path: Path) -> None:
+    version = write_versioned_dataset(PAIR_ROWS, "view", PAIR_COLS, root=tmp_path)
+    version_dir = tmp_path / "view" / version
+
+    pairs = partition_pairs(version_dir, *PAIR_COLS)
+
+    on_disk = {
+        (d.name.removeprefix("donor_slug="), r.name.removeprefix("recipient_slug="))
+        for d in version_dir.iterdir()
+        for r in d.iterdir()
+    }
+    assert {(d, r) for d, recipients in pairs.items() for r in recipients} == on_disk
+    assert pairs == {"france": ["kenya", "mali"], "germany": ["kenya"]}
+
+
+def test_partition_pairs_reject_another_layout(tmp_path: Path) -> None:
+    write_partitioned_dataset(PAIR_ROWS, "view", ["donor_slug"], root=tmp_path)
+    with pytest.raises(ValueError, match="recipient_slug="):
+        partition_pairs(tmp_path / "view", *PAIR_COLS)

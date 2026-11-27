@@ -7,9 +7,11 @@ A view source is a directory in one of three layouts:
    (``validation_data/baseline/<view>/``) both use it.
 2. Hive with options inside: ``<source>/donor_slug=*/recipient_slug=*/*.parquet`` +
    ``<source>/options.json``. The baseline snapshot of sectors_view.
-3. Hive with options beside it: ``<source>/donor_slug=*/...`` +
-   ``<source>/../<view>_options.json``. The CDN build (``cdn_files/sectors_view``).
-   Passing the parent (``cdn_files``) also works: ``<source>/<view>`` is tried first.
+3. Hive with options beside it: ``<source>/<dataset_version>/donor_slug=*/...`` +
+   ``<source>/../<view>_options.json``, whose ``dataset_version`` names the version
+   directory. The CDN build (``cdn_files/sectors_view``). Options without a
+   ``dataset_version`` (builds before versioning) mean the partitions sit in ``<source>``
+   itself. Passing the parent (``cdn_files``) also works, and ``<source>/<view>`` is tried first.
 
 So a baseline or source root ``R`` maps every view to ``R/<view>``.
 """
@@ -31,6 +33,8 @@ from src.data.validation.views import ViewSpec, get_spec
 
 DATA_FILE: str = "data.parquet"
 OPTIONS_FILE: str = "options.json"
+# The options key naming the CDN build's version directory (sectors_view.py writes it).
+DATASET_VERSION_KEY: str = "dataset_version"
 PARTITION_COLUMNS: tuple[str, ...] = ("donor_slug", "recipient_slug")
 
 OBSERVABLE_CACHE_DIR: Path = PATHS.SRC / ".observablehq" / "cache" / "data" / "scripts"
@@ -89,6 +93,38 @@ def _is_hive_dir(path: Path) -> bool:
     return path.is_dir() and any(p.is_dir() and "=" in p.name for p in path.iterdir())
 
 
+def resolve_dataset_dir(name: str, source: Path) -> Path:
+    """The directory holding a hive view's partitions, following a CDN build's version.
+
+    Layout 3 keeps the partitions in ``<source>/<dataset_version>``, named by the options
+    beside the view directory. Every other layout keeps them in ``source`` itself.
+
+    Args:
+        name: A key of VIEWS.
+        source: The view's directory (not its parent).
+
+    Returns:
+        ``<source>/<dataset_version>`` when the options beside source name a version,
+        otherwise source.
+
+    Raises:
+        FileNotFoundError: The options name a version that is not under source.
+    """
+    options_beside = source.parent / f"{name}_options.json"
+    if not options_beside.is_file():
+        return source
+    version = read_options(options_beside).get(DATASET_VERSION_KEY)
+    if version is None:
+        return source
+    version_dir = source / str(version)
+    if not version_dir.is_dir():
+        raise FileNotFoundError(
+            f"{options_beside} names {DATASET_VERSION_KEY} {version!r}, but {version_dir} "
+            "does not exist"
+        )
+    return version_dir
+
+
 def resolve_source(name: str, source: Path) -> tuple[Path, Path]:
     """Find a view's data path and options path under a source directory.
 
@@ -102,13 +138,14 @@ def resolve_source(name: str, source: Path) -> tuple[Path, Path]:
         source = source / name
 
     flat = source / DATA_FILE
+    hive = resolve_dataset_dir(name, source)
     if flat.is_file():
         data_path = flat
-    elif _is_hive_dir(source):
-        data_path = source
+    elif _is_hive_dir(hive):
+        data_path = hive
     else:
         raise FileNotFoundError(
-            f"No {name} data at {source}: tried {flat} and hive partitions in {source}"
+            f"No {name} data at {source}: tried {flat} and hive partitions in {hive}"
         )
 
     options_candidates = [source / OPTIONS_FILE, source.parent / f"{name}_options.json"]

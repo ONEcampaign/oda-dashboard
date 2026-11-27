@@ -17,7 +17,12 @@ from src.data.validation.cross_view import (
 )
 from src.data.validation.expected import DeltaKind, ExpectedDelta
 from src.data.validation.models import Severity
-from tests.data.validation.conftest import MakeView, write_flat, write_hive
+from tests.data.validation.conftest import (
+    MakeView,
+    write_flat,
+    write_hive,
+    write_versioned_hive,
+)
 
 DAC = "DAC countries"
 ELIGIBLE = "ODA eligible countries"
@@ -359,6 +364,19 @@ def test_sectors_reader_reads_only_oda_eligible(
         assert set(data["recipient_name"]) == {ELIGIBLE}
         assert data["value_usd_constant"].sum() == 100 * MILLION
         assert str(data["donor_name"].dtype) == "string"
+
+
+def test_sectors_reader_follows_the_dataset_version(
+    tmp_path: Path, make_view: MakeView
+) -> None:
+    """The versioned CDN build is read from the version its options name."""
+    view_dir = write_versioned_hive(
+        make_view("sectors_view", _sector_rows()), tmp_path / "sectors_view", "abc123"
+    )
+    for source in (view_dir, tmp_path):
+        data = ViewReader({"sectors_view": source}).sectors_oda_eligible
+        assert set(data["recipient_name"]) == {ELIGIBLE}
+        assert data["value_usd_constant"].sum() == 100 * MILLION
 
 
 def test_sectors_reader_reads_only_oda_eligible_from_a_flat_file(

@@ -164,16 +164,50 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      # Each sectors release lives under sources/sectors_view/<version>/, named by its
+      # content hash and never overwritten, so it is cached as immutable. The options file
+      # points to the live version. It goes up after the data, so every pair it lists
+      # resolves, gzipped and no-cache. The live version is read first, so the prune step
+      # can keep it for pages that loaded the old options.
       - name: Upload sectors partitioned dataset
+        id: sectors
         run: |
-          if [ -d "cdn_files/sectors_view" ]; then
-            echo "Uploading sectors partitioned dataset to GCS..."
-            gsutil -m rsync -r -d cdn_files/sectors_view gs://${{ env.BUCKET }}/sources/sectors_view
-            # Upload after the dataset so every slug it lists already resolves. no-cache makes
-            # browsers pick up a new release's options at once.
-            gsutil -h "Cache-Control:no-cache" cp cdn_files/sectors_view_options.json gs://${{ env.BUCKET }}/sources/sectors_view_options.json
-          else
-            echo "Warning: cdn_files/sectors_view directory not found"
+          set -euo pipefail
+          sources="gs://${{ env.BUCKET }}/sources"
+          options_url="${sources}/sectors_view_options.json"
+          version="$(jq -er '.dataset_version' cdn_files/sectors_view_options.json)"
+          if [ ! -d "cdn_files/sectors_view/${version}" ]; then
+            echo "::error::cdn_files/sectors_view/${version} not found"
+            exit 1
+          fi
+
+          # Prints the live dataset_version, or nothing when the options object does not
+          # exist yet. Any other failure (auth, network, 5xx) returns 1, so an empty version
+          # always means "first deploy". Otherwise the prune step could delete the live one.
+          read_live_version() {
+            local out
+            if ! out="$(gsutil ls "${options_url}" 2>&1)"; then
+              if grep -Eq 'matched no objects|No URLs matched' <<<"${out}"; then
+                return 0
+              fi
+              echo "::error::cannot read ${options_url}: ${out}" >&2
+              return 1
+            fi
+            # cp decompresses the gzip-encoded object.
+            gsutil -q cp "${options_url}" "${RUNNER_TEMP}/live_options.json" || return 1
+            jq -er '.dataset_version // ""' "${RUNNER_TEMP}/live_options.json" || return 1
+          }
+          previous="$(read_live_version)"
+          echo "Live sectors version: ${previous:-none}; new: ${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "previous=${previous}" >> "$GITHUB_OUTPUT"
+
+          # -c compares checksums, so an unchanged version is not re-uploaded for new mtimes.
+          gsutil -m -h "Cache-Control:public, max-age=31536000, immutable" \
+            rsync -r -c "cdn_files/sectors_view/${version}" "${sources}/sectors_view/${version}"
+          gsutil -h "Cache-Control:no-cache" cp -Z cdn_files/sectors_view_options.json "${options_url}"
+          if ! gsutil stat "${options_url}" | grep -Eq 'Cache-Control:.*no-cache'; then
+            echo "::error::${options_url} was not uploaded with Cache-Control no-cache"
             exit 1
           fi
 
@@ -202,3 +236,82 @@ jobs:
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             -H "Content-Type: application/json" \
             --data '{"purge_everything":true}' | jq -e '.success'
+
+      # Runs only once dist/ is up, so the new app is live before anything is removed. Keeps
+      # the new version, the one the live options pointed to before this deploy (pages
+      # opened before it still read that one) and the one they point to now (re-read just
+      # before deleting, in case scripts/upload_sectors_partition.sh published another
+      # version during the deploy). A deploy whose sectors data did not change prunes nothing,
+      # so a tab opened before the last release keeps its version until the next one. If the
+      # live options cannot be read, or no previous version was recorded while older versions
+      # exist, nothing is deleted and the step fails. Only directories named like a version
+      # (VERSION_HEX_LENGTH hex digits, src/data/analysis_tools/outputs.py) are removed. The
+      # root-level donor_slug=* tree
+      # from before versioning is left for old cached pages. By hand, a day or more after
+      # the first versioned deploy, remove it with:
+      #   gsutil -m rm -r 'gs://data-apps-one-data/sources/sectors_view/donor_slug=*'
+      - name: Prune old sectors dataset versions
+        env:
+          VERSION: ${{ steps.sectors.outputs.version }}
+          PREVIOUS: ${{ steps.sectors.outputs.previous }}
+        run: |
+          set -euo pipefail
+          base="gs://${{ env.BUCKET }}/sources/sectors_view"
+          options_url="gs://${{ env.BUCKET }}/sources/sectors_view_options.json"
+          if [ -z "${VERSION}" ]; then
+            echo "::error::no new sectors version from the upload step; nothing pruned"
+            exit 1
+          fi
+          if [ "${VERSION}" = "${PREVIOUS}" ]; then
+            echo "Sectors data unchanged (${VERSION}); nothing to prune"
+            exit 0
+          fi
+
+          # Same rule as the upload step: empty only when the options object does not exist.
+          read_live_version() {
+            local out
+            if ! out="$(gsutil ls "${options_url}" 2>&1)"; then
+              if grep -Eq 'matched no objects|No URLs matched' <<<"${out}"; then
+                return 0
+              fi
+              echo "::error::cannot read ${options_url}: ${out}" >&2
+              return 1
+            fi
+            gsutil -q cp "${options_url}" "${RUNNER_TEMP}/live_options_prune.json" || return 1
+            jq -er '.dataset_version // ""' "${RUNNER_TEMP}/live_options_prune.json" || return 1
+          }
+          if ! live="$(read_live_version)"; then
+            echo "::error::cannot re-read the live sectors version; nothing pruned"
+            exit 1
+          fi
+          echo "Keeping sectors versions: new ${VERSION}, previous ${PREVIOUS:-none}, live ${live:-none}"
+
+          listing="$(gsutil ls -d "${base}/*/")"
+          versions=()
+          while IFS= read -r dir; do
+            name="$(basename "${dir}")"
+            if [[ "${name}" =~ ^[0-9a-f]{16}$ ]]; then
+              versions+=("${name}")
+            fi
+          done <<<"${listing}"
+          # The new version was just uploaded, so a listing without it is wrong.
+          if [[ " ${versions[*]-} " != *" ${VERSION} "* ]]; then
+            echo "::error::new version ${VERSION} not listed under ${base}; nothing pruned"
+            exit 1
+          fi
+
+          # No live options before this deploy means a first versioned deploy, which leaves one
+          # version. More than one means versions this run cannot account for.
+          if [ -z "${PREVIOUS}" ] && { [ -z "${live}" ] || [ "${live}" = "${VERSION}" ]; } \
+            && [ "${#versions[@]}" -gt 1 ]; then
+            echo "::error::no previous version recorded but ${#versions[@]} versions exist; nothing pruned"
+            exit 1
+          fi
+
+          for name in "${versions[@]}"; do
+            if [ "${name}" = "${VERSION}" ] || [ "${name}" = "${PREVIOUS}" ] || [ "${name}" = "${live}" ]; then
+              continue
+            fi
+            echo "Removing sectors version ${name}"
+            gsutil -m -q rm -r "${base}/${name}"
+          done

@@ -9,8 +9,8 @@ Shape of the pipeline:
     3. recipient names, regions and income groups from the shared CRS classification table
     4. recipient groups then donor groups, summed locally because the CRS publishes neither
     5. shares from both perspectives, then values as integer units
-    6. a partitioned dataset addressed by donor and recipient slug, plus its options, under
-       cdn_files (or --output-dir)
+    6. a partitioned dataset addressed by donor and recipient slug, in a directory named by
+       its content hash, plus its options, under cdn_files (or --output-dir)
 
 This is the largest view by far, so the frame is kept dictionary-encoded and stripped of spent
 columns before the pivot; see _as_categoricals and the drop before widen_currency_price.
@@ -38,7 +38,8 @@ from src.data.analysis_tools.oda import (
 )
 from src.data.analysis_tools.outputs import (
     build_view_options,
-    write_partitioned_dataset,
+    partition_pairs,
+    write_versioned_dataset,
     write_view_options,
 )
 from src.data.analysis_tools.sectors import (
@@ -86,6 +87,8 @@ CRS: str = "crs"
 
 DATASET_DIR: str = "sectors_view"
 OPTIONS_FILE: str = "sectors_view_options.json"
+# The page addresses a partition as <version>/donor_slug=…/recipient_slug=…/part-0.parquet.
+PARTITION_COLS: tuple[str, str] = ("donor_slug", "recipient_slug")
 
 VIEW_KEYS: list[str] = [
     "year",
@@ -489,11 +492,17 @@ def main(output_dir: Path) -> None:
 
     output_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Writing partitioned dataset...")
-    write_partitioned_dataset(
-        df,
-        DATASET_DIR,
-        partition_cols=["donor_slug", "recipient_slug"],
-        root=output_dir,
+    version = write_versioned_dataset(
+        df, DATASET_DIR, partition_cols=list(PARTITION_COLS), root=output_dir
+    )
+    # Contract with src/js/sectorsQueries.js. Options changes are additive only. The options
+    # file is a mutable pointer the page fetches at runtime, so for one deploy the previous
+    # app reads the new options and must still find every key it expects.
+    options["dataset_version"] = version
+    # The pairs that have a partition, so the page requests only those and treats any
+    # failed fetch as an error.
+    options["partition_pairs"] = partition_pairs(
+        output_dir / DATASET_DIR / version, *PARTITION_COLS
     )
     # Written after the dataset, so the options only exist alongside the data they describe;
     # CI publishes both to the CDN, where the page reads them.

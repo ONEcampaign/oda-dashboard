@@ -8,9 +8,10 @@ import {COMBINED_INDICATOR_ODA} from "./config.js";
  */
 
 // The sectors data lives on the CDN, published by CI together with its options: the option
-// lists, the opening selections and the name-to-slug maps used to address partitions.
+// lists, the opening selections, the name-to-slug maps, and the dataset version and partition
+// list used to address partitions. Each version is immutable under its own directory, so a
+// page never mixes partitions from two releases.
 const CDN_URL = "https://storage.googleapis.com/data-apps-one-data/sources";
-const PARQUET_DATASET_URL = `${CDN_URL}/sectors_view`;
 const OPTIONS_URL = `${CDN_URL}/sectors_view_options.json`;
 
 const optionsResponse = await fetch(OPTIONS_URL);
@@ -18,6 +19,10 @@ if (!optionsResponse.ok) {
     throw new Error(`Sectors options unavailable (${optionsResponse.status}): ${OPTIONS_URL}`);
 }
 const viewOptions = await optionsResponse.json();
+if (!viewOptions.dataset_version || !viewOptions.partition_pairs) {
+    throw new Error(`Sectors options lack dataset_version or partition_pairs: ${OPTIONS_URL}`);
+}
+const PARQUET_DATASET_URL = `${CDN_URL}/sectors_view/${viewOptions.dataset_version}`;
 
 export const donorNames = viewOptions.donor_name;
 export const recipientNames = viewOptions.recipient_name;
@@ -33,6 +38,10 @@ export const subSectorsBySector = viewOptions.sub_sectors_by_sector;
 
 const donorSlugs = viewOptions.donor_slugs;
 const recipientSlugs = viewOptions.recipient_slugs;
+// donor slug -> the recipient slugs it has a partition for.
+const partitionPairs = new Map(
+    Object.entries(viewOptions.partition_pairs).map(([donorSlug, recipients]) => [donorSlug, new Set(recipients)])
+);
 
 // Lazy initialization: DuckDB instance is created on first query
 let dbPromise = null;
@@ -70,8 +79,9 @@ function buildPartitionPaths({donor, recipient}) {
         for (const recipientName of recipients) {
             const donorSlug = donorSlugs[donorName];
             const recipientSlug = recipientSlugs[recipientName];
-            // A name with no slug has no partition, so there is nothing to fetch.
-            if (!donorSlug || !recipientSlug) continue;
+            // An unlisted pair has no partition, so there is nothing to fetch: "No data".
+            // Every listed pair exists, so any failure to read one is a real error.
+            if (!partitionPairs.get(donorSlug)?.has(recipientSlug)) continue;
             paths.add(
                 `${PARQUET_DATASET_URL}/donor_slug=${donorSlug}/recipient_slug=${recipientSlug}/part-0.parquet`
             );
@@ -92,11 +102,6 @@ function buildReadParquetClause(paths) {
 
     const quoted = paths.map((path) => `'${path}'`).join(", ");
     return `read_parquet([${quoted}], union_by_name=true)`;
-}
-
-function isNotFoundError(error) {
-    const message = error?.message?.toLowerCase() ?? "";
-    return message.includes("404") || message.includes("not found") || message.includes("no files matched");
 }
 
 export function sectorsQueries(
@@ -217,24 +222,15 @@ async function executeSectorsSeries({
 
     const db = await getDB();
 
-    try {
-        return await runSectorsQuery(db, {
-            donor,
-            recipient,
-            indicatorSelection,
-            combineIndicators,
-            valueColumn,
-            timeRange,
-            parquetClause
-        });
-    } catch (error) {
-        // Return empty array for 404/not found errors (partition doesn't exist)
-        if (isNotFoundError(error)) {
-            return [];
-        }
-        // Re-throw other errors
-        throw error;
-    }
+    return runSectorsQuery(db, {
+        donor,
+        recipient,
+        indicatorSelection,
+        combineIndicators,
+        valueColumn,
+        timeRange,
+        parquetClause
+    });
 }
 
 async function runSectorsQuery(db, {

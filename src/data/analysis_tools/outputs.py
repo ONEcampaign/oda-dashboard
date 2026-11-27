@@ -9,6 +9,7 @@ DataFrame and returns a DataFrame belongs in ``transformations``; anything that 
 entity is labelled belongs in ``naming``.
 """
 
+import hashlib
 import io
 import json
 import shutil
@@ -284,3 +285,116 @@ def write_partitioned_dataset(
             row_group_size=PARTITION_ROW_GROUP_SIZE,
             **PARQUET_CODEC,
         )
+
+
+# Hex digits of the sha256 a dataset version is named by. deploy.yml's prune step only removes
+# directories named like this, so the two must agree.
+VERSION_HEX_LENGTH: int = 16
+_STAGING_DIR: str = "_staging"
+_HASH_CHUNK_BYTES: int = 1 << 20
+
+
+def dataset_version(path: Path) -> str:
+    """Content hash of a partitioned dataset, used as its immutable version name.
+
+    Hashes every file under path in sorted relative-path order, taking its path, size and
+    bytes, so the same partitions written twice give the same version and any changed byte,
+    renamed partition or added file gives a new one.
+
+    Args:
+        path: The dataset directory.
+
+    Returns:
+        The first VERSION_HEX_LENGTH hex digits of the sha256.
+
+    Raises:
+        ValueError: If path holds no files.
+    """
+    files = sorted(
+        (f.relative_to(path).as_posix(), f) for f in path.rglob("*") if f.is_file()
+    )
+    if not files:
+        raise ValueError(f"No files to version under {path}")
+
+    digest = hashlib.sha256()
+    for relative, file in files:
+        # The NUL after the path and the fixed-width size keep the path and content
+        # boundaries unambiguous.
+        digest.update(relative.encode())
+        digest.update(b"\0")
+        digest.update(file.stat().st_size.to_bytes(8, "big"))
+        with file.open("rb") as f:
+            while chunk := f.read(_HASH_CHUNK_BYTES):
+                digest.update(chunk)
+    return digest.hexdigest()[:VERSION_HEX_LENGTH]
+
+
+def write_versioned_dataset(
+    df: pd.DataFrame,
+    base_dir: str,
+    partition_cols: list[str],
+    *,
+    root: Path = PATHS.CDN_FILES,
+) -> str:
+    """Write a partitioned dataset into ``root/base_dir/<version>``, named by its content.
+
+    Everything under root/base_dir is cleared first, so only the new version is left to
+    publish. The partitions are written to a staging directory, hashed, then renamed. A
+    published version is never overwritten in place. New data gets a new URL, so a reader
+    holding an old options file, or old cached footers, never mixes two releases.
+
+    Args:
+        df: Wide frame ready to be written.
+        base_dir: Directory name, created under root.
+        partition_cols: Columns to partition by, as in write_partitioned_dataset.
+        root: Directory to write into. CI publishes PATHS.CDN_FILES.
+
+    Returns:
+        The version, from dataset_version.
+    """
+    dataset_dir = root / base_dir
+    if dataset_dir.exists():
+        logger.info("Clearing existing dataset versions at %s", dataset_dir)
+        shutil.rmtree(dataset_dir)
+    dataset_dir.mkdir(parents=True)
+
+    write_partitioned_dataset(df, _STAGING_DIR, partition_cols, root=dataset_dir)
+    staging = dataset_dir / _STAGING_DIR
+    version = dataset_version(staging)
+    staging.rename(dataset_dir / version)
+    logger.info("Dataset version %s written to %s", version, dataset_dir / version)
+    return version
+
+
+def partition_pairs(path: Path, outer: str, inner: str) -> dict[str, list[str]]:
+    """List the two-level partitions written under a dataset directory.
+
+    Read from the directories themselves, so the list cannot drift from what was written.
+
+    Args:
+        path: The dataset (version) directory.
+        outer: The first partition column, e.g. "donor_slug".
+        inner: The second partition column, e.g. "recipient_slug".
+
+    Returns:
+        Each outer value mapped to its sorted inner values, outer values sorted.
+
+    Raises:
+        ValueError: If a partition file is not exactly ``outer=…/inner=…/PARTITION_FILE``.
+    """
+    pairs: dict[str, list[str]] = {}
+    for file in sorted(path.rglob("*.parquet")):
+        parts = file.relative_to(path).parts
+        if (
+            len(parts) != 3
+            or not parts[0].startswith(f"{outer}=")
+            or not parts[1].startswith(f"{inner}=")
+            or parts[2] != PARTITION_FILE
+        ):
+            raise ValueError(
+                f"{file} is not {outer}=…/{inner}=…/{PARTITION_FILE} under {path}"
+            )
+        pairs.setdefault(parts[0].removeprefix(f"{outer}="), []).append(
+            parts[1].removeprefix(f"{inner}=")
+        )
+    return {key: sorted(values) for key, values in sorted(pairs.items())}
