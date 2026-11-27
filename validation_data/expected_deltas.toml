@@ -38,13 +38,3 @@ years = [2025]
 donors = ["United States"]
 indicators = ["Grant equivalents"]
 max_rel = 0.65
-
-[[delta]]
-view = "financing_view"
-kind = "value"
-reason = "a group's pct_of_gni is null where none of its GNI-reporting members has the indicator"
-years = [2015]
-donors = ["Non-DAC countries"]
-indicators = ["Scholarships/training in donor country"]
-columns = ["pct_of_gni"]
-max_abs = 1e-5
