@@ -1,25 +1,34 @@
 """Deltas we expect between two builds, or between a view and the topic page, with reasons.
 
 Parity and cross-view checks report a delta that matches an entry as INFO "explained
-(reason)" and an unmatched one as ERROR. The file is TOML, one ``[[delta]]`` table per entry:
+(reason)" and an unmatched one as ERROR; the anomaly check reports a matched latest-year
+change as INFO instead of a WARNING. The file is TOML, one ``[[delta]]`` table per entry:
 
     [[delta]]
-    view = "financing_view"          # or "cross_view"
-    kind = "value"                   # "value", "missing_in_candidate", "new_in_candidate"
+    view = "financing_view"          # a view name, or "cross_view"
+    kind = "value"                   # "value", "missing_in_candidate", "new_in_candidate",
+                                     # "anomaly"
     reason = "PSI read in grant equivalents from 2023"
-    years = [2023, 2024]             # optional filters; omitted means any
+    years = [2023, 2024]             # filters; omitted means any, empty is an error
     donors = ["France"]
     indicators = ["Private sector instruments"]
-    recipients = []                  # an empty list also means any
-    columns = ["value_usd_current"]  # optional: the value or share columns it covers
-    max_rel = 0.05                   # optional, "value" only: explains |rel diff| <= this
-    max_abs = 11000                  # optional, "value" only: explains |diff| <= this
-    paths = ["year.start"]           # optional: options.json paths, see below
+    recipients = ["Kenya"]
+    columns = ["value_usd_current"]  # the value or share columns it covers
+    max_rel = 0.05                   # "value"/"anomaly": explains |rel diff| <= this
+    max_abs = 11000                  # "value" only: explains |diff| <= this
+    paths = ["year.start"]           # options.json paths, see below
+
+Every entry needs at least one filter or bound: an entry with neither would explain every
+delta of its kind in the view. ``view`` must name a known view (or "cross_view"), so a
+misspelt entry fails to load rather than never matching. Entries that explained nothing in
+a run that could have used them are reported (``expected.unused``), so stale entries get
+removed.
 
 With both max_rel and max_abs set, a delta within either is explained. max_abs is in the
 column's unit: currency units for value columns, a fraction for share columns. A null
 against a number counts as a difference of |number| (no relative difference), so only
-max_abs can explain it.
+max_abs can explain it. For kind "anomaly", max_rel bounds the donor's latest-year change
+(e.g. 0.6 explains a fall or rise of up to 60%) and years is the latest year.
 
 ``paths`` explains options.json differences by dotted path: a changed scalar (kind
 "value", e.g. "year.start") or a key added or removed (kind "new_in_candidate" or
@@ -29,11 +38,16 @@ items in the options are matched by the donors, recipients and indicators filter
 """
 
 import tomllib
-from dataclasses import dataclass
+from collections.abc import Iterable
+from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 
 from src.data.validation.io import VALIDATION_DATA_DIR
+from src.data.validation.views import VIEWS
+
+CROSS_VIEW: str = "cross_view"
+KNOWN_VIEWS: frozenset[str] = frozenset({*VIEWS, CROSS_VIEW})
 
 DEFAULT_EXPECTED_DELTAS_PATH: Path = VALIDATION_DATA_DIR / "expected_deltas.toml"
 
@@ -57,6 +71,7 @@ class DeltaKind(StrEnum):
     VALUE = "value"  # the key exists on both sides and a value differs
     MISSING_IN_CANDIDATE = "missing_in_candidate"  # key only in the baseline
     NEW_IN_CANDIDATE = "new_in_candidate"  # key only in the candidate
+    ANOMALY = "anomaly"  # an unusual latest-year change in a view's key total
 
 
 @dataclass(frozen=True)
@@ -74,6 +89,8 @@ class ExpectedDelta:
         max_abs: For kind "value", the largest |difference| explained, in the column's
             unit. With neither bound set, a delta of any size matches; with both, a delta
             within either matches.
+        hits: How many deltas the entry has explained so far in this process, not part
+            of equality.
     """
 
     view: str
@@ -87,6 +104,19 @@ class ExpectedDelta:
     paths: frozenset[str] | None = None
     max_rel: float | None = None
     max_abs: float | None = None
+    # A one-item list so the frozen entry can count its matches.
+    _hits: list[int] = field(
+        default_factory=lambda: [0], compare=False, repr=False, hash=False
+    )
+
+    @property
+    def hits(self) -> int:
+        """How many deltas this entry has explained."""
+        return self._hits[0]
+
+    def record_hit(self) -> None:
+        """Count one explained delta."""
+        self._hits[0] += 1
 
     def matches(
         self,
@@ -175,26 +205,65 @@ def find_explanation(
             rel_diff=rel_diff,
             abs_diff=abs_diff,
         ):
+            entry.record_hit()
             return entry
     return None
 
 
+def unused_entries(
+    expected: Iterable[ExpectedDelta],
+    *,
+    anomaly_views: Iterable[str],
+    parity_views: Iterable[str],
+    cross_view: bool,
+) -> list[ExpectedDelta]:
+    """Entries that explained nothing although the run checked their view and kind.
+
+    Args:
+        expected: The entries, after the run.
+        anomaly_views: Views whose anomaly check ran (anomaly entries).
+        parity_views: Views compared with a baseline (value and key entries).
+        cross_view: Whether the cross-view comparison ran ("cross_view" entries).
+    """
+    anomaly, parity = set(anomaly_views), set(parity_views)
+
+    def in_scope(entry: ExpectedDelta) -> bool:
+        if entry.kind is DeltaKind.ANOMALY:
+            return entry.view in anomaly
+        if entry.view == CROSS_VIEW:
+            return cross_view
+        return entry.view in parity
+
+    return [e for e in expected if in_scope(e) and e.hits == 0]
+
+
 def _filter_set[T](
-    raw: dict, field: str, item_type: type[T], where: str
+    raw: dict, name: str, item_type: type[T], where: str
 ) -> frozenset[T] | None:
-    """Read an optional list filter; an absent or empty list means any value."""
-    values = raw.get(field)
+    """Read an optional list filter; absent means any value, an empty list is an error."""
+    values = raw.get(name)
     if values is None:
         return None
     if not isinstance(values, list) or not all(
         isinstance(v, item_type) and not isinstance(v, bool) for v in values
     ):
-        raise ValueError(f"{where}: {field} must be a list of {item_type.__name__}")
-    return frozenset(values) or None
+        raise ValueError(f"{where}: {name} must be a list of {item_type.__name__}")
+    if not values:
+        raise ValueError(
+            f"{where}: {name} is empty; list the values it covers, or leave it out"
+        )
+    return frozenset(values)
+
+
+# The bounds each kind accepts.
+_KIND_BOUNDS: dict[DeltaKind, frozenset[str]] = {
+    DeltaKind.VALUE: frozenset(_BOUND_FIELDS),
+    DeltaKind.ANOMALY: frozenset({"max_rel"}),
+}
 
 
 def _bound(raw: dict, name: str, kind: DeltaKind, where: str) -> float | None:
-    """Read an optional max_rel / max_abs: a number >= 0, for kind "value" only."""
+    """Read an optional max_rel / max_abs: a number >= 0, for the kinds that take it."""
     value = raw.get(name)
     if value is None:
         return None
@@ -202,8 +271,8 @@ def _bound(raw: dict, name: str, kind: DeltaKind, where: str) -> float | None:
         raise ValueError(f"{where}: {name} must be a number")
     if value < 0:
         raise ValueError(f"{where}: {name} must be >= 0")
-    if kind is not DeltaKind.VALUE:
-        raise ValueError(f"{where}: {name} applies only to kind 'value'")
+    if name not in _KIND_BOUNDS.get(kind, frozenset()):
+        raise ValueError(f"{where}: {name} does not apply to kind {kind.value!r}")
     return float(value)
 
 
@@ -217,6 +286,10 @@ def _parse_entry(raw: object, where: str) -> ExpectedDelta:
     for required in ("view", "reason"):
         if not isinstance(raw.get(required), str) or not raw[required].strip():
             raise ValueError(f"{where}: {required} must be a non-empty string")
+    if raw["view"] not in KNOWN_VIEWS:
+        raise ValueError(
+            f"{where}: unknown view {raw['view']!r}; known: {sorted(KNOWN_VIEWS)}"
+        )
 
     try:
         kind = DeltaKind(raw.get("kind", DeltaKind.VALUE))
@@ -229,7 +302,7 @@ def _parse_entry(raw: object, where: str) -> ExpectedDelta:
     if paths is not None and (max_rel is not None or max_abs is not None):
         raise ValueError(f"{where}: paths cannot be combined with max_rel or max_abs")
 
-    return ExpectedDelta(
+    entry = ExpectedDelta(
         view=raw["view"],
         reason=raw["reason"],
         kind=kind,
@@ -242,6 +315,13 @@ def _parse_entry(raw: object, where: str) -> ExpectedDelta:
         max_rel=max_rel,
         max_abs=max_abs,
     )
+    scoped = [getattr(entry, name) for name in (*_FILTER_FIELDS, *_BOUND_FIELDS)]
+    if all(value is None for value in scoped):
+        raise ValueError(
+            f"{where}: needs at least one of {[*_FILTER_FIELDS, *_BOUND_FIELDS]}; "
+            "without one it would explain every delta of its kind"
+        )
+    return entry
 
 
 def load_expected_deltas(

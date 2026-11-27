@@ -950,8 +950,8 @@ def check_provenance_consistency(sources: dict[str, Path]) -> list[CheckResult]:
 
     Returns:
         Non-blocking results: an ERROR for each view whose options cannot be read or whose
-        provenance is malformed, a passed INFO naming views without provenance (skipped), and
-        a pass or an ERROR listing the tables read at more than one token. Nothing when
+        provenance is malformed, a WARNING naming views without provenance (not checked),
+        and a pass or an ERROR listing the tables read at more than one token. Nothing when
         there are no sources.
     """
     if not sources:
@@ -977,11 +977,15 @@ def check_provenance_consistency(sources: dict[str, Path]) -> list[CheckResult]:
             )
 
     if skipped:
+        # Every loader writes provenance, so a view without it was built by old code or
+        # lost it. Either way the consistency check cannot cover it.
         results.append(
             _provenance_result(
-                passed=True,
-                severity=Severity.INFO,
-                message=f"skipped, no provenance in options.json: {', '.join(skipped)}",
+                passed=False,
+                severity=Severity.WARNING,
+                message=(
+                    f"not checked, no provenance in options.json: {', '.join(skipped)}"
+                ),
             )
         )
 

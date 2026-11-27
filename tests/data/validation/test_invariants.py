@@ -251,8 +251,8 @@ def test_recipient_sums_recipients_view(
     assert set(_failed(results)) == failed
 
 
-def test_share_range_severity(make_view: MakeView) -> None:
-    """Out-of-range shares are an ERROR for gender and a WARNING elsewhere."""
+def test_share_range_blocks_without_negative_values(make_view: MakeView) -> None:
+    """A share outside [0, 1] in a group with no negative value is a blocking ERROR."""
     rows = [
         _row(
             "France",
@@ -262,18 +262,16 @@ def test_share_range_severity(make_view: MakeView) -> None:
             pct_total_donor=SHARE_MIN - 0.5,
         )
     ]
-    gender = _by_check(check_share_range(make_view("gender_view", rows)))
-    recipients = _by_check(check_share_range(make_view("recipients_view", rows)))
-    assert set(recipients) == {"invariants.share_range", "invariants.share_nulls"}
-    gender_range = gender["invariants.share_range"]
-    recipients_range = recipients["invariants.share_range"]
-    assert gender_range.severity is Severity.ERROR and not gender_range.passed
-    assert gender["invariants.share_range_net_flows"].passed
-    assert recipients_range.severity is Severity.WARNING and not recipients_range.passed
+    for view in ("gender_view", "recipients_view"):
+        results = _by_check(check_share_range(make_view(view, rows)))
+        assert set(results) == {"invariants.share_range", "invariants.share_nulls"}
+        share_range = results["invariants.share_range"]
+        assert not share_range.passed
+        assert share_range.severity is Severity.ERROR and share_range.blocking
 
 
-def test_gender_share_range_net_flows(make_view: MakeView) -> None:
-    """Gender: out-of-range shares in a group with a negative value are a WARNING."""
+def test_share_range_allows_net_flow_groups(make_view: MakeView) -> None:
+    """A negative value in the share's denominator group explains an out-of-range share."""
     net = [
         {
             **_row("France", "Kenya", v, pct_of_bilateral_allocable=s),
@@ -282,30 +280,68 @@ def test_gender_share_range_net_flows(make_view: MakeView) -> None:
         for marker, v, s in (("Main target", -50.0, -1.0), ("Not targeted", 100.0, 2.0))
     ]
     gross = [_row("France", "Mali", 100.0, pct_of_bilateral_allocable=1.5)]
-    results = _by_check(check_share_range(make_view("gender_view", net + gross)))
-    gross_result = results["invariants.share_range"]
-    net_result = results["invariants.share_range_net_flows"]
-    assert gross_result.severity is Severity.ERROR and gross_result.blocking
-    assert gross_result.details["recipient_name"].tolist() == ["Mali"]
-    assert net_result.severity is Severity.WARNING and not net_result.blocking
-    assert sorted(net_result.details["share"].tolist()) == [-1.0, 2.0]
-
-
-def test_share_nulls_error_above_one_percent(make_view: MakeView) -> None:
-    """Null shares are a WARNING, an ERROR above 1% of rows."""
-    rows = [
-        _row("France", f"R{i}", 1.0, pct_of_bilateral_allocable=0.5) for i in range(200)
+    result = _by_check(check_share_range(make_view("gender_view", net + gross)))[
+        "invariants.share_range"
     ]
-    rows[0]["pct_of_bilateral_allocable"] = np.nan
-    nulls = _by_check(check_share_range(make_view("gender_view", rows)))
-    assert nulls["invariants.share_nulls"].severity is Severity.WARNING
-    assert not nulls["invariants.share_nulls"].passed
+    assert result.details["recipient_name"].tolist() == ["Mali"]
+    assert check_share_range(make_view("gender_view", net))[0].passed
 
-    rows[1]["pct_of_bilateral_allocable"] = rows[2]["pct_of_bilateral_allocable"] = (
-        np.nan
-    )
-    nulls = _by_check(check_share_range(make_view("gender_view", rows)))
-    assert nulls["invariants.share_nulls"].severity is Severity.ERROR
+
+def test_share_range_by_donor_year_spans_recipients(make_view: MakeView) -> None:
+    """pct_total_donor's group is (year, donor): a negative row anywhere explains it."""
+    rows = [
+        _row("France", "Kenya", 200.0, pct_total_donor=2.0),
+        _row("France", "Mali", -100.0, pct_total_donor=-1.0),
+        _row("France", ODA_ELIGIBLE, 100.0, pct_total_donor=1.0),
+    ]
+    assert check_share_range(make_view("recipients_view", rows))[0].passed
+
+
+def test_share_range_exempts_donors_outside_the_reference(make_view: MakeView) -> None:
+    """EU Institutions are not in All bilateral donors, so their recipient share may top 1."""
+    rows = [
+        _row("EU Institutions", "Kenya", 300.0, pct_total_recipient=1.5),
+        _row(ALL_BILATERAL_DONORS, "Kenya", 200.0, pct_total_recipient=1.0),
+    ]
+    assert check_share_range(make_view("recipients_view", rows))[0].passed
+    rows[0]["donor_name"] = "France"
+    assert not check_share_range(make_view("recipients_view", rows))[0].passed
+
+
+def test_financing_total_oda_shares_are_unbounded(make_view: MakeView) -> None:
+    """Grants above 1 and Non-grants below 0 of Total ODA are normal."""
+    rows = [
+        _financing_row("France", YEAR, indicator_name=indicator, pct_of_total_oda=s)
+        for indicator, s in (("Total ODA", 1.0), ("Grants", 1.4), ("Non-grants", -0.4))
+    ]
+    assert check_share_range(make_view("financing_view", rows))[0].passed
+
+
+def test_null_share_needs_a_zero_denominator(make_view: MakeView) -> None:
+    """A null share blocks unless its denominator group sums to zero."""
+    zero_group = [
+        {
+            **_row("France", "Kenya", 0.0, pct_of_bilateral_allocable=np.nan),
+            "indicator_name": marker,
+        }
+        for marker in ("Main target", "Not targeted")
+    ]
+    nulls = _by_check(check_share_range(make_view("gender_view", zero_group)))
+    assert nulls["invariants.share_nulls"].passed
+    assert "2 null where" in nulls["invariants.share_nulls"].message
+
+    funded = [_row("France", "Mali", MILLION, pct_of_bilateral_allocable=np.nan)]
+    nulls = _by_check(check_share_range(make_view("gender_view", zero_group + funded)))
+    result = nulls["invariants.share_nulls"]
+    assert not result.passed and result.blocking
+    assert result.details["recipient_name"].tolist() == ["Mali"]
+
+
+def test_null_reference_share_without_reference_rows(make_view: MakeView) -> None:
+    """A null pct_total_recipient for a recipient no bilateral donor funds is allowed."""
+    rows = [_row("EU Institutions", "Kenya", 100.0, pct_total_recipient=np.nan)]
+    nulls = _by_check(check_share_range(make_view("recipients_view", rows)))
+    assert nulls["invariants.share_nulls"].passed
 
 
 def _financing_row(donor: str, year: int, **extra: object) -> dict:
@@ -322,23 +358,20 @@ def _financing_row(donor: str, year: int, **extra: object) -> dict:
     }
 
 
-def test_gni_share_nulls_are_a_warning_by_donor(make_view: MakeView) -> None:
-    """Null pct_of_gni is always a WARNING, counted per donor, and kept out of share_nulls."""
-    rows = [_financing_row("France", y) for y in range(2000, 2021)]
-    rows += [_financing_row("Kuwait", y, pct_of_gni=np.nan) for y in range(2000, 2021)]
-    results = _by_check(check_share_range(make_view("financing_view", rows)))
-    assert results["invariants.share_nulls"].passed
-    gni = results["invariants.share_nulls_gni"]
-    assert not gni.passed and gni.severity is Severity.WARNING and not gni.blocking
-    assert "'Kuwait': 21" in gni.message
+def test_gni_share_is_left_to_contracts(make_view: MakeView) -> None:
+    """Null or large pct_of_gni does not touch the share invariants."""
+    rows = [_financing_row("Kuwait", y, pct_of_gni=np.nan) for y in range(2000, 2021)]
+    rows.append(_financing_row("France", YEAR, pct_of_gni=5.0))
+    results = check_share_range(make_view("financing_view", rows))
+    assert all(r.passed for r in results)
 
 
-def test_gni_share_nulls_only_where_the_view_has_it(make_view: MakeView) -> None:
-    """Views without pct_of_gni have no GNI null result."""
-    results = _by_check(
-        check_share_range(make_view("gender_view", [_row("A", "B", 1.0)]))
-    )
-    assert "invariants.share_nulls_gni" not in results
+def test_share_sums_with_nothing_to_check_fail(make_view: MakeView) -> None:
+    """An identity whose rows are missing fails instead of passing on nothing."""
+    rows = [_row("France", "Kenya", 1.0)]  # no ODA eligible or All bilateral rows
+    [result] = check_share_sums(make_view("recipients_view", rows))
+    assert not result.passed and result.blocking
+    assert "no rows to check" in result.message
 
 
 def test_gender_shares_sum_to_one(make_view: MakeView) -> None:

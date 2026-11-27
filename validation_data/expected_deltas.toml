@@ -7,10 +7,17 @@
 # Give a precise reason. Do not add an entry just to silence a delta nobody can explain.
 # Remove entries once the baseline is refreshed past the change they explain.
 #
-# Fields: view and reason are required. kind ("value", "missing_in_candidate",
-# "new_in_candidate"), the years, donors, indicators, recipients and columns filters, the
-# max_rel and max_abs bounds, and options.json paths are optional. The module docstring of
-# src/data/validation/expected.py describes each one.
+# The anomaly check (a donor's unusual latest-year change in a view's key total) reads the
+# entries of kind "anomaly": a matched change is reported as INFO with the reason instead
+# of a WARNING.
+#
+# Fields: view and reason are required. The view must be a view name or "cross_view". kind
+# ("value", "missing_in_candidate", "new_in_candidate", "anomaly"), the years, donors,
+# indicators, recipients and columns filters, the max_rel and max_abs bounds, and
+# options.json paths are optional, but every entry needs at least one filter or bound, and
+# a filter list cannot be empty. Entries that explained nothing in a run that checked their
+# view are reported as expected.unused. The module docstring of
+# src/data/validation/expected.py describes each field.
 #
 # Example:
 #
@@ -22,3 +29,22 @@
 # indicators = ["Private sector instruments"]
 # columns = ["value_usd_current"]
 # max_rel = 0.05
+
+[[delta]]
+view = "financing_view"
+kind = "anomaly"
+reason = "US ODA fell by more than half in 2025 after the US cut foreign aid and closed USAID"
+years = [2025]
+donors = ["United States"]
+indicators = ["Grant equivalents"]
+max_rel = 0.65
+
+[[delta]]
+view = "financing_view"
+kind = "value"
+reason = "a group's pct_of_gni is null where none of its GNI-reporting members has the indicator"
+years = [2015]
+donors = ["Non-DAC countries"]
+indicators = ["Scholarships/training in donor country"]
+columns = ["pct_of_gni"]
+max_abs = 1e-5

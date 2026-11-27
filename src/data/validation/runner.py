@@ -15,7 +15,7 @@ from src.data.config import logger
 from src.data.validation.anomalies import run_anomalies
 from src.data.validation.contracts import has_required_columns, run_contracts
 from src.data.validation.cross_view import run_cross_view
-from src.data.validation.expected import ExpectedDelta
+from src.data.validation.expected import ExpectedDelta, unused_entries
 from src.data.validation.invariants import run_invariants
 from src.data.validation.io import LoadedView, iter_partitions, load_view
 from src.data.validation.models import CheckResult, Severity
@@ -24,6 +24,8 @@ from src.data.validation.views import get_spec
 
 # The partition the anomaly check reads in a partitioned view: it holds each donor's key total.
 ANOMALY_PARTITION: str = "oda-eligible-countries"
+# The view name expected-delta bookkeeping results are reported under.
+EXPECTED_VIEW: str = "expected_deltas"
 # Failures to run a check at all, as opposed to a check that ran and failed.
 _LOAD_ERRORS: tuple[type[Exception], ...] = (FileNotFoundError, KeyError, ValueError)
 
@@ -57,7 +59,9 @@ def _stream_partitions(
         yield part
 
 
-def run_view(name: str, source: Path) -> list[CheckResult]:
+def run_view(
+    name: str, source: Path, expected: Sequence[ExpectedDelta] = ()
+) -> list[CheckResult]:
     """Run contracts, invariants and anomalies on one view.
 
     Only loading errors are caught. An error raised by a check propagates. A view that is empty or
@@ -67,6 +71,7 @@ def run_view(name: str, source: Path) -> list[CheckResult]:
     Args:
         name: A key of VIEWS.
         source: The view's directory.
+        expected: Expected deltas; "anomaly" entries explain anomaly flags.
 
     Returns:
         The results; one blocking ERROR if the view could not be loaded.
@@ -80,7 +85,7 @@ def run_view(name: str, source: Path) -> list[CheckResult]:
     if view.data.empty or not has_required_columns(view):
         return results
     if not get_spec(name).partitioned:
-        return [*results, *run_invariants([view]), *run_anomalies(view)]
+        return [*results, *run_invariants([view]), *run_anomalies(view, expected)]
 
     del view  # release the whole view before streaming its partitions
     gc.collect()
@@ -101,11 +106,14 @@ def run_view(name: str, source: Path) -> list[CheckResult]:
                 check="anomalies.partition",
                 view=name,
                 passed=False,
-                severity=Severity.WARNING,
-                message=f"no {ANOMALY_PARTITION} partition to check",
+                severity=Severity.ERROR,
+                message=f"no {ANOMALY_PARTITION} partition: nothing to check",
             ),
         ]
-    return [*results, *(r for part in anomaly_parts for r in run_anomalies(part))]
+    return [
+        *results,
+        *(r for part in anomaly_parts for r in run_anomalies(part, expected)),
+    ]
 
 
 def run_view_parity(
@@ -141,7 +149,7 @@ def run_validation(
     results: list[CheckResult] = []
     for name in views:
         logger.info("Checking %s (%s)", name, sources[name])
-        results += run_view(name, sources[name])
+        results += run_view(name, sources[name], expected)
         if baseline_sources is not None:
             logger.info("Comparing %s with %s", name, baseline_sources[name])
             results += run_view_parity(
@@ -150,4 +158,46 @@ def run_validation(
     if cross_view:
         logger.info("Comparing the views with topic_page")
         results += run_cross_view(dict(sources), expected)
-    return results
+    return [
+        *results,
+        unused_expected_result(
+            expected,
+            anomaly_views=views,
+            parity_views=views if baseline_sources is not None else (),
+            cross_view=cross_view,
+        ),
+    ]
+
+
+def unused_expected_result(
+    expected: Sequence[ExpectedDelta],
+    *,
+    anomaly_views: Iterable[str],
+    parity_views: Iterable[str],
+    cross_view: bool,
+) -> CheckResult:
+    """A WARNING listing expected entries that explained nothing this run, else a pass.
+
+    Only entries whose view and kind the run checked count; a parity entry is not unused
+    in a run without --baseline. A stale entry blocks nothing but could later explain a
+    real regression, so it should be removed.
+    """
+    unused = unused_entries(
+        expected,
+        anomaly_views=anomaly_views,
+        parity_views=parity_views,
+        cross_view=cross_view,
+    )
+    listed = "; ".join(f"{e.view} {e.kind.value}: {e.reason}" for e in unused)
+    return CheckResult(
+        check="expected.unused",
+        view=EXPECTED_VIEW,
+        passed=not unused,
+        severity=Severity.WARNING,
+        message=(
+            f"{len(unused)} expected deltas explained nothing: {listed}"
+            if unused
+            else "Every expected delta in scope explained something"
+        ),
+        blocking=False,
+    )

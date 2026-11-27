@@ -21,15 +21,23 @@ Checks, each reported per reason (unexplained, or one result per explaining reas
 
 Nulls: null against null is equal; null against a number is a delta, which an entry's
 max_abs bounds by the number's absolute value (the null read as 0); max_rel cannot.
+
+Renames: a baseline taken before a column or recipient was renamed is read under the new
+names (BASELINE_COLUMN_RENAMES, BASELINE_RECIPIENT_RENAMES), so renamed rows are compared
+value by value instead of showing up as one-sided keys or null-vs-number shares. Every
+rename applied is reported once, as ``parity.baseline_renames`` (INFO, explained).
 """
 
-from collections.abc import Callable, Iterator, Sequence
+from collections import Counter
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
+from itertools import chain
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
+from src.data.analysis_tools.naming import slugify
 from src.data.config import logger
 from src.data.validation.expected import DeltaKind, ExpectedDelta, find_explanation
 from src.data.validation.invariants import ROUNDING_UNIT, sum_tolerance
@@ -84,6 +92,34 @@ _OPTION_DIMENSIONS: dict[str, str] = {
 # cross_view.provenance_consistency checks provenance across views instead.
 OPTIONS_METADATA_KEYS: frozenset[str] = frozenset({"provenance"})
 _AMOUNT_UNITS: tuple[tuple[float, str], ...] = ((1e9, "bn"), (1e6, "mn"))
+
+# Renames made after the production baseline of 2026-11-20 (one canonical name per
+# recipient code, and gender's share named for its denominator). Applied to the baseline
+# side only. Delete both maps once the baseline is refreshed past that change. Until then
+# a rename that finds nothing to rename is not reported.
+BASELINE_RENAMES_REASON: str = (
+    "baseline predates the 2026-11 recipient and column renames; refresh it after merge"
+)
+BASELINE_COLUMN_RENAMES: dict[str, dict[str, str]] = {
+    "gender_view": {"pct_of_total_oda": "pct_of_bilateral_allocable"},
+}
+BASELINE_RECIPIENT_RENAMES: dict[str, str] = {
+    "Southern Asia, unspecified": "South Asia, unspecified",  # 679
+    "States Ex-Yugoslavia, unspecified": "States ex-Yugoslavia, unspecified",  # 88
+    "Côte d\u2019Ivoire": "Côte d'Ivoire",  # 247
+    "Sint Maarten": "Netherlands Antilles",  # 361
+    "Palestinian Authority or West Bank and Gaza Strip": "West Bank and Gaza Strip",  # 550
+    "China (People\u2019s Republic of)": "China (People's Republic of)",  # 730
+    "Democratic People\u2019s Republic of Korea": "Democratic People's Republic of Korea",
+    "Lao People\u2019s Democratic Republic": "Lao People's Democratic Republic",  # 745
+}
+# The same renames as sectors partition slugs, where the slug itself changes.
+BASELINE_SLUG_RENAMES: dict[str, str] = {
+    slugify(old): slugify(new)
+    for old, new in BASELINE_RECIPIENT_RENAMES.items()
+    if slugify(old) != slugify(new)
+}
+RECIPIENT_COLUMN: str = "recipient_name"
 
 
 # --- Explaining deltas ---------------------------------------------------------------
@@ -378,6 +414,107 @@ def _failed(
     )
 
 
+# --- Baseline renames ------------------------------------------------------------------
+
+
+def rename_baseline_frame(
+    view: str, df: pd.DataFrame, applied: Counter[tuple[str, str, str]]
+) -> pd.DataFrame:
+    """The baseline frame under the current names; counts each rename in ``applied``.
+
+    Args:
+        view: The view name, for its column renames.
+        df: Baseline rows.
+        applied: (what, old, new) -> rows renamed, updated in place.
+    """
+    columns = {
+        old: new
+        for old, new in BASELINE_COLUMN_RENAMES.get(view, {}).items()
+        if old in df.columns and new not in df.columns
+    }
+    for old, new in columns.items():
+        applied[("column", old, new)] += len(df)
+    df = df.rename(columns=columns)
+    if RECIPIENT_COLUMN not in df.columns:
+        return df
+    recipients = df[RECIPIENT_COLUMN]
+    renamed = recipients.isin(list(BASELINE_RECIPIENT_RENAMES))
+    if not renamed.any():
+        return df
+    for old, n in recipients[renamed].value_counts().items():
+        applied[("recipient", str(old), BASELINE_RECIPIENT_RENAMES[str(old)])] += int(n)
+    return df.assign(
+        **{
+            RECIPIENT_COLUMN: recipients.astype(object)
+            .replace(BASELINE_RECIPIENT_RENAMES)
+            .astype(recipients.dtype)
+        }
+    )
+
+
+def _rename_option_value(value: object) -> object:
+    """An options.json value with renamed recipient names and slugs, at any depth."""
+    if isinstance(value, dict):
+        return {
+            _rename_option_value(k): _rename_option_value(v) for k, v in value.items()
+        }
+    if isinstance(value, list):
+        return [_rename_option_value(v) for v in value]
+    if isinstance(value, str):
+        return BASELINE_RECIPIENT_RENAMES.get(
+            value, BASELINE_SLUG_RENAMES.get(value, value)
+        )
+    return value
+
+
+def rename_baseline_options(options: dict) -> dict:
+    """Baseline options.json under the current recipient names and slugs."""
+    renamed = _rename_option_value(options)
+    assert isinstance(renamed, dict)  # a dict maps to a dict
+    return renamed
+
+
+def renamed_option_lists(options: object, path: str = "") -> set[str]:
+    """Dotted paths of the lists in options.json that hold a renamed recipient.
+
+    Renaming moves a name within a sorted list, so such a list reorders.
+    """
+    if isinstance(options, dict):
+        return {
+            found
+            for key, value in options.items()
+            for found in renamed_option_lists(value, f"{path}.{key}" if path else key)
+        }
+    if isinstance(options, list) and any(
+        isinstance(v, str) and v in BASELINE_RECIPIENT_RENAMES for v in options
+    ):
+        return {path}
+    return set()
+
+
+def _renames_result(view: str, applied: Mapping[tuple[str, str, str], int]) -> list:
+    """One explained parity.baseline_renames result, or nothing when none applied."""
+    if not applied:
+        return []
+    table = pd.DataFrame(
+        [(what, old, new, n) for (what, old, new), n in sorted(applied.items())],
+        columns=["what", "baseline", "candidate", "rows"],
+    )
+    listed = "; ".join(
+        f"{row.what} {row.baseline!r} -> {row.candidate!r}"
+        for row in table.itertuples(index=False)
+    )
+    return [
+        _failed(
+            "parity.baseline_renames",
+            view,
+            f"baseline read under {len(table)} renames: {listed}",
+            reason=BASELINE_RENAMES_REASON,
+            details=table,
+        )
+    ]
+
+
 # --- Comparing one pair of frames ------------------------------------------------------
 
 
@@ -453,6 +590,7 @@ class _ParityRun:
     donor_year_reasons: dict[tuple[str, int], set[str]] = field(default_factory=dict)
     partitions: int = 0
     one_sided_partitions: list[dict] = field(default_factory=list)
+    renames: Counter[tuple[str, str, str]] = field(default_factory=Counter)
 
     @property
     def view(self) -> str:
@@ -495,6 +633,7 @@ class _ParityRun:
 
     def add(self, candidate: pd.DataFrame, baseline: pd.DataFrame) -> set[str]:
         """Compare one pair of frames; returns the reasons of its one-sided keys."""
+        baseline = rename_baseline_frame(self.view, baseline, self.renames)
         self.rows["candidate"] += len(candidate)
         self.rows["baseline"] += len(baseline)
         merged = self._prepare(candidate, "candidate").merge(
@@ -686,7 +825,10 @@ class _ParityRun:
         totals_log = _DeltaLog()
         totals_log.add(self._totals_deltas())
 
-        results = [self._row_count_result(key_reasons)]
+        results = [
+            *_renames_result(self.view, self.renames),
+            self._row_count_result(key_reasons),
+        ]
         if (duplicates := self._duplicates_result()) is not None:
             results.append(duplicates)
         results += self._partition_results()
@@ -838,11 +980,20 @@ def _options_results(
     view: str, candidate: dict, baseline: dict, expected: Sequence[ExpectedDelta]
 ) -> list[CheckResult]:
     """Compare two options.json dicts, without OPTIONS_METADATA_KEYS; one per reason."""
-    deltas = _options_deltas(_without_metadata(candidate), _without_metadata(baseline))
+    baseline = _without_metadata(baseline)
+    deltas = _options_deltas(
+        _without_metadata(candidate), rename_baseline_options(baseline)
+    )
     if not deltas:
         return [_passed("parity.options", view, "options.json identical")]
+    reordered_by_rename = renamed_option_lists(baseline)
     table = pd.DataFrame(deltas)
-    table["reason"] = [_explain_option(d, view, expected) for d in deltas]
+    table["reason"] = [
+        BASELINE_RENAMES_REASON
+        if d["change"] == "reordered" and d["path"] in reordered_by_rename
+        else _explain_option(d, view, expected)
+        for d in deltas
+    ]
     results = []
     for reason, group in table.groupby("reason", sort=True):
         listed = "; ".join(
@@ -904,10 +1055,48 @@ def compare_views(
 type _PartitionPair = tuple[str, LoadedView | None, LoadedView | None]
 
 
+def _set_aside(
+    partitions: Iterator[tuple[str, LoadedView]],
+    slugs: Mapping[str, str],
+    held: dict[str, LoadedView],
+) -> Iterator[tuple[str, LoadedView]]:
+    """Yield partitions, keeping those whose slug is in ``slugs`` in ``held`` instead.
+
+    ``held`` is keyed by ``slugs[slug]``, the name both sides share after renaming.
+    """
+    for slug, view in partitions:
+        if slug in slugs:
+            held[slugs[slug]] = view
+        else:
+            yield slug, view
+
+
+def _merge_join(
+    candidates: Iterator[tuple[str, LoadedView]],
+    baselines: Iterator[tuple[str, LoadedView]],
+) -> Iterator[_PartitionPair]:
+    """Merge-join two sorted partition streams by slug. A missing side is None."""
+    c, b = next(candidates, None), next(baselines, None)
+    while c is not None or b is not None:
+        if c is not None and (b is None or c[0] < b[0]):
+            yield c[0], c[1], None
+            c = next(candidates, None)
+        elif b is not None and (c is None or b[0] < c[0]):
+            yield b[0], None, b[1]
+            b = next(baselines, None)
+        elif c is not None and b is not None:
+            yield c[0], c[1], b[1]
+            c, b = next(candidates, None), next(baselines, None)
+
+
 def _paired_partitions(
     name: str, candidate_source: Path, baseline_source: Path
 ) -> Iterator[_PartitionPair]:
-    """Merge-join the two sides' sorted partitions by slug; a missing side is None.
+    """Pair the two sides' partitions by slug. A missing side is None.
+
+    Partitions under a renamed slug (BASELINE_SLUG_RENAMES, a handful of recipients) sort
+    elsewhere on each side, so both sides' copies are held back and paired at the end
+    under the new slug.
 
     Raises:
         ValueError: One side is a single file and the other is partitioned.
@@ -922,16 +1111,21 @@ def _paired_partitions(
             f"{name}: cannot compare a single-file source with a partitioned one "
             f"({candidate_source} vs {baseline_source})"
         )
-    while c is not None or b is not None:
-        if c is not None and (b is None or c[0] < b[0]):
-            yield c[0], c[1], None
-            c = next(candidates, None)
-        elif b is not None and (c is None or b[0] < c[0]):
-            yield b[0], None, b[1]
-            b = next(baselines, None)
-        elif c is not None and b is not None:
-            yield c[0], c[1], b[1]
-            c, b = next(candidates, None), next(baselines, None)
+    held_candidates: dict[str, LoadedView] = {}
+    held_baselines: dict[str, LoadedView] = {}
+    new_slugs = {new: new for new in BASELINE_SLUG_RENAMES.values()}
+    yield from _merge_join(
+        _set_aside(
+            chain([c] if c is not None else [], candidates), new_slugs, held_candidates
+        ),
+        _set_aside(
+            chain([b] if b is not None else [], baselines),
+            BASELINE_SLUG_RENAMES,
+            held_baselines,
+        ),
+    )
+    for slug in sorted(held_candidates.keys() | held_baselines.keys()):
+        yield slug, held_candidates.get(slug), held_baselines.get(slug)
 
 
 def run_parity(

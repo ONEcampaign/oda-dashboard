@@ -11,6 +11,7 @@ from src.data.validation.expected import (
     ExpectedDelta,
     find_explanation,
     load_expected_deltas,
+    unused_entries,
 )
 from src.data.validation.views import VIEWS
 
@@ -56,12 +57,70 @@ def test_load_full_entry(tmp_path: Path) -> None:
 
 
 def test_minimal_entry_defaults(tmp_path: Path) -> None:
-    """Only view and reason are required; empty filter lists mean any."""
-    text = '[[delta]]\nview = "cross_view"\nreason = "r"\nyears = []\n'
+    """View, reason and one filter suffice; the rest default to any."""
+    text = '[[delta]]\nview = "cross_view"\nreason = "r"\nyears = [2024]\n'
     [entry] = load_expected_deltas(_write(tmp_path, text))
     assert entry.kind is DeltaKind.VALUE
-    assert entry.years is None
+    assert entry.donors is None
     assert entry.max_rel is None
+
+
+@pytest.mark.parametrize(
+    ("body", "error"),
+    [
+        ("", "at least one of"),  # no filter or bound: would explain everything
+        ("years = []", "years is empty"),
+        ("donors = []", "donors is empty"),
+    ],
+)
+def test_entries_must_be_scoped(tmp_path: Path, body: str, error: str) -> None:
+    """An entry without a filter or bound, or with an empty filter, is rejected."""
+    text = f'[[delta]]\nview = "gender_view"\nreason = "r"\n{body}\n'
+    with pytest.raises(ValueError, match=error):
+        load_expected_deltas(_write(tmp_path, text))
+
+
+def test_unknown_view_is_rejected(tmp_path: Path) -> None:
+    """A misspelt view fails to load instead of never matching."""
+    text = '[[delta]]\nview = "financing"\nreason = "r"\nyears = [2024]\n'
+    with pytest.raises(ValueError, match="unknown view 'financing'"):
+        load_expected_deltas(_write(tmp_path, text))
+
+
+def test_anomaly_entries_take_max_rel_only(tmp_path: Path) -> None:
+    """Kind "anomaly" reads max_rel and rejects max_abs."""
+    base = '[[delta]]\nview = "financing_view"\nreason = "r"\nkind = "anomaly"\n'
+    [entry] = load_expected_deltas(_write(tmp_path, base + "max_rel = 0.6\n"))
+    assert entry.kind is DeltaKind.ANOMALY and entry.max_rel == 0.6
+    with pytest.raises(ValueError, match="does not apply"):
+        load_expected_deltas(_write(tmp_path, base + "max_abs = 1\n"))
+
+
+def test_hits_and_unused_entries() -> None:
+    """find_explanation counts hits, and unused_entries lists in-scope entries never hit."""
+    used = ExpectedDelta(view="financing_view", reason="u", years=frozenset({2024}))
+    idle = ExpectedDelta(view="gender_view", reason="i", years=frozenset({2024}))
+    cross = ExpectedDelta(view="cross_view", reason="c", years=frozenset({2024}))
+    anomaly = ExpectedDelta(
+        view="gender_view", reason="a", kind=DeltaKind.ANOMALY, max_rel=1.0
+    )
+    entries = [used, idle, cross, anomaly]
+    assert find_explanation(entries, view="financing_view", kind="value", year=2024)
+    assert used.hits == 1 and idle.hits == 0
+
+    def unused(**scope: object) -> list[str]:
+        return [e.reason for e in unused_entries(entries, **scope)]
+
+    assert unused(anomaly_views=[], parity_views=[], cross_view=False) == []
+    assert unused(anomaly_views=["gender_view"], parity_views=[], cross_view=True) == [
+        "c",
+        "a",
+    ]
+    assert unused(
+        anomaly_views=[],
+        parity_views=["financing_view", "gender_view"],
+        cross_view=False,
+    ) == ["i"]
 
 
 def test_missing_file(tmp_path: Path) -> None:
@@ -78,21 +137,27 @@ def test_missing_file(tmp_path: Path) -> None:
         ('delta = "x"\n', "array of tables"),
         ('[[delta]]\nview = "v"\n', "reason"),
         ('[[delta]]\nview = "v"\nreason = " "\n', "reason"),
-        ('[[delta]]\nview = "v"\nreason = "r"\ntypo = 1\n', "unknown fields"),
-        ('[[delta]]\nview = "v"\nreason = "r"\nkind = "x"\n', "kind must be"),
-        ('[[delta]]\nview = "v"\nreason = "r"\nyears = ["2024"]\n', "years"),
-        ('[[delta]]\nview = "v"\nreason = "r"\ndonors = "France"\n', "donors"),
-        ('[[delta]]\nview = "v"\nreason = "r"\nmax_rel = -1\n', "max_rel"),
-        ('[[delta]]\nview = "v"\nreason = "r"\nmax_rel = "a"\n', "max_rel"),
-        ('[[delta]]\nview = "v"\nreason = "r"\nmax_abs = -1\n', "max_abs"),
-        ('[[delta]]\nview = "v"\nreason = "r"\ncolumns = "pct_of_gni"\n', "columns"),
+        ('[[delta]]\nview = "gender_view"\nreason = "r"\ntypo = 1\n', "unknown fields"),
+        ('[[delta]]\nview = "gender_view"\nreason = "r"\nkind = "x"\n', "kind must be"),
+        ('[[delta]]\nview = "gender_view"\nreason = "r"\nyears = ["2024"]\n', "years"),
         (
-            '[[delta]]\nview = "v"\nreason = "r"\nkind = "new_in_candidate"\nmax_abs = 1\n',
-            "only to kind",
+            '[[delta]]\nview = "gender_view"\nreason = "r"\ndonors = "France"\n',
+            "donors",
+        ),
+        ('[[delta]]\nview = "gender_view"\nreason = "r"\nmax_rel = -1\n', "max_rel"),
+        ('[[delta]]\nview = "gender_view"\nreason = "r"\nmax_rel = "a"\n', "max_rel"),
+        ('[[delta]]\nview = "gender_view"\nreason = "r"\nmax_abs = -1\n', "max_abs"),
+        (
+            '[[delta]]\nview = "gender_view"\nreason = "r"\ncolumns = "pct_of_gni"\n',
+            "columns",
         ),
         (
-            '[[delta]]\nview = "v"\nreason = "r"\nkind = "new_in_candidate"\nmax_rel = 0.1\n',
-            "only to kind",
+            '[[delta]]\nview = "gender_view"\nreason = "r"\nkind = "new_in_candidate"\nmax_abs = 1\n',
+            "does not apply to kind",
+        ),
+        (
+            '[[delta]]\nview = "gender_view"\nreason = "r"\nkind = "new_in_candidate"\nmax_rel = 0.1\n',
+            "does not apply to kind",
         ),
     ],
 )
@@ -207,14 +272,16 @@ def test_load_paths(tmp_path: Path) -> None:
 )
 def test_invalid_paths(tmp_path: Path, extra: str) -> None:
     """paths must be a list of strings and takes no bounds."""
-    text = f'[[delta]]\nview = "v"\nreason = "r"\n{extra}\n'
+    text = f'[[delta]]\nview = "gender_view"\nreason = "r"\n{extra}\n'
     with pytest.raises(ValueError, match="paths"):
         load_expected_deltas(_write(tmp_path, text))
 
 
 def test_paths_filter() -> None:
     """An entry with paths matches only a delta at one of those paths."""
-    entry = ExpectedDelta(view="v", reason="r", paths=frozenset({"year.start"}))
-    assert entry.matches(view="v", kind="value", path="year.start")
-    assert not entry.matches(view="v", kind="value", path="year.end")
-    assert not entry.matches(view="v", kind="value", year=2024)
+    entry = ExpectedDelta(
+        view="gender_view", reason="r", paths=frozenset({"year.start"})
+    )
+    assert entry.matches(view="gender_view", kind="value", path="year.start")
+    assert not entry.matches(view="gender_view", kind="value", path="year.end")
+    assert not entry.matches(view="gender_view", kind="value", year=2024)

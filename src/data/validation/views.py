@@ -24,6 +24,11 @@ PRICES: tuple[str, ...] = ("current", "constant")
 VALUE_COLUMNS: tuple[str, ...] = tuple(
     f"value_{currency.lower()}_{price}" for currency in CURRENCIES for price in PRICES
 )
+# (current, constant) value column per currency.
+CURRENCY_PAIRS: tuple[tuple[str, str], ...] = tuple(
+    (f"value_{currency.lower()}_current", f"value_{currency.lower()}_constant")
+    for currency in CURRENCIES
+)
 
 # Dtypes as load_view returns them. Labels are arrow-backed strings (str(dtype) == "string").
 # Contracts compare str(dtype) against these, with int/float width tolerance.
