@@ -8,9 +8,7 @@
     "build": "export PYTHONPATH=$(pwd) && uv sync --frozen && npm run tw:build && observable build",
     "dev": "export PYTHONPATH=$(pwd) && uv sync --frozen && npm run tw:build && concurrently \"npm run tw:dev\" \"observable preview\"",
     "deploy": "export PYTHONPATH=$(pwd) && npm run tw:build && observable deploy",
-    "observable": "observable",
-    "preinstall": "pip install uv --upgrade && pip uninstall opencv-python",
-    "install": "uv sync"
+    "observable": "observable"
   },
   "dependencies": {
     "@observablehq/framework": "^1.13.3",
@@ -23,7 +21,6 @@
     "tailwindcss": "^3.4.17"
   },
   "engines": {
-    "node": ">=18",
-    "poetry": ">2.0"
+    "node": ">=18"
   }
 }
