@@ -26,7 +26,6 @@ from src.data.analysis_tools.oda import (
 from src.data.analysis_tools.transformations import get_crs_recipient_classifications
 from src.data.config import (
     DAC2A_RECIPIENT_AGGREGATES,
-    DAC2A_RECIPIENT_NAMES,
     ODA_ELIGIBLE,
     RECIPIENT_NAME_OVERRIDES,
 )
@@ -140,8 +139,8 @@ def canonical_recipients(df: pd.DataFrame) -> pd.DataFrame:
         df: DAC2A rows with recipient_code and recipient_name.
 
     Returns:
-        The rows, with canonical names, then the view's names for its groups and for the
-        countries the bulk file spells differently.
+        The rows, with the canonical names every view shares, then the view's names for
+        the DAC2A groups, which only this view reads.
 
     Raises:
         ValueError: If a recipient has no code, or two recipient codes end up with one name,
@@ -150,9 +149,8 @@ def canonical_recipients(df: pd.DataFrame) -> pd.DataFrame:
     if df["recipient_code"].isna().any():
         raise ValueError("DAC2A rows without a recipient code")
 
-    df = canonical_recipient_names(df)
     df = apply_name_overrides(
-        df, DAC2A_RECIPIENT_AGGREGATES | DAC2A_RECIPIENT_NAMES, "recipient"
+        canonical_recipient_names(df), DAC2A_RECIPIENT_AGGREGATES, "recipient"
     )
 
     codes_per_name = df.groupby("recipient_name", observed=True)[

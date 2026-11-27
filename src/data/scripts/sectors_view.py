@@ -374,7 +374,8 @@ def combined_sectors(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataFram
         [
             sectors,
             # No EU27 + institutions plain sum: it would double count member contributions
-            # routed through the institutions, so the bloc is built from the corrected frame.
+            # routed through the institutions, so the bloc is built from the corrected frame
+            # (the sectors method of the three in analysis_tools.eu).
             *build_donor_group_totals(sectors, DONOR_GROUP_COLS).values(),
             # The corrected frame needs the same recipient groups as everything else, or the
             # bloc would carry imputed multilateral for countries but not for regions,

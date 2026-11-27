@@ -1,15 +1,31 @@
-"""The EU27 + EU Institutions bloc: weighting the institutions so members are not counted twice.
+"""The EU27 + EU Institutions bloc, and how each view avoids counting member money twice.
 
 EU member states fund much of the EU Institutions' (918) spending through their core
 contributions, which DAC1 records on line 2102 of each member. Summing members and the
-institutions as they stand would count that money twice, once as the members' contributions
-and again as the institutions' spending. The institutions' figures are therefore scaled by
-the share of their total ODA that member contributions do not fund:
+institutions as they stand can count that money twice, once as the members' contributions
+and again as the institutions' spending. Whether it does depends on what a view reads, so the
+views de-duplicate in three different ways.
 
-    weight = 1 - sum(EU27 line 2102) / 918 total ODA
+1. Financing and recipients: weight the institutions. Both read totals that include the
+   members' core contributions to the EU (DAC1 aggregates; DAC2A imputed multilateral, line
+   106), and neither can split those out by channel. The institutions' figures are scaled by
+   the share of their total ODA that member contributions do not fund:
 
-per year and basis. This is the calculation of oda-data 2.x's
-``get_eui_plus_bilateral_providers_indicator``, which oda-data 3.0 does not provide.
+       weight = 1 - sum(EU27 line 2102) / 918 total ODA
+
+   per year and basis, on the basis of the figures it scales (``eui_weights``,
+   ``weight_eu_institutions``). This is the calculation of oda-data 2.x's
+   ``get_eui_plus_bilateral_providers_indicator``, which oda-data 3.0 does not provide.
+
+2. Sectors: drop the members' EU-channel flows. The imputed multilateral read carries the
+   channel, so the members' imputed multilateral on EUI_CHANNEL_CODES (their contributions
+   reaching the institutions) is left out of the bloc, and the institutions' own spending is
+   kept in full (``get_eu27_eui_imputed`` in ``scripts/sectors_view.py``). This removes the
+   overlap exactly where it sits, by sector and recipient.
+
+3. Gender: a plain sum. The gender marker data is bilateral CRS only, with no imputed
+   multilateral leg, so members' core contributions to the EU never appear in it and nothing
+   is counted twice.
 """
 
 from collections.abc import Iterable

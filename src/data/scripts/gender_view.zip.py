@@ -61,6 +61,8 @@ GENDER_MARKER: str = "oecd.crs.gender_marker"
 CRS: str = "crs"
 
 VIEW_KEYS: list[str] = ["year", "donor_name", "recipient_name", "indicator_name"]
+# Each marker score's share of the entity's bilateral allocable aid (the four scores together).
+SHARE_COLUMN: str = "pct_of_bilateral_allocable"
 # Everything identifying a row except the recipient, and except the donor, respectively.
 RECIPIENT_GROUP_COLS: list[str] = [
     "year",
@@ -115,7 +117,7 @@ def combined_gender(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataFrame
 
     Returns:
         Wide frame keyed by year, donor_name, recipient_name and indicator_name, with one
-        column per currency and price pair plus pct_of_total_oda.
+        column per currency and price pair plus pct_of_bilateral_allocable.
     """
     logger.info("Fetching gender marker data...")
     gender = read_gender_markers(ctx, provenance)
@@ -143,7 +145,8 @@ def combined_gender(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataFrame
             *build_donor_group_totals(gender, DONOR_GROUP_COLS).values(),
             # A plain sum is safe here: the marker data has no imputed multilateral leg
             # through which member contributions could be counted twice, and with provider
-            # in `by` the CRS returns EU Institutions (918) as any other provider.
+            # in `by` the CRS returns EU Institutions (918) as any other provider. The three
+            # ways the views build this bloc are set out in analysis_tools.eu.
             get_group_total(
                 gender,
                 EU_COUNTRIES | EU_INSTITUTIONS,
@@ -161,12 +164,13 @@ def combined_gender(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataFrame
     logger.info("Pivoting to wide format...")
     gender = widen_currency_price(df=gender, index_cols=tuple(VIEW_KEYS))
 
-    # The four marker scores partition each entity's allocable aid, so the denominator is the
-    # entity's own total rather than a reference entity's.
+    # The four marker scores partition each entity's bilateral allocable aid, so the
+    # denominator is the entity's own total rather than a reference entity's. That total
+    # covers bilateral allocable aid only, hence the column name.
     gender = add_share_of_group_total(
         gender,
         group_cols=["year", "donor_name", "recipient_name"],
-        pct_col="pct_of_total_oda",
+        pct_col=SHARE_COLUMN,
     )
 
     # Integers in units compress far better than floats in millions.

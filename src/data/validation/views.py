@@ -188,7 +188,7 @@ VIEWS: dict[str, ViewSpec] = {
         _make_spec(
             "gender_view",
             keys=_RECIPIENT_KEYS,
-            share_columns=("pct_of_total_oda",),
+            share_columns=("pct_of_bilateral_allocable",),
             time=GENDER_TIME,
         ),
         _make_spec(

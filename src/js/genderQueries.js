@@ -66,7 +66,7 @@ export function genderQueries(
         donor: row.donor,
         recipient: row.recipient,
         indicator: row.indicator,
-        value: row.pct_of_total != null ? row.pct_of_total * 100 : null,
+        value: row.pct_of_bilateral_allocable != null ? row.pct_of_bilateral_allocable * 100 : null,
         unit: "% of bilateral allocable aid",
         source: "OECD CRS"
     })), timeRange, null);
@@ -84,7 +84,7 @@ export function transformTableData(rows, unit, currency, prices) {
         indicator: row.indicator,
         value: unit === "value"
             ? row.value
-            : row.pct_of_total != null ? row.pct_of_total * 100 : null,
+            : row.pct_of_bilateral_allocable != null ? row.pct_of_bilateral_allocable * 100 : null,
         unit: unit === "value"
             ? `${currency} ${prices} million`
             : "% of bilateral allocable aid",
@@ -161,7 +161,7 @@ function executeGenderSeries(
             recipient: row.recipient_name,
             indicator: row.indicator_name,
             value: convertUnitsToMillions(row[valueColumn]),
-            pct_of_total: row.pct_of_total_oda ?? null
+            pct_of_bilateral_allocable: row.pct_of_bilateral_allocable ?? null
         }))
         .sort((a, b) => {
             if (a.year !== b.year) return a.year - b.year;

@@ -5,6 +5,11 @@ the same entity must not appear as "Caribbean unspecified" in one view and
 "Caribbean, regional" in another, and a name used as a URL path segment has to be ASCII-safe.
 This module owns those rules.
 
+Every view gives a recipient code one name. Each view names its
+recipients through ``canonical_recipient_names``, which applies config's
+``RECIPIENT_NAME_OVERRIDES`` (the single place a code's display name is chosen) and the
+spelling normalisations below. No view keeps a name list of its own for countries.
+
 Add here anything that decides how an entity is *labelled*. Aggregation and reshaping belong in
 ``transformations``; writing files belongs in ``outputs``.
 """
@@ -90,8 +95,28 @@ def normalize_unspecified_names(names: pd.Series) -> pd.Series:
     )
 
 
+# Typographic apostrophes some sources use ("Côte d’Ivoire"), and the plain one every view
+# shows, so a name never differs between views by its apostrophe alone.
+_TYPOGRAPHIC_APOSTROPHE: str = "\u2019"
+_PLAIN_APOSTROPHE: str = "'"
+
+
+def normalize_apostrophes(names: pd.Series) -> pd.Series:
+    """Replace typographic apostrophes with plain ones.
+
+    Args:
+        names: Recipient names.
+
+    Returns:
+        The names as strings, with every apostrophe plain; missing values stay missing.
+    """
+    return names.astype("string").str.replace(
+        _TYPOGRAPHIC_APOSTROPHE, _PLAIN_APOSTROPHE, regex=False
+    )
+
+
 def canonical_recipient_names(df: pd.DataFrame) -> pd.DataFrame:
-    """Apply RECIPIENT_NAME_OVERRIDES, then normalise the unspecified labels.
+    """Apply RECIPIENT_NAME_OVERRIDES, then normalise apostrophes and unspecified labels.
 
     Every view names recipients through this, so a code-keyed rename reaches them all.
 
@@ -102,7 +127,9 @@ def canonical_recipient_names(df: pd.DataFrame) -> pd.DataFrame:
         The frame with canonical recipient names.
     """
     df = apply_name_overrides(df, RECIPIENT_NAME_OVERRIDES, "recipient")
-    df["recipient_name"] = normalize_unspecified_names(df["recipient_name"])
+    df["recipient_name"] = normalize_unspecified_names(
+        normalize_apostrophes(df["recipient_name"])
+    )
     return df
 
 
