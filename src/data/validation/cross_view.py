@@ -335,7 +335,7 @@ def topic_sector_shares(read: TopicReader) -> pd.DataFrame:
 def _topic_sector_amount(
     file: str, value_column: str
 ) -> Callable[[TopicReader], pd.DataFrame]:
-    """Build an extractor for aid_to_{health,humanitarian}_ts: bn constant 2024 -> USD mn.
+    """Build an extractor for aid_to_{health,humanitarian}_ts: bn constant 2025 -> USD mn.
 
     The topic series starts in 2010; years before SECTORS_TIME's start are left out, since
     the sectors view does not publish them.
@@ -354,7 +354,7 @@ def _topic_sector_amount(
         )
         return long[long["year"] >= SECTORS_TIME["start"]]
 
-    extract.__doc__ = f"{file} {value_column!r}, USD mn constant 2024."
+    extract.__doc__ = f"{file} {value_column!r}, USD mn constant 2025."
     return extract
 
 
@@ -373,7 +373,7 @@ def topic_africa_share(read: TopicReader) -> pd.DataFrame:
 
 
 def topic_income_groups(read: TopicReader) -> pd.DataFrame:
-    """aid_to_income_latest "ODA" ("US$27.0 billion"), USD mn constant 2024.
+    """aid_to_income_latest "ODA" ("US$27.0 billion"), USD mn constant 2025.
 
     Only the four World Bank income groups; "Not classified by income" has no view
     counterpart.
@@ -470,14 +470,17 @@ def view_oda_gni(views: ViewReader) -> pd.DataFrame:
     )
 
 
-def _sectors_by_donor_sector(views: ViewReader) -> pd.DataFrame:
-    """sectors constant USD at ODA eligible countries, both indicators, per donor/year/sector."""
+def _sectors_by_donor_sector(views: ViewReader, column: str) -> pd.DataFrame:
+    """sectors view at ODA eligible countries, both indicators summed, per donor/year/sector.
+
+    Args:
+        views: The view reader.
+        column: The amount column to sum, kept under its own name.
+    """
     df = views.sectors_oda_eligible
     df = df[df["indicator_name"].isin([BILATERAL, IMPUTED_MULTILATERAL])]
     return (
-        df.groupby(["year", "donor_name", "sector_name"], observed=True)[
-            "value_usd_constant"
-        ]
+        df.groupby(["year", "donor_name", "sector_name"], observed=True)[column]
         .sum()
         .reset_index()
         .rename(columns={"donor_name": "donor", "sector_name": "indicator"})
@@ -487,7 +490,7 @@ def _sectors_by_donor_sector(views: ViewReader) -> pd.DataFrame:
 
 def view_sector_shares(views: ViewReader) -> pd.DataFrame:
     """Each sector's share of the donor-year total across sectors (constant 2024 USD)."""
-    df = _sectors_by_donor_sector(views)
+    df = _sectors_by_donor_sector(views, "value_usd_constant")
     total = df.groupby(["year", "donor"])["value_usd_constant"].transform("sum")
     return df.assign(**{VALUE: df["value_usd_constant"] / total}).drop(
         columns="value_usd_constant"
@@ -495,11 +498,14 @@ def view_sector_shares(views: ViewReader) -> pd.DataFrame:
 
 
 def view_sector_amounts(views: ViewReader) -> pd.DataFrame:
-    """Each sector's value_usd_constant (base 2024), USD mn, per donor and year."""
-    df = _sectors_by_donor_sector(views)
-    return df.assign(**{VALUE: df["value_usd_constant"] / UNITS_PER_MILLION}).drop(
-        columns="value_usd_constant"
+    """Each sector's amount rebased to constant 2025, USD mn, per DAC member and their sum.
+
+    See _rebase_dac_members for the rebasing.
+    """
+    df = _sectors_by_donor_sector(views, "value_usd_current").rename(
+        columns={"value_usd_current": VALUE}
     )
+    return _rebase_dac_members(views, df, keys=("indicator",))
 
 
 def _recipients_both_indicators(
@@ -541,11 +547,14 @@ def view_africa_share(views: ViewReader) -> pd.DataFrame:
 
 
 def view_income_groups(views: ViewReader) -> pd.DataFrame:
-    """Income group value_usd_constant (base 2024), USD mn, per donor and year."""
+    """Income group amounts rebased to constant 2025, USD mn, per DAC member and their sum.
+
+    See _rebase_dac_members for the rebasing.
+    """
     df = _recipients_both_indicators(
-        views, list(TOPIC_INCOME_GROUPS.values()), "value_usd_constant"
+        views, list(TOPIC_INCOME_GROUPS.values()), "value_usd_current"
     )
-    return df.assign(**{VALUE: df[VALUE] / UNITS_PER_MILLION})
+    return _rebase_dac_members(views, df, keys=("recipient",))
 
 
 def view_refugees(views: ViewReader) -> pd.DataFrame:
@@ -563,13 +572,25 @@ def view_refugees(views: ViewReader) -> pd.DataFrame:
     )
 
 
-def view_ukraine(views: ViewReader) -> pd.DataFrame:
-    """recipients view Ukraine for each DAC member, rebased to constant 2025, plus the DAC sum.
+def _rebase_dac_members(
+    views: ViewReader, current: pd.DataFrame, *, keys: tuple[str, ...]
+) -> pd.DataFrame:
+    """Rebase DAC members' current USD to the financing view's base and add their sum.
 
-    The recipients view's constant prices are base 2024 and the topic's base 2025, and a
-    group has no single deflator, so each member's current USD is converted with its own
-    constant/current ratio of Total ODA in the financing view (base 2025), and DAC countries
-    is the sum of the members. A member-year with no Ukraine row received nothing.
+    The sectors and recipients views' constant prices are base 2024 while the topic page's
+    are base 2025, and a group has no single deflator. So each member's current USD is
+    converted with its own constant/current ratio of Total ODA in the financing view (base
+    2025), and DAC countries is the sum of the members. A member-year with no row for a
+    label received nothing (0). Only years present in ``current`` are kept.
+
+    Args:
+        views: The view reader (the financing view supplies the ratios).
+        current: ``year``, ``donor``, ``keys`` and ``value`` in current USD.
+        keys: The label columns besides year and donor (e.g. ``("recipient",)``).
+
+    Returns:
+        ``year``, ``donor``, ``keys`` and ``value`` in USD mn, constant 2025, for every
+        DAC member and for DAC countries.
     """
     financing = _financing_total_oda(views)
     ratios = pd.DataFrame(
@@ -579,20 +600,32 @@ def view_ukraine(views: ViewReader) -> pd.DataFrame:
             "ratio": financing["value_usd_constant"] / financing["value_usd_current"],
         }
     )
-    members = ratios[ratios["donor"].isin(DAC_COUNTRIES.values())]
-    ukraine = _recipients_both_indicators(views, [UKRAINE], "value_usd_current")
-    rebased = members.merge(
-        ukraine[["year", "donor", VALUE]], on=["year", "donor"], how="left"
-    ).fillna({VALUE: 0.0})
+    members = ratios[
+        ratios["donor"].isin(DAC_COUNTRIES.values())
+        & ratios["year"].isin(current["year"])
+    ]
+    columns = ["year", "donor", *keys]
+    grid = members.merge(current[list(keys)].drop_duplicates(), how="cross")
+    rebased = grid.merge(current[[*columns, VALUE]], on=columns, how="left").fillna(
+        {VALUE: 0.0}
+    )
     rebased[VALUE] = rebased[VALUE] * rebased["ratio"] / UNITS_PER_MILLION
+    rebased = rebased.drop(columns="ratio")
     dac = (
-        rebased.groupby("year", as_index=False)[VALUE]
+        rebased.groupby(["year", *keys], as_index=False)[VALUE]
         .sum()
         .assign(donor=DAC_COUNTRIES_NAME)
     )
-    return pd.concat([rebased.drop(columns="ratio"), dac], ignore_index=True).assign(
-        recipient=UKRAINE
-    )
+    return pd.concat([rebased, dac], ignore_index=True)
+
+
+def view_ukraine(views: ViewReader) -> pd.DataFrame:
+    """recipients view Ukraine rebased to constant 2025, per DAC member and their sum.
+
+    See _rebase_dac_members for the rebasing.
+    """
+    ukraine = _recipients_both_indicators(views, [UKRAINE], "value_usd_current")
+    return _rebase_dac_members(views, ukraine, keys=("recipient",))
 
 
 # ---------------------------------------------------------------------------------------
@@ -652,7 +685,8 @@ CROSS_CHECKS: tuple[CrossCheck, ...] = (
         keys=("year", "donor", "indicator"),
         tolerance=Tolerance(absolute=BILLIONS_ROUNDING_FLOOR, relative=0.01),
         note="aid_to_health_ts vs sectors view Health, DAC countries at ODA eligible "
-        "countries, both indicators, constant 2024 USD mn.",
+        "countries, both indicators, constant 2025 USD mn (the view rebased per member "
+        "with the financing view's constant/current ratio of Total ODA).",
     ),
     CrossCheck(
         name="humanitarian",
@@ -661,7 +695,8 @@ CROSS_CHECKS: tuple[CrossCheck, ...] = (
         keys=("year", "donor", "indicator"),
         tolerance=Tolerance(absolute=BILLIONS_ROUNDING_FLOOR, relative=0.01),
         note="aid_to_humanitarian_ts vs sectors view Humanitarian, DAC countries at ODA "
-        "eligible countries, both indicators, constant 2024 USD mn.",
+        "eligible countries, both indicators, constant 2025 USD mn (the view rebased per "
+        "member with the financing view's constant/current ratio of Total ODA).",
     ),
     CrossCheck(
         name="africa_share",
@@ -680,7 +715,8 @@ CROSS_CHECKS: tuple[CrossCheck, ...] = (
         keys=("year", "donor", "recipient"),
         tolerance=Tolerance(absolute=BILLIONS_ROUNDING_FLOOR, relative=0.02),
         note="aid_to_income_latest (latest year) vs recipients view income "
-        "groups, DAC countries, both indicators, constant 2024 USD mn.",
+        "groups, DAC countries, both indicators, constant 2025 USD mn (the view rebased "
+        "per member with the financing view's constant/current ratio of Total ODA).",
     ),
     CrossCheck(
         name="total_oda_covid",

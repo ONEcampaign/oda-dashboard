@@ -709,7 +709,7 @@ Estonia,2005,22.9 million,186.3 million,0.07651
 Poland,2005,331.1 million,3.05 billion,0.06846
 Latvia,2005,22.6 million,215.1 million,0.06646
 Lithuania,2005,31.9 million,330.7 million,0.0616
-Slovak Republic,2005,101.4 million,0.0 million,
+Slovak Republic,2005,101.4 million,,
 Norway,2004,3.21 billion,0.0 million,0.87397
 Denmark,2004,2.74 billion,0.0 million,0.84713
 Luxembourg,2004,434.0 million,0.0 million,0.79054
@@ -773,7 +773,7 @@ Hungary,2003,40.1 million,1.00 billion,0.02684
 Poland,2003,56.9 million,2.97 billion,0.01315
 Lithuania,2003,4.7 million,303.7 million,0.01077
 Latvia,2003,2.2 million,194.1 million,0.00799
-Estonia,2003,3.2 million,0.0 million,
+Estonia,2003,3.2 million,,
 Denmark,2002,3.02 billion,0.0 million,0.96414
 Norway,2002,3.20 billion,0.0 million,0.8884
 Sweden,2002,3.29 billion,0.0 million,0.83638
@@ -801,10 +801,10 @@ United States,2002,22.67 billion,102.58 billion,0.12669
 Czechia,2002,125.8 million,1.22 billion,0.06535
 Korea,2002,388.9 million,4.96 billion,0.05092
 Slovak Republic,2002,19.9 million,560.5 million,0.02404
-Estonia,2002,4.6 million,0.0 million,
-Latvia,2002,4.3 million,0.0 million,
-Lithuania,2002,4.9 million,0.0 million,
-Poland,2002,31.6 million,0.0 million,
+Estonia,2002,4.6 million,,
+Latvia,2002,4.3 million,,
+Lithuania,2002,4.9 million,,
+Poland,2002,31.6 million,,
 Denmark,2001,3.24 billion,0.0 million,1.03014
 Netherlands,2001,6.89 billion,0.0 million,0.82176
 Norway,2001,2.81 billion,0.0 million,0.79742
@@ -833,8 +833,8 @@ Korea,2001,392.3 million,4.60 billion,0.05501
 Czechia,2001,87.6 million,1.19 billion,0.04803
 Slovak Republic,2001,27.4 million,442.8 million,0.04081
 Poland,2001,80.7 million,2.68 billion,0.02047
-Estonia,2001,2.0 million,0.0 million,
-Lithuania,2001,5.7 million,0.0 million,
+Estonia,2001,2.0 million,,
+Lithuania,2001,5.7 million,,
 Denmark,2000,3.29 billion,0.0 million,1.06082
 Netherlands,2000,6.90 billion,0.0 million,0.83673
 Sweden,2000,2.89 billion,0.0 million,0.80126
@@ -863,4 +863,4 @@ Korea,2000,285.2 million,4.51 billion,0.04161
 Czechia,2000,57.0 million,1.17 billion,0.03265
 Slovak Republic,2000,19.6 million,423.7 million,0.03089
 Poland,2000,71.9 million,2.69 billion,0.01826
-Estonia,2000,2.2 million,0.0 million,
+Estonia,2000,2.2 million,,

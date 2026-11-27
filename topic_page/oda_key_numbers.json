@@ -1,6 +1,6 @@
 {
     "total_oda": "174.3 billion",
-    "total_oda_change": "-22.8 %",
+    "total_oda_change": "-22.8%",
     "latest_year": "2025",
     "oda_gni": "0.26%",
     "oda_gni_distance": "302 billion",
@@ -12,26 +12,26 @@
             "share": "0.4%"
         },
         "Low income": {
-            "value": "30.8",
+            "value": "32.3",
             "share": "14.7%"
         },
         "Lower-middle income": {
-            "value": "43.7",
-            "share": "20.9%"
+            "value": "45.6",
+            "share": "20.8%"
         },
         "Not classified by income": {
-            "value": "83.6",
-            "share": "39.9%"
+            "value": "87.9",
+            "share": "40.1%"
         },
         "Upper-middle income": {
-            "value": "50.5",
+            "value": "52.9",
             "share": "24.1%"
         }
     },
-    "aid_to_health": "27.4 billion",
-    "aid_to_health_share": "12.1%",
-    "aid_to_humanitarian": "29.3 billion",
-    "aid_to_humanitarian_share": "13.0%",
+    "aid_to_health": "28.5 billion",
+    "aid_to_health_share": "12.0%",
+    "aid_to_humanitarian": "30.6 billion",
+    "aid_to_humanitarian_share": "12.9%",
     "ukraine_share_of_total_oda": "12.2%",
     "ukraine_times_pre_invasion": "12 times",
     "pre_invasion_year": "2021",

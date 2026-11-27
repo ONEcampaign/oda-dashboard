@@ -20,6 +20,8 @@ from src.data.topic_page.common import (
     LATEST_YEAR_AGG,
     LATEST_YEAR_DETAIL,
     ODA_COVID_START_YEAR,
+    PRE_COVID_YEAR,
+    PRE_INVASION_YEAR,
     SHORT_START_YEAR,
     describe_change,
     read_total_oda,
@@ -29,7 +31,6 @@ from src.data.topic_page.common import (
 )
 from src.data.topic_page.covid import covid_bi_multi_dac
 from src.data.topic_page.ukraine import (
-    PRE_INVASION_YEAR,
     dac_to_ukraine_total,
     write_ukraine_comparison,
 )
@@ -43,12 +44,11 @@ TOTAL_ODA: str = "Total ODA"
 IDRC: str = "IDRC"
 UKRAINE: str = "ODA to Ukraine"
 OTHER_ODA: str = "Other ODA"
-# The article compares ODA without COVID-19, refugees and Ukraine with this pre-COVID year.
-PRE_COVID_YEAR: int = 2019
+COVID_ODA: str = "COVID ODA"
 OUTPUT_COLUMNS: list[str] = [
     "Year",
     "Donor",
-    "COVID ODA",
+    COVID_ODA,
     IDRC,
     UKRAINE,
     OTHER_ODA,
@@ -65,7 +65,10 @@ def read_total_and_idrc(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataF
 
     Returns:
         One row per donor_name and year, with TOTAL_ODA and IDRC columns in constant USD
-        millions of CONSTANT_YEAR, 0 where a donor reports nothing.
+        millions of CONSTANT_YEAR. IDRC is 0 where a donor reports none.
+
+    Raises:
+        ValueError: If a donor-year has in-donor refugee costs but no Total ODA.
     """
     providers = list(DAC_COUNTRIES)
     total = read_total_oda(ctx, years=YEARS, providers=providers, provenance=provenance)
@@ -88,13 +91,53 @@ def read_total_and_idrc(ctx: oda.Context, provenance: ProvenanceLog) -> pd.DataF
     )[["donor_code", "year", "indicator", "value"]]
     constant = to_usd_constant(current, base_year=CONSTANT_YEAR, provenance=provenance)
     constant["donor_name"] = constant["donor_code"].map(DAC_COUNTRIES)
-    return (
+    wide = (
         with_dac_total(constant, ["year", "indicator"])
         .pivot(index=["donor_name", "year"], columns="indicator", values="value")
-        .fillna(0)
         .reset_index()
         .rename_axis(None, axis=1)
     )
+    return check_total_oda_present(wide).fillna({IDRC: 0})
+
+
+def check_total_oda_present(wide: pd.DataFrame) -> pd.DataFrame:
+    """Return wide unchanged if every donor-year has Total ODA.
+
+    Raises:
+        ValueError: If any TOTAL_ODA value is missing, naming the donor-years.
+    """
+    missing = wide.loc[wide[TOTAL_ODA].isna(), ["donor_name", "year"]]
+    if not missing.empty:
+        raise ValueError(
+            f"Total ODA missing for {len(missing)} donor-years:\n"
+            f"{missing.to_string(index=False)}"
+        )
+    return wide
+
+
+def add_covid_oda(df: pd.DataFrame, covid: pd.DataFrame) -> pd.DataFrame:
+    """Add the COVID_ODA column from the static series, missing where it holds no figure.
+
+    COVID-19 ODA is 0 before the series' first year, when there was none. From then on a
+    donor-year the series leaves out (a member that never reported it, or a year after the
+    series ends) stays missing, so the chart shows a gap.
+
+    Args:
+        df: Frame with donor_name and year.
+        covid: From covid_bi_multi_dac: donor_name, year and value.
+
+    Returns:
+        df with COVID_ODA added.
+    """
+    data = df.merge(
+        covid[["donor_name", "year", "value"]].rename(columns={"value": COVID_ODA}),
+        how="left",
+        on=["donor_name", "year"],
+        validate="1:1",
+    )
+    before_covid = data["year"] < covid["year"].min()
+    data.loc[before_covid, COVID_ODA] = data.loc[before_covid, COVID_ODA].fillna(0)
+    return data
 
 
 def _key_numbers(dac: pd.DataFrame) -> dict[str, str]:
@@ -137,8 +180,9 @@ def total_oda_excluding_covid_ukraine_idrc(
 ) -> None:
     """Write oda_covid.csv: Total ODA and its parts per DAC member and year, DAC first.
 
-    The latest year is preliminary, so its "Other ODA" moves to the Preliminary column. The
-    file starts in ODA_COVID_START_YEAR; the key numbers use every year read.
+    The latest year is preliminary, so its "Other ODA" moves to the Preliminary column. Other
+    ODA takes away COVID-19 ODA only where the static series has it (add_covid_oda), so a
+    missing COVID figure leaves it equal to Total ODA less IDRC and Ukraine.
 
     Args:
         ctx: From open_context.
@@ -147,21 +191,17 @@ def total_oda_excluding_covid_ukraine_idrc(
     ukraine = dac_to_ukraine_total(ctx, provenance)
     write_ukraine_comparison(ukraine)
     ukraine = ukraine.rename(columns={"value": UKRAINE})
-    covid = covid_bi_multi_dac()[["donor_name", "year", "value"]].rename(
-        columns={"value": "COVID ODA"}
-    )
 
     full_data = (
         read_total_and_idrc(ctx, provenance)
         .merge(ukraine, how="left", on=["donor_name", "year"], validate="1:1")
-        .merge(covid, how="left", on=["donor_name", "year"], validate="1:1")
-        .fillna({"COVID ODA": 0})
+        .pipe(add_covid_oda, covid_bi_multi_dac())
         .rename(columns={"donor_name": "Donor", "year": "Year"})
     )
 
     full_data[OTHER_ODA] = round(
         full_data[TOTAL_ODA]
-        - full_data["COVID ODA"]
+        - full_data[COVID_ODA].fillna(0)
         - full_data[IDRC]
         - full_data[UKRAINE].fillna(0),
         1,

@@ -31,7 +31,6 @@ from src.data.topic_page.common import (
     LONG_START_YEAR,
     MINI_CHART_START_YEAR,
     SECTORS_START_YEAR,
-    START_YEAR,
     add_change,
     describe_change,
     df_to_key_number,
@@ -141,7 +140,7 @@ def total_aid_key_number(dac: pd.DataFrame) -> None:
     _update_key_numbers(
         {
             "total_oda": f"{data['value'].item() / BILLION:,.1f} billion",
-            "total_oda_change": f"{float(data['pct_change'].item()):.1f} %",
+            "total_oda_change": f"{float(data['pct_change'].item()):.1f}%",
             "total_oda_change_abs": change["abs"],
             "total_oda_change_verb": change["verb"],
             "total_oda_change_noun": change["noun"],
@@ -160,20 +159,21 @@ def aid_gni_key_number(dac: pd.DataFrame) -> None:
     Args:
         dac: oda_gni_table rows for DAC countries in the latest two years.
     """
+    year = int(dac["year"].max())
     data = (
         dac.sort_values("year")
         .assign(
             oda_gni=lambda d: d["oda_gni"].round(6),
             distance=lambda d: d["gap_current"].round(1),
-            first_line=f"As of {LATEST_YEAR_AGG}",
+            first_line=f"As of {year}",
             second_line="Additional required to get to 0.7%",
         )
         .assign(centre=lambda d: d["oda_gni"].pct_change().round(4))
-        .loc[lambda d: d["year"] == d["year"].max()]
+        .loc[lambda d: d["year"] == year]
     )[["first_line", "oda_gni", "second_line", "distance", "centre"]]
 
     data.to_csv(PATHS.TOPIC_PAGE / "oda_gni_sm.csv", index=False)
-    logger.info("Saved chart version of oda_gni_sm.csv for %s", LATEST_YEAR_AGG)
+    logger.info("Saved chart version of oda_gni_sm.csv for %s", year)
 
     _update_key_numbers(
         {
@@ -256,7 +256,7 @@ def aid_to_africa_ts(provenance: ProvenanceLog) -> None:
 
     Amounts are constant USD of CONSTANT_YEAR. The share of total ODA is computed in current
     USD, as the recipients view computes its shares. The file starts in MINI_CHART_START_YEAR;
-    the years before it are read so its first annual change has a previous year.
+    the year before it is read so its first annual change has a previous year.
 
     Args:
         provenance: Log to record every read in.
@@ -266,7 +266,7 @@ def aid_to_africa_ts(provenance: ProvenanceLog) -> None:
             AFRICA_CODE: "Africa",
             DEVELOPING_COUNTRIES_CODE: DEVELOPING_COUNTRIES,
         },
-        years=range(START_YEAR, LATEST_YEAR_DETAIL + 1),
+        years=range(MINI_CHART_START_YEAR - 1, LATEST_YEAR_DETAIL + 1),
         base_year=CONSTANT_YEAR,
         provenance=provenance,
     ).pivot(index="year", columns="recipient", values=["current", "constant"])
@@ -313,7 +313,7 @@ def aid_to_africa_ts(provenance: ProvenanceLog) -> None:
 def aid_to_incomes_latest(provenance: ProvenanceLog) -> None:
     """Write aid_to_income_latest.csv and the aid by income group key numbers.
 
-    Amounts are constant USD of LATEST_YEAR_DETAIL; shares are of the DAC countries' ODA to
+    Amounts are constant USD of CONSTANT_YEAR; shares are of the DAC countries' ODA to
     developing countries.
 
     Args:
@@ -322,7 +322,7 @@ def aid_to_incomes_latest(provenance: ProvenanceLog) -> None:
     totals = dac_to_recipients(
         recipients=INCOME_GROUPS,
         years=range(LATEST_YEAR_DETAIL, LATEST_YEAR_DETAIL + 1),
-        base_year=LATEST_YEAR_DETAIL,
+        base_year=CONSTANT_YEAR,
         provenance=provenance,
     )
     developing = totals.loc[
@@ -442,7 +442,7 @@ def aid_to_incomes_ts(provenance: ProvenanceLog) -> None:
 def sector_totals_ts(sectors: pd.DataFrame) -> None:
     """Write sector_totals.csv: ODA per broad sector, DAC member and year.
 
-    Amounts are constant USD millions of LATEST_YEAR_DETAIL. Sectors are ordered by the DAC
+    Amounts are constant USD millions of CONSTANT_YEAR. Sectors are ordered by the DAC
     countries total summed over every year in the file, largest first.
 
     Args:
@@ -493,7 +493,7 @@ def aid_to_sectors_ts(sectors: pd.DataFrame) -> None:
     The files start in MINI_CHART_START_YEAR; the shares use every sector of each year.
 
     Args:
-        sectors: From sector_totals, constant USD of LATEST_YEAR_DETAIL.
+        sectors: From sector_totals, constant USD of CONSTANT_YEAR.
     """
     data = _dac_sector_amounts(sectors)
 
@@ -574,7 +574,7 @@ def main() -> None:
         sectors = sector_totals(
             ctx,
             years=range(SECTORS_START_YEAR, LATEST_YEAR_DETAIL + 1),
-            base_year=LATEST_YEAR_DETAIL,
+            base_year=CONSTANT_YEAR,
             provenance=provenance,
         )
     aid_to_sectors_ts(sectors)

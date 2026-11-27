@@ -75,7 +75,8 @@ def oda_gni_year_columns(table: pd.DataFrame) -> None:
     """Write oda_gni_single_year_ts.csv: ODA, the gap to 0.7% and ODA/GNI, latest year first.
 
     Amounts are constant USD of CONSTANT_YEAR. The gap is converted with the donor's own
-    constant/current ratio of Total ODA (for DAC countries, the total's).
+    constant/current ratio of Total ODA (for DAC countries, the total's). A donor-year
+    without GNI has no ratio and no gap, so both publish empty.
 
     Args:
         table: From oda_gni_table, for DAC members and DAC countries.
@@ -88,7 +89,9 @@ def oda_gni_year_columns(table: pd.DataFrame) -> None:
         )
         .assign(
             value=lambda d: d["oda_constant"].map(_billions_or_millions),
-            missing=lambda d: d["missing"].fillna(0).map(_billions_or_millions),
+            missing=lambda d: d["missing"].map(
+                _billions_or_millions, na_action="ignore"
+            ),
         )
         .sort_values(["year", "oda_gni", "donor_name"], ascending=[False, False, True])
         .rename(
