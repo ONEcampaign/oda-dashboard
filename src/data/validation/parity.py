@@ -838,8 +838,7 @@ def _options_results(
     view: str, candidate: dict, baseline: dict, expected: Sequence[ExpectedDelta]
 ) -> list[CheckResult]:
     """Compare two options.json dicts, without OPTIONS_METADATA_KEYS; one per reason."""
-    baseline = _without_metadata(baseline)
-    deltas = _options_deltas(_without_metadata(candidate), baseline)
+    deltas = _options_deltas(_without_metadata(candidate), _without_metadata(baseline))
     if not deltas:
         return [_passed("parity.options", view, "options.json identical")]
     table = pd.DataFrame(deltas)

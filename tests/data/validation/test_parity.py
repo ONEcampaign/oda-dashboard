@@ -9,14 +9,10 @@ import pytest
 from src.data.validation.expected import DeltaKind, ExpectedDelta
 from src.data.validation.models import MAX_DETAIL_ROWS, CheckResult, Severity
 from src.data.validation.parity import compare_views, run_parity
-from src.data.validation.views import VALUE_COLUMNS
 from tests.data.validation.conftest import MakeView, write_flat, write_hive
 
 VIEW = "financing_view"
 BILLION = 1_000_000_000
-VALUE_COLUMNS_NO_USD: tuple[str, ...] = tuple(
-    c for c in VALUE_COLUMNS if c != "value_usd_current"
-)
 
 
 def _row(
